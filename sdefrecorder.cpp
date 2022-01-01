@@ -2,7 +2,6 @@
 
 SdefRecorder::SdefRecorder()
 {
-    qDebug() << convertDdToddmmss(63.4455) << convertDdToddmmss(10.4433, false);
 }
 
 void SdefRecorder::start()
@@ -17,32 +16,34 @@ void SdefRecorder::start()
 
 void SdefRecorder::updSettings()
 {
-    // not needed, read directly from config/disk (no big io penalty here)
+    saveToSdef = getSdefSaveToFile();
+    recordTime = getSdefRecordTime() * 60e3;
+    maxRecordTime = getSdefMaxRecordTime() * 60e3;
 }
 
 void SdefRecorder::triggerRecording()
 {
-    if (getSdefSaveToFile()) {
-        recordingStartedTimer->start(getSdefRecordTime() * 60e3); // minutes. restarts every time routine is called, which means it will run for x minutes after incident ended
+    recordingStartedTimer->start(recordTime); // minutes. restarts every time routine is called, which means it will run for x minutes after incident ended
 
-        if (!recording) {
-            recording = true;
-            emit recordingStarted();
+    if (!recording && saveToSdef) {
+        recording = true;
+        dateTimeRecordingStarted = QDateTime::currentDateTime(); // for incident log
 
-            if (!recordingTimeoutTimer->isActive())
-                recordingTimeoutTimer->start(getSdefMaxRecordTime() * 60e3); // only call once
+        emit recordingStarted();
 
-            file.setFileName(createFilename());
-            if (!failed) failed = file.open(QIODevice::WriteOnly);
-            if (failed) {
-                file.close();
-                emit warning("Error creating file " + file.fileName());
-            }
-            else {
-                file.write(createHeader());
-                if (getSdefPreRecordTime() > 0) emit reqTraceHistory(getSdefPreRecordTime());
-                else historicDataSaved = true;
-            }
+        if (!recordingTimeoutTimer->isActive())
+            recordingTimeoutTimer->start(maxRecordTime); // only call once
+
+        file.setFileName(createFilename());
+        if (failed || !file.open(QIODevice::WriteOnly)) {
+            emit warning("Error creating file " + file.fileName());
+            failed = true;
+            finishRecording();
+        }
+        else {
+            file.write(createHeader());
+            if (getSdefPreRecordTime() > 0) emit reqTraceHistory(getSdefPreRecordTime());
+            else historicDataSaved = true;
         }
     }
 }
@@ -149,10 +150,16 @@ QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
 void SdefRecorder::finishRecording()
 {
     emit recordingEnded();
+    if (getSdefSaveToFile())
+        if (recordingStartedTimer->isActive()) emit toIncidentLog("Recording ended after "
+                           + QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                           + " minutes");
+
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
-    file.close();
-    recording = historicDataSaved = failed = false;
+    if (file.isOpen()) file.close();
+    if (!failed)
+        recording = historicDataSaved = failed = false;
 }
 
 void SdefRecorder::restartRecording()

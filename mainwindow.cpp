@@ -15,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     instrMode->addItems(QStringList() << "PScan" << "FFM");
     instrFftMode->addItems(QStringList() << "Cl/wr" << "Min" << "Max" << "Avg");
 
+    customPlot->setOpenGl(false);
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
 
@@ -238,9 +239,8 @@ void MainWindow::setToolTips()
     instrTrigLevel->setToolTip("Decides how much above the average noise floor in dB a signal must be "\
                                "to trigger an incident. 10 dB is a reasonable value. "\
                                "See also the other trigger settings below.");
-    instrTrigBandwidth->setToolTip("An incident is triggered only if the total bandwidth of the "\
-                                   "signal above the set trig level is at least the same "\
-                                   "as this setting. Previously the \"percentage of spectrum\" setting.");
+    instrTrigBandwidth->setToolTip("An incident is triggered only if the continous bandwidth of a "\
+                                   "signal above the set trig level is higher than this setting.");
     instrTrigTime->setToolTip("Decides how long an incident must be present before an incident is "\
                               "triggered and a recording is started. "\
                               "Previously the \"trace count before recording is triggered\" setting.");
@@ -446,11 +446,13 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::averageLevelReady, customPlotController, &CustomPlotController::stopFlashTrigline);
 
     connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
-    connect(measurementDevice, &MeasurementDevice::newTrace, traceAnalyzer, &TraceAnalyzer::setTrace);
+    //connect(measurementDevice, &MeasurementDevice::newTrace, traceAnalyzer, &TraceAnalyzer::setTrace);
     connect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::resetAverageLevel);
     connect(traceBuffer, &TraceBuffer::averageLevelReady, traceAnalyzer, &TraceAnalyzer::setAverageTrace);
+    connect(traceBuffer, &TraceBuffer::traceToAnalyzer, traceAnalyzer, &TraceAnalyzer::setTrace);
+
     connect(traceAnalyzer, &TraceAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
     connect(customPlotController, &CustomPlotController::freqSelectionChanged, traceAnalyzer, &TraceAnalyzer::updTrigFrequencyTable);
 
@@ -466,6 +468,7 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::toRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
+    connect(sdefRecorder, &SdefRecorder::toIncidentLog, this, &MainWindow::appendToIncidentLog);
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);

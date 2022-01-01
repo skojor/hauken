@@ -47,6 +47,7 @@ signals:
     void averageLevelReady(const QVector<qint16> &data);
     void averageLevelCalculating();
     void historicData(const QList<QDateTime>, const QList<QVector<qint16> >data);
+    void traceToAnalyzer(const QVector<qint16> &data);
 
 private slots:
     void deleteOlderThan();

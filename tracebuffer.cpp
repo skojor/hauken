@@ -19,7 +19,7 @@ void TraceBuffer::start()
 void TraceBuffer::deleteOlderThan()
 {
     mutex.lock();
-    if (traceBuffer.size() > 1) { // failsafe, don't ever delete an empty buffer line!
+    if (!traceBuffer.isEmpty()) { // failsafe, don't ever delete an empty buffer line!
         while (datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
@@ -31,6 +31,8 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
+    emit traceToAnalyzer(data);
+
     if (!throttleTimer->isValid())
         throttleTimer->start();
     mutex.lock();
@@ -110,7 +112,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 
 void TraceBuffer::calcAvgLevel()
 {
-    if (traceBuffer.size() > 1) { // never work on an empty buffer!
+    if (!traceBuffer.isEmpty()) { // never work on an empty buffer!
         if (averageLevel.isEmpty())
             averageLevel = traceBuffer.last();
         else {

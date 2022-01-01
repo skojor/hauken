@@ -36,7 +36,7 @@ void CustomPlotController::setupBasics()
 
     customPlotPtr->setInteraction(QCP::iRangeDrag, true);
     customPlotPtr->setSelectionRectMode(QCP::srmCustom);
-    customPlotPtr->setOpenGl(false);
+    //customPlotPtr->setOpenGl(false);
     customPlotPtr->setNotAntialiasedElements(QCP::aePlottables);
 
     fill.fill(-200, screenResolution);

@@ -22,7 +22,7 @@ public slots:
     void updTrigFrequencyTable();
     void updSettings();
     void recorderStarted() { recorderRunning = true;}
-    void recorderEnded() { recorderRunning = alarmEmitted = false; emit toIncidentLog("Recording ended");}
+    void recorderEnded() { recorderRunning = alarmEmitted = false;}
     double getKhzAboveLimit() { return khzAboveLimit; }
 
 signals:
@@ -32,6 +32,7 @@ signals:
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
+    void alarmTriggered();
 
 private:
     QSharedPointer<Config> config;

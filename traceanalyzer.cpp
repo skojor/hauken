@@ -8,38 +8,50 @@ TraceAnalyzer::TraceAnalyzer(QSharedPointer<Config> c)
 
 void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 {
-    if (recorderRunning) emit toRecorder(data);
+    if (recorderRunning) emit toRecorder(data);  // forwards one trace line to the sdef recorder
 
+    khzAboveLimit = 0;
     int valuesAboveLimit = 0;
     if (averageData.size() == data.size()) {
         for (int i=0; i<data.size(); i++) {
-            if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i)) && data.at(i) > averageData.at(i) + trigLevel * 10) // * 10 because we have values in 1/10 dBuV!
+            if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
+                    && data.at(i) > averageData.at(i) + trigLevel * 10) // * 10 because we have values in 1/10 dBuV!
                 valuesAboveLimit++;
+            else if (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
+                                && data.at(i) < averageData.at(i) + trigLevel * 10) { // previously trace point high, not this one. reset counter and calc BW of signal
+                double khzOfIncident = valuesAboveLimit * resolution;
+                if (khzOfIncident > khzAboveLimit)
+                    khzAboveLimit = khzOfIncident;
+                valuesAboveLimit = 0;
+            }
         }
     }
-    khzAboveLimit = valuesAboveLimit * resolution;
     if (khzAboveLimit > trigBandwidth) {
         if (trigTime == 0) { // trig time 0 means sound the alarm immediately
-            emit alarm();
-            if (!alarmEmitted) {
-                alarmEmitted = true;
-                emit toIncidentLog("Recording triggered by measurement receiver (" + QString::number(khzAboveLimit) + ")");
-            }
+            alarmTriggered();
         }
         else if (trigTime > 0 && !elapsedTimer->isValid()) // first time above limit, start the clock
             elapsedTimer->start();
-        else if (trigTime > 0 && elapsedTimer->isValid()) {
-            if (elapsedTimer->elapsed() >= trigTime) {
-                emit alarm();
-                if (!alarmEmitted) {
-                    alarmEmitted = true;
-                    emit toIncidentLog("Recording triggered by measurement receiver (" +QString::number(khzAboveLimit) + ")");
-                }
-            }
+        else if (trigTime > 0 && elapsedTimer->isValid() && elapsedTimer->elapsed() >= trigTime) {
+            alarmTriggered();
         }
     }
     else {
         if (elapsedTimer) elapsedTimer->invalidate();
+    }
+}
+
+void TraceAnalyzer::alarmTriggered()
+{
+    emit alarm();
+    if (!alarmEmitted) {
+        alarmEmitted = true;
+        if (config->getSdefSaveToFile())
+            emit toIncidentLog("Recording triggered by measurement receiver (" +
+                               QString::number((int)khzAboveLimit) + " kHz above limit)");
+        else
+            emit toIncidentLog("Incident registered, " + QString::number((int)khzAboveLimit) +
+                               " kHz above limit. Recording is not enabled.");
     }
 }
 

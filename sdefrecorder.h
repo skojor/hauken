@@ -52,11 +52,15 @@ private:
     //QSharedPointer<Config> config;
     QFile file;
     double tracePerSecond;
+    QDateTime dateTimeRecordingStarted;
     QTimer *recordingStartedTimer;
     QTimer *recordingTimeoutTimer;
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
+    bool saveToSdef;
+    int recordTime;
+    int maxRecordTime;
 };
 
 #endif // SDEFRECORDER_H
