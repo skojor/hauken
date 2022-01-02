@@ -13,7 +13,7 @@ void TraceBuffer::start()
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
     connect(averageLevelDoneTimer, &QTimer::timeout, this, &TraceBuffer::finishAvgLevelCalc);
-    connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::calcAvgLevel);
+    connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
 }
 
 void TraceBuffer::deleteOlderThan()
@@ -31,16 +31,24 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
-    emit traceToAnalyzer(data);
+    emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
 
     if (!throttleTimer->isValid())
         throttleTimer->start();
+
     mutex.lock();
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
             emptyBuffer();
     }
-    traceBuffer.append(data);
+
+    if (normalizeSpectrum)
+        traceBuffer.append(calcNormalizedTrace(data));
+    else
+        traceBuffer.append(data);
+    if (recording)
+        emit traceToRecorder(traceBuffer.last());
+
     datetimeBuffer.append(QDateTime::currentDateTime());
     addDisplayBufferTrace(data);
 
@@ -53,7 +61,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     mutex.unlock();
 
     if (averageLevelDoneTimer->isActive())
-        calcAvgLevel();
+        calcAvgLevel(data);
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
@@ -106,40 +114,59 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
             displayData[i] = (double)data.at((int)((double)i / rate)) / 10;
         }
     }
+    if (normalizeSpectrum && !averageDispLevel.isEmpty()) {
+        for (int i=0; i<displayData.size(); i++)
+            displayData[i] -= averageDispLevel.at(i);
+    }
 
     displayBuffer.append(displayData);
 }
 
-void TraceBuffer::calcAvgLevel()
+void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
 {
-    if (!traceBuffer.isEmpty()) { // never work on an empty buffer!
-        if (averageLevel.isEmpty())
-            averageLevel = traceBuffer.last();
-        else {
-            for (int i=0; i<traceBuffer.last().size(); i++) {
-                if (averageLevel.at(i) < traceBuffer.last().at(i)) averageLevel[i] += avgFactor;
-                else averageLevel[i] -= avgFactor;
+    if (!data.isEmpty()) {
+        if (!traceBuffer.isEmpty()) { // never work on an empty buffer!
+            if (averageLevel.isEmpty())
+                averageLevel = data;
+            else {
+                for (int i=0; i<data.size(); i++) {
+                    if (averageLevel.at(i) < data.at(i)) averageLevel[i] += avgFactor;
+                    else averageLevel[i] -= avgFactor;
+                }
+                avgFactor *= 0.96;
             }
-            avgFactor *= 0.96;
-        }
-        if (traceBuffer.last().size() > plotResolution) {
-            double rate = (double)traceBuffer.last().size() / plotResolution;
-            int iterator = 0;
-            for (int i=0; i<plotResolution; i++) {
-                /*int val = 0;
+            if (data.size() > plotResolution) {
+                double rate = (double)data.size() / plotResolution;
+                int iterator = 0;
+                for (int i=0; i<plotResolution; i++) {
+                    /*int val = 0;
                 for (int j=0; j<(int)rate; j++)
                     val += averageLevel.at(iterator++);
                 val /= (int)rate;*/
-                averageDispLevel[i] = trigLevel + (double)averageLevel.at(iterator += rate) / 10;
+                    averageDispLevel[i] = (double)averageLevel.at(iterator += rate) / 10;
+                }
             }
-        }
-        else {
-            double rate = (double)plotResolution / traceBuffer.last().size();
-            for (int i=0; i<plotResolution; i++) {
-                averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10;
+            else {
+                double rate = (double)plotResolution / data.size();
+                for (int i=0; i<plotResolution; i++) {
+                    averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10;
+                }
             }
+
         }
-        emit newDispTriglevel(averageDispLevel);
+    }
+
+    if (normalizeSpectrum) {
+        if (averageDispLevelNormalized.isEmpty())
+            averageDispLevelNormalized.fill(trigLevel, plotResolution);
+        emit newDispTriglevel(averageDispLevelNormalized);
+    }
+    else {
+        QVector<double> copy = averageDispLevel;
+        for (auto &val : copy)
+            val += trigLevel;
+
+        emit newDispTriglevel(copy);
     }
 }
 
@@ -148,6 +175,8 @@ void TraceBuffer::emptyBuffer()
     traceBuffer.clear();
     datetimeBuffer.clear();
     displayBuffer.clear();
+    averageDispLevel.clear();
+    averageDispLevelNormalized.clear();
     restartCalcAvgLevel();
 }
 
@@ -166,6 +195,7 @@ void TraceBuffer::restartCalcAvgLevel()
     averageLevel.clear();
     averageDispLevel.clear();
     averageDispLevel.resize(plotResolution);
+    averageDispLevelNormalized.clear();
     //emit toIncidentLog("Recalculating trig level");
     emit averageLevelCalculating();
     avgFactor = 40;
@@ -175,8 +205,6 @@ void TraceBuffer::updSettings()
 {
     if (trigLevel != (int)config->getInstrTrigLevel()) {
         trigLevel = config->getInstrTrigLevel();
-        //restartCalcAvgLevel();
-        calcAvgLevel();
     }
     maxholdTime = config->getPlotMaxholdTime();
     emit showMaxhold((bool)maxholdTime);
@@ -184,10 +212,28 @@ void TraceBuffer::updSettings()
         fftMode = config->getInstrFftMode();
         restartCalcAvgLevel();
     }
+    normalizeSpectrum = config->getInstrNormalizeSpectrum();
+    averageDispLevelNormalized.clear();
+    maintainAvgLevel();
 }
 
 void TraceBuffer::deviceDisconnected()
 {
     averageLevelDoneTimer->stop();
     averageLevelMaintenanceTimer->stop();
+}
+
+QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
+{
+    QVector<qint16> copy = data;
+    if (!averageLevel.isEmpty()) {
+        for (int i=0; i<copy.size(); i++)
+            copy[i] -= averageLevel.at(i);
+    }
+    return copy;
+}
+
+void TraceBuffer::maintainAvgLevel()
+{
+    calcAvgLevel();
 }

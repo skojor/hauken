@@ -103,8 +103,8 @@ void MeasurementDevice::scpiError(QAbstractSocket::SocketError error)
 void MeasurementDevice::setPscanFrequency()
 {
     if (connected && devicePtr->hasPscan) {
-        scpiWrite("freq:psc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
         scpiWrite("freq:psc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
+        scpiWrite("freq:psc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
         emit resetBuffers();
     }
 }
@@ -469,11 +469,14 @@ void MeasurementDevice::setupTcpStream()
     else if (mode == Mode::FFM) modeStr = "ifpan";
 
     // ssh tunnel hackaround
-    tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit(),
-            tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
+    tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
+    tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
+
     scpiWrite("trac:tcp:sock?");
     disconnect(scpiSocket, &QTcpSocket::readyRead, this, scpiRead);
     scpiSocket->waitForReadyRead(1000);
+    //QThread::msleep(500);
+
     QByteArray tmpBuffer = scpiSocket->readAll();
     QList<QByteArray> split = tmpBuffer.split(',');
     if (split.size() > 1) {
@@ -548,7 +551,9 @@ void MeasurementDevice::autoReconnectCheckStatus()
 
 void MeasurementDevice::updSettings()
 {
-    if (devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 || devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) {
+
+    if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
+            devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) && config->getInstrStopFreq() > config->getInstrStartFreq()) {
         devicePtr->pscanStartFrequency = config->getInstrStartFreq() * 1e6;
         devicePtr->pscanStopFrequency = config->getInstrStopFreq() * 1e6;
         setPscanFrequency();

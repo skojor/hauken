@@ -151,7 +151,7 @@ void SdefRecorder::finishRecording()
 {
     emit recordingEnded();
     if (getSdefSaveToFile())
-        if (recordingStartedTimer->isActive()) emit toIncidentLog("Recording ended after "
+        if (recordingTimeoutTimer->isActive()) emit toIncidentLog("Recording ended after "
                            + QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
                            + " minutes");
 

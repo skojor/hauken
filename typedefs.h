@@ -237,7 +237,7 @@ public:
     bool hasPscan = false;
 
     Instrument::Mode mode = Instrument::Mode::PSCAN;
-    quint64 pscanStartFrequency, pscanStopFrequency;
+    quint64 pscanStartFrequency = 0, pscanStopFrequency = 0;
     quint32 pscanResolution;
     quint64 ffmCenterFrequency;
     quint32 ffmFrequencySpan;

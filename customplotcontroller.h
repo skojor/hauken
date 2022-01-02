@@ -35,6 +35,7 @@ public slots:
     void updSettings();
     void flashTrigline();
     void stopFlashTrigline(const QVector<qint16>);
+    void updDeviceConnected(bool b);
 
 private slots:
     void setupBasics();
@@ -66,6 +67,7 @@ private:
     QColor colorNormal = QColor(0, 150, 0, 40);
     QColor colorFlash = QColor(0, 150, 0, 20);
     bool flip = true;
+    bool deviceConnected = false;
     const int screenResolution = 600;
 };
 

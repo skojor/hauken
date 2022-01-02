@@ -57,8 +57,8 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
 
         if (startFreq != devicePtr->pscanStartFrequency ||
                 stopFreq != devicePtr->pscanStopFrequency) {
-            qDebug() << "Start/stop frequency mismatch, ignoring data" << startFreq << devicePtr->pscanStartFrequency
-                     << stopFreq << devicePtr->pscanStopFrequency;
+            qDebug() << "Start/stop frequency mismatch, ignoring data" << (long)startFreq - (long)devicePtr->pscanStartFrequency
+                     << (long)stopFreq - (long)devicePtr->pscanStopFrequency;
             return false;
         }
         if (optHeaderPscanEb500.stepFreq != devicePtr->pscanResolution) {

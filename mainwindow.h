@@ -59,7 +59,8 @@ private slots:
     void setValidators();
     void setSignals();
 
-    void instrFreqChanged();
+    void instrStartFreqChanged();
+    void instrStopFreqChanged();
     void instrResolutionChanged(int a = -1);
     void instrMeasurementTimeChanged();
     void instrAttChanged();

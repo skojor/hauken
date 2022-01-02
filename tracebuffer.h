@@ -31,11 +31,13 @@ public slots:
     void start();
     void addTrace(const QVector<qint16> &data);
     void emptyBuffer();
-    void getSecondsOfBuffer(int secs);
+    void getSecondsOfBuffer(int secs = 0);
     void restartCalcAvgLevel();
     void sendDispTrigline() { emit newDispTriglevel(averageDispLevel);}
     void updSettings();
     void deviceDisconnected();
+    void recorderStarted() { recording = true;}
+    void recorderEnded() { recording = false;}
 
 signals:
     void newDispTrace(const QVector<double> &data);
@@ -48,13 +50,16 @@ signals:
     void averageLevelCalculating();
     void historicData(const QList<QDateTime>, const QList<QVector<qint16> >data);
     void traceToAnalyzer(const QVector<qint16> &data);
+    void traceToRecorder(const QVector<qint16> &data);
 
 private slots:
     void deleteOlderThan();
     void calcMaxhold();
     void addDisplayBufferTrace(const QVector<qint16> &data);
-    void calcAvgLevel();
+    void calcAvgLevel(const QVector<qint16> &data = QVector<qint16>());
     void finishAvgLevelCalc();
+    QVector<qint16> calcNormalizedTrace(const QVector<qint16> &data);
+    void maintainAvgLevel();
 
 private:
     QSharedPointer<Config> config;
@@ -62,6 +67,7 @@ private:
     QList<QVector<qint16>> traceBuffer;
     QVector<qint16> averageLevel;
     QVector<double> averageDispLevel;
+    QVector<double> averageDispLevelNormalized;
     QList<QVector<double>> displayBuffer;
     int maxholdTime = 10;
     const int bufferAge = 120; // always hold 120 seconds of buffer. maxhold/other output adjusted to their own settings
@@ -73,6 +79,8 @@ private:
     int trigLevel;
     double avgFactor;
     int fftMode = -1;
+    bool normalizeSpectrum;
+    bool recording = false;
     const int plotResolution = 600;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs

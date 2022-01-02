@@ -28,7 +28,6 @@ public slots:
 signals:
     void alarm();
     void toIncidentLog(QString);
-    void toRecorder(QVector<qint16>);
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);

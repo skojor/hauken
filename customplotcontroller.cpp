@@ -224,11 +224,15 @@ void CustomPlotController::updSettings()
         customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
         reCalc();
     }
+    if (config->getInstrNormalizeSpectrum())
+        customPlotPtr->yAxis->setLabel("dBμV (normalized)");
+    else
+        customPlotPtr->yAxis->setLabel("dBμV");
 }
 
 void CustomPlotController::flashTrigline()
 {
-    flashTimer->start(500);
+    if (deviceConnected) flashTimer->start(500);
 }
 
 void CustomPlotController::stopFlashTrigline(const QVector<qint16>)
@@ -245,4 +249,12 @@ void CustomPlotController::flashRoutine()
     else flip = true;
 
     customPlotPtr->replot();
+}
+
+void CustomPlotController::updDeviceConnected(bool b)
+{
+    deviceConnected = b;
+    if (!b) {
+        flashTimer->stop();
+    }
 }

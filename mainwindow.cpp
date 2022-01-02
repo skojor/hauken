@@ -281,7 +281,8 @@ void MainWindow::getConfigValues()
     instrAutoAttChanged();
     instrModeChanged();
     instrFftModeChanged();
-    instrFreqChanged();
+    //instrStartFreqChanged();
+    //instrStopFreqChanged();
     instrMeasurementTimeChanged();
     instrAttChanged();
     instrAntPortChanged();
@@ -340,7 +341,8 @@ void MainWindow::instrModeChanged(int a)
     if (a >= 0 && instrResolution->findText(QString::number(config->getInstrResolution())) > 0)
         instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));
     config->setInstrMode(instrMode->currentIndex());
-    instrFreqChanged();
+    instrStartFreqChanged();
+    instrStopFreqChanged();
     instrResolutionChanged();
 }
 
@@ -395,8 +397,8 @@ void MainWindow::setValidators()
 
 void MainWindow::setSignals()
 {
-    connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, instrFreqChanged);
-    connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, instrFreqChanged);
+    connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, instrStartFreqChanged);
+    connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, instrStopFreqChanged);
     connect(instrResolution, QOverload<int>::of(&QComboBox::currentIndexChanged), this, instrResolutionChanged);
     connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMeasurementTime);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrManAtt);
@@ -422,6 +424,7 @@ void MainWindow::setSignals()
     connect(gnssTimeOffset, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setGnssTimeOffset);
 
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, instrConnected);
+    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
 
     connect(measurementDevice, &MeasurementDevice::popup, this, generatePopup);
@@ -464,8 +467,10 @@ void MainWindow::setSignals()
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
+    connect(sdefRecorder, &SdefRecorder::recordingStarted, traceBuffer, &TraceBuffer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceAnalyzer, &TraceAnalyzer::recorderEnded);
-    connect(traceAnalyzer, &TraceAnalyzer::toRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, traceBuffer, &TraceBuffer::recorderEnded);
+    connect(traceBuffer, &TraceBuffer::traceToRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
     connect(sdefRecorder, &SdefRecorder::toIncidentLog, this, &MainWindow::appendToIncidentLog);
@@ -476,15 +481,22 @@ void MainWindow::setSignals()
     sdefRecorderThread->start();
 }
 
-void MainWindow::instrFreqChanged()
+void MainWindow::instrStartFreqChanged()
 {
-    if (config->getInstrMode() == 0 && instrStartFreq->value() < instrStopFreq->value()) { //Pscan
+    if (config->getInstrMode() == 0) { //Pscan
         config->setInstrStartFreq(instrStartFreq->value());
-        config->setInstrStopFreq(instrStopFreq->value());
     }
     else { // ffm
         config->setInstrFfmCenterFreq(instrStartFreq->value());
         measurementDevice->setFfmCenterFrequency();
+    }
+    traceBuffer->restartCalcAvgLevel();
+}
+
+void MainWindow::instrStopFreqChanged()
+{
+    if (config->getInstrMode() == 0) { //Pscan
+        config->setInstrStopFreq(instrStopFreq->value());
     }
     traceBuffer->restartCalcAvgLevel();
 }
