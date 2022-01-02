@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
-    qApp->setFont(QApplication::font("QMessageBox"));
+    //qApp->setFont(QFont("Arial", 8, QFont::Normal, true)); //(QApplication::font("QMessageBox"));
     instrMode->addItems(QStringList() << "PScan" << "FFM");
     instrFftMode->addItems(QStringList() << "Cl/wr" << "Min" << "Max" << "Avg");
 
