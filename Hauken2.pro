@@ -55,8 +55,12 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RESOURCES += \
     icons.qrc
-LIBS += -lOpenGL32
-DEFINES += QCUSTOMPLOT_USE_OPENGL
+#
+win32 {
+  LIBS += -lOpenGL32
+}
+
+#DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"
 #DEFINES += GIT_LOG=\\\"$$system(git log --oneline)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)

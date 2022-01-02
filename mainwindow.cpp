@@ -15,7 +15,6 @@ MainWindow::MainWindow(QWidget *parent)
     instrMode->addItems(QStringList() << "PScan" << "FFM");
     instrFftMode->addItems(QStringList() << "Cl/wr" << "Min" << "Max" << "Avg");
 
-    customPlot->setOpenGl(false);
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
 
