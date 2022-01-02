@@ -53,7 +53,7 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt1->setToolTip("Enabling this will create a folder named after the current date and time for the relevant logfiles");
     cbOpt1->setChecked(config->getNewLogFolder());
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
     mainLayout->addWidget(btnBox);
