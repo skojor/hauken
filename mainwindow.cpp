@@ -52,40 +52,40 @@ void MainWindow::createActions()
     openAct = new QAction(tr("&Open..."), this);
     openAct->setShortcuts(QKeySequence::Open);
     openAct->setStatusTip(tr("Open an existing configuration file"));
-    connect(openAct, &QAction::triggered, this, open);
+    connect(openAct, &QAction::triggered, this, &MainWindow::open);
 
     saveAct = new QAction(tr("&Save as..."), this);
     saveAct->setShortcuts(QKeySequence::Save);
     saveAct->setStatusTip(tr("Save the current configuration to disk"));
-    connect(saveAct, &QAction::triggered, this, save);
+    connect(saveAct, &QAction::triggered, this, &MainWindow::save);
 
     optStation = new QAction(tr("&General setup"), this);
     optStation->setStatusTip(tr("Basic station setup (position, folders, etc.)"));
-    connect(optStation, &QAction::triggered, this, stnConfig);
+    connect(optStation, &QAction::triggered, this, &MainWindow::stnConfig);
 
     optGnss = new QAction(tr("G&NSS"), this);
     optGnss->setStatusTip(tr("GNSS ports and logging configuration"));
-    connect(optGnss, &QAction::triggered, this, gnssConfig);
+    connect(optGnss, &QAction::triggered, this, &MainWindow::gnssConfig);
 
     optStream = new QAction(tr("&Receiver setup"), this);
     optStream->setStatusTip(tr("Measurement receiver device options"));
-    connect(optStream, &QAction::triggered, this, streamConfig);
+    connect(optStream, &QAction::triggered, this, &MainWindow::streamConfig);
 
     optSdef = new QAction(tr("&SDEF"), this);
     optSdef->setStatusTip(tr("Configuration of 1809 format and options"));
-    connect(optSdef, &QAction::triggered, this, sdefConfig);
+    connect(optSdef, &QAction::triggered, this, &MainWindow::sdefConfig);
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
-    connect(aboutAct, &QAction::triggered, this, about);
+    connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
 
     aboutQtAct = new QAction(tr("About &Qt"), this);
     aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
-    connect(aboutQtAct, &QAction::triggered, this, aboutQt);
+    connect(aboutQtAct, &QAction::triggered, this, &MainWindow::aboutQt);
 
     changelogAct = new QAction(tr("&Changelog"), this);
     changelogAct->setStatusTip(tr("Show the application changelog"));
-    connect(changelogAct, &QAction::triggered, this, changelog);
+    connect(changelogAct, &QAction::triggered, this, &MainWindow::changelog);
 
     exitAct = new QAction(tr("Exit the application"), this);
     exitAct->setStatusTip(tr("Shuts down connections and terminates Hauken"));
