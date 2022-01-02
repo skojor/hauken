@@ -19,8 +19,8 @@ void TraceBuffer::start()
 void TraceBuffer::deleteOlderThan()
 {
     mutex.lock();
-    if (!traceBuffer.isEmpty()) { // failsafe, don't ever delete an empty buffer line!
-        while (datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
+    if (traceBuffer.size() > 2) { // failsafe, don't ever delete an empty buffer line!
+        while (!datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
             displayBuffer.removeFirst();
@@ -33,10 +33,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
     emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
 
-    if (!throttleTimer->isValid())
-        throttleTimer->start();
-
-    mutex.lock();
+    mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
             emptyBuffer();
@@ -46,11 +43,15 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
         traceBuffer.append(calcNormalizedTrace(data));
     else
         traceBuffer.append(data);
+
     if (recording)
         emit traceToRecorder(traceBuffer.last());
 
     datetimeBuffer.append(QDateTime::currentDateTime());
     addDisplayBufferTrace(data);
+
+    if (!throttleTimer->isValid())
+        throttleTimer->start();
 
     if (throttleTimer->elapsed() > throttleTime) {
         throttleTimer->start();
@@ -133,16 +134,12 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     if (averageLevel.at(i) < data.at(i)) averageLevel[i] += avgFactor;
                     else averageLevel[i] -= avgFactor;
                 }
-                avgFactor *= 0.96;
+                if (avgFactor > 1) avgFactor *= 0.96;
             }
             if (data.size() > plotResolution) {
                 double rate = (double)data.size() / plotResolution;
                 int iterator = 0;
                 for (int i=0; i<plotResolution; i++) {
-                    /*int val = 0;
-                for (int j=0; j<(int)rate; j++)
-                    val += averageLevel.at(iterator++);
-                val /= (int)rate;*/
                     averageDispLevel[i] = (double)averageLevel.at(iterator += rate) / 10;
                 }
             }
@@ -185,7 +182,6 @@ void TraceBuffer::finishAvgLevelCalc()
     averageLevelDoneTimer->stop();
     averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime * 1e3); // routine to keep updating the average level at a very slow interval
     emit averageLevelReady(averageLevel);
-    //emit toIncidentLog("Trig level calculated");
 }
 
 void TraceBuffer::restartCalcAvgLevel()
@@ -236,4 +232,5 @@ QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
 void TraceBuffer::maintainAvgLevel()
 {
     calcAvgLevel();
+    emit averageLevelReady(averageLevel); // update trace analyzer with the new avg level data
 }

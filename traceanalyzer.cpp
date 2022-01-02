@@ -8,8 +8,6 @@ TraceAnalyzer::TraceAnalyzer(QSharedPointer<Config> c)
 
 void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 {
-    //if (recorderRunning) emit toRecorder(data);  // forwards one trace line to the sdef recorder. Removed since normalizeSpectrum, now traceBuffer serves this
-
     khzAboveLimit = 0;
     int valuesAboveLimit = 0;
     if (averageData.size() == data.size()) {

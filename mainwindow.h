@@ -55,7 +55,6 @@ private slots:
     void instrAutoAttChanged();
     void instrModeChanged(int a = 0);
     void updInstrButtonsStatus();
-    void setResolutionOrSpan();
     void setValidators();
     void setSignals();
 

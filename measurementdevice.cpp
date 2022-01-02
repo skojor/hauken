@@ -29,6 +29,10 @@ void MeasurementDevice::start()
 
     autoReconnectTimer->setSingleShot(true);
     connect(autoReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::autoReconnectCheckStatus);
+    emit connectedStateChanged(connected);
+
+    connect(tcpStream, &TcpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
+    connect(udpStream, &UdpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
 }
 
 void MeasurementDevice::instrConnect()
@@ -597,4 +601,13 @@ void MeasurementDevice::updSettings()
 
     if (useUdpStream != !config->getInstrUseTcpDatastream())
         useUdpStream = !config->getInstrUseTcpDatastream();
+}
+
+void MeasurementDevice::resetFreqSettings()
+{
+    setPscanFrequency();
+    setPscanResolution();
+    setFfmCenterFrequency();
+    setFfmFrequencySpan();
+    qDebug() << "error handling freq settings";
 }

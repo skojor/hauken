@@ -17,8 +17,8 @@
  * Used for recording data before incident, and for calculating
  * maxhold values. A display container is created with reduced
  * samples to simplify calculations.
- * The 2 min average level is also calculated here, used in
- * normalized spectrum and trig level
+ * The average level is also calculated here, used in
+ * normalized spectrum and trig level settings
  */
 
 class TraceBuffer : public QObject
@@ -33,7 +33,9 @@ public slots:
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
     void restartCalcAvgLevel();
-    void sendDispTrigline() { emit newDispTriglevel(averageDispLevel);}
+    void sendDispTrigline()
+    { if (normalizeSpectrum) emit newDispTriglevel(averageDispLevelNormalized);
+        else emit newDispTriglevel(averageDispLevel);}
     void updSettings();
     void deviceDisconnected();
     void recorderStarted() { recording = true;}

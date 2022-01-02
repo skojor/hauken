@@ -79,6 +79,14 @@ public slots:
     void fftDataHandler(QVector<qint16> &);
     double getTracesPerSec() { return tracesPerSecValue;}
 
+    QStringList getDevicePscanResolutions() { return devicePtr->pscanResolutions;}
+    QStringList getDeviceAntPorts() { return devicePtr->antPorts;}
+    QStringList getDeviceFfmSpans() { return devicePtr->ffmSpans;}
+    Instrument::Mode getCurrentMode() { return devicePtr->mode;}
+    QStringList getDeviceFftModes() { return devicePtr->fftModes;}
+    quint64 getDeviceMinFreq() { return devicePtr->minFrequency;}
+    quint64 getDeviceMaxFreq() { return devicePtr->maxFrequency;}
+
 private slots:
     void scpiConnected();
     void scpiDisconnected();
@@ -101,6 +109,8 @@ private slots:
     void tcpTimeout();
     void handleStreamTimeout();
     void autoReconnectCheckStatus();
+
+    void resetFreqSettings();
 
 private:
     bool connected = false;

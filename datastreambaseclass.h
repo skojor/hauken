@@ -45,6 +45,7 @@ public:
     QTimer *timeoutTimer = new QTimer;
     QElapsedTimer *traceTimer = new QElapsedTimer;
     int traceCtr = 0;
+    int errorCtr = 0;
     const int timeoutInMs = 20000;
 
 public slots:
@@ -62,6 +63,7 @@ public slots:
     bool checkHeader(const QByteArray &);
     bool checkOptHeader(const QByteArray &);
     void readAttrHeader(QDataStream &ds);
+    void readIfpanOptHeader(QDataStream &ds);
     void readPscanOptHeader(QDataStream &ds);
     void fillFft(const QByteArray &);
     void calcBytesPerSecond();
@@ -74,6 +76,7 @@ signals:
     void bytesPerSecond(int);
     void tracesPerSecond(double);
     void timeout();
+    void streamErrorResetFreq();
 
 private slots:
 

@@ -56,7 +56,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
 {
     QVector<double> copy;
 
-    if (!data.isEmpty()) {
+    if (!data.isEmpty() && !freqSelection.isEmpty()) {
         copy = data;
         for (int i=0; i<screenResolution; i++) {
             if (!freqSelection.at(i))

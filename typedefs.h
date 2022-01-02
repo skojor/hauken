@@ -163,7 +163,6 @@ class Device
 {
 public:
     Device() {
-        antPorts << "Default";
     }
     void setType(Instrument::InstrumentType t)
     {
@@ -176,6 +175,21 @@ public:
             id = "EB500";
             attrHeader = true;
             optHeaderEb500 = true;
+            optHeaderIfpan = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts << "(V)UHF";
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                       << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
+            fftModes << "Cl/wr" << "Min" << "Max" << "Avg";
+            minFrequency = 20e6;
+            maxFrequency = 6e9;
         }
         else if (type == Instrument::InstrumentType::EM100) {
             udpStream = true;
@@ -222,11 +236,13 @@ public:
             optHeaderEb500 = true;
         }
     }
+
     Eb200Header mainHeader;
     bool attrHeader = false;
     bool optHeaderDscan = false;
     bool optHeaderPr100 = false;
     bool optHeaderEb500 = false;
+    bool optHeaderIfpan = false;
 
     Instrument::InstrumentType type = Instrument::InstrumentType::UNKNOWN;
     bool udpStream = false;
@@ -236,6 +252,8 @@ public:
     bool hasFfm = true; // think all devices supported have ffm mode
     bool hasPscan = false;
 
+
+
     Instrument::Mode mode = Instrument::Mode::PSCAN;
     quint64 pscanStartFrequency = 0, pscanStopFrequency = 0;
     quint32 pscanResolution;
@@ -244,6 +262,11 @@ public:
     float measurementTime;
     QString id;
     QString longId;
+
+    quint64 minFrequency = 0, maxFrequency = 0;
     QStringList antPorts;
+    QStringList ffmSpans;
+    QStringList pscanResolutions;
+    QStringList fftModes;
 };
 #endif // TYPEDEFS_H
