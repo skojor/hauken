@@ -397,18 +397,18 @@ void MainWindow::setValidators()
 
 void MainWindow::setSignals()
 {
-    connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, instrStartFreqChanged);
-    connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, instrStopFreqChanged);
-    connect(instrResolution, QOverload<int>::of(&QComboBox::currentIndexChanged), this, instrResolutionChanged);
+    connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);
+    connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStopFreqChanged);
+    connect(instrResolution, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrResolutionChanged);
     connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMeasurementTime);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrManAtt);
     connect(instrAutoAtt, &QCheckBox::toggled, this, &MainWindow::instrAutoAttChanged);
     connect(instrAntPort, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrAntPortChanged);
     connect(instrMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrModeChanged);
     connect(instrFftMode, QOverload<int>::of(&QComboBox::currentIndexChanged), config.data(), &Config::setInstrFftMode);
-    connect(instrIpAddr, &QLineEdit::textChanged, this, updInstrButtonsStatus);
-    connect(instrIpAddr, &QLineEdit::editingFinished, this, instrIpChanged);
-    connect(instrPort, &QLineEdit::editingFinished, this, instrPortChanged);
+    connect(instrIpAddr, &QLineEdit::textChanged, this, &MainWindow::updInstrButtonsStatus);
+    connect(instrIpAddr, &QLineEdit::editingFinished, this, &MainWindow::instrIpChanged);
+    connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
     connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect);
     connect(instrDisconnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrDisconnect);
@@ -423,14 +423,14 @@ void MainWindow::setSignals()
     connect(gnssAltOffset, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setGnssAltOffset);
     connect(gnssTimeOffset, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setGnssTimeOffset);
 
-    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, instrConnected);
+    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, &MainWindow::instrConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
 
-    connect(measurementDevice, &MeasurementDevice::popup, this, generatePopup);
-    connect(measurementDevice, &MeasurementDevice::status, this, updateStatusLine);
-    connect(measurementDevice, &MeasurementDevice::instrId, this, updWindowTitle);
-    connect(measurementDevice, &MeasurementDevice::toIncidentLog, this, appendToIncidentLog);
+    connect(measurementDevice, &MeasurementDevice::popup, this, &MainWindow::generatePopup);
+    connect(measurementDevice, &MeasurementDevice::status, this, &MainWindow::updateStatusLine);
+    connect(measurementDevice, &MeasurementDevice::instrId, this, &MainWindow::updWindowTitle);
+    connect(measurementDevice, &MeasurementDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
     connect(measurementDevice, &MeasurementDevice::bytesPerSec, this, &MainWindow::showBytesPerSec);
     connect(measurementDevice, &MeasurementDevice::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
 
