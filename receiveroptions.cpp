@@ -31,7 +31,7 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
     cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, QDialog::close);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
     mainLayout->addWidget(btnBox);
 }
