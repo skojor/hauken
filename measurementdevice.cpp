@@ -53,6 +53,18 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
     }
 }
 
+void MeasurementDevice::scpiWrite(QByteArray data)
+{
+    if (!scpiThrottleTimer->isValid()) scpiThrottleTimer->start();
+
+    while (scpiThrottleTimer->elapsed() < scpiThrottleTime) { // min. x ms time between scpi commands, to give device time to breathe
+        QCoreApplication::processEvents();
+    }
+    scpiThrottleTimer->start();
+    scpiSocket->write(data + '\n');
+    qDebug() << data;
+}
+
 void MeasurementDevice::instrDisconnect()
 {
     if (instrumentState == InstrumentState::CONNECTED) {

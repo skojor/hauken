@@ -6,6 +6,7 @@
 #include <QTcpSocket>
 #include <QDebug>
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QNetworkInterface>
 #include <QList>
 #include <QSharedPointer>
@@ -95,7 +96,7 @@ private slots:
     void delUdpStreams();
     void delTcpStreams();
 
-    void scpiWrite(QByteArray data) { scpiSocket->write(data + '\n'); qDebug() << data; }
+    void scpiWrite(QByteArray data);
     void scpiRead();
     void tcpTimeout();
     void handleStreamTimeout();
@@ -121,6 +122,7 @@ private:
     Instrument::FftMode fftMode;
     QTimer *tcpTimeoutTimer = new QTimer;
     QTimer *autoReconnectTimer = new QTimer;
+    QElapsedTimer *scpiThrottleTimer = new QElapsedTimer;
     bool deviceInUseWarningIssued = false;
     bool useUdpStream = true;
     bool autoReconnect;
@@ -132,6 +134,8 @@ private:
     QByteArray tcpOwnPort = "0";
     QSharedPointer<Config> config;
     double tracesPerSecValue;
+
+    const int scpiThrottleTime = 5; // ms
 };
 
 #endif // MEASUREMENTDEVICE_H

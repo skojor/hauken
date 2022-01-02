@@ -234,13 +234,15 @@ void CustomPlotController::flashTrigline()
 void CustomPlotController::stopFlashTrigline(const QVector<qint16>)
 {
     flashTimer->stop();
-    customPlotPtr->graph(2)->setVisible(true);  //setBrush(colorNormal);
+    customPlotPtr->graph(2)->setBrush(colorNormal);
 }
 
 void CustomPlotController::flashRoutine()
 {
-    if (flip) customPlotPtr->graph(2)->setVisible(false); //customPlotPtr->graph(2)->setBrush(colorNormal);
-    else customPlotPtr->graph(2)->setVisible(true);
-    flip = !flip;
+    if (flip) customPlotPtr->graph(2)->setBrush(colorNormal);
+    else customPlotPtr->graph(2)->setBrush(colorFlash);
+    if (flip) flip = false;
+    else flip = true;
+
     customPlotPtr->replot();
 }
