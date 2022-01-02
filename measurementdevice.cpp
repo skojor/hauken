@@ -10,7 +10,7 @@ void MeasurementDevice::start()
 {
     //connect(scpiSocket, &QTcpSocket::connected, this, scpiConnected); NO! Don't pretend to be connected until we know what we have connected to!
     connect(scpiSocket, &QTcpSocket::disconnected, this, &MeasurementDevice::scpiDisconnected);
-    connect(scpiSocket, &QAbstractSocket::errorOccurred, this, &MeasurementDevice::scpiError);
+    //connect(scpiSocket, &QTcpSocket::errorOccurred, this, &MeasurementDevice::scpiError);
     connect(scpiSocket, &QTcpSocket::stateChanged, this, &MeasurementDevice::scpiStateChanged);
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
     connect(tcpTimeoutTimer, &QTimer::timeout, this, &MeasurementDevice::tcpTimeout);
