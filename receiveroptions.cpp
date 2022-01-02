@@ -30,8 +30,8 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
                                   "amplifier response");
     cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, close);
+    connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, QDialog::close);
 
     mainLayout->addWidget(btnBox);
 }

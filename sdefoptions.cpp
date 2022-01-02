@@ -49,8 +49,8 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     leOpt3->setToolTip("The initials used in the 1809 file header, your own initals or a designated initial for this station");
     leOpt3->setText(config->getSdefStationInitals());
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, close);
+    connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
     mainLayout->addWidget(btnBox);
 }
