@@ -9,20 +9,20 @@ MeasurementDevice::MeasurementDevice(QSharedPointer<Config> c)
 void MeasurementDevice::start()
 {
     //connect(scpiSocket, &QTcpSocket::connected, this, scpiConnected); NO! Don't pretend to be connected until we know what we have connected to!
-    connect(scpiSocket, &QTcpSocket::disconnected, this, scpiDisconnected);
-    connect(scpiSocket, &QTcpSocket::errorOccurred, this, scpiError);
-    connect(scpiSocket, &QTcpSocket::stateChanged, this, scpiStateChanged);
-    connect(scpiSocket, &QTcpSocket::readyRead, this, scpiRead);
-    connect(tcpTimeoutTimer, &QTimer::timeout, this, tcpTimeout);
+    connect(scpiSocket, &QTcpSocket::disconnected, this, &MeasurementDevice::scpiDisconnected);
+    connect(scpiSocket, &QTcpSocket::errorOccurred, this, &MeasurementDevice::scpiError);
+    connect(scpiSocket, &QTcpSocket::stateChanged, this, &MeasurementDevice::scpiStateChanged);
+    connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
+    connect(tcpTimeoutTimer, &QTimer::timeout, this, &MeasurementDevice::tcpTimeout);
 
     connect(tcpStream, &TcpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler);
     connect(udpStream, &UdpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler);
 
     devicePtr = QSharedPointer<Device>(new Device);
-    connect(tcpStream, &TcpDataStream::bytesPerSecond, this, forwardBytesPerSec);
-    connect(udpStream, &UdpDataStream::bytesPerSecond, this, forwardBytesPerSec);
-    connect(tcpStream, &TcpDataStream::tracesPerSecond, this, forwardTracesPerSec);
-    connect(udpStream, &UdpDataStream::tracesPerSecond, this, forwardTracesPerSec);
+    connect(tcpStream, &TcpDataStream::bytesPerSecond, this, &MeasurementDevice::forwardBytesPerSec);
+    connect(udpStream, &UdpDataStream::bytesPerSecond, this, &MeasurementDevice::forwardBytesPerSec);
+    connect(tcpStream, &TcpDataStream::tracesPerSecond, this, &MeasurementDevice::forwardTracesPerSec);
+    connect(udpStream, &UdpDataStream::tracesPerSecond, this, &MeasurementDevice::forwardTracesPerSec);
 
     connect(tcpStream, &TcpDataStream::timeout, this, &MeasurementDevice::handleStreamTimeout);
     connect(udpStream, &UdpDataStream::timeout, this, &MeasurementDevice::handleStreamTimeout);
@@ -473,7 +473,7 @@ void MeasurementDevice::setupTcpStream()
     tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
 
     scpiWrite("trac:tcp:sock?");
-    disconnect(scpiSocket, &QTcpSocket::readyRead, this, scpiRead);
+    disconnect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
     scpiSocket->waitForReadyRead(1000);
     //QThread::msleep(500);
 
@@ -483,7 +483,7 @@ void MeasurementDevice::setupTcpStream()
         tcpOwnAdress = split.at(0).simplified();
         tcpOwnPort = split.at(1).simplified();
     }
-    connect(scpiSocket, &QTcpSocket::readyRead, this, scpiRead);
+    connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
 
     scpiWrite("trac:tcp:tag:on " +
               tcpOwnAdress +
