@@ -54,7 +54,7 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt1->setChecked(config->getNewLogFolder());
 
     connect(btnBox, &QDialogButtonBox::accepted, this, saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, close);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
     mainLayout->addWidget(btnBox);
 }
