@@ -57,14 +57,16 @@ private slots:
     void updInstrButtonsStatus();
     void setValidators();
     void setSignals();
+    void setInputsState(const bool state);
+    void setResolutionFunction();
+    void setDeviceAntPorts();
+    void setDeviceFftModes();
 
     void instrStartFreqChanged();
     void instrStopFreqChanged();
     void instrResolutionChanged(int a = -1);
     void instrMeasurementTimeChanged();
     void instrAttChanged();
-    void instrAntPortChanged(int a = 0);
-    void instrFftModeChanged(int a = 0);
     void instrIpChanged();
     void instrPortChanged();
     void instrConnected(bool state);

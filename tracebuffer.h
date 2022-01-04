@@ -80,7 +80,9 @@ private:
     QMutex mutex;
     int trigLevel;
     double avgFactor;
-    int fftMode = -1;
+    QString fftMode, antPort;
+    bool autoAtt;
+    int att;
     bool normalizeSpectrum;
     bool recording = false;
     const int plotResolution = 600;

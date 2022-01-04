@@ -12,6 +12,8 @@ DataStreamBaseClass::DataStreamBaseClass(QObject *parent)
     connect(bytesPerSecTimer, &QTimer::timeout, this, &DataStreamBaseClass::calcBytesPerSecond);
     bytesPerSecTimer->setInterval(1000);
 
+    timeoutTimer->setSingleShot(true);
+    timeoutTimer->setInterval(timeoutInMs);
     connect(timeoutTimer, &QTimer::timeout, this, &DataStreamBaseClass::timeoutCallback);
 }
 
@@ -64,12 +66,17 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
                      << optHeaderPscanEb500.stepFreq << devicePtr->pscanResolution;*/
             errorCtr++;
 
-            if (errorCtr > 20)
+            if (!errorHandleSent && errorCtr > 20) {
                 emit streamErrorResetFreq();
+                errorHandleSent = true;
+            }
 
             return false;
         }
-        else errorCtr = 0;
+        else {
+            errorCtr = 0;
+            errorHandleSent = false;
+        }
     }
 
     else if (devicePtr->mode == Instrument::Mode::FFM) {

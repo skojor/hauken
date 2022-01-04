@@ -187,7 +187,7 @@ public:
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                        << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
-            fftModes << "Cl/wr" << "Min" << "Max" << "Avg";
+            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
@@ -234,6 +234,19 @@ public:
             attrHeader = true;
             hasPscan = true;
             optHeaderEb500 = true;
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                       << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "50000";
+            fftModes << "Off (cl/wr)" << "Min" << "Max";
+            antPorts << "RX2_A" << "TRX_A";
+            minFrequency = 70e6;
+            maxFrequency = 6e9;
         }
     }
 

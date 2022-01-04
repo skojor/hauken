@@ -39,8 +39,8 @@ void MeasurementDevice::instrConnect()
 {
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
-    emit status("Connecting measurement device...");
-    //tcpTimeoutTimer->start(2000);
+    emit status("Connecting to measurement device...");
+    tcpTimeoutTimer->start(2000);
 }
 
 void MeasurementDevice::scpiConnected()
@@ -162,8 +162,8 @@ void MeasurementDevice::setAutoAttenuator()
 void MeasurementDevice::setAntPort()
 {
     if (connected) {
-        if (!antPort.contains("default", Qt::CaseInsensitive))
-            (void)1; // TODO!!
+        if (!antPort.isEmpty() && !antPort.toLower().contains("default"))
+            scpiWrite("syst:ant:rx " + antPort);
     }
 }
 
@@ -193,10 +193,7 @@ void MeasurementDevice::setMode()
 void MeasurementDevice::setFftMode()
 {
     if (connected) {
-        if (fftMode == Instrument::FftMode::OFF) scpiWrite("calc:ifp:aver:type off");
-        else if (fftMode == Instrument::FftMode::MIN) scpiWrite("calc:ifp:aver:type min");
-        else if (fftMode == Instrument::FftMode::MAX) scpiWrite("calc:ifp:aver:type max");
-        else if (fftMode == Instrument::FftMode::SCALAR) scpiWrite("calc:ifp:aver:type scal");
+        scpiWrite(QByteArray("calc:ifp:aver:type ") + fftMode.toLower());
     }
 }
 
@@ -384,7 +381,7 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
     tcpTimeoutTimer->stop();
     instrDisconnect();
     deviceInUseWarningIssued = true;
-    popup(msg);
+    emit popup(msg);
 }
 
 void MeasurementDevice::stateConnected()
@@ -586,14 +583,17 @@ void MeasurementDevice::updSettings()
         autoAttenuator = config->getInstrAutoAtt();
         setAutoAttenuator();
     }
-    antPort = config->getInstrAntPort();  //TODO
+    if (antPort != config->getInstrAntPort().toLocal8Bit()) {
+        antPort = config->getInstrAntPort().toLocal8Bit();
+        setAntPort();
+    }
 
     if (mode != (Instrument::Mode)config->getInstrMode()) {
         mode = (Instrument::Mode)config->getInstrMode();
         setMode();
     }
-    if (fftMode != (Instrument::FftMode)config->getInstrFftMode()) {
-        fftMode = (Instrument::FftMode)config->getInstrFftMode();
+    if (!fftMode.contains(config->getInstrFftMode().toLocal8Bit())) {
+        fftMode = config->getInstrFftMode().toLocal8Bit();
         setFftMode();
     }
     scpiAddress = new QHostAddress(config->getInstrIpAddr());

@@ -17,7 +17,6 @@ MainWindow::MainWindow(QWidget *parent)
     qApp->setFont(font);
 
     instrMode->addItems(QStringList() << "PScan" << "FFM");
-    instrFftMode->addItems(QStringList() << "Cl/wr" << "Min" << "Max" << "Avg");
 
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
@@ -279,15 +278,14 @@ void MainWindow::getConfigValues()
     instrAutoAtt->setChecked(config->getInstrAutoAtt());
     instrAntPort->setCurrentText(config->getInstrAntPort());
     instrMode->setCurrentIndex(config->getInstrMode());
-    instrFftMode->setCurrentIndex(config->getInstrFftMode());
+    //instrFftMode->setCurrentIndex(config->getInstrFftMode());
     instrIpAddr->setText(config->getInstrIpAddr());
     instrPort->setText(QString::number(config->getInstrPort()));
     instrAutoAttChanged();
     instrModeChanged();
-    instrFftModeChanged();
+    //instrFftModeChanged();
     instrMeasurementTimeChanged();
     instrAttChanged();
-    instrAntPortChanged();
     instrIpChanged();
     instrPortChanged();
 
@@ -367,7 +365,7 @@ void MainWindow::setValidators()
     instrIpAddr->setCursorPosition(0);
 
     instrTrigLevel->setRange(0, 200);
-    instrTrigLevel->setDecimals(1);
+    instrTrigLevel->setDecimals(0);
     instrTrigTime->setRange(0, 9e5);
     instrTrigBandwidth->setRange(0, 9.99e9);
     instrTrigBandwidth->setDecimals(0);
@@ -387,9 +385,9 @@ void MainWindow::setSignals()
     connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMeasurementTime);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrManAtt);
     connect(instrAutoAtt, &QCheckBox::toggled, this, &MainWindow::instrAutoAttChanged);
-    connect(instrAntPort, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrAntPortChanged);
+    connect(instrAntPort, &QComboBox::currentTextChanged, config.data(), &Config::setInstrAntPort);
     connect(instrMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrModeChanged);
-    connect(instrFftMode, QOverload<int>::of(&QComboBox::currentIndexChanged), config.data(), &Config::setInstrFftMode);
+    connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
     connect(instrIpAddr, &QLineEdit::textChanged, this, &MainWindow::updInstrButtonsStatus);
     connect(instrIpAddr, &QLineEdit::editingFinished, this, &MainWindow::instrIpChanged);
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
@@ -509,19 +507,6 @@ void MainWindow::instrAutoAttChanged()
     traceBuffer->restartCalcAvgLevel();
 }
 
-void MainWindow::instrAntPortChanged(int a)
-{
-    (void)a;
-    config->setInstrAntPort(instrAntPort->currentText());
-    traceBuffer->restartCalcAvgLevel();
-}
-
-void MainWindow::instrFftModeChanged(int a)
-{
-    (void)a;
-    config->setInstrFftMode(instrFftMode->currentIndex());
-}
-
 void MainWindow::instrIpChanged()
 {
     config->setInstrIpAddr(instrIpAddr->text());
@@ -534,7 +519,22 @@ void MainWindow::instrPortChanged()
     measurementDevice->setPort(config->getInstrPort());
 }
 
-void MainWindow::instrConnected(bool state)
+void MainWindow::instrConnected(bool state) // takes care of enabling/disabling user inputs
+{
+    setInputsState(state);
+    if (state) { // only do these funcs when connected, if not the device data has not been set
+        setResolutionFunction();
+        setDeviceAntPorts();
+        setDeviceFftModes();
+        instrStartFreq->setMinimum(measurementDevice->getDeviceMinFreq() / 1e6);
+        instrStopFreq->setMaximum(measurementDevice->getDeviceMaxFreq() / 1e6);
+    }
+    else
+        traceBuffer->deviceDisconnected(); // stops buffer work when not needed
+
+}
+
+void MainWindow::setInputsState(const bool state)
 {
     instrStartFreq->setEnabled(state);
     instrStopFreq->setEnabled(state);
@@ -554,29 +554,41 @@ void MainWindow::instrConnected(bool state)
     instrIpAddr->setDisabled(state);
     instrPort->setDisabled(state);
     instrAntPort->setEnabled(state);
-    if (!state) {
-        traceBuffer->deviceDisconnected(); // stops buffer work when not needed
-    }
+}
 
-    if (state) {
-        instrResolution->clear();
-       if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN)
-            instrResolution->addItems(measurementDevice->getDevicePscanResolutions());
-        else
-            instrResolution->addItems(measurementDevice->getDeviceFfmSpans());
-        if (instrResolution->findText(QString::number(config->getInstrResolution())) > 0)
-            instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));
+void MainWindow::setResolutionFunction()
+{
 
-        instrAntPort->clear();
-        instrAntPort->addItems(measurementDevice->getDeviceAntPorts());
-        instrAntPort->setEnabled(instrAntPort->count());
+    instrResolution->clear();
+    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN)
+        instrResolution->addItems(measurementDevice->getDevicePscanResolutions());
+    else
+        instrResolution->addItems(measurementDevice->getDeviceFfmSpans());
+    if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
+        instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));
 
-        instrFftMode->clear();
-        instrFftMode->addItems(measurementDevice->getDeviceFftModes());
-        instrFftMode->setEnabled(instrFftMode->count() > 1);
+}
 
-        instrStartFreq->setMinimum(measurementDevice->getDeviceMinFreq() / 1e6);
-        instrStopFreq->setMaximum(measurementDevice->getDeviceMaxFreq() / 1e6);
+void MainWindow::setDeviceAntPorts()
+{
+    instrAntPort->clear();
+    QString val = config->getInstrAntPort();
+    instrAntPort->addItems(measurementDevice->getDeviceAntPorts());
+    instrAntPort->setEnabled(instrAntPort->count() > 1);
+
+    if (instrAntPort->findText(val) >= 0)
+        instrAntPort->setCurrentIndex(instrAntPort->findText(val));
+}
+
+void MainWindow::setDeviceFftModes()
+{
+    instrFftMode->clear();
+    QString val = config->getInstrFftMode(); // tmp keeper
+    instrFftMode->addItems(measurementDevice->getDeviceFftModes());
+    instrFftMode->setEnabled(instrFftMode->count() > 1); // no point in having 0 choices...
+
+    if (instrFftMode->findText(val) >= 0) {
+        instrFftMode->setCurrentIndex(instrFftMode->findText(val));
     }
 }
 
@@ -685,7 +697,7 @@ void MainWindow::saveConfigValues()
     config->setInstrAutoAtt(instrAutoAtt->isChecked());
     config->setInstrAntPort(instrAntPort->currentText());
     config->setInstrMode(instrMode->currentIndex());
-    config->setInstrFftMode(instrFftMode->currentIndex());
+    config->setInstrFftMode(instrFftMode->currentText());
     config->setInstrIpAddr(instrIpAddr->text());
     config->setInstrPort(instrPort->text().toUInt());
     config->setInstrTrigLevel(instrTrigLevel->value());

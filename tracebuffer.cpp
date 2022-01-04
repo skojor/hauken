@@ -204,8 +204,12 @@ void TraceBuffer::updSettings()
     }
     maxholdTime = config->getPlotMaxholdTime();
     emit showMaxhold((bool)maxholdTime);
-    if (fftMode != (int)config->getInstrFftMode()) {
+    if (fftMode != config->getInstrFftMode() || antPort != config->getInstrAntPort() || // any of these changes should invalidate average level
+            autoAtt != config->getInstrAutoAtt() || att != config->getInstrManAtt()) {
         fftMode = config->getInstrFftMode();
+        antPort = config->getInstrAntPort();
+        autoAtt = config->getInstrAutoAtt();
+        att = config->getInstrManAtt();
         restartCalcAvgLevel();
     }
     normalizeSpectrum = config->getInstrNormalizeSpectrum();

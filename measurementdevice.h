@@ -121,15 +121,15 @@ private:
     QTcpSocket *scpiSocket = new QTcpSocket;
     InstrumentState instrumentState = InstrumentState::DISCONNECTED;
     // pointer below contains what each instr can/cannot do, and needed freq/other settings for packet inspection etc.
-    // used a shared pointer just because I can, and more important because it is safer in multithread env.
+    // used a shared pointer just because I wanted to, and more important because it is safer in multithread env.
     QSharedPointer<Device> devicePtr;
 
     int measurementTime;
     int attenuator;
     bool autoAttenuator;
-    QString antPort;
+    QByteArray antPort;
     Instrument::Mode mode;
-    Instrument::FftMode fftMode;
+    QByteArray fftMode;
     QTimer *tcpTimeoutTimer = new QTimer;
     QTimer *autoReconnectTimer = new QTimer;
     QElapsedTimer *scpiThrottleTimer = new QElapsedTimer;

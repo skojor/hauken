@@ -35,11 +35,11 @@ public slots:
     bool getInstrAutoAtt() { return settings->value("instrAutoAtt", true).toBool(); }
     void setInstrAutoAtt(bool b) { settings->setValue("instrAutoAtt", b); emit settingsUpdated(); }
     QString getInstrAntPort() { return settings->value("instrAntPort", "Default").toString(); }
-    void setInstrAntPort(QString str) { settings->setValue("instrAntPort", str); emit settingsUpdated(); }
+    void setInstrAntPort(QString str) { if (!str.isEmpty()) settings->setValue("instrAntPort", str); emit settingsUpdated(); }
     int getInstrMode() { return settings->value("instrMode", 0).toInt(); }
     void setInstrMode(int val) { settings->setValue("instrMode", val); emit settingsUpdated(); }
-    uint getInstrFftMode() { return settings->value("instrFftMode", 0).toUInt(); }
-    void setInstrFftMode(uint val) { settings->setValue("instrFftMode", val); emit settingsUpdated(); }
+    QString getInstrFftMode() { return settings->value("instrFftMode", 0).toString(); }
+    void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instrFftMode", val); emit settingsUpdated(); }
     QString getInstrIpAddr() { return settings->value("instrIpAddr", "").toString(); }
     void setInstrIpAddr(QString str) { settings->setValue("instrIpAddr", str); emit settingsUpdated(); }
     int getInstrPort() { return settings->value("instrPort", 5555).toInt(); }

@@ -23,12 +23,13 @@ void TcpDataStream::closeListener()
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
     if (state == QAbstractSocket::ConnectedState) {
-        timeoutTimer->start(timeoutInMs);
+        //timeoutTimer->start();
     }
 }
 
 void TcpDataStream::newData()
 {
+    timeoutTimer->start();
     QByteArray data = tcpSocket->readAll();
     QDataStream ds(data);
 

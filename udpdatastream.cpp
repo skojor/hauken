@@ -28,12 +28,14 @@ void UdpDataStream::closeListener()
 void UdpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
     if (state == QAbstractSocket::ConnectedState) {
-        timeoutTimer->start(timeoutInMs);
+        //timeoutTimer->start(timeoutInMs); // stupid, udp conn. is stateless you fool!
     }
 }
 
 void UdpDataStream::newData()
 {
+    timeoutTimer->start();
+
     QByteArray rxData;
 
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
