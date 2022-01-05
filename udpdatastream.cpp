@@ -43,6 +43,6 @@ void UdpDataStream::newData()
         udpSocket->readDatagram(rxData.data(), rxData.size());
     }
     byteCtr += rxData.size();
-    qDebug() << byteCtr;
+    //qDebug() << byteCtr;
     processData(rxData);
 }

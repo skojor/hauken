@@ -109,8 +109,10 @@ void MeasurementDevice::scpiError(QAbstractSocket::SocketError error)
 void MeasurementDevice::setPscanFrequency()
 {
     if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
+        abor();
         scpiWrite("freq:psc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
         scpiWrite("freq:psc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
+        initImm();
         emit resetBuffers();
     }
     else if (connected && devicePtr->hasDscan && devicePtr->mode == Instrument::Mode::PSCAN) { // esmb mode
@@ -123,8 +125,11 @@ void MeasurementDevice::setPscanFrequency()
 
 void MeasurementDevice::setPscanResolution()
 {
-    if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN)
+    if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
+        abor();
         scpiWrite("psc:step " + QByteArray::number((int)devicePtr->pscanResolution));
+        initImm();
+    }
     else if (connected && devicePtr->hasDscan) {
         scpiWrite("bwid " + QByteArray::number((int)devicePtr->pscanResolution));
         scpiWrite("dsc:coun inf");
