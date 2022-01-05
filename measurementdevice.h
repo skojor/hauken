@@ -111,6 +111,8 @@ private slots:
     void autoReconnectCheckStatus();
 
     void resetFreqSettings();
+    void abor() { scpiWrite("abor");}
+    void initImm() { scpiWrite("init:imm");}
 
 private:
     bool connected = false;
