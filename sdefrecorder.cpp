@@ -123,10 +123,10 @@ QByteArray SdefRecorder::createHeader() //TODO: Own dynamic position update!
            << "FreqStart " << QString::number(getInstrStartFreq() * 1e6, 'f', 0) << '\n'
            << "FreqStop " << QString::number(getInstrStopFreq() * 1e6, 'f', 0) << '\n'
            << "AntennaType NoAntenna" << '\n'
-           << "FilterBandwidth " << QString::number(getInstrResolution() * 1e3) << '\n'
+           << "FilterBandwidth " << QString::number(getInstrResolution().toDouble() * 1e3) << '\n'
            << "LevelUnits dBuV" << '\n' \
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
-           << "DataPoints " << QString::number(1 + ((getInstrStopFreq() - getInstrStartFreq()) / (getInstrResolution() / 1e3))) << '\n'
+           << "DataPoints " << QString::number(1 + ((getInstrStopFreq() - getInstrStartFreq()) / (getInstrResolution().toDouble() / 1e3))) << '\n'
            << "ScanTime " << QString::number((double)getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Detector FFM" << '\n'
            << "Note Instrument: " << getInstrId() << "; Hauken_" << QString(SW_VERSION).split('-').at(0) << "\n"

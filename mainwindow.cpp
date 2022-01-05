@@ -289,8 +289,8 @@ void MainWindow::getConfigValues()
     instrIpChanged();
     instrPortChanged();
 
-    if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
-        instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));
+    /*if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
+        instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));*/
 
     updInstrButtonsStatus();
 
@@ -326,7 +326,6 @@ void MainWindow::updInstrButtonsStatus()
 void MainWindow::instrModeChanged(int a)
 {
     (void)a;
-
     if (instrMode->currentIndex() == (int)Instrument::Mode::PSCAN) {
         startFreqLabel->setText("Start frequency (MHz)");
         stopFreqLabel->setDisabled(false);
@@ -342,7 +341,6 @@ void MainWindow::instrModeChanged(int a)
     config->setInstrMode(instrMode->currentIndex());
     instrStartFreqChanged();
     instrStopFreqChanged();
-    instrResolutionChanged();
 }
 
 void MainWindow::setValidators()
@@ -381,7 +379,7 @@ void MainWindow::setSignals()
 {
     connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);
     connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStopFreqChanged);
-    connect(instrResolution, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrResolutionChanged);
+    connect(instrResolution, &QComboBox::currentTextChanged, config.data(), &Config::setInstrResolution);
     connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMeasurementTime);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrManAtt);
     connect(instrAutoAtt, &QCheckBox::toggled, this, &MainWindow::instrAutoAttChanged);
@@ -472,7 +470,7 @@ void MainWindow::instrStartFreqChanged()
         config->setInstrFfmCenterFreq(instrStartFreq->value());
         measurementDevice->setFfmCenterFrequency();
     }
-    traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrStopFreqChanged()
@@ -480,13 +478,7 @@ void MainWindow::instrStopFreqChanged()
     if (config->getInstrMode() == 0) { //Pscan
         config->setInstrStopFreq(instrStopFreq->value());
     }
-    traceBuffer->restartCalcAvgLevel();
-}
-
-void MainWindow::instrResolutionChanged(int a)
-{
-    if (a > 0) config->setInstrResolution(instrResolution->currentText().toDouble());
-    traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrMeasurementTimeChanged()
@@ -497,14 +489,14 @@ void MainWindow::instrMeasurementTimeChanged()
 void MainWindow::instrAttChanged()
 {
     config->setInstrManAtt(instrAtt->text().toInt());
-    traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrAutoAttChanged()
 {
     instrAtt->setDisabled(instrAutoAtt->isChecked());
     config->setInstrAutoAtt(instrAutoAtt->isChecked());
-    traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrIpChanged()
@@ -544,10 +536,8 @@ void MainWindow::setInputsState(const bool state)
     instrAutoAtt->setEnabled(state);
     if (state && instrAutoAtt->isChecked())
         instrAtt->setDisabled(true);
-    else
-        instrAutoAtt->setDisabled(true);
 
-    instrMode->setEnabled(state);
+    instrMode->setEnabled(false);       // disabled until further
     instrFftMode->setEnabled(state);
     instrDisconnect->setEnabled(state);
     instrConnect->setDisabled(state);
@@ -558,15 +548,19 @@ void MainWindow::setInputsState(const bool state)
 
 void MainWindow::setResolutionFunction()
 {
-
     instrResolution->clear();
-    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN)
+    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN) {
+        QString val = config->getInstrResolution();
         instrResolution->addItems(measurementDevice->getDevicePscanResolutions());
-    else
+        if (instrResolution->findText(val) >= 0)
+            instrResolution->setCurrentIndex(instrResolution->findText(val));
+    }
+    else {
+        QString val = config->getInstrResolution();
         instrResolution->addItems(measurementDevice->getDeviceFfmSpans());
-    if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
-        instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));
-
+        if (instrResolution->findText(val) >= 0)
+            instrResolution->setCurrentIndex(instrResolution->findText(val));
+    }
 }
 
 void MainWindow::setDeviceAntPorts()
@@ -691,7 +685,7 @@ void MainWindow::saveConfigValues()
 {
     config->setInstrStartFreq(instrStartFreq->value());
     config->setInstrStopFreq(instrStopFreq->value());
-    config->setInstrResolution(instrResolution->currentText().toDouble());
+    config->setInstrResolution(instrResolution->currentText());
     config->setInstrMeasurementTime(instrMeasurementTime->value());
     config->setInstrManAtt(instrAtt->text().toUInt());
     config->setInstrAutoAtt(instrAutoAtt->isChecked());

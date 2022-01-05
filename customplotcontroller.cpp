@@ -212,12 +212,12 @@ void CustomPlotController::updSettings()
 {
     if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrStartFreq()
             || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
-            || (int)(resolution * 1000) != (int)(config->getInstrResolution() * 1000)
+            || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)
             || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
             || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
         startFreq = config->getInstrStartFreq();
         stopFreq = config->getInstrStopFreq();
-        resolution = config->getInstrResolution();
+        resolution = config->getInstrResolution().toDouble();
         customPlotPtr->xAxis->setRangeLower(startFreq);
         customPlotPtr->xAxis->setRangeUpper(stopFreq);
         customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());

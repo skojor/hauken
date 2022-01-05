@@ -89,5 +89,5 @@ void TraceAnalyzer::updSettings()
     trigTime = config->getInstrMinTrigTime();
     startFreq = config->getInstrStartFreq();
     stopFreq = config->getInstrStopFreq();
-    resolution = config->getInstrResolution();
+    resolution = config->getInstrResolution().toDouble();
 }

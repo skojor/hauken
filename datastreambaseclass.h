@@ -66,6 +66,8 @@ public slots:
     void readAttrHeader(QDataStream &ds);
     void readIfpanOptHeader(QDataStream &ds);
     void readPscanOptHeader(QDataStream &ds);
+    void readDscanOptHeader(QDataStream &ds);
+    void readAvdOptHeader(QDataStream &ds);
     void fillFft(const QByteArray &);
     void calcBytesPerSecond();
     int calcPscanPointsPerTrace();

@@ -55,6 +55,8 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
         askId();
         emit status("Measurement device connected, asking for ID");
     }
+    else if (state == QAbstractSocket::UnconnectedState)
+        instrDisconnect();
 }
 
 void MeasurementDevice::scpiWrite(QByteArray data)
@@ -106,28 +108,38 @@ void MeasurementDevice::scpiError(QAbstractSocket::SocketError error)
 
 void MeasurementDevice::setPscanFrequency()
 {
-    if (connected && devicePtr->hasPscan) {
+    if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
         scpiWrite("freq:psc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
         scpiWrite("freq:psc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
         emit resetBuffers();
     }
+    else if (connected && devicePtr->hasDscan && devicePtr->mode == Instrument::Mode::PSCAN) { // esmb mode
+        scpiWrite("freq:dsc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
+        scpiWrite("freq:dsc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
+        emit resetBuffers();
+    }
+
 }
 
 void MeasurementDevice::setPscanResolution()
 {
-    if (connected && devicePtr->hasPscan)
-        scpiWrite("psc:step " + QByteArray::number(devicePtr->pscanResolution, 'f', 3));
+    if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN)
+        scpiWrite("psc:step " + QByteArray::number((int)devicePtr->pscanResolution));
+    else if (connected && devicePtr->hasDscan) {
+        scpiWrite("bwid " + QByteArray::number((int)devicePtr->pscanResolution));
+        scpiWrite("dsc:coun inf");
+    }
 }
 
 void MeasurementDevice::setFfmCenterFrequency()
 {
-    if (connected && devicePtr->hasFfm)
+    if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
         scpiWrite("freq " + QByteArray::number(devicePtr->ffmCenterFrequency));
 }
 
 void MeasurementDevice::setFfmFrequencySpan()
 {
-    if (connected && devicePtr->hasFfm)
+    if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
         scpiWrite("freq:span " + QByteArray::number(devicePtr->ffmFrequencySpan));
 }
 
@@ -142,14 +154,18 @@ void MeasurementDevice::setMeasurementTime()
 
 void MeasurementDevice::setAttenuator()
 {
-    if (connected)
+    if (connected && !devicePtr->hasAttOnOff)
         scpiWrite("inp:att " + QByteArray::number(attenuator));
+    else if (connected && devicePtr->hasAttOnOff) {
+        if (attenuator > 0) scpiWrite("inp:att:stat on");
+        else scpiWrite("inp:att:stat off");
+    }
 }
 
 
 void MeasurementDevice::setAutoAttenuator()
 {
-    if (connected) {
+    if (connected && devicePtr->hasAutoAtt) {
         QByteArray text;
         if (autoAttenuator)
             text = "inp:att:auto on";
@@ -161,10 +177,8 @@ void MeasurementDevice::setAutoAttenuator()
 
 void MeasurementDevice::setAntPort()
 {
-    if (connected) {
-        if (!antPort.isEmpty() && !antPort.toLower().contains("default"))
-            scpiWrite("syst:ant:rx " + antPort);
-    }
+    if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default"))
+        scpiWrite("syst:ant:rx " + antPort);
 }
 
 QStringList MeasurementDevice::getAntPorts()
@@ -192,8 +206,11 @@ void MeasurementDevice::setMode()
 
 void MeasurementDevice::setFftMode()
 {
-    if (connected) {
+    if (connected && devicePtr->hasAvgType && devicePtr->hasPscan) {
         scpiWrite(QByteArray("calc:ifp:aver:type ") + fftMode.toLower());
+    }
+    else if (connected && devicePtr->hasAvgType && devicePtr->hasDscan) {
+        scpiWrite(QByteArray("calc:dsc:aver:type ") + fftMode.toLower());
     }
 }
 
@@ -213,6 +230,8 @@ void MeasurementDevice::askId()
 
 void MeasurementDevice::checkId(const QByteArray buffer)
 {
+    devicePtr->clearSettings();
+
     if (buffer.contains("EB500"))
         devicePtr->setType(InstrumentType::EB500);
     else if (buffer.contains("PR100"))
@@ -413,6 +432,7 @@ void MeasurementDevice::tcpTimeout()
 void MeasurementDevice::delUdpStreams()
 {
     scpiWrite("trac:udp:del all");
+
     udpStream->closeListener();
 }
 
@@ -486,6 +506,9 @@ void MeasurementDevice::setupTcpStream()
     }
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
 
+    QByteArray em200Specific;
+    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+
     scpiWrite("trac:tcp:tag:on " +
               tcpOwnAdress +
               ", " +
@@ -498,7 +521,7 @@ void MeasurementDevice::setupTcpStream()
               ", " +
               //scpiSocket->localAddress().toString().toLocal8Bit() +
               //"', " +
-              tcpOwnPort + ", 'volt:ac', 'opt'");
+              tcpOwnPort + ", 'volt:ac', 'opt'" + em200Specific);
 }
 
 void MeasurementDevice::setupUdpStream()
@@ -510,6 +533,9 @@ void MeasurementDevice::setupUdpStream()
     else if (mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
     else if (mode == Mode::FFM) modeStr = "ifpan";
 
+    QByteArray em200Specific;
+    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+
     scpiWrite("trac:udp:tag:on '" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
               "', " +
@@ -518,7 +544,7 @@ void MeasurementDevice::setupUdpStream()
     scpiWrite("trac:udp:flag:on '" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
               "', " +
-              QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'");
+              QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
 }
 
 void MeasurementDevice::forwardBytesPerSec(int val)
@@ -533,14 +559,20 @@ void MeasurementDevice::fftDataHandler(QVector<qint16> &data)
 
 void MeasurementDevice::handleStreamTimeout()
 {
-    tcpTimeoutTimer->stop();
-    if (autoReconnect) { // check stream settings regularly to see if device is available again
-        autoReconnectTimer->start(15000);
-        if (!autoReconnectInProgress) emit toIncidentLog(devicePtr->id + ": Lost datastream. Auto reconnect enabled, waiting for device to be available again");
+    if (connected) {
+        tcpTimeoutTimer->stop();
+        if (autoReconnect) { // check stream settings regularly to see if device is available again
+            autoReconnectTimer->start(15000);
+            if (!autoReconnectInProgress) emit toIncidentLog(devicePtr->id + ": Lost datastream. Auto reconnect enabled, waiting for device to be available again");
+        }
+        else {
+            emit toIncidentLog(devicePtr->id + ": Datastream timed out and reconnect is disabled, disconnecting");
+            instrDisconnect();
+        }
     }
     else {
-        emit toIncidentLog(devicePtr->id + ": Datastream timed out and reconnect is disabled, disconnecting");
-        instrDisconnect();
+        udpStream->closeListener();
+        tcpStream->closeListener();
     }
 }
 
@@ -552,15 +584,14 @@ void MeasurementDevice::autoReconnectCheckStatus()
 
 void MeasurementDevice::updSettings()
 {
-
     if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
-            devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) && config->getInstrStopFreq() > config->getInstrStartFreq()) {
+         devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) && config->getInstrStopFreq() > config->getInstrStartFreq()) {
         devicePtr->pscanStartFrequency = config->getInstrStartFreq() * 1e6;
         devicePtr->pscanStopFrequency = config->getInstrStopFreq() * 1e6;
         setPscanFrequency();
     }
-    if (devicePtr->pscanResolution != config->getInstrResolution() * 1e3) {
-        devicePtr->pscanResolution = config->getInstrResolution() * 1e3;
+    if (devicePtr->pscanResolution != config->getInstrResolution().toDouble() * 1e3) {
+        devicePtr->pscanResolution = config->getInstrResolution().toDouble() * 1e3;
         setPscanResolution();
     }
     if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {

@@ -21,6 +21,7 @@ enum class Tags
 {
     FSCAN   =     101,
     MSCAN   =     201,
+    DSCAN   =     301,
     AUDIO   =     401,
     IFPAN   =     501,
     CW      =     801,
@@ -164,6 +165,26 @@ class Device
 public:
     Device() {
     }
+    void clearSettings()
+    {
+        attrHeader = false;
+        optHeaderDscan = false;
+        optHeaderPr100 = false;
+        optHeaderEb500 = false;
+        optHeaderIfpan = false;
+
+        type = Instrument::InstrumentType::UNKNOWN;
+        udpStream = false;
+        tcpStream = false;
+        systManLocName = false;
+        advProtocol = false;
+        hasFfm = true; // think all devices supported have ffm mode
+        hasPscan = false;
+        hasDscan = false;
+        hasAvgType = false;
+        hasAutoAtt = false;
+        hasAttOnOff = false;
+    }
     void setType(Instrument::InstrumentType t)
     {
         type = t;
@@ -172,6 +193,8 @@ public:
             tcpStream = true;
             systManLocName = true;
             hasPscan = true;
+            hasAvgType = true;
+            hasAutoAtt = true;
             id = "EB500";
             attrHeader = true;
             optHeaderEb500 = true;
@@ -186,16 +209,34 @@ public:
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
-                       << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
             fftModes << "Off (clwr)" << "Min" << "Max" << "Avg";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
         else if (type == Instrument::InstrumentType::EM100) {
             udpStream = true;
-            id = "EM100";
             hasPscan = true;
+            hasAvgType = true;
+            hasAutoAtt = true;
+            id = "EB500";
+            attrHeader = true;
             optHeaderPr100 = true;
+            optHeaderIfpan = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts << "Default";
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000";
+            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg";
+            minFrequency = 20e6;
+            maxFrequency = 6e9;
         }
         else if (type == Instrument::InstrumentType::EM200) {
             udpStream = true;
@@ -204,12 +245,43 @@ public:
             advProtocol = true;
             id = "EM200";
             hasPscan = true;
+            hasAvgType = true;
+            hasAutoAtt = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts << "Default";
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
+            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg";
+            minFrequency = 8e3;
+            maxFrequency = 6e9;
         }
         else if (type == Instrument::InstrumentType::ESMB) {
             udpStream = true;
             attrHeader = true;
             optHeaderDscan = true;
             id = "ESMB";
+            hasDscan = true;
+            hasAutoAtt = true;
+            hasAvgType = true;
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            pscanResolutions << "0.15" << "0.3" << "0.6" << "1" << "1.5"
+                             << "2.4" << "3" << "4" << "8" << "15" << "120";
+            ffmSpans << "25" << "50" << "100" << "200" << "500" << "1000";
+            fftModes << "Off" << "Max";
+            antPorts << "Default";
+            minFrequency = 9e3;
+            maxFrequency = 2.999e9;
+            hasAttOnOff = true;
         }
         else if (type == Instrument::InstrumentType::PR100) {
             udpStream = true;
@@ -238,11 +310,11 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
-            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
-                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
-                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
-            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
-                       << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "50000";
+            hasAvgType = true;
+            hasAutoAtt = true;
+            pscanResolutions << "0.625" << "1.25" << "2" << "2.5" << "3.125" << "5"
+                             << "6.25" << "8.33" << "10" << "12.5" << "20" << "25" << "50";
+            ffmSpans << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "50000";
             fftModes << "Off (cl/wr)" << "Min" << "Max";
             antPorts << "RX2_A" << "TRX_A";
             minFrequency = 70e6;
@@ -264,8 +336,10 @@ public:
     bool advProtocol = false;
     bool hasFfm = true; // think all devices supported have ffm mode
     bool hasPscan = false;
-
-
+    bool hasDscan = false;
+    bool hasAvgType = false;
+    bool hasAutoAtt = false;
+    bool hasAttOnOff = false;
 
     Instrument::Mode mode = Instrument::Mode::PSCAN;
     quint64 pscanStartFrequency = 0, pscanStopFrequency = 0;

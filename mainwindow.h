@@ -64,7 +64,6 @@ private slots:
 
     void instrStartFreqChanged();
     void instrStopFreqChanged();
-    void instrResolutionChanged(int a = -1);
     void instrMeasurementTimeChanged();
     void instrAttChanged();
     void instrIpChanged();

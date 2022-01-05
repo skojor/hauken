@@ -22,8 +22,8 @@ public slots:
     void setInstrStartFreq(double val) { settings->setValue("instrStartFreq", val); emit settingsUpdated();}
     double getInstrStopFreq() { return settings->value("instrStopFreq", 1610).toDouble(); emit settingsUpdated();}
     void setInstrStopFreq(double val) { settings->setValue("instrStopFreq", val); emit settingsUpdated(); }
-    double getInstrResolution() { return settings->value("instrResolution", 1).toDouble(); }
-    void setInstrResolution(double f) { settings->setValue("instrResolution", f); emit settingsUpdated(); }
+    QString getInstrResolution() { return settings->value("instrResolution", 1).toString(); }
+    void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instrResolution", f); emit settingsUpdated(); }
     double getInstrFfmCenterFreq() { return settings->value("instrFftCenterFreq", 1560).toDouble();}
     void setInstrFfmCenterFreq(double f) { settings->setValue("instrFftCenterFreq", f); emit settingsUpdated();}
     int getInstrFfmSpan() { return settings->value("instrFftSpan", 2000).toInt();}
