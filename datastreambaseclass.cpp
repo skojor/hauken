@@ -29,7 +29,7 @@ bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the ini
     ds >> header.magicNumber >> header.versionMinor >> header.versionMajor >> header.seqNumber
             >> header.reserved >> header.dataSize;
     if (header.magicNumber != 0x000eb200) {
-        qDebug() << "Packet magic number != 0x000eb200, not Rohde & Schwarz?";
+        qDebug() << "Packet magic number != 0x000eb200, not Rohde & Schwarz?" << header.magicNumber << header.seqNumber << header.dataSize;
         return false;
     }
 
@@ -49,12 +49,15 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
 
     if (devicePtr->attrHeader)
         readAttrHeader(ds);
+    else if (devicePtr->advProtocol)
+        readAdvHeader(ds);
 
     if (devicePtr->mode == Instrument::Mode::PSCAN) {
         quint64 startFreq = 0, stopFreq = 0;
         quint32 stepFreq = 0;
 
-        if ((devicePtr->optHeaderPr100 || devicePtr->optHeaderEb500) && attrHeader.optHeaderLength) {
+        if (((devicePtr->optHeaderPr100 || devicePtr->optHeaderEb500) && attrHeader.optHeaderLength) ||
+                (devicePtr->advProtocol && genAttrAdvHeader.optHeaderLength)) {
             readPscanOptHeader(ds);
             startFreq = (quint64)optHeaderPscanEb500.startFreqHigh << 32 | optHeaderPscanEb500.startFreqLow;
             stopFreq  = (quint64)optHeaderPscanEb500.stopFreqHigh << 32 | optHeaderPscanEb500.stopFreqLow;
@@ -64,7 +67,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
             readDscanOptHeader(ds);
             startFreq = esmbOptHeader.startFreq;
             stopFreq  = esmbOptHeader.stopFreq;
-            stepFreq  = esmbOptHeader.stepFreq * 2;
+            stepFreq  = esmbOptHeader.stepFreq;
         }
 
         if (startFreq != devicePtr->pscanStartFrequency ||
@@ -93,7 +96,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
         quint64 ffmFreq = (quint64)optHeaderIfPanEb500.freqHigh << 32 | optHeaderIfPanEb500.freqLow;
         if (ffmFreq != devicePtr->ffmCenterFrequency ||
                 optHeaderIfPanEb500.freqSpan != devicePtr->ffmFrequencySpan) {
-            qDebug() << "chujowe frekvenser" << ffmFreq << devicePtr->ffmCenterFrequency << optHeaderIfPanEb500.freqSpan << devicePtr->ffmFrequencySpan;
+            qDebug() << "chuj" << ffmFreq << devicePtr->ffmCenterFrequency << optHeaderIfPanEb500.freqSpan << devicePtr->ffmFrequencySpan;
             return false;
         }
     }
@@ -129,9 +132,13 @@ void DataStreamBaseClass::readDscanOptHeader(QDataStream &ds)
             >> esmbOptHeader.markFreq >> esmbOptHeader.bwZoom >> esmbOptHeader.refLevel;
 }
 
-void DataStreamBaseClass::readAvdOptHeader(QDataStream &ds)
+void DataStreamBaseClass::readAdvHeader(QDataStream &ds)
 {
-
+    ds >> genAttrAdvHeader.tag >> genAttrAdvHeader.reserved >> genAttrAdvHeader.length
+            >> genAttrAdvHeader.res1 >> genAttrAdvHeader.res2 >> genAttrAdvHeader.res3 >> genAttrAdvHeader.res4
+            >> genAttrAdvHeader.numItems >> genAttrAdvHeader.channelNumber >> genAttrAdvHeader.optHeaderLength
+            >> genAttrAdvHeader.selectorFlagsLow >> genAttrAdvHeader.selectorFlagsHigh
+            >> genAttrAdvHeader.res5 >> genAttrAdvHeader.res6 >> genAttrAdvHeader.res7 >> genAttrAdvHeader.res8;
 }
 
 void DataStreamBaseClass::fillFft(const QByteArray &buf)
@@ -143,16 +150,21 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
     if (devicePtr->attrHeader) {
         skipBytes += attrHeader.size + attrHeader.optHeaderLength;
     }
+    else if (devicePtr->advProtocol)
+        skipBytes += genAttrAdvHeader.size + genAttrAdvHeader.optHeaderLength;
+
     ds.skipRawData(skipBytes);
 
     qint16 data;
-    if (devicePtr->mode == Instrument::Mode::PSCAN && attrHeader.tag == (int)Instrument::Tags::PSCAN) {
+    if (devicePtr->mode == Instrument::Mode::PSCAN && (attrHeader.tag == (int)Instrument::Tags::PSCAN || genAttrAdvHeader.tag == (int)Instrument::Tags::ADVPSC)) {
         while (!ds.atEnd())
         {
             ds >> data;
             if (data != 2000) fft.append(data);
             else {
                 if (fft.size() >= calcPscanPointsPerTrace()) {
+                    //qDebug() << calcPscanPointsPerTrace();
+                    if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "stor pakke" << fft.size() - calcPscanPointsPerTrace();
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);
@@ -176,6 +188,8 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
             if (data != 2000) fft.append(data);
             else {
                 if (fft.size() >= calcPscanPointsPerTrace()) {
+                    if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "stor pakke" << fft.size() << calcPscanPointsPerTrace();
+
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);

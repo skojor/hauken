@@ -43,6 +43,26 @@ void UdpDataStream::newData()
         udpSocket->readDatagram(rxData.data(), rxData.size());
     }
     byteCtr += rxData.size();
-    //qDebug() << byteCtr;
     processData(rxData);
+    /*QDataStream ds(rxData);
+
+    while (!ds.atEnd()) {
+        uchar tmp;
+        ds >> tmp;
+        udpBuffer.append(tmp);
+
+        if (!headerIsRead and udpBuffer.size() > 15) {
+            if (!checkHeader(udpBuffer)) {
+                qDebug() << "udp header fail" << header.dataSize;
+                udpBuffer.clear();
+            }
+            else
+                headerIsRead = true;
+        }
+        else if (headerIsRead && udpBuffer.size() >= (int)header.dataSize) {
+            processData(udpBuffer);
+            headerIsRead = false;
+            udpBuffer.clear();
+        }
+    }*/
 }

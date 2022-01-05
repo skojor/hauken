@@ -19,6 +19,8 @@ public slots:
 signals:
 
 private:
+    bool headerIsRead = false;
+
 };
 
 #endif // UDPDATASTREAM_H

@@ -100,13 +100,12 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
-        int iterator = 0;
         for (int i=0; i<plotResolution; i++) {
             /*int val = 0;
             for (int j=0; j<(int)rate; j++)
                 val += data.at(iterator++);
             val /= (int)rate;*/
-            displayData[i] = (double)data.at(iterator += rate) / 10;
+            displayData[i] = (double)data.at((int)(rate * i)) / 10;
         }
     }
     else {
@@ -138,9 +137,9 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
             }
             if (data.size() > plotResolution) {
                 double rate = (double)data.size() / plotResolution;
-                int iterator = 0;
                 for (int i=0; i<plotResolution; i++) {
-                    averageDispLevel[i] = (double)averageLevel.at(iterator += rate) / 10;
+                    averageDispLevel[i] = (double)averageLevel.at((int)(rate * i)) / 10;
+
                 }
             }
             else {
@@ -182,6 +181,7 @@ void TraceBuffer::finishAvgLevelCalc()
     averageLevelDoneTimer->stop();
     averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime * 1e3); // routine to keep updating the average level at a very slow interval
     emit averageLevelReady(averageLevel);
+    emit stopAvgLevelFlash();
 }
 
 void TraceBuffer::restartCalcAvgLevel()

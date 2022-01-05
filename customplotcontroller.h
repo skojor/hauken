@@ -34,7 +34,7 @@ public slots:
     void doReplot();
     void updSettings();
     void flashTrigline();
-    void stopFlashTrigline(const QVector<qint16>);
+    void stopFlashTrigline();
     void updDeviceConnected(bool b);
 
 private slots:
@@ -68,7 +68,7 @@ private:
     QColor colorFlash = QColor(0, 150, 0, 20);
     bool flip = true;
     bool deviceConnected = false;
-    const int screenResolution = 600;
+    const int screenResolution = 2400;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H

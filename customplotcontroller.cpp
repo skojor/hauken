@@ -235,19 +235,15 @@ void CustomPlotController::flashTrigline()
     if (deviceConnected) flashTimer->start(500);
 }
 
-void CustomPlotController::stopFlashTrigline(const QVector<qint16>)
+void CustomPlotController::stopFlashTrigline()
 {
     flashTimer->stop();
-    customPlotPtr->graph(2)->setBrush(colorNormal);
+    customPlotPtr->graph(2)->setVisible(true);
 }
 
 void CustomPlotController::flashRoutine()
 {
-    if (flip) customPlotPtr->graph(2)->setBrush(colorNormal);
-    else customPlotPtr->graph(2)->setBrush(colorFlash);
-    if (flip) flip = false;
-    else flip = true;
-
+    customPlotPtr->graph(2)->setVisible(flip = !flip);
     customPlotPtr->replot();
 }
 

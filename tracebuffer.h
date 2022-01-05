@@ -49,6 +49,7 @@ signals:
     void toIncidentLog(QString);
     void reqReplot();
     void averageLevelReady(const QVector<qint16> &data);
+    void stopAvgLevelFlash();
     void averageLevelCalculating();
     void historicData(const QList<QDateTime>, const QList<QVector<qint16> >data);
     void traceToAnalyzer(const QVector<qint16> &data);
@@ -85,7 +86,7 @@ private:
     int att;
     bool normalizeSpectrum;
     bool recording = false;
-    const int plotResolution = 600;
+    const int plotResolution = 2400;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 60; // secs

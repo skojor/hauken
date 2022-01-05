@@ -2,16 +2,24 @@
 
 SdefRecorder::SdefRecorder()
 {
+    qDebug() << "Working folder" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
 }
 
 void SdefRecorder::start()
 {
+    process = new QProcess;
     recordingStartedTimer = new QTimer;
     recordingTimeoutTimer = new QTimer;
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
     connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::finishRecording);
     connect(recordingTimeoutTimer, &QTimer::timeout, this, &SdefRecorder::restartRecording);
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        [=](int exitCode, QProcess::ExitStatus exitStatus)
+    {
+        qDebug() << "process exit code" << exitStatus << exitCode;
+    });
+
 }
 
 void SdefRecorder::updSettings()
@@ -63,8 +71,8 @@ QString SdefRecorder::createFilename()
     }
 
     ts << dir << "/" << getSdefStationInitals() << "_"
-       << QString::number(getInstrStartFreq() * 1e6, 'f', 0) << "-"
-       << QString::number(getInstrStopFreq() * 1e6, 'f', 0) << "_"
+       << QString::number(getInstrStartFreq() * 1e3, 'f', 0) << "-"
+       << QString::number(getInstrStopFreq() * 1e3, 'f', 0) << "_"
        << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm")
        << ".cef";
 
@@ -129,7 +137,7 @@ QByteArray SdefRecorder::createHeader() //TODO: Own dynamic position update!
            << "DataPoints " << QString::number(1 + ((getInstrStopFreq() - getInstrStartFreq()) / (getInstrResolution().toDouble() / 1e3))) << '\n'
            << "ScanTime " << QString::number((double)getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Detector FFM" << '\n'
-           << "Note Instrument: " << getInstrId() << "; Hauken_" << QString(SW_VERSION).split('-').at(0) << "\n"
+           << "Note Instrument: " << getInstrId() << "; Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
            << "Note\nNote " << getSdefStationInitals() << ", MaxHoldTime: " << QString::number(1 / tracePerSecond, 'f', 2)
            << ", Attenuator: " << (getInstrAutoAtt()? "Auto" : QString::number(getInstrManAtt()))
            << "\n\n";
@@ -152,12 +160,14 @@ void SdefRecorder::finishRecording()
     emit recordingEnded();
     if (getSdefSaveToFile())
         if (recordingTimeoutTimer->isActive()) emit toIncidentLog("Recording ended after "
-                           + QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                           + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes"));
+                                                                  + QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                                                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes"));
 
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
     if (file.isOpen()) file.close();
+    if (getSdefUploadFile()) uploadToCasper();
+
     if (!failed)
         recording = historicDataSaved = failed = false;
 }
@@ -165,4 +175,37 @@ void SdefRecorder::finishRecording()
 void SdefRecorder::restartRecording()
 {
     finishRecording(); // basically the same operation, recording should restart anyway.
+}
+
+bool SdefRecorder::uploadToCasper()
+{
+    // parameters check
+    if (getSdefStationInitals().isEmpty() or getSdefUsername().isEmpty() or getSdefPassword().isEmpty()
+            or getStationName().isEmpty()) {
+        emit toIncidentLog("Upload requested, but some parameters are missing in the config. Check it out");
+        return false;
+    }
+    if ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0) {
+        emit toIncidentLog("Upload requested, but the current position is set to equator. Somehow I doubt it");
+        return false;
+    }
+
+    QStringList l;
+    process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
+    process->setStandardOutputFile(getWorkFolder() + "/.process.out");
+    process->setStandardErrorFile(getWorkFolder() + "/.process.err");
+
+    if (QSysInfo::kernelType().contains("win")) {
+        l << "/C" << "upload.bat" << file.fileName() << getSdefUsername() << getSdefPassword();
+        process->setProgram("cmd.exe");
+    }
+    else if (QSysInfo::kernelType().contains("linux")) {
+        l << "upload.sh" << file.fileName() << getSdefUsername() << getSdefPassword();
+        process->setProgram("bash");
+    }
+
+    process->setArguments(l);
+    process->startDetached();
+
+    return true;
 }

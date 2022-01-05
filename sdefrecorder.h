@@ -3,6 +3,8 @@
 
 //#include <QObject>
 #include <QFile>
+#include <QCoreApplication>
+#include <QProcess>
 #include <QDir>
 #include <QDataStream>
 #include <QDebug>
@@ -18,6 +20,7 @@
  * Class to take care of recording to file in sdef format.
  * Should run in its own thread, as this can be rather I/O unfriendly, at least
  * on a tiny RPi with a slow SD card.
+ * Also takes care of eventual uploading to Casper the friendly cat
  */
 
 class SdefRecorder : public Config
@@ -41,6 +44,8 @@ private slots:
     void finishRecording();
     void restartRecording();
     QString createFilename();
+    bool uploadToCasper();
+
 signals:
     void recordingStarted();
     void recordingEnded();
@@ -61,6 +66,7 @@ private:
     bool saveToSdef;
     int recordTime;
     int maxRecordTime;
+    QProcess *process;
 };
 
 #endif // SDEFRECORDER_H

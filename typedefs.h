@@ -26,7 +26,8 @@ enum class Tags
     IFPAN   =     501,
     CW      =     801,
     PSCAN   =    1201,
-    GPSC    =    1801
+    GPSC    =    1801,
+    ADVPSC  =   11201
 };
 
 enum class InstrumentState {
@@ -157,8 +158,14 @@ public:
     quint32 optHeaderLength = 0;
     quint32 selectorFlagsLow = 0;
     quint32 selectorFlagsHigh = 0;
-    const int size = 44;
+    quint32 res5 = 0;
+    quint32 res6 = 0;
+    quint32 res7 = 0;
+    quint32 res8 = 0;
+    const int size = 60;
 };
+
+//class OptHeaderEM200  just use pscan opt header
 
 class Device
 {
@@ -204,7 +211,7 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
-            antPorts << "(V)UHF";
+            antPorts << "Default";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
@@ -253,13 +260,13 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
-            antPorts << "Default";
+            antPorts << "Ant1" << "Ant2";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
-            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg";
+            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg" << "APeak";
             minFrequency = 8e3;
             maxFrequency = 6e9;
         }
@@ -275,8 +282,9 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
-            pscanResolutions << "0.15" << "0.3" << "0.6" << "1" << "1.5"
-                             << "2.4" << "3" << "4" << "8" << "15" << "120";
+            pscanResolutions << "0.075" << "0.15" << "0.3" << "0.5" << "0.75"
+                             << "1.2" << "1.5" << "2" << "3" << "4" << "4.5" << "7.5"
+                             << "15" << "50" << "60" << "75" << "125" << "150";
             ffmSpans << "25" << "50" << "100" << "200" << "500" << "1000";
             fftModes << "Off" << "Max";
             antPorts << "Default";
@@ -285,11 +293,28 @@ public:
             hasAttOnOff = true;
         }
         else if (type == Instrument::InstrumentType::PR100) {
-            udpStream = true;
-            id = "PR100";
             hasPscan = true;
+            hasAvgType = false;
+            hasAutoAtt = true;
+            id = "EB500";
             attrHeader = true;
             optHeaderPr100 = true;
+            optHeaderIfpan = true;
+            hasAttOnOff = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts << "Default";
+            pscanResolutions << "0.125" << "0.250" << "0.625"
+                             << "1.25" << "2" << "3.125" << "6.25" << "12.5"
+                             << "25" << "50";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000";
+            fftModes << "Off (clwr)";
+            minFrequency = 20e6;
+            maxFrequency = 6e9;
         }
         else if (type == Instrument::InstrumentType::PR200) {
             udpStream = true;

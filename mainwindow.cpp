@@ -426,7 +426,7 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::reqReplot, customPlotController, &CustomPlotController::doReplot);
     connect(customPlotController, &CustomPlotController::reqTrigline, traceBuffer, &TraceBuffer::sendDispTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, customPlotController, &CustomPlotController::flashTrigline);
-    connect(traceBuffer, &TraceBuffer::averageLevelReady, customPlotController, &CustomPlotController::stopFlashTrigline);
+    connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, customPlotController, &CustomPlotController::stopFlashTrigline);
 
     connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
     //connect(measurementDevice, &MeasurementDevice::newTrace, traceAnalyzer, &TraceAnalyzer::setTrace);
@@ -653,6 +653,7 @@ void MainWindow::sdefConfig()
 
 void MainWindow::newFile()
 {
+    qDebug() << config->getWorkFolder();
     QString filename = QFileDialog::getSaveFileName(this, tr("New configuration file"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));

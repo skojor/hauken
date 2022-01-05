@@ -62,8 +62,9 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
 void MeasurementDevice::scpiWrite(QByteArray data)
 {
     if (!scpiThrottleTimer->isValid()) scpiThrottleTimer->start();
-
-    while (scpiThrottleTimer->elapsed() < scpiThrottleTime) { // min. x ms time between scpi commands, to give device time to breathe
+    int throttle = scpiThrottleTime;
+    if (devicePtr->id.toLower().contains("esmb")) throttle *= 3; // esmb hack, slow interface
+    while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
         QCoreApplication::processEvents();
     }
     scpiThrottleTimer->start();
@@ -116,8 +117,10 @@ void MeasurementDevice::setPscanFrequency()
         emit resetBuffers();
     }
     else if (connected && devicePtr->hasDscan && devicePtr->mode == Instrument::Mode::PSCAN) { // esmb mode
+        abor();
         scpiWrite("freq:dsc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
         scpiWrite("freq:dsc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
+        initImm();
         emit resetBuffers();
     }
 
@@ -130,8 +133,8 @@ void MeasurementDevice::setPscanResolution()
         scpiWrite("psc:step " + QByteArray::number((int)devicePtr->pscanResolution));
         initImm();
     }
-    else if (connected && devicePtr->hasDscan) {
-        scpiWrite("bwid " + QByteArray::number((int)devicePtr->pscanResolution));
+    else if (connected && devicePtr->hasDscan && devicePtr->mode == Instrument::Mode::PSCAN) {
+        scpiWrite("bwid " + QByteArray::number((int)devicePtr->pscanResolution * 2));  // ESMB "hack"
         scpiWrite("dsc:coun inf");
     }
 }
@@ -182,8 +185,11 @@ void MeasurementDevice::setAutoAttenuator()
 
 void MeasurementDevice::setAntPort()
 {
-    if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default"))
-        scpiWrite("syst:ant:rx " + antPort);
+    if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default")) {
+        if (!devicePtr->advProtocol) scpiWrite("syst:ant:rx " + antPort);
+        else if (antPort.contains("1")) scpiWrite("route:vuhf:input (@0)");  // em200 specific
+        else if (antPort.contains("2")) scpiWrite("route:vuhf:input (@1)");  // em200 specific
+    }
 }
 
 QStringList MeasurementDevice::getAntPorts()
@@ -198,9 +204,9 @@ void MeasurementDevice::setMode()
             if (devicePtr->hasPscan) {
                 scpiWrite("freq:mode psc");
             }
-            //else if (devicePtr->hasDscan) { // ESMB support, TODO!
-
-            //}
+            else if (devicePtr->hasDscan) {
+                scpiWrite("freq:mode dsc");
+            }
         }
         else {
             scpiWrite("freq:mode ffm");
@@ -630,6 +636,8 @@ void MeasurementDevice::updSettings()
     }
     if (!fftMode.contains(config->getInstrFftMode().toLocal8Bit())) {
         fftMode = config->getInstrFftMode().toLocal8Bit();
+        if (fftMode.contains('(')) fftMode = "off";
+        else if (fftMode.toLower().contains("avg")) fftMode = "scalar";
         setFftMode();
     }
     scpiAddress = new QHostAddress(config->getInstrIpAddr());

@@ -33,7 +33,7 @@ public:
     QUdpSocket *udpSocket = new QUdpSocket;
     int byteCtr = 0;
     QTimer *bytesPerSecTimer = new QTimer;
-    QByteArray tcpBuffer;
+    QByteArray tcpBuffer, udpBuffer;
     QSharedPointer<Device> devicePtr;
     Eb200Header header;
     UdpDatagramAttribute attrHeader;
@@ -67,7 +67,7 @@ public slots:
     void readIfpanOptHeader(QDataStream &ds);
     void readPscanOptHeader(QDataStream &ds);
     void readDscanOptHeader(QDataStream &ds);
-    void readAvdOptHeader(QDataStream &ds);
+    void readAdvHeader(QDataStream &ds);
     void fillFft(const QByteArray &);
     void calcBytesPerSecond();
     int calcPscanPointsPerTrace();
