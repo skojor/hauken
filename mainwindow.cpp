@@ -451,6 +451,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, traceAnalyzer, &TraceAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, traceBuffer, &TraceBuffer::updSettings);
     connect(config.data(), &Config::settingsUpdated, sdefRecorder, &SdefRecorder::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssDevice, &GnssDevice::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);

@@ -32,6 +32,7 @@
 #include "tracebuffer.h"
 #include "traceanalyzer.h"
 #include "sdefrecorder.h"
+#include "gnssdevice.h"
 
 class MainWindow : public QMainWindow
 {
@@ -131,6 +132,7 @@ private:
     QTextEdit *gnssStatus = new QTextEdit;
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
+    GnssDevice *gnssDevice = new GnssDevice;
 
     QAction *newAct;
     QAction *openAct;

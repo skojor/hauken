@@ -20,7 +20,7 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     comboOpt1->setCurrentIndex(comboOpt1->findText(config->getGnssSerialPort1Name()));
 
     gnss1Layout->addRow(new QLabel("Baudrate"), comboOpt2);
-    comboOpt2->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200");
+    comboOpt2->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200");
     comboOpt2->setToolTip("GNSS device baudrate");
     comboOpt2->setCurrentIndex(comboOpt2->findText(config->getGnssSerialPort1Baudrate()));
 
@@ -38,6 +38,11 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt4->setText("Monitor AGC level");
     cbOpt4->setToolTip("When checked the AGC receiver level will be monitored for sudden changes.\nOnly usable together with uBlox M7/M8 receivers.");
     cbOpt4->setChecked(config->getGnssSerialPort1MonitorAgc());
+
+    gnss1Layout->addRow((cbOpt9));
+    cbOpt9->setText("Detected incidents triggers spectrum recording");
+    cbOpt9->setToolTip("Any incidents detected will cause a recording to be started, and uploaded if configured");
+    cbOpt9->setChecked(config->getGnssSerialPort1TriggerRecording());
 
     gnss1GroupBox->setLayout(gnss1Layout);
 
@@ -57,7 +62,7 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     comboOpt3->setCurrentIndex(comboOpt3->findText(config->getGnssSerialPort2Name()));
 
     gnss2Layout->addRow(new QLabel("Baudrate"), comboOpt4);
-    comboOpt4->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200");
+    comboOpt4->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200");
     comboOpt4->setToolTip("GNSS device baudrate");
     comboOpt4->setCurrentIndex(comboOpt4->findText(config->getGnssSerialPort2Baudrate()));
 
@@ -75,6 +80,11 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt8->setText("Monitor AGC level");
     cbOpt8->setToolTip("When checked the AGC receiver level will be monitored for sudden changes.\nOnly usable together with uBlox M7/M8 receivers.");
     cbOpt8->setChecked(config->getGnssSerialPort2MonitorAgc());
+
+    gnss2Layout->addRow((cbOpt10));
+    cbOpt10->setText("Detected incidents triggers spectrum recording");
+    cbOpt10->setToolTip("Any incidents detected will cause a recording to be started, and uploaded if configured");
+    cbOpt10->setChecked(config->getGnssSerialPort2TriggerRecording());
 
     gnss2GroupBox->setLayout(gnss2Layout);
 
@@ -108,6 +118,7 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssSerialPort1LogToFile(cbOpt3->isChecked());
     config->setGnssSerialPort1MonitorAgc(cbOpt4->isChecked());
     config->setGnssSerialPort1Name(comboOpt1->currentText());
+    config->setGnssSerialPort1TriggerRecording(cbOpt9->isChecked());
 
     config->setGnssSerialPort2Activate(cbOpt5->isChecked());
     config->setGnssSerialPort2AutoConnect(cbOpt6->isChecked());
@@ -115,6 +126,7 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssSerialPort2LogToFile(cbOpt7->isChecked());
     config->setGnssSerialPort2MonitorAgc(cbOpt8->isChecked());
     config->setGnssSerialPort2Name(comboOpt3->currentText());
+    config->setGnssSerialPort2TriggerRecording(cbOpt10->isChecked());
 
     dialog->close();
 }

@@ -129,10 +129,13 @@ public slots:
     void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1/LogToFile", b);}
     bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1/MonitorAgc", false).toBool();}
     void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1/MonitorAgc", b);}
+    bool getGnssSerialPort1TriggerRecording() { return settings->value("gnss/SerialPort1/TriggerRecording", false).toBool();}
+    void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1/TriggerRecording", b);}
+
 
     QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2/Name").toString();}
     void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2/Name", s);}
-    QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2/Baudrate").toString();}
+    QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2/Baudrate", "4800").toString();}
     void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2/Baudrate", s);}
     bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2/activate", false).toBool();}
     void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2/activate", b);}
@@ -142,7 +145,8 @@ public slots:
     void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2/LogToFile", b);}
     bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2/MonitorAgc", false).toBool();}
     void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2/MonitorAgc", b);}
-
+    bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2/TriggerRecording", false).toBool();}
+    void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2/TriggerRecording", b);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plotYMax", 50).toInt();}
