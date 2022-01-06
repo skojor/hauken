@@ -6,6 +6,7 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
     config = c;
     connect(customPlotPtr, &QCustomPlot::mouseMove, this, &CustomPlotController::showToolTip);
     connect(customPlotPtr->selectionRect(), &QCPSelectionRect::accepted, this, &CustomPlotController::showSelectionMenu);
+    connect(customPlotPtr, &QCustomPlot::mouseRelease, this, &CustomPlotController::onMouseClick);
     connect(flashTimer, &QTimer::timeout, this, &CustomPlotController::flashRoutine);
 }
 
@@ -99,6 +100,18 @@ void CustomPlotController::showToolTip(QMouseEvent *event)
     QString text = QString::number(x, 'f', 3) + " MHz / " +
             QString::number(y, 'f', 1) + " dBuV";
     customPlotPtr->setToolTip(text);
+}
+
+void CustomPlotController::onMouseClick(QMouseEvent *event)
+{
+    (void)event;
+    if (event->button() == Qt::RightButton) {
+
+        QMenu menu;
+        menu.addAction("Exclude all trigger frequencies", this, &CustomPlotController::trigExcludeAll);
+        menu.addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
+        menu.exec(customPlotPtr->mapToGlobal(event->pos()));
+    }
 }
 
 void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *event)

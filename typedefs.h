@@ -346,7 +346,7 @@ public:
             pscanResolutions << "0.625" << "1.25" << "2" << "2.5" << "3.125" << "5"
                              << "6.25" << "8.33" << "10" << "12.5" << "20" << "25" << "50";
             ffmSpans << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "50000";
-            fftModes << "Off"; // << "Min" << "Max";
+            fftModes << "Off" << "Min" << "Max";
             antPorts << "RX2_A" << "TRX_A";
             minFrequency = 70e6;
             maxFrequency = 6e9;

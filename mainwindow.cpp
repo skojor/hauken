@@ -771,8 +771,6 @@ bool MainWindow::instrCheckSettings() // TODO: More checks here
 {
     if (instrStartFreq->text().toDouble() > instrStopFreq->text().toDouble())
         return false;
-
-
     return true;
 }
 

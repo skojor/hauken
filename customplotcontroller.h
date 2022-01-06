@@ -40,6 +40,7 @@ public slots:
 private slots:
     void setupBasics();
     void showToolTip(QMouseEvent *event);
+    void onMouseClick(QMouseEvent *event);
     void showSelectionMenu(const QRect &rect, QMouseEvent *event);
     void trigInclude();
     void trigExclude();
