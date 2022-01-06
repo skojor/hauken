@@ -116,23 +116,25 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
 
 void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *event)
 {
-    selMin = customPlotPtr->xAxis->pixelToCoord(rect.x());
-    selMax = customPlotPtr->xAxis->pixelToCoord(rect.x() + rect.width());
-    if (selMin > selMax) { // some smartypant tried to reverse the selection
-        double tmp = selMin;
-        selMin = selMax;
-        selMax = tmp;
+    if (event->button() == Qt::LeftButton) {
+        selMin = customPlotPtr->xAxis->pixelToCoord(rect.x());
+        selMax = customPlotPtr->xAxis->pixelToCoord(rect.x() + rect.width());
+        if (selMin > selMax) { // some smartypant tried to reverse the selection
+            double tmp = selMin;
+            selMin = selMax;
+            selMax = tmp;
+        }
+        QMenu *menu = new QMenu;
+        menu->addAction("Include " + QString::number(selMin, 'f', 3) +
+                        "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
+                        this, &CustomPlotController::trigInclude);
+        menu->addAction("Exclude " + QString::number(selMin, 'f', 3) +
+                        "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
+                        this, &CustomPlotController::trigExclude);
+        menu->addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
+        menu->addAction("Exclude all trigger frequencies", this, &CustomPlotController::trigExcludeAll);
+        menu->exec(customPlotPtr->mapToGlobal(event->pos()));
     }
-    QMenu *menu = new QMenu;
-    menu->addAction("Include " + QString::number(selMin, 'f', 3) +
-                    "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
-                    this, &CustomPlotController::trigInclude);
-    menu->addAction("Exclude " + QString::number(selMin, 'f', 3) +
-                    "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
-                    this, &CustomPlotController::trigExclude);
-    menu->addAction("Include all", this, &CustomPlotController::trigIncludeAll);
-    menu->addAction("Exclude all", this, &CustomPlotController::trigExcludeAll);
-    menu->exec(customPlotPtr->mapToGlobal(event->pos()));
 }
 
 void CustomPlotController::trigInclude()

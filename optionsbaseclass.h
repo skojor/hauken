@@ -14,6 +14,9 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QDoubleValidator>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
 #include "config.h"
 
 
@@ -38,11 +41,21 @@ public:
     QCheckBox *cbOpt3 = new QCheckBox;
     QCheckBox *cbOpt4 = new QCheckBox;
     QCheckBox *cbOpt5 = new QCheckBox;
+    QCheckBox *cbOpt6 = new QCheckBox;
+    QCheckBox *cbOpt7 = new QCheckBox;
+    QCheckBox *cbOpt8 = new QCheckBox;
     QSpinBox *sbOpt1 = new QSpinBox;
     QSpinBox *sbOpt2 = new QSpinBox;
     QSpinBox *sbOpt3 = new QSpinBox;
     QSpinBox *sbOpt4 = new QSpinBox;
     QSpinBox *sbOpt5 = new QSpinBox;
+    QComboBox *comboOpt1 = new QComboBox;
+    QComboBox *comboOpt2 = new QComboBox;
+    QComboBox *comboOpt3 = new QComboBox;
+    QComboBox *comboOpt4 = new QComboBox;
+    QComboBox *comboOpt5 = new QComboBox;
+    QComboBox *comboOpt6 = new QComboBox;
+
 
 
     QDialogButtonBox *btnBox;

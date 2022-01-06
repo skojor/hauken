@@ -25,6 +25,7 @@
 #include "measurementdevice.h"
 #include "typedefs.h"
 #include "generaloptions.h"
+#include "gnssoptions.h"
 #include "receiveroptions.h"
 #include "sdefoptions.h"
 #include "customplotcontroller.h"
@@ -146,6 +147,7 @@ private:
     QAction *exitAct;
 
     GeneralOptions *generalOptions;
+    GnssOptions *gnssOptions;
     ReceiverOptions *receiverOptions;
     SdefOptions *sdefOptions;
 

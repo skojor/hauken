@@ -46,7 +46,7 @@ private:
     bool alarmEmitted = false;
     QList<QPair<double, double>> trigFrequenciesList;
     bool recorderRunning = false;
-    double khzAboveLimit;
+    double khzAboveLimit = 0;
     bool ready = false;
 };
 

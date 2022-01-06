@@ -116,6 +116,34 @@ public slots:
     int getSdefPreRecordTime() { return settings->value("sdefPreRecordTime", 30).toUInt();}
     void setSdefPreRecordTime(int val) { settings->setValue("sdefPreRecordTime", val);}
 
+    // GNSS options
+    QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1/Name").toString();}
+    void setGnssSerialPort1Name(QString s) { settings->setValue("gnss/SerialPort1/Name", s);}
+    QString getGnssSerialPort1Baudrate() { return settings->value("gnss/SerialPort1/Baudrate", "4800").toString();}
+    void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1/Baudrate", s);}
+    bool getGnssSerialPort1Activate() { return settings->value("gnss/SerialPort1/activate", false).toBool();}
+    void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1/activate", b);}
+    bool getGnssSerialPort1AutoConnect() { return settings->value("gnss/SerialPort1/AutoConnect", false).toBool();}
+    void setGnssSerialPort1AutoConnect(bool b) { settings->setValue("gnss/SerialPort1/AutoConnect", b);}
+    bool getGnssSerialPort1LogToFile() { return settings->value("gnss/SerialPort1/LogToFile", false).toBool();}
+    void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1/LogToFile", b);}
+    bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1/MonitorAgc", false).toBool();}
+    void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1/MonitorAgc", b);}
+
+    QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2/Name").toString();}
+    void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2/Name", s);}
+    QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2/Baudrate").toString();}
+    void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2/Baudrate", s);}
+    bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2/activate", false).toBool();}
+    void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2/activate", b);}
+    bool getGnssSerialPort2AutoConnect() { return settings->value("gnss/SerialPort2/AutoConnect", false).toBool();}
+    void setGnssSerialPort2AutoConnect(bool b) { settings->setValue("gnss/SerialPort2/AutoConnect", b);}
+    bool getGnssSerialPort2LogToFile() { return settings->value("gnss/SerialPort2/LogToFile", false).toBool();}
+    void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2/LogToFile", b);}
+    bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2/MonitorAgc", false).toBool();}
+    void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2/MonitorAgc", b);}
+
+
     // Window specific settings
     int getPlotYMax() { return settings->value("plotYMax", 50).toInt();}
     void setPlotYMax(int val) { settings->setValue("plotYMax", val); emit settingsUpdated();}

@@ -25,6 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController->init();
 
     generalOptions = new GeneralOptions(config);
+    gnssOptions = new GnssOptions(config);
     receiverOptions = new ReceiverOptions(config);
     sdefOptions = new SdefOptions(config);
 
@@ -648,7 +649,7 @@ void MainWindow::stnConfig()
 
 void MainWindow::gnssConfig()
 {
-
+    gnssOptions->start();
 }
 
 void MainWindow::streamConfig()

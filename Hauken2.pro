@@ -17,6 +17,8 @@ SOURCES += \
     customplotcontroller.cpp \
     datastreambaseclass.cpp \
     generaloptions.cpp \
+    gnssdevice.cpp \
+    gnssoptions.cpp \
     main.cpp \
     mainwindow.cpp \
     measurementdevice.cpp \
@@ -35,6 +37,8 @@ HEADERS += \
     customplotcontroller.h \
     datastreambaseclass.h \
     generaloptions.h \
+    gnssdevice.h \
+    gnssoptions.h \
     mainwindow.h \
     measurementdevice.h \
     optionsbaseclass.h \
