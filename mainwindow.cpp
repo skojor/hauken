@@ -11,6 +11,9 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
+    incidentLogfile->setFileName(config->getWorkFolder() + "/incident.log");
+    incidentLogfile->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
+
     //qApp->setFont(QFont("Arial", 8, QFont::Normal, true)); //(QApplication::font("QMessageBox"));
     QFont font = QApplication::font("QMessageBox");
     font.setPixelSize(11);
@@ -43,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete measurementDevice;
+    incidentLogfile->close();
 }
 
 void MainWindow::createActions()
@@ -427,6 +431,8 @@ void MainWindow::setSignals()
     connect(customPlotController, &CustomPlotController::reqTrigline, traceBuffer, &TraceBuffer::sendDispTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, customPlotController, &CustomPlotController::flashTrigline);
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, customPlotController, &CustomPlotController::stopFlashTrigline);
+    connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::setAnalyzerNotReady);
+    connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, traceAnalyzer, &TraceAnalyzer::setAnalyzerReady);
 
     connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
     //connect(measurementDevice, &MeasurementDevice::newTrace, traceAnalyzer, &TraceAnalyzer::setTrace);
@@ -623,8 +629,12 @@ void MainWindow::changelog()
     msgBox.setText("Hauken changelog");
     QString txt;
     QTextStream ts(&txt);
-    ts << "<table><tr><td>2.0.b</td>" << "<td>Initial commit, basic instrument control</td>";
-
+    ts << "<table>"
+       << "<tr><td>2.4</td><td>Auto upload to Casper added, minor bugfixes</td></tr>"
+       << "<tr><td>2.3</td><td>Instrument support: ESMB, EM100, EM200, EB500, USRP/Tracy</td></tr>"
+       << "<tr><td>2.2</td><td>Basic file saving enabled</td></tr>"
+       << "<tr><td>2.1</td><td>Plot and buffer functions working</td></tr>"
+       << "<tr><td>2.0.b</td>" << "<td>Initial commit, basic instrument control</td></tr>";
     ts << "</table>";
     msgBox.setInformativeText(txt);
 
@@ -714,6 +724,11 @@ void MainWindow::appendToIncidentLog(QString incident)
        << "</td></tr>";
 
     incidentLog->append(text);
+
+    text.clear();
+    ts << QDateTime::currentDateTime().toString("dd.MM.yy hh:mm:ss") << "\t" << incident << "\n";
+    incidentLogfile->write(text.toLocal8Bit());
+    incidentLogfile->flush();
 }
 
 void MainWindow::setupIncidentTable()

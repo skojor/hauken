@@ -22,9 +22,9 @@ void TcpDataStream::closeListener()
 
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    if (state == QAbstractSocket::ConnectedState) {
-        //timeoutTimer->start();
-    }
+    qDebug() << "TCP stream state" << state;
+    if (state == QAbstractSocket::UnconnectedState)
+        timeoutTimer->stop();
 }
 
 void TcpDataStream::newData()

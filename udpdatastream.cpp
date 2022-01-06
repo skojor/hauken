@@ -27,9 +27,9 @@ void UdpDataStream::closeListener()
 
 void UdpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    if (state == QAbstractSocket::ConnectedState) {
-        //timeoutTimer->start(timeoutInMs); // stupid, udp conn. is stateless you fool!
-    }
+    qDebug() << "UDP stream state" << state;
+    if (state == QAbstractSocket::UnconnectedState)
+        timeoutTimer->stop();
 }
 
 void UdpDataStream::newData()

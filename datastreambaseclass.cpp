@@ -160,11 +160,17 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
         while (!ds.atEnd())
         {
             ds >> data;
-            if (data != 2000) fft.append(data);
+            if (data > 2000) { // shouldn't happen, unless hell breaks loose. discard all the data
+                fft.clear();
+                qDebug() << "Dropped trace, values > 200 dBuV!";
+                break;
+            }
+            else if (data != 2000) fft.append(data);
             else {
-                if (fft.size() >= calcPscanPointsPerTrace()) {
-                    //qDebug() << calcPscanPointsPerTrace();
-                    if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "stor pakke" << fft.size() - calcPscanPointsPerTrace();
+                if (fft.size() == calcPscanPointsPerTrace())
+                    emit newFftData(fft);
+
+                else if (fft.size() > calcPscanPointsPerTrace() && devicePtr->id.contains("USRP")) { // usrp exception, keep those data even if it's too much
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);

@@ -24,6 +24,8 @@ public slots:
     void recorderStarted() { recorderRunning = true;}
     void recorderEnded() { recorderRunning = alarmEmitted = false;}
     double getKhzAboveLimit() { return khzAboveLimit; }
+    void setAnalyzerReady() { ready = true;}
+    void setAnalyzerNotReady() { ready = false;}
 
 signals:
     void alarm();
@@ -45,6 +47,7 @@ private:
     QList<QPair<double, double>> trigFrequenciesList;
     bool recorderRunning = false;
     double khzAboveLimit;
+    bool ready = false;
 };
 
 #endif // TRACEANALYZER_H

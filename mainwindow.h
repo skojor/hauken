@@ -20,6 +20,7 @@
 #include <QSpinBox>
 #include <QDoubleSpinBox>
 #include <QSharedPointer>
+#include <QFile>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 #include "typedefs.h"
@@ -158,5 +159,7 @@ private:
     TraceAnalyzer *traceAnalyzer = new TraceAnalyzer(config);
     SdefRecorder *sdefRecorder = new SdefRecorder();
     QThread *sdefRecorderThread = new QThread;
+
+    QFile *incidentLogfile = new QFile;
 };
 #endif // MAINWINDOW_H

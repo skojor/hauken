@@ -8,34 +8,37 @@ TraceAnalyzer::TraceAnalyzer(QSharedPointer<Config> c)
 
 void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 {
-    khzAboveLimit = 0;
-    int valuesAboveLimit = 0;
-    if (averageData.size() == data.size()) {
-        for (int i=0; i<data.size(); i++) {
-            if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                    && data.at(i) > averageData.at(i) + trigLevel * 10) // * 10 because we have values in 1/10 dBuV!
-                valuesAboveLimit++;
-            else if (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                                && data.at(i) < averageData.at(i) + trigLevel * 10) { // previously trace point high, not this one. reset counter and calc BW of signal
-                double khzOfIncident = valuesAboveLimit * resolution;
-                if (khzOfIncident > khzAboveLimit)
-                    khzAboveLimit = khzOfIncident;
-                valuesAboveLimit = 0;
+    if (ready) { // dont do anything until trace buffer says go
+
+        khzAboveLimit = 0;
+        int valuesAboveLimit = 0;
+        if (averageData.size() == data.size()) {
+            for (int i=0; i<data.size(); i++) {
+                if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
+                        && data.at(i) > averageData.at(i) + trigLevel * 10) // * 10 because we have values in 1/10 dBuV!
+                    valuesAboveLimit++;
+                else if (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
+                         && data.at(i) < averageData.at(i) + trigLevel * 10) { // previously trace point high, not this one. reset counter and calc BW of signal
+                    double khzOfIncident = valuesAboveLimit * resolution;
+                    if (khzOfIncident > khzAboveLimit)
+                        khzAboveLimit = khzOfIncident;
+                    valuesAboveLimit = 0;
+                }
             }
         }
-    }
-    if (khzAboveLimit > trigBandwidth) {
-        if (trigTime == 0) { // trig time 0 means sound the alarm immediately
-            alarmTriggered();
+        if (khzAboveLimit > trigBandwidth) {
+            if (trigTime == 0) { // trig time 0 means sound the alarm immediately
+                alarmTriggered();
+            }
+            else if (trigTime > 0 && !elapsedTimer->isValid()) // first time above limit, start the clock
+                elapsedTimer->start();
+            else if (trigTime > 0 && elapsedTimer->isValid() && elapsedTimer->elapsed() >= trigTime) {
+                alarmTriggered();
+            }
         }
-        else if (trigTime > 0 && !elapsedTimer->isValid()) // first time above limit, start the clock
-            elapsedTimer->start();
-        else if (trigTime > 0 && elapsedTimer->isValid() && elapsedTimer->elapsed() >= trigTime) {
-            alarmTriggered();
+        else {
+            if (elapsedTimer) elapsedTimer->invalidate();
         }
-    }
-    else {
-        if (elapsedTimer) elapsedTimer->invalidate();
     }
 }
 

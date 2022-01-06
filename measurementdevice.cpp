@@ -51,19 +51,21 @@ void MeasurementDevice::scpiConnected()
 
 void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
 {
+    qDebug() << "TCP scpi socket state" << state;
+
     if (state == QAbstractSocket::ConnectedState) {
         askId();
         emit status("Measurement device connected, asking for ID");
     }
-    else if (state == QAbstractSocket::UnconnectedState)
-        instrDisconnect();
+   /* else if (state == QAbstractSocket::UnconnectedState && connected) // unlikely, but could happen
+        instrDisconnect();*/
 }
 
 void MeasurementDevice::scpiWrite(QByteArray data)
 {
     if (!scpiThrottleTimer->isValid()) scpiThrottleTimer->start();
     int throttle = scpiThrottleTime;
-    if (devicePtr->id.toLower().contains("esmb")) throttle *= 3; // esmb hack, slow interface
+    if (devicePtr->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
     while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
         QCoreApplication::processEvents();
     }
@@ -94,7 +96,6 @@ void MeasurementDevice::scpiDisconnected()
 {
     tcpTimeoutTimer->stop();
     emit status("Measurement device disconnected");
-    connected = false;
     emit connectedStateChanged(false);
 }
 
@@ -473,7 +474,9 @@ void MeasurementDevice::runAfterConnected()
 
 void MeasurementDevice::setUser()
 {
-    scpiWrite("syst:man:loc:name Hauken"); // TODO
+    if (devicePtr->systManLocName) scpiWrite("syst:man:loc:name '" + config->getStationName().toLocal8Bit() + " (hauken)'");
+    else if (devicePtr->memLab999) scpiWrite("MEM:LAB 999, '" + config->getStationName().toLocal8Bit() + " (hauken)'");
+    else if (devicePtr->systKlocLab) scpiWrite("syst:kloc:lab '" + config->getStationName().toLocal8Bit() + " (hauken)'");
 }
 
 void MeasurementDevice::startDevice()
@@ -636,8 +639,6 @@ void MeasurementDevice::updSettings()
     }
     if (!fftMode.contains(config->getInstrFftMode().toLocal8Bit())) {
         fftMode = config->getInstrFftMode().toLocal8Bit();
-        if (fftMode.contains('(')) fftMode = "off";
-        else if (fftMode.toLower().contains("avg")) fftMode = "scalar";
         setFftMode();
     }
     scpiAddress = new QHostAddress(config->getInstrIpAddr());

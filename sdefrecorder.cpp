@@ -128,10 +128,10 @@ QByteArray SdefRecorder::createHeader() //TODO: Own dynamic position update!
            << "LocationName " << getStationName() << "\n"
            << "Latitude " << convertDdToddmmss(getStnLatitude().toDouble()) << "\n"
            << "Longitude " << convertDdToddmmss(getStnLongitude().toDouble(), false) << '\n'
-           << "FreqStart " << QString::number(getInstrStartFreq() * 1e6, 'f', 0) << '\n'
-           << "FreqStop " << QString::number(getInstrStopFreq() * 1e6, 'f', 0) << '\n'
+           << "FreqStart " << QString::number(getInstrStartFreq() * 1e3, 'f', 0) << '\n'
+           << "FreqStop " << QString::number(getInstrStopFreq() * 1e3, 'f', 0) << '\n'
            << "AntennaType NoAntenna" << '\n'
-           << "FilterBandwidth " << QString::number(getInstrResolution().toDouble() * 1e3) << '\n'
+           << "FilterBandwidth " << QString::number(getInstrResolution().toDouble(), 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n' \
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
            << "DataPoints " << QString::number(1 + ((getInstrStopFreq() - getInstrStartFreq()) / (getInstrResolution().toDouble() / 1e3))) << '\n'
@@ -163,10 +163,10 @@ void SdefRecorder::finishRecording()
                                                                   + QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
                                                                   + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes"));
 
+    if (file.isOpen()) file.close();
+    if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) uploadToCasper();
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
-    if (file.isOpen()) file.close();
-    if (getSdefUploadFile()) uploadToCasper();
 
     if (!failed)
         recording = historicDataSaved = failed = false;
@@ -204,6 +204,7 @@ bool SdefRecorder::uploadToCasper()
         process->setProgram("bash");
     }
 
+    qDebug() << "starting upload process" << l;
     process->setArguments(l);
     process->startDetached();
 

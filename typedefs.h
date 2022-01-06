@@ -184,6 +184,8 @@ public:
         udpStream = false;
         tcpStream = false;
         systManLocName = false;
+        memLab999 = false;
+        systKlocLab = false;
         advProtocol = false;
         hasFfm = true; // think all devices supported have ffm mode
         hasPscan = false;
@@ -217,7 +219,7 @@ public:
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
-            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg";
+            fftModes << "Off" << "Min" << "Max" << "Scalar";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
@@ -226,11 +228,12 @@ public:
             hasPscan = true;
             hasAvgType = false;
             hasAutoAtt = true;
-            id = "EB500";
+            id = "EM100";
             attrHeader = true;
             optHeaderPr100 = true;
             optHeaderIfpan = true;
             hasAttOnOff = true;
+            memLab999 = true;
 
             pscanResolutions.clear();
             ffmSpans.clear();
@@ -242,7 +245,7 @@ public:
                              << "25" << "50";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000";
-            fftModes << "Off (clwr)";
+            fftModes << "Off";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
@@ -266,7 +269,7 @@ public:
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
-            fftModes << "Off (clwr)" << "Min" << "Max" << "Avg" << "APeak";
+            fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
             minFrequency = 8e3;
             maxFrequency = 6e9;
         }
@@ -278,6 +281,7 @@ public:
             hasDscan = true;
             hasAutoAtt = true;
             hasAvgType = true;
+            systKlocLab = true;
             pscanResolutions.clear();
             ffmSpans.clear();
             antPorts.clear();
@@ -286,7 +290,7 @@ public:
                              << "1.2" << "1.5" << "2" << "3" << "4" << "4.5" << "7.5"
                              << "15" << "50" << "60" << "75" << "125" << "150";
             ffmSpans << "25" << "50" << "100" << "200" << "500" << "1000";
-            fftModes << "Off" << "Max";
+            fftModes << "Off";
             antPorts << "Default";
             minFrequency = 9e3;
             maxFrequency = 2.999e9;
@@ -296,11 +300,12 @@ public:
             hasPscan = true;
             hasAvgType = false;
             hasAutoAtt = true;
-            id = "EB500";
+            id = "PR100";
             attrHeader = true;
             optHeaderPr100 = true;
             optHeaderIfpan = true;
             hasAttOnOff = true;
+            memLab999 = true;
 
             pscanResolutions.clear();
             ffmSpans.clear();
@@ -312,7 +317,7 @@ public:
                              << "25" << "50";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000";
-            fftModes << "Off (clwr)";
+            fftModes << "Off";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
@@ -341,7 +346,7 @@ public:
             pscanResolutions << "0.625" << "1.25" << "2" << "2.5" << "3.125" << "5"
                              << "6.25" << "8.33" << "10" << "12.5" << "20" << "25" << "50";
             ffmSpans << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "50000";
-            fftModes << "Off (cl/wr)" << "Min" << "Max";
+            fftModes << "Off"; // << "Min" << "Max";
             antPorts << "RX2_A" << "TRX_A";
             minFrequency = 70e6;
             maxFrequency = 6e9;
@@ -359,6 +364,8 @@ public:
     bool udpStream = false;
     bool tcpStream = false;
     bool systManLocName = false;
+    bool memLab999 = false;
+    bool systKlocLab = false;
     bool advProtocol = false;
     bool hasFfm = true; // think all devices supported have ffm mode
     bool hasPscan = false;
