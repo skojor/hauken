@@ -19,64 +19,64 @@ signals:
 
 public slots:
     // meas. device data
-    double getInstrStartFreq() { return settings->value("instrStartFreq", 1560).toDouble();}
-    void setInstrStartFreq(double val) { settings->setValue("instrStartFreq", val); emit settingsUpdated();}
-    double getInstrStopFreq() { return settings->value("instrStopFreq", 1610).toDouble(); emit settingsUpdated();}
-    void setInstrStopFreq(double val) { settings->setValue("instrStopFreq", val); emit settingsUpdated(); }
-    QString getInstrResolution() { return settings->value("instrResolution", 1).toString(); }
-    void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instrResolution", f); emit settingsUpdated(); }
-    double getInstrFfmCenterFreq() { return settings->value("instrFftCenterFreq", 1560).toDouble();}
-    void setInstrFfmCenterFreq(double f) { settings->setValue("instrFftCenterFreq", f); emit settingsUpdated();}
-    int getInstrFfmSpan() { return settings->value("instrFftSpan", 2000).toInt();}
-    void setInstrFfmSpan(int f) { settings->setValue("instrFftSpan", f); emit settingsUpdated();}
-    int getInstrMeasurementTime() { return settings->value("instrMeasurementTime", 18).toInt(); }
-    void setInstrMeasurementTime(int val) { settings->setValue("instrMeasurementTime", val); emit settingsUpdated(); }
-    int getInstrManAtt() { return settings->value("instrManAtt", 0).toInt(); }
-    void setInstrManAtt(int val) { settings->setValue("instrManAtt", val); emit settingsUpdated(); }
-    bool getInstrAutoAtt() { return settings->value("instrAutoAtt", true).toBool(); }
-    void setInstrAutoAtt(bool b) { settings->setValue("instrAutoAtt", b); emit settingsUpdated(); }
-    QString getInstrAntPort() { return settings->value("instrAntPort", "Default").toString(); }
-    void setInstrAntPort(QString str) { if (!str.isEmpty()) settings->setValue("instrAntPort", str); emit settingsUpdated(); }
-    int getInstrMode() { return settings->value("instrMode", 0).toInt(); }
-    void setInstrMode(int val) { settings->setValue("instrMode", val); emit settingsUpdated(); }
-    QString getInstrFftMode() { return settings->value("instrFftMode", 0).toString(); }
-    void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instrFftMode", val); emit settingsUpdated(); }
-    QString getInstrIpAddr() { return settings->value("instrIpAddr", "").toString(); }
-    void setInstrIpAddr(QString str) { settings->setValue("instrIpAddr", str); emit settingsUpdated(); }
-    int getInstrPort() { return settings->value("instrPort", 5555).toInt(); }
-    void setInstrPort(int val) { settings->setValue("instrPort", val); emit settingsUpdated(); }
-    QString getInstrId() { return settings->value("instrId").toString();}
-    void setInstrId(QString s) { settings->setValue("instrId", s);}
+    double getInstrStartFreq() { return settings->value("instr/StartFreq", 1560).toDouble();}
+    void setInstrStartFreq(double val) { settings->setValue("instr/StartFreq", val); emit settingsUpdated();}
+    double getInstrStopFreq() { return settings->value("instr/StopFreq", 1610).toDouble(); emit settingsUpdated();}
+    void setInstrStopFreq(double val) { settings->setValue("instr/StopFreq", val); emit settingsUpdated(); }
+    QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
+    void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated(); }
+    double getInstrFfmCenterFreq() { return settings->value("instr/FftCenterFreq", 1560).toDouble();}
+    void setInstrFfmCenterFreq(double f) { settings->setValue("instr/FftCenterFreq", f); emit settingsUpdated();}
+    int getInstrFfmSpan() { return settings->value("instr/FftSpan", 2000).toInt();}
+    void setInstrFfmSpan(int f) { settings->setValue("instr/FftSpan", f); emit settingsUpdated();}
+    int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt(); }
+    void setInstrMeasurementTime(int val) { settings->setValue("instr/MeasurementTime", val); emit settingsUpdated(); }
+    int getInstrManAtt() { return settings->value("instr/ManAtt", 0).toInt(); }
+    void setInstrManAtt(int val) { settings->setValue("instr/ManAtt", val); emit settingsUpdated(); }
+    bool getInstrAutoAtt() { return settings->value("instr/AutoAtt", true).toBool(); }
+    void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); emit settingsUpdated(); }
+    QString getInstrAntPort() { return settings->value("instr/AntPort", "Default").toString(); }
+    void setInstrAntPort(QString str) { if (!str.isEmpty()) settings->setValue("instr/AntPort", str); emit settingsUpdated(); }
+    int getInstrMode() { return settings->value("instr/Mode", 0).toInt(); }
+    void setInstrMode(int val) { settings->setValue("instr/Mode", val); emit settingsUpdated(); }
+    QString getInstrFftMode() { return settings->value("instr/FftMode", 0).toString(); }
+    void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instr/FftMode", val); emit settingsUpdated(); }
+    QString getInstrIpAddr() { return settings->value("instr/IpAddr", "").toString(); }
+    void setInstrIpAddr(QString str) { settings->setValue("instr/IpAddr", str); emit settingsUpdated(); }
+    int getInstrPort() { return settings->value("instr/Port", 5555).toInt(); }
+    void setInstrPort(int val) { settings->setValue("instr/Port", val); emit settingsUpdated(); }
+    QString getInstrId() { return settings->value("instr/Id").toString();}
+    void setInstrId(QString s) { settings->setValue("instr/Id", s);}
 
     // spectrum criterias
-    int getInstrTrigLevel() { return settings->value("instrTrigLevel", 15.0).toInt(); }
-    void setInstrTrigLevel(int val) { settings->setValue("instrTrigLevel", val); emit settingsUpdated(); }
-    int getInstrMinTrigBW() { return settings->value("instrMinTrigBW", 50).toInt(); }
-    void setInstrMinTrigBW(int val) { settings->setValue("instrMinTrigBW", val); emit settingsUpdated(); }
-    int getInstrMinTrigTime() { return settings->value("instrMinTrigTime", 18).toInt(); }
-    void setInstrMinTrigTime(int val) { settings->setValue("instrMinTrigTime", val); emit settingsUpdated(); }
+    int getInstrTrigLevel() { return settings->value("instr/TrigLevel", 15.0).toInt(); }
+    void setInstrTrigLevel(int val) { settings->setValue("instr/TrigLevel", val); emit settingsUpdated(); }
+    int getInstrMinTrigBW() { return settings->value("instr/MinTrigBW", 50).toInt(); }
+    void setInstrMinTrigBW(int val) { settings->setValue("instr/MinTrigBW", val); emit settingsUpdated(); }
+    int getInstrMinTrigTime() { return settings->value("instr/MinTrigTime", 18).toInt(); }
+    void setInstrMinTrigTime(int val) { settings->setValue("instr/MinTrigTime", val); emit settingsUpdated(); }
 
     // GNSS criterias
-    int getGnssCnoDeviation() { return settings->value("gnssCnoDeviation", 15).toInt(); }
-    void setGnssCnoDeviation(double val) { settings->setValue("gnssCnoDeviation", val); emit settingsUpdated(); }
-    int getGnssAgcDeviation() { return settings->value("gnssAgcDeviation", 0).toInt(); }
-    void setGnssAgcDeviation(int val) { settings->setValue("gnssAgcDeviation", val); emit settingsUpdated(); }
-    int getGnssPosOffset() { return settings->value("gnssPosOffset", 0).toInt(); }
-    void setGnssPosOffset(int val) { settings->setValue("gnssPosOffset", val); emit settingsUpdated(); }
-    int getGnssAltOffset() { return settings->value("gnssAltOffset", 0).toInt(); }
-    void setGnssAltOffset(int val) { settings->setValue("gnssAltOffset", val); emit settingsUpdated(); }
-    int getGnssTimeOffset() { return settings->value("gnssTimeOffset", 0).toInt(); }
-    void setGnssTimeOffset(int val) { settings->setValue("gnssTimeOffset", val); emit settingsUpdated(); }
+    int getGnssCnoDeviation() { return settings->value("gnss/CnoDeviation", 15).toInt(); }
+    void setGnssCnoDeviation(double val) { settings->setValue("gnss/CnoDeviation", val); emit settingsUpdated(); }
+    int getGnssAgcDeviation() { return settings->value("gnss/AgcDeviation", 0).toInt(); }
+    void setGnssAgcDeviation(int val) { settings->setValue("gnss/AgcDeviation", val); emit settingsUpdated(); }
+    int getGnssPosOffset() { return settings->value("gnss/PosOffset", 0).toInt(); }
+    void setGnssPosOffset(int val) { settings->setValue("gnss/PosOffset", val); emit settingsUpdated(); }
+    int getGnssAltOffset() { return settings->value("gnss/AltOffset", 0).toInt(); }
+    void setGnssAltOffset(int val) { settings->setValue("gnss/AltOffset", val); emit settingsUpdated(); }
+    int getGnssTimeOffset() { return settings->value("gnss/TimeOffset", 0).toInt(); }
+    void setGnssTimeOffset(int val) { settings->setValue("gnss/TimeOffset", val); emit settingsUpdated(); }
 
     // General options
-    QString getStationName() { return settings->value("stationName", "").toString(); }
-    void setStationName(QString s) { settings->setValue("stationName", s);  emit settingsUpdated();}
-    QString getStnLatitude() { return settings->value("stationLatitude", 0).toString(); }
-    void setStnLatitude(QString s) { settings->setValue("stationLatitude", s); emit settingsUpdated(); }
-    QString getStnLongitude() { return settings->value("stationLongitude", 0).toString(); }
-    void setStnLongitude(QString s) { settings->setValue("stationLongitude", s); emit settingsUpdated(); }
-    QString getStnAltitude() { return settings->value("stationAltitude", 0).toString(); }
-    void setStnAltitude(QString s) { settings->setValue("stationAltitude", s); emit settingsUpdated(); }
+    QString getStationName() { return settings->value("station/Name", "").toString(); }
+    void setStationName(QString s) { settings->setValue("station/Name", s);  emit settingsUpdated();}
+    QString getStnLatitude() { return settings->value("station/Latitude", 0).toString(); }
+    void setStnLatitude(QString s) { settings->setValue("station/Latitude", s); emit settingsUpdated(); }
+    QString getStnLongitude() { return settings->value("station/Longitude", 0).toString(); }
+    void setStnLongitude(QString s) { settings->setValue("station/Longitude", s); emit settingsUpdated(); }
+    QString getStnAltitude() { return settings->value("station/Altitude", 0).toString(); }
+    void setStnAltitude(QString s) { settings->setValue("station/Altitude", s); emit settingsUpdated(); }
     QString getWorkFolder() { return settings->value("workFolder",
                                                      QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken").toString(); }
     void setWorkFolder(QString s) { settings->setValue("workFolder", s); emit settingsUpdated(); }
@@ -87,78 +87,78 @@ public slots:
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); emit settingsUpdated(); }
 
     // Receiver options
-    bool getInstrConnectOnStartup() { return settings->value("instrConnectOnStartup", false).toBool(); }
-    void setInstrConnectOnStartup(bool b) { settings->setValue("instrConnectOnStartup", b); emit settingsUpdated(); }
-    bool getInstrUseTcpDatastream() { return settings->value("instrUseTcpDatastream", false).toBool(); }
-    void setInstrUseTcpDatastream(bool b) { settings->setValue("instrUseTcpDatastream", b); emit settingsUpdated(); }
-    bool getInstrAutoReconnect() { return settings->value("instrAutoReconnect", true).toBool(); }
-    void setInstrAutoReconnect(bool b) { settings->setValue("instrAutoReconnect", b); emit settingsUpdated(); }
-    bool getInstrNormalizeSpectrum() { return settings->value("instrNormalizeSpectrum", false).toBool(); }
-    void setInstrNormalizeSpectrum(bool b) { settings->setValue("instrNormalizeSpectrum", b); emit settingsUpdated(); }
+    bool getInstrConnectOnStartup() { return settings->value("instr/ConnectOnStartup", false).toBool(); }
+    void setInstrConnectOnStartup(bool b) { settings->setValue("instr/ConnectOnStartup", b); emit settingsUpdated(); }
+    bool getInstrUseTcpDatastream() { return settings->value("instr/UseTcpDatastream", false).toBool(); }
+    void setInstrUseTcpDatastream(bool b) { settings->setValue("instr/UseTcpDatastream", b); emit settingsUpdated(); }
+    bool getInstrAutoReconnect() { return settings->value("instr/AutoReconnect", true).toBool(); }
+    void setInstrAutoReconnect(bool b) { settings->setValue("instr/AutoReconnect", b); emit settingsUpdated(); }
+    bool getInstrNormalizeSpectrum() { return settings->value("instr/NormalizeSpectrum", false).toBool(); }
+    void setInstrNormalizeSpectrum(bool b) { settings->setValue("instr/NormalizeSpectrum", b); emit settingsUpdated(); }
 
     // SDeF options
-    bool getSdefSaveToFile() { return settings->value("sdefSaveToFile", true).toBool();}
-    void setSdefSaveToFile(bool b) { settings->setValue("sdefSaveToFile", b); emit settingsUpdated();}
-    bool getSdefUploadFile() { return settings->value("sdefUploadFile", false).toBool();}
-    void setSdefUploadFile(bool b) { settings->setValue("sdefUploadFile", b); emit settingsUpdated();}
-    QString getSdefUsername() { return settings->value("sdefUsername", "").toString();}
-    void setSdefUsername(QString s) { settings->setValue("sdefUsername", s); emit settingsUpdated();}
-    QString getSdefPassword() { return settings->value("sdefPassword", "").toString();}
-    void setSdefPassword(QString s) { settings->setValue("sdefPassword", s); emit settingsUpdated();}
-    bool getSdefAddPosition() { return settings->value("sdefAddPosition", false).toBool();}
-    void setSdefAddPosition(bool b) { settings->setValue("sdefAddPosition", b); emit settingsUpdated();}
-    int getSdefRecordTime() { return settings->value("sdefRecordTime", 2).toUInt();}
-    void setSdefRecordTime(int val) { settings->setValue("sdefRecordTime", val); emit settingsUpdated();}
-    int getSdefMaxRecordTime() { return settings->value("sdefMaxRecordTime", 60).toUInt();}
-    void setSdefMaxRecordTime(int val) { settings->setValue("sdefMaxRecordTime", val); emit settingsUpdated();}
-    QString getSdefStationInitals() { return settings->value("sdefStationInitials", "").toString();}
-    void setSdefStationInitials(QString s) { settings->setValue("sdefStationInitials", s);}
-    int getSdefPreRecordTime() { return settings->value("sdefPreRecordTime", 30).toUInt();}
-    void setSdefPreRecordTime(int val) { settings->setValue("sdefPreRecordTime", val);}
+    bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
+    void setSdefSaveToFile(bool b) { settings->setValue("sdef/SaveToFile", b); emit settingsUpdated();}
+    bool getSdefUploadFile() { return settings->value("sdef/UploadFile", false).toBool();}
+    void setSdefUploadFile(bool b) { settings->setValue("sdef/UploadFile", b); emit settingsUpdated();}
+    QString getSdefUsername() { return settings->value("sdef/Username", "").toString();}
+    void setSdefUsername(QString s) { settings->setValue("sdef/Username", s); emit settingsUpdated();}
+    QString getSdefPassword() { return settings->value("sdef/Password", "").toString();}
+    void setSdefPassword(QString s) { settings->setValue("sdef/Password", s); emit settingsUpdated();}
+    bool getSdefAddPosition() { return settings->value("sdef/AddPosition", false).toBool();}
+    void setSdefAddPosition(bool b) { settings->setValue("sdef/AddPosition", b); emit settingsUpdated();}
+    int getSdefRecordTime() { return settings->value("sdef/RecordTime", 2).toUInt();}
+    void setSdefRecordTime(int val) { settings->setValue("sdef/RecordTime", val); emit settingsUpdated();}
+    int getSdefMaxRecordTime() { return settings->value("sdef/MaxRecordTime", 60).toUInt();}
+    void setSdefMaxRecordTime(int val) { settings->setValue("sdef/MaxRecordTime", val); emit settingsUpdated();}
+    QString getSdefStationInitals() { return settings->value("sdef/StationInitials", "").toString();}
+    void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s);}
+    int getSdefPreRecordTime() { return settings->value("sdef/PreRecordTime", 30).toUInt();}
+    void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val);}
 
     // GNSS options
-    QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1/Name").toString();}
-    void setGnssSerialPort1Name(QString s) { settings->setValue("gnss/SerialPort1/Name", s);}
-    QString getGnssSerialPort1Baudrate() { return settings->value("gnss/SerialPort1/Baudrate", "4800").toString();}
-    void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1/Baudrate", s);}
-    bool getGnssSerialPort1Activate() { return settings->value("gnss/SerialPort1/activate", false).toBool();}
-    void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1/activate", b);}
-    bool getGnssSerialPort1AutoConnect() { return settings->value("gnss/SerialPort1/AutoConnect", false).toBool();}
-    void setGnssSerialPort1AutoConnect(bool b) { settings->setValue("gnss/SerialPort1/AutoConnect", b);}
-    bool getGnssSerialPort1LogToFile() { return settings->value("gnss/SerialPort1/LogToFile", false).toBool();}
-    void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1/LogToFile", b);}
-    bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1/MonitorAgc", false).toBool();}
-    void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1/MonitorAgc", b);}
-    bool getGnssSerialPort1TriggerRecording() { return settings->value("gnss/SerialPort1/TriggerRecording", false).toBool();}
-    void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1/TriggerRecording", b);}
+    QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
+    void setGnssSerialPort1Name(QString s) { settings->setValue("gnss/SerialPort1Name", s); emit settingsUpdated();}
+    QString getGnssSerialPort1Baudrate() { return settings->value("gnss/SerialPort1Baudrate", "4800").toString();}
+    void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1Baudrate", s); emit settingsUpdated();}
+    bool getGnssSerialPort1Activate() { return settings->value("gnss/SerialPort1activate", false).toBool();}
+    void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1activate", b); emit settingsUpdated();}
+    bool getGnssSerialPort1AutoConnect() { return settings->value("gnss/SerialPort1AutoConnect", false).toBool();}
+    void setGnssSerialPort1AutoConnect(bool b) { settings->setValue("gnss/SerialPort1AutoConnect", b); emit settingsUpdated();}
+    bool getGnssSerialPort1LogToFile() { return settings->value("gnss/SerialPort1LogToFile", false).toBool();}
+    void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1LogToFile", b); emit settingsUpdated();}
+    bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1MonitorAgc", false).toBool();}
+    void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1MonitorAgc", b); emit settingsUpdated();}
+    bool getGnssSerialPort1TriggerRecording() { return settings->value("gnss/SerialPort1TriggerRecording", false).toBool();}
+    void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1TriggerRecording", b); emit settingsUpdated();}
 
 
-    QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2/Name").toString();}
-    void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2/Name", s);}
-    QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2/Baudrate", "4800").toString();}
-    void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2/Baudrate", s);}
-    bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2/activate", false).toBool();}
-    void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2/activate", b);}
-    bool getGnssSerialPort2AutoConnect() { return settings->value("gnss/SerialPort2/AutoConnect", false).toBool();}
-    void setGnssSerialPort2AutoConnect(bool b) { settings->setValue("gnss/SerialPort2/AutoConnect", b);}
-    bool getGnssSerialPort2LogToFile() { return settings->value("gnss/SerialPort2/LogToFile", false).toBool();}
-    void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2/LogToFile", b);}
-    bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2/MonitorAgc", false).toBool();}
-    void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2/MonitorAgc", b);}
-    bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2/TriggerRecording", false).toBool();}
-    void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2/TriggerRecording", b);}
+    QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2Name").toString();}
+    void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2Name", s); emit settingsUpdated();}
+    QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2Baudrate", "4800").toString();}
+    void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2Baudrate", s); emit settingsUpdated();}
+    bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2activate", false).toBool();}
+    void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2activate", b); emit settingsUpdated();}
+    bool getGnssSerialPort2AutoConnect() { return settings->value("gnss/SerialPort2AutoConnect", false).toBool();}
+    void setGnssSerialPort2AutoConnect(bool b) { settings->setValue("gnss/SerialPort2AutoConnect", b); emit settingsUpdated();}
+    bool getGnssSerialPort2LogToFile() { return settings->value("gnss/SerialPort2LogToFile", false).toBool();}
+    void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2LogToFile", b); emit settingsUpdated();}
+    bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2MonitorAgc", false).toBool();}
+    void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2MonitorAgc", b); emit settingsUpdated();}
+    bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
+    void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); emit settingsUpdated();}
 
     // Window specific settings
-    int getPlotYMax() { return settings->value("plotYMax", 50).toInt();}
-    void setPlotYMax(int val) { settings->setValue("plotYMax", val); emit settingsUpdated();}
-    int getPlotYMin() { return settings->value("plotYMin", -30).toInt();}
-    void setPlotYMin(int val) { settings->setValue("plotYMin", val); emit settingsUpdated();}
+    int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
+    void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}
+    int getPlotYMin() { return settings->value("plot/YMin", -30).toInt();}
+    void setPlotYMin(int val) { settings->setValue("plot/YMin", val); emit settingsUpdated();}
     QByteArray getWindowGeometry() { return settings->value("windowGeometry", "").toByteArray();}
     void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr);}
     QByteArray getWindowState() { return settings->value("windowState", "").toByteArray();}
     void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
-    int getPlotMaxholdTime() { return settings->value("plotMaxholdTime", 1).toUInt();}
-    void setPlotMaxholdTime(int val) { settings->setValue("plotMaxholdTime", val); emit settingsUpdated();}
+    int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 1).toUInt();}
+    void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
 
     // trig line
 

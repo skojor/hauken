@@ -204,7 +204,7 @@ bool SdefRecorder::uploadToCasper()
         process->setProgram("bash");
     }
 
-    qDebug() << "starting upload process" << l;
+    qDebug() << "starting upload process";
     process->setArguments(l);
     process->startDetached();
 

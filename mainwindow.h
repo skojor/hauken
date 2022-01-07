@@ -33,6 +33,7 @@
 #include "traceanalyzer.h"
 #include "sdefrecorder.h"
 #include "gnssdevice.h"
+#include "gnssanalyzer.h"
 
 class MainWindow : public QMainWindow
 {
@@ -115,6 +116,7 @@ private:
     QComboBox *instrFftMode = new QComboBox;
     QLineEdit *instrIpAddr = new QLineEdit;
     QLineEdit *instrPort = new QLineEdit;
+    QGroupBox *rightBox = new QGroupBox("GNSS status");
 
     QPushButton *instrConnect = new QPushButton("Connect");
     QPushButton *instrDisconnect = new QPushButton("Disconnect");
@@ -133,6 +135,7 @@ private:
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
     GnssDevice *gnssDevice = new GnssDevice;
+    GnssAnalyzer *gnssAnalyzer = new GnssAnalyzer;
 
     QAction *newAct;
     QAction *openAct;

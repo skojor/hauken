@@ -189,7 +189,7 @@ void MainWindow::createLayout()
     bottomBox->addWidget(incBox);
 
     QHBoxLayout *rightLayout = new QHBoxLayout;
-    QGroupBox *rightBox = new QGroupBox("GNSS status");
+
     rightLayout->addWidget(gnssStatus);
     rightBox->setLayout(rightLayout);
     rightBox->setMaximumWidth(200);
@@ -452,6 +452,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, traceBuffer, &TraceBuffer::updSettings);
     connect(config.data(), &Config::settingsUpdated, sdefRecorder, &SdefRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssDevice, &GnssDevice::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer, &GnssAnalyzer::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
@@ -465,6 +466,13 @@ void MainWindow::setSignals()
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
+
+    connect(gnssDevice, &GnssDevice::displayGnssData, this, [=](QString s, int val)
+        { this->rightBox->setTitle("GNSS receiver status (" + QString::number(val) + ")"); this->gnssStatus->setText(s);});
+    connect(gnssDevice, &GnssDevice::analyzeThisData, gnssAnalyzer, &GnssAnalyzer::getData);
+    connect(gnssAnalyzer, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssAnalyzer, &GnssAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssDevice, &GnssDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
 
     sdefRecorderThread->start();
 }

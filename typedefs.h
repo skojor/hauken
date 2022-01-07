@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QDateTime>
 
 namespace Instrument {
 enum class Mode {
@@ -389,4 +390,27 @@ public:
     QStringList pscanResolutions;
     QStringList fftModes;
 };
+
+class GnssData
+{
+public:
+    GnssData() {}
+    double hdop = 0;
+    double latitude = 0;
+    double longitude = 0;
+    double altitude = 0;
+    bool gsaValid = false;
+    bool gsvValid = false;
+    bool ggaValid = false;
+    bool posValid = false;
+    QString fixType = "No fix";
+    int satsTracked = 0;
+    int satsVisible = 0;
+    int fixQuality = 0;
+    int cno = 0;
+    QDateTime timestamp = QDateTime();
+    int id = 0;
+};
+
 #endif // TYPEDEFS_H
+
