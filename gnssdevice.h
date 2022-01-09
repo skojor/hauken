@@ -16,7 +16,7 @@
 #include "typedefs.h"
 
 /*
- *  Class connecting to and reading data from up to two gnss receivers.
+ *  Class connecting to and reading data from one gnss receiver.
  *  Collects data for average C/No readings, AGC levels (if available)
  *  and position/altitude/time for spoofing detection. May be used
  *  to trigger recording of spectrum.
@@ -27,39 +27,40 @@ class GnssDevice : public Config
 {
     Q_OBJECT
 public:
-    explicit GnssDevice(QObject *parent = nullptr);
+    explicit GnssDevice(QObject *parent = nullptr, int val = 0);
 
 public slots:
     void start();
-    void connectToPort(int portnr);
+    void connectToPort();
     void updSettings();
 
 signals:
-    void displayGnssData(QString, int);
     void analyzeThisData(GnssData &);
     void toIncidentLog(QString);
 
 private slots:
     void handleBuffer();
     bool checkChecksum(const QByteArray &val);
-    bool decodeGga(const QByteArray &val, const int nr);
-    bool decodeGsa(const QByteArray &val, const int nr);
-    bool decodeRmc(const QByteArray &val, const int nr);
-    bool decodeGsv(const QByteArray &val, const int nr);
+    bool decodeGga(const QByteArray &val);
+    bool decodeGsa(const QByteArray &val);
+    bool decodeRmc(const QByteArray &val);
+    bool decodeGsv(const QByteArray &val);
     QDateTime convFromGnssTimeToQDateTime(const QByteArray date, const QByteArray time);
-    void updDisplay();
+    void decodeBinary(const QByteArray &val);
+    bool checkBinaryChecksum(const QByteArray &val);
+    void appendToLogfile(const QByteArray &data);
 
 private:
-    QSerialPort *gnss1 = new QSerialPort;
-    QSerialPort *gnss2 = new QSerialPort;
-    QList<QSerialPortInfo> serialPortList;
-    QByteArray gnss1Buffer, gnss2Buffer;
-    QTimer *updDisplayTimer = new QTimer;
-    QList<QByteArray>gsvSentences;
-    QList<GnssData> gnssData;
-    int display = 0;
-
+    QSerialPort *gnss = new QSerialPort;
+    //QList<QSerialPortInfo> serialPortList;
+    QByteArray gnssBuffer;
+    QTimer *sendToAnalyzerTimer = new QTimer;
+    QList<QByteArray> gsvSentences;
+    GnssData gnssData;
     int gsvNrOfSentences;
+    QFile logfile;
+    bool logToFile = false;
+    QDate logfileStartedDate;
 };
 
 #endif // GNSSDEVICE_H

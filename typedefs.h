@@ -395,6 +395,7 @@ class GnssData
 {
 public:
     GnssData() {}
+    bool inUse = false;
     double hdop = 0;
     double latitude = 0;
     double longitude = 0;
@@ -404,12 +405,23 @@ public:
     bool ggaValid = false;
     bool posValid = false;
     QString fixType = "No fix";
+    QString gnssType = "Unknown";
     int satsTracked = 0;
     int satsVisible = 0;
     int fixQuality = 0;
     int cno = 0;
+    int agc = 0;
     QDateTime timestamp = QDateTime();
     int id = 0;
+    QList<int> avgCnoArray;
+    int avgCno = 0;
+    QList<int> avgAgcArray;
+    int avgAgc = 0;
+    double posOffset;
+    double altOffset;
+    unsigned long timeOffset = 0;
+    int cnoOffset = 0;
+    int agcOffset = 0;
 };
 
 #endif // TYPEDEFS_H

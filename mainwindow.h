@@ -96,6 +96,8 @@ private slots:
     void showBytesPerSec(int val);
     void triggerSettingsUpdate();
 
+    void updGnssBox(const QString txt, const int id, bool valid);
+
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
     QWidget *centralWidget = new QWidget;
@@ -134,8 +136,10 @@ private:
     QTextEdit *gnssStatus = new QTextEdit;
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
-    GnssDevice *gnssDevice = new GnssDevice;
-    GnssAnalyzer *gnssAnalyzer = new GnssAnalyzer;
+    GnssDevice *gnssDevice1 = new GnssDevice(this, 1);
+    GnssDevice *gnssDevice2 = new GnssDevice(this, 2);
+    GnssAnalyzer *gnssAnalyzer1 = new GnssAnalyzer(this, 1);
+    GnssAnalyzer *gnssAnalyzer2 = new GnssAnalyzer(this, 2);
 
     QAction *newAct;
     QAction *openAct;
@@ -168,5 +172,8 @@ private:
     QThread *sdefRecorderThread = new QThread;
 
     QFile *incidentLogfile = new QFile;
+
+    int gnssLastDisplayedId = 0;
+    QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
 };
 #endif // MAINWINDOW_H

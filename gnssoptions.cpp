@@ -24,11 +24,6 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     comboOpt2->setToolTip("GNSS device baudrate");
     comboOpt2->setCurrentIndex(comboOpt2->findText(config->getGnssSerialPort1Baudrate()));
 
-    /*gnss1Layout->addRow(cbOpt2);
-    cbOpt2->setText("Connect on startup");
-    cbOpt2->setToolTip("The GNSS receiver will be connected to upon program startup");
-    cbOpt2->setChecked(config->getGnssSerialPort1AutoConnect());*/
-
     gnss1Layout->addRow(cbOpt3);
     cbOpt3->setText("Log NMEA to file");
     cbOpt3->setToolTip("When checked all NMEA sentences will be logged to a logfile.\nA new logfile is started every day");
@@ -65,11 +60,6 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     comboOpt4->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200");
     comboOpt4->setToolTip("GNSS device baudrate");
     comboOpt4->setCurrentIndex(comboOpt4->findText(config->getGnssSerialPort2Baudrate()));
-
-    /*gnss2Layout->addRow(cbOpt6);
-    cbOpt6->setText("Connect on startup");
-    cbOpt6->setToolTip("The GNSS receiver will be connected to upon program startup");
-    cbOpt6->setChecked(config->getGnssSerialPort2AutoConnect());*/
 
     gnss2Layout->addRow(cbOpt7);
     cbOpt7->setText("Log NMEA to file");
@@ -113,7 +103,6 @@ void GnssOptions::start()
 void GnssOptions::saveCurrentSettings()
 {
     config->setGnssSerialPort1Activate(cbOpt1->isChecked());
-    //config->setGnssSerialPort1AutoConnect(cbOpt2->isChecked());
     config->setGnssSerialPort1Baudrate(comboOpt2->currentText());
     config->setGnssSerialPort1LogToFile(cbOpt3->isChecked());
     config->setGnssSerialPort1MonitorAgc(cbOpt4->isChecked());
@@ -121,7 +110,6 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssSerialPort1TriggerRecording(cbOpt9->isChecked());
 
     config->setGnssSerialPort2Activate(cbOpt5->isChecked());
-    //config->setGnssSerialPort2AutoConnect(cbOpt6->isChecked());
     config->setGnssSerialPort2Baudrate(comboOpt4->currentText());
     config->setGnssSerialPort2LogToFile(cbOpt7->isChecked());
     config->setGnssSerialPort2MonitorAgc(cbOpt8->isChecked());

@@ -123,8 +123,6 @@ public slots:
     void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1Baudrate", s); emit settingsUpdated();}
     bool getGnssSerialPort1Activate() { return settings->value("gnss/SerialPort1activate", false).toBool();}
     void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1activate", b); emit settingsUpdated();}
-    bool getGnssSerialPort1AutoConnect() { return settings->value("gnss/SerialPort1AutoConnect", false).toBool();}
-    void setGnssSerialPort1AutoConnect(bool b) { settings->setValue("gnss/SerialPort1AutoConnect", b); emit settingsUpdated();}
     bool getGnssSerialPort1LogToFile() { return settings->value("gnss/SerialPort1LogToFile", false).toBool();}
     void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1LogToFile", b); emit settingsUpdated();}
     bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1MonitorAgc", false).toBool();}
@@ -139,8 +137,6 @@ public slots:
     void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2Baudrate", s); emit settingsUpdated();}
     bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2activate", false).toBool();}
     void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2activate", b); emit settingsUpdated();}
-    bool getGnssSerialPort2AutoConnect() { return settings->value("gnss/SerialPort2AutoConnect", false).toBool();}
-    void setGnssSerialPort2AutoConnect(bool b) { settings->setValue("gnss/SerialPort2AutoConnect", b); emit settingsUpdated();}
     bool getGnssSerialPort2LogToFile() { return settings->value("gnss/SerialPort2LogToFile", false).toBool();}
     void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2LogToFile", b); emit settingsUpdated();}
     bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2MonitorAgc", false).toBool();}

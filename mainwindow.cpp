@@ -431,6 +431,7 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::reqReplot, customPlotController, &CustomPlotController::doReplot);
     connect(customPlotController, &CustomPlotController::reqTrigline, traceBuffer, &TraceBuffer::sendDispTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, customPlotController, &CustomPlotController::flashTrigline);
+    connect(traceBuffer, &TraceBuffer::averageLevelCalculating, sdefRecorder, &SdefRecorder::endRecording); // stop ev. recording in case avg level for any reason should start recalc.
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, customPlotController, &CustomPlotController::stopFlashTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::setAnalyzerNotReady);
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, traceAnalyzer, &TraceAnalyzer::setAnalyzerReady);
@@ -451,8 +452,10 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, traceAnalyzer, &TraceAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, traceBuffer, &TraceBuffer::updSettings);
     connect(config.data(), &Config::settingsUpdated, sdefRecorder, &SdefRecorder::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssDevice, &GnssDevice::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer, &GnssAnalyzer::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssDevice1, &GnssDevice::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssDevice2, &GnssDevice::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer1, &GnssAnalyzer::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer2, &GnssAnalyzer::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
@@ -467,12 +470,16 @@ void MainWindow::setSignals()
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
 
-    connect(gnssDevice, &GnssDevice::displayGnssData, this, [=](QString s, int val)
-        { this->rightBox->setTitle("GNSS receiver status (" + QString::number(val) + ")"); this->gnssStatus->setText(s);});
-    connect(gnssDevice, &GnssDevice::analyzeThisData, gnssAnalyzer, &GnssAnalyzer::getData);
-    connect(gnssAnalyzer, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(gnssAnalyzer, &GnssAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
-    connect(gnssDevice, &GnssDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
+    connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
+    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssAnalyzer1, &GnssAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssDevice1, &GnssDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssAnalyzer2, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
+    connect(gnssDevice2, &GnssDevice::analyzeThisData, gnssAnalyzer2, &GnssAnalyzer::getData);
+    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssDevice2, &GnssDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
 
     sdefRecorderThread->start();
 }
@@ -640,6 +647,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.5</td><td>Dual GNSS support added</td></tr>"
        << "<tr><td>2.4</td><td>Auto upload to Casper added, minor bugfixes</td></tr>"
        << "<tr><td>2.3</td><td>Instrument support: ESMB, EM100, EM200, EB500, USRP/Tracy</td></tr>"
        << "<tr><td>2.2</td><td>Basic file saving enabled</td></tr>"
@@ -793,4 +801,17 @@ void MainWindow::updConfigSettings()
 void MainWindow::triggerSettingsUpdate()
 {
 
+}
+
+void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
+{
+    if (id == gnssLastDisplayedId) { // same as previous update, just show result
+        gnssStatus->setText(txt);
+    }
+    else if (gnssLastDisplayedTime.secsTo(QDateTime::currentDateTime()) >= 5) {
+        gnssLastDisplayedId = id;
+        gnssLastDisplayedTime = QDateTime::currentDateTime();
+        rightBox->setTitle("GNSS " + QString::number(id) + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
+        gnssStatus->setText(txt);
+    }
 }

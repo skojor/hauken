@@ -37,6 +37,7 @@ public slots:
     void receiveTrace(const QVector<qint16> data); // new data arrives here
     void updTracesPerSecond(double d) { tracePerSecond = d;}
     void deviceDisconnected(bool b) { if (!b) finishRecording();}
+    void endRecording() { finishRecording();}
 
 private slots:
     QByteArray createHeader();

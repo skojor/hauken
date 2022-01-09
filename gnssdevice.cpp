@@ -1,172 +1,168 @@
 #include "gnssdevice.h"
 
-GnssDevice::GnssDevice(QObject *parent)
+GnssDevice::GnssDevice(QObject *parent, int val)
     : Config{parent}
 {
-    gnssData.append(GnssData());
-    gnssData.append(GnssData());
-    gnssData[0].id = 0;
-    gnssData[1].id = 1;
+    gnssData.id = val;
 
-    connect(gnss1, &QSerialPort::readyRead, this, [this]
+    connect(gnss, &QSerialPort::readyRead, this, [this]
     {
-        this->gnss1Buffer.append(gnss1->readAll());
+        this->gnssBuffer.append(gnss->readAll());
         this->handleBuffer();
     });
-    connect(gnss2, &QSerialPort::readyRead, this,  [this]
+
+    connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
     {
-        this->gnss2Buffer.append(gnss2->readAll());
+        if (this->gnss->isOpen()) emit analyzeThisData(gnssData);
     });
 
-    connect(updDisplayTimer, &QTimer::timeout, this, &GnssDevice::updDisplay);
     start();
 }
 
 void GnssDevice::start()
 {
-    //gnss1->close();
-    //gnss2->close();
-    if (getGnssSerialPort1Activate() && !gnss1->isOpen()) connectToPort(1);
-    if (getGnssSerialPort2Activate() && !gnss2->isOpen()) connectToPort(2);
+    if (gnssData.id == 1 && getGnssSerialPort1Activate() && !gnss->isOpen()) connectToPort();
+    else if (gnssData.id == 2 && getGnssSerialPort2Activate() && !gnss->isOpen()) connectToPort();
+    sendToAnalyzerTimer->stop();
 
-    updDisplayTimer->stop();
-    if (gnss1->isOpen() or gnss2->isOpen()) updDisplayTimer->start(2000);
+    if (gnss->isOpen()) {
+        sendToAnalyzerTimer->start(1000);
+    }
 }
 
-void GnssDevice::connectToPort(int portnr)
+void GnssDevice::connectToPort()
 {
-    serialPortList = QSerialPortInfo::availablePorts();
     QSerialPortInfo portInfo;
-    // gnss 1 basic config check
-    if (portnr == 1 && getGnssSerialPort1Activate() && !getGnssSerialPort1Name().isEmpty() && !getGnssSerialPort1Baudrate().isEmpty()) {
-        for (auto &val : serialPortList) {
-            if (!val.isNull() && val.portName().contains(getGnssSerialPort1Name(), Qt::CaseInsensitive))
-                portInfo = val;
-        }
-        if (!portInfo.isNull())
-            gnss1->setPort(portInfo);
-        else {
-            qDebug() << "Couldn't find serial port, check settings";
-        }
-        gnss1->setBaudRate(getGnssSerialPort1Baudrate().toUInt());
-        if (gnss1->open(QIODevice::ReadWrite))
-            qDebug() << "Connected to" << gnss1->portName();
-        else
-            qDebug() << "Cannot open" << gnss1->portName();
+    bool activate;
+    QString portName;
+    QString baudrate;
+
+    if (gnssData.id == 1) {
+        activate = getGnssSerialPort1Activate();
+        portName = getGnssSerialPort1Name();
+        baudrate = getGnssSerialPort1Baudrate();
+    }
+    else {
+        activate = getGnssSerialPort2Activate();
+        portName = getGnssSerialPort2Name();
+        baudrate = getGnssSerialPort2Baudrate();
     }
 
-    if (portnr == 2 && getGnssSerialPort2Activate() && !getGnssSerialPort2Name().isEmpty() && !getGnssSerialPort2Baudrate().isEmpty()) {
-        for (auto &val : serialPortList) {
-            if (!val.isNull() && val.portName().contains(getGnssSerialPort2Name(), Qt::CaseInsensitive))
+    if (activate && !portName.isEmpty() && !baudrate.isEmpty()) {
+        for (auto &val : QSerialPortInfo::availablePorts()) {
+            if (!val.isNull() && val.portName().contains(portName, Qt::CaseInsensitive))
                 portInfo = val;
         }
         if (!portInfo.isNull())
-            gnss2->setPort(portInfo);
+            gnss->setPort(portInfo);
         else {
-            qDebug() << "Couldn't find serial port, check settings";
+            qDebug() << "Couldn't find serial port" << portInfo.portName() << ", check settings";
         }
-        gnss2->setBaudRate(getGnssSerialPort2Baudrate().toUInt());
-        if (gnss2->open(QIODevice::ReadWrite))
-            qDebug() << "Connected to" << gnss2->portName();
+        gnss->setBaudRate(baudrate.toUInt());
+        if (gnss->open(QIODevice::ReadWrite))
+            qDebug() << "Connected to" << gnss->portName();
         else
-            qDebug() << "Cannot open" << gnss2->portName();
-
+            qDebug() << "Cannot open" << gnss->portName();
+        if (gnss->isOpen()) gnssData.inUse = true;
+        else gnssData.inUse = false;
     }
 }
 
 void GnssDevice::handleBuffer()
 {
-    while (gnss1Buffer.contains('\n')) {
-        QByteArray sentence = gnss1Buffer.split('\n').at(0);
-        gnss1Buffer.remove(0, gnss1Buffer.indexOf('\n') + 1); // deletes one sentence from the buffer
-        if (checkChecksum(sentence)) {
-            if (sentence.contains("GGA"))
-                decodeGga(sentence, 0);
-            else if (sentence.contains("GSA"))
-                decodeGsa(sentence, 0);
-            else if (sentence.contains("RMC"))
-                decodeRmc(sentence, 0);
-            else if (sentence.contains("GSV"))
-                decodeGsv(sentence, 0);
+    while (gnssBuffer.contains('\n')) {
+        if (gnssBuffer.at(0) == (char)0xb5 && gnssBuffer.at(1) == (char)0x62) { //binary header
+            quint16 size = 8 + (quint16)gnssBuffer.at(4) + (quint16)(gnssBuffer.at(5) << 8);
+            if (gnssBuffer.size() >= size) {
+                QByteArray tmp = gnssBuffer.left(size);
+                gnssBuffer.remove(0, size);
+                if (checkBinaryChecksum(tmp)) decodeBinary(tmp);
+            }
         }
-        else qDebug() << "checksum error" << sentence;
-    }
-    while (gnss2Buffer.contains('\n')) {
-        QByteArray sentence = gnss2Buffer.split('\n').at(0);
-        gnss2Buffer.remove(0, gnss2Buffer.indexOf('\n') + 1); // deletes one sentence from the buffer
-        if (checkChecksum(sentence)) {
-            if (sentence.contains("GGA"))
-                decodeGga(sentence, 1);
-            else if (sentence.contains("GSA"))
-                decodeGsa(sentence, 1);
-            else if (sentence.contains("RMC"))
-                decodeRmc(sentence, 1);
-            else if (sentence.contains("GSV"))
-                decodeGsv(sentence, 1);
-        }
-        else qDebug() << "checksum error" << sentence;
-    }
 
+        QByteArray sentence = gnssBuffer.split('\n').at(0);
+        gnssBuffer.remove(0, gnssBuffer.indexOf('\n') + 1); // deletes one sentence from the buffer
+        if (logToFile) appendToLogfile(sentence);
+
+        if (sentence.at(0) == '$' && sentence.contains('\r')) { // looks like nmea
+            if (checkChecksum(sentence)) {
+                if (sentence.contains("GGA"))
+                    decodeGga(sentence);
+                else if (sentence.contains("GSA"))
+                    decodeGsa(sentence);
+                else if (sentence.contains("RMC"))
+                    decodeRmc(sentence);
+                else if (sentence.contains("GSV"))
+                    decodeGsv(sentence);
+            }
+            else qDebug() << "checksum error" << sentence;
+        }
+    }
 }
 
-bool GnssDevice::decodeGsa(const QByteArray &val, const int nr)
+bool GnssDevice::decodeGsa(const QByteArray &val)
 {
     QList<QByteArray> split = val.split(',');
     if (split.count() > 16) {
-        gnssData[nr].gsaValid = true;
-        gnssData[nr].hdop = split.at(16).toDouble();
+        gnssData.gsaValid = true;
+        gnssData.hdop = split.at(16).toDouble();
 
-        if (split.at(2).toInt() == 3) gnssData[nr].fixType = "3D";
-        else if (split.at(2).toInt() == 2) gnssData[nr].fixType = "2D";
-        else gnssData[nr].fixType = "No fix";
+        if (split.at(2).toInt() == 3) gnssData.fixType = "3D";
+        else if (split.at(2).toInt() == 2) gnssData.fixType = "2D";
+        else gnssData.fixType = "No fix";
     }
     else
-        gnssData[nr].gsaValid = false;
+        gnssData.gsaValid = false;
 
-    return gnssData[nr].gsaValid;
+    return gnssData.gsaValid;
 }
 
-bool GnssDevice::decodeGga(const QByteArray &val, const int nr)
+bool GnssDevice::decodeGga(const QByteArray &val)
 {
     QList<QByteArray> split = val.split(',');
     if (split.size() > 7) {
-        gnssData[nr].ggaValid = true;
+        gnssData.ggaValid = true;
 
-        gnssData[nr].satsTracked = split.at(7).toInt();
-        gnssData[nr].fixQuality = split.at(6).toInt();
-        gnssData[nr].altitude = split.at(9).toDouble();
-        //gnssData[nr].hdop = split.at(8).toDouble();
-        gnssData[nr].latitude =
+        gnssData.satsTracked = split.at(7).toInt();
+        gnssData.fixQuality = split.at(6).toInt();
+        gnssData.altitude = split.at(9).toDouble();
+        //gnssData.hdop = split.at(8).toDouble();
+        gnssData.latitude =
                 int(split.at(2).toDouble() / 100) +
                 ((split.at(2).toDouble() / 100) - int(split.at(2).toDouble() / 100)) * 1.6667;
-        gnssData[nr].longitude =
+        gnssData.longitude =
                 int(split.at(4).toDouble() / 100) +
                 ((split.at(4).toDouble() / 100) - int(split.at(4).toDouble() / 100)) * 1.6667;
 
-        if (split[3][0] == 'S') gnssData[nr].latitude *= -1;
-        if (split[5][0] == 'W') gnssData[nr].longitude *= -1;
+        if (split[3][0] == 'S') gnssData.latitude *= -1;
+        if (split[5][0] == 'W') gnssData.longitude *= -1;
     }
-    else gnssData[nr].ggaValid = false;
-    return gnssData[nr].ggaValid;
+    else gnssData.ggaValid = false;
+    return gnssData.ggaValid;
 }
 
-bool GnssDevice::decodeRmc(const QByteArray &val, const int nr)
+bool GnssDevice::decodeRmc(const QByteArray &val)
 {
     QList<QByteArray> split = val.split(',');
     if (split.size() > 11) {
-        gnssData[nr].timestamp = convFromGnssTimeToQDateTime(split.at(9), split.at(1));
+        gnssData.timestamp = convFromGnssTimeToQDateTime(split.at(9), split.at(1));
         if (split.at(2).contains('A'))
-            gnssData[nr].posValid = true;
+            gnssData.posValid = true;
         else
-            gnssData[nr].posValid = false;
+            gnssData.posValid = false;
     }
     return true;
 }
 
-bool GnssDevice::decodeGsv(const QByteArray &val, const int nr)
+bool GnssDevice::decodeGsv(const QByteArray &val)
 {
     QList<QByteArray> split = val.split(',');
-    if (split.size() > 11) {
+    if (split.size() > 4) {
+        if (val.contains("$GN")) gnssData.gnssType = "GPS+GLONASS";
+        else if (val.contains("$GP")) gnssData.gnssType = "GPS";
+        else if (val.contains("$GL")) gnssData.gnssType = "GLONASS";
+        else gnssData.gnssType = "Other";
+
         if (split.at(2).toInt() == gsvSentences.size() + 1)
             gsvSentences.append(val);
     }
@@ -174,7 +170,7 @@ bool GnssDevice::decodeGsv(const QByteArray &val, const int nr)
         QList<int> cnoList;
         for (auto &gsvSentence : gsvSentences) {
             split = gsvSentence.split(',');
-            for (int i=4; i<split.size(); i += 3) {
+            for (int i=7; i<split.size(); i += 4) {
                 if (split.at(i).toInt() > 0) cnoList.append(split.at(i).toInt());
             }
         }
@@ -188,12 +184,14 @@ bool GnssDevice::decodeGsv(const QByteArray &val, const int nr)
             }
             cnoList.removeAt(iterator);
         }
-        gnssData[nr].cno = 0;
-        for (auto &val : cnoList)
-            gnssData[nr].cno += val;
-        gnssData[nr].cno /= cnoList.size();
+        if (cnoList.size() > 0) {
+            gnssData.cno = 0;
+            for (auto &v : cnoList)
+                gnssData.cno += v;
+            gnssData.cno /= cnoList.size();
+        }
+        gsvSentences.clear();
     }
-    gsvSentences.clear();
     return true;
 }
 
@@ -205,6 +203,30 @@ QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const Q
     dt.setTimeSpec(Qt::UTC);
     return dt;
 }
+
+void GnssDevice::decodeBinary(const QByteArray &val)
+{
+    if (checkBinaryChecksum(val)) {
+        gnssData.agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
+        //jamInd = (quint8)buffer.at(51);
+    }
+}
+
+bool GnssDevice::checkBinaryChecksum(const QByteArray &val)
+{
+    quint8 calcChkA = 0, calcChkB = 0;
+    quint16 size = val.length() - 4;
+    quint8 chkA = (quint8)val.at(val.size()-2);
+    quint8 chkB = (quint8)val.at(val.size()-1);
+
+    for (int i = 2; i<size+2; i++) {
+        calcChkA += (quint8)val.at(i);
+        calcChkB += calcChkA;
+    }
+    if (calcChkA == chkA && calcChkB == chkB) return true;
+    else return false;
+}
+
 
 bool GnssDevice::checkChecksum(const QByteArray &val)
 {
@@ -231,35 +253,30 @@ bool GnssDevice::checkChecksum(const QByteArray &val)
 
 void GnssDevice::updSettings() // caching these settings in memory since they are used often
 {
-    if (!getGnssSerialPort1Activate()) gnss1->close();
-    if (!getGnssSerialPort2Activate()) gnss2->close();
+    if (gnssData.id == 1 && !getGnssSerialPort1Activate()) gnss->close();
+    else if (gnssData.id == 2 && !getGnssSerialPort2Activate()) gnss->close();
+    if (gnssData.id == 1) {
+        logToFile = getGnssSerialPort1LogToFile();
+    }
+    else {
+        logToFile = getGnssSerialPort2LogToFile();
+    }
     start(); // reconnect if needed
 }
 
-void GnssDevice::updDisplay()
+void GnssDevice::appendToLogfile(const QByteArray &data)
 {
-    if (gnss1->isOpen() && gnss2->isOpen()) { // alternates once per update (second)
-        if (display) display = 0;
-        else display = 1;
+    if (!logfile.isOpen()) {
+        logfile.setFileName(getLogFolder() + "/" + "gnss_" + QString::number(gnssData.id) + QDate::currentDate().toString("_yyyyMMdd.log"));
+        logfile.open(QIODevice::Append | QIODevice::Text);
+        logfileStartedDate = QDate::currentDate();
+        qDebug() << "GNSS logfile opened" << logfile.fileName();
     }
-    else if (gnss1->isOpen() && !gnss2->isOpen())
-        display = 0;
-    else if (!gnss1->isOpen() && gnss2->isOpen())
-        display = 1;
-    else display = -1;
+    logfile.write(data);
+    logfile.flush();
 
-    if (display >= 0) {
-        QString out;
-        QTextStream ts(&out);
-
-        ts << "<table><tr><td>Latitude</td><td>" << gnssData.at(display).latitude << "</td></tr>"
-           << "<tr><td>Longitude</td><td>" << gnssData.at(display).longitude << "</td></tr>"
-           << "<tr><td>Altitude</td><td>" << gnssData.at(display).altitude << "</td></tr>"
-           << "<tr><td>C/No</td><td>" << gnssData.at(display).cno << "</td></tr>"
-           << "<tr><td>Sats tracked</td><td>" << gnssData.at(display).satsTracked << "</td></tr>"
-           << "<tr><td>HDOP</td><td>" << gnssData.at(display).hdop << "</td></tr>"
-           << "<tr><td>GNSS type</td><td>" << gnssData.at(display).fixType << "</td></tr>"
-           << "</table>";
-        emit displayGnssData(out, display + 1);
+    if (logfileStartedDate.daysTo(QDate::currentDate())) {
+        logfile.close();
+        qDebug() << "GNSS logfile closed, starting new";
     }
 }

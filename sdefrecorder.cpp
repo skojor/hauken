@@ -160,8 +160,11 @@ void SdefRecorder::finishRecording()
     emit recordingEnded();
     if (getSdefSaveToFile())
         if (recordingTimeoutTimer->isActive()) emit toIncidentLog("Recording ended after "
-                                                                  + QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes"));
+                                                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
+                                                                       QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
+                                                                       + " seconds" :
+                                                                   QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                                                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
 
     if (file.isOpen()) file.close();
     if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) uploadToCasper();
