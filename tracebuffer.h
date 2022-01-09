@@ -86,10 +86,12 @@ private:
     int att;
     bool normalizeSpectrum;
     bool recording = false;
+    int tracesUsedInAvg = 0;
     const int plotResolution = 2400;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 60; // secs
+    const int tracesNeededForAvg = 250;
 };
 
 #endif // TRACEBUFFER_H

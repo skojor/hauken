@@ -68,7 +68,7 @@ win32 {
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"
-DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd)\\\"
+DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 
 #DEFINES += GIT_LOG=\\\"$$system(git log --oneline)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)

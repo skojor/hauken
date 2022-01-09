@@ -12,7 +12,7 @@ void TraceBuffer::start()
     throttleTimer = new QElapsedTimer;
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
-    connect(averageLevelDoneTimer, &QTimer::timeout, this, &TraceBuffer::finishAvgLevelCalc);
+    //connect(averageLevelDoneTimer, &QTimer::timeout, this, &TraceBuffer::finishAvgLevelCalc);
     connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
 }
 
@@ -61,7 +61,8 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     }
     mutex.unlock();
 
-    if (averageLevelDoneTimer->isActive())
+    if (tracesUsedInAvg <= tracesNeededForAvg)
+    //if (averageLevelDoneTimer->isActive())
         calcAvgLevel(data);
 }
 
@@ -164,6 +165,8 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
 
         emit newDispTriglevel(copy);
     }
+    tracesUsedInAvg++;
+    if (tracesUsedInAvg >= tracesNeededForAvg) finishAvgLevelCalc();
 }
 
 void TraceBuffer::emptyBuffer()
@@ -178,7 +181,7 @@ void TraceBuffer::emptyBuffer()
 
 void TraceBuffer::finishAvgLevelCalc()
 {
-    averageLevelDoneTimer->stop();
+    //averageLevelDoneTimer->stop();
     averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime * 1e3); // routine to keep updating the average level at a very slow interval
     emit averageLevelReady(averageLevel);
     emit stopAvgLevelFlash();
@@ -186,7 +189,8 @@ void TraceBuffer::finishAvgLevelCalc()
 
 void TraceBuffer::restartCalcAvgLevel()
 {
-    averageLevelDoneTimer->start(calcAvgLevelTime * 1e3);
+    tracesUsedInAvg = 0;
+    //averageLevelDoneTimer->start(calcAvgLevelTime * 1e3);
     averageLevelMaintenanceTimer->stop();
     averageLevel.clear();
     averageDispLevel.clear();
@@ -219,7 +223,7 @@ void TraceBuffer::updSettings()
 
 void TraceBuffer::deviceDisconnected()
 {
-    averageLevelDoneTimer->stop();
+    //averageLevelDoneTimer->stop();
     averageLevelMaintenanceTimer->stop();
 }
 

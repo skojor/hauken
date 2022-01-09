@@ -631,7 +631,8 @@ void MainWindow::about()
     QString txt;
     QTextStream ts(&txt);
     ts << "Application version " << SW_VERSION;
-    ts << "\nAdd more info here...";
+    ts << "\nABuild date " << BUILD_DATE;
+    ts << "Questions/support? => JSK";
     QMessageBox::about(this, "About Hauken", txt);
 }
 
