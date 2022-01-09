@@ -40,7 +40,6 @@ void CustomPlotController::setupBasics()
     //customPlotPtr->setOpenGl(false);
     customPlotPtr->setNotAntialiasedElements(QCP::aePlottables);
 
-    fill.fill(-200, screenResolution);
 }
 
 void CustomPlotController::plotTrace(const QVector<double> &data)
@@ -59,7 +58,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
 
     if (!data.isEmpty() && !freqSelection.isEmpty()) {
         copy = data;
-        for (int i=0; i<screenResolution; i++) {
+        for (int i=0; i<plotResolution; i++) {
             if (!freqSelection.at(i))
                 copy[i] = -100;
         }
@@ -77,11 +76,11 @@ void CustomPlotController::reCalc()
     if ((int)(resolution * 1e6) > 0 && customPlotPtr->xAxis->range().upper > 0 && customPlotPtr->xAxis->range().lower > 0) {
         nrOfValues = 1 + ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
         if (nrOfValues > 1) {
-            double rate = (customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / screenResolution;
+            double rate = (customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / plotResolution;
             keyValues.clear();
             double freq = customPlotPtr->xAxis->range().lower;
 
-            for (int i = 0; i < screenResolution; i++) {
+            for (int i = 0; i < plotResolution; i++) {
                 keyValues.append(freq);
                 freq += rate;
             }
@@ -139,7 +138,7 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
 
 void CustomPlotController::trigInclude()
 {
-    for (int i=0; i<screenResolution; i++) {
+    for (int i=0; i<plotResolution; i++) {
         if (keyValues.at(i) > selMin && keyValues.at(i) < selMax) {
             freqSelection[i] = 1;
         }
@@ -149,7 +148,7 @@ void CustomPlotController::trigInclude()
 
 void CustomPlotController::trigExclude()
 {
-    for (int i=0; i<screenResolution; i++) {
+    for (int i=0; i<plotResolution; i++) {
         if (keyValues.at(i) > selMin && keyValues.at(i) < selMax) {
             freqSelection[i] = 0;
         }
@@ -159,7 +158,7 @@ void CustomPlotController::trigExclude()
 
 void CustomPlotController::trigIncludeAll()
 {
-    for (int i=0; i<screenResolution; i++) {
+    for (int i=0; i<plotResolution; i++) {
         freqSelection[i] = 1;
     }
     saveTrigSelectionToConfig();
@@ -167,7 +166,7 @@ void CustomPlotController::trigIncludeAll()
 
 void CustomPlotController::trigExcludeAll()
 {
-    for (int i=0; i<screenResolution; i++) {
+    for (int i=0; i<plotResolution; i++) {
         freqSelection[i] = 0;
     }
     //saveTrigSelectionToConfig();
@@ -177,7 +176,7 @@ void CustomPlotController::trigExcludeAll()
 
 void CustomPlotController::readTrigSelectionFromConfig()
 {
-    freqSelection.fill(0, screenResolution);
+    freqSelection.fill(0, plotResolution);
     QStringList freqList = config->getTrigFrequencies();
 
     if (!freqList.isEmpty()) {
@@ -185,14 +184,14 @@ void CustomPlotController::readTrigSelectionFromConfig()
         for (int i=0; i<freqList.size();) {
             range1 = freqList.at(i++).toDouble();
             range2 = freqList.at(i++).toDouble();
-            for (int j=0; j<screenResolution; j++) {
+            for (int j=0; j<plotResolution; j++) {
                 if (keyValues.at(j) > range1 && keyValues.at(j) < range2)
                     freqSelection[j] = 1;
             }
         }
     }
     else { // initialize list in config, it shouldn't be empty
-        freqSelection.fill(1, screenResolution);
+        freqSelection.fill(1, plotResolution);
         freqList << "0" << "9999";
         config->setTrigFrequencies(freqList);
     }
@@ -203,7 +202,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
     QStringList tmp;
 
     double sel1 = 0, sel2 = 0;
-    for (int i=0; i<screenResolution; i++) {
+    for (int i=0; i<plotResolution; i++) {
         if (freqSelection.at(i) == 1 && (int)sel1 == 0) { // first include value
             sel1 = keyValues.at(i);
         }
@@ -225,6 +224,9 @@ void CustomPlotController::saveTrigSelectionToConfig()
 
 void CustomPlotController::updSettings()
 {
+    plotResolution = config->getPlotResolution();
+    fill.fill(-200, plotResolution);
+
     if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrStartFreq()
             || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
             || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)

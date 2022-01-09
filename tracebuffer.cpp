@@ -83,30 +83,34 @@ void TraceBuffer::calcMaxhold()
 {
     if (displayBuffer.size() > 2) {
         QVector<double> maxhold(displayBuffer.last());
+        //QElapsedTimer timer; timer.start();
         int iterator = displayBuffer.size() - 2;
+        int size = displayBuffer.last().size();
         while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(QDateTime::currentDateTime()) < maxholdTime) {
-            for (int i=0; i<displayBuffer.at(iterator).size(); i++) {
+            for (int i=0; i<size; i++) {
                 if (maxhold.at(i) < displayBuffer.at(iterator).at(i))
                     maxhold[i] = displayBuffer.at(iterator).at(i);
             }
             iterator--;
         }
+        //qDebug() << timer.nsecsElapsed()/1000;
         emit newDispMaxhold(maxhold);
     }
 }
 
-void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find average between points
+void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points
 {
     QVector<double>displayData(plotResolution);
 
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
-            /*int val = 0;
-            for (int j=0; j<(int)rate; j++)
-                val += data.at(iterator++);
-            val /= (int)rate;*/
-            displayData[i] = (double)data.at((int)(rate * i)) / 10;
+            int val = data.at(rate * i);
+            for (int j=1; j<(int)rate; j++) {
+                if (val < data.at(rate * i + j))
+                    val = data.at(rate * i + j); // pick the strongest sample to show in plot
+            }
+            displayData[i] = (double)val / 10;
         }
     }
     else {
@@ -203,6 +207,7 @@ void TraceBuffer::restartCalcAvgLevel()
 
 void TraceBuffer::updSettings()
 {
+    plotResolution = config->getPlotResolution();
     if (trigLevel != (int)config->getInstrTrigLevel()) {
         trigLevel = config->getInstrTrigLevel();
     }

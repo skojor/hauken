@@ -155,7 +155,7 @@ public slots:
     void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
     int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 1).toUInt();}
     void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
-
+    int getPlotResolution() { return plotResolution;}
     // trig line
 
     QStringList getTrigFrequencies() { return settings->value("trigFrequencies").toStringList();}
@@ -170,6 +170,7 @@ private:
     QString curFile = basicSettings->value("lastFile", "default.ini").toString();
     QSettings *settings = new QSettings(curFile, QSettings::IniFormat);
     bool ready = false;
+    const int plotResolution = 1200;
 };
 
 #endif // CONFIG_H

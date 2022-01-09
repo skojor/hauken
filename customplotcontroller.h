@@ -69,7 +69,7 @@ private:
     QColor colorFlash = QColor(0, 150, 0, 20);
     bool flip = true;
     bool deviceConnected = false;
-    const int screenResolution = 2400;
+    int plotResolution;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H
