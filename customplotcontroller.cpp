@@ -40,6 +40,14 @@ void CustomPlotController::setupBasics()
     //customPlotPtr->setOpenGl(false);
     customPlotPtr->setNotAntialiasedElements(QCP::aePlottables);
 
+    customPlotPtr->addLayer("liveGraph");
+    customPlotPtr->layer("liveGraph")->setMode(QCPLayer::lmBuffered);
+    customPlotPtr->addLayer("triggerLayer");
+    customPlotPtr->layer("triggerLayer")->setMode(QCPLayer::lmBuffered);
+    customPlotPtr->graph(0)->setLayer("liveGraph");
+    customPlotPtr->graph(1)->setLayer("liveGraph");
+    customPlotPtr->graph(2)->setLayer("triggerLayer");
+    customPlotPtr->graph(3)->setLayer("triggerLayer");
 }
 
 void CustomPlotController::plotTrace(const QVector<double> &data)
@@ -68,7 +76,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
 
 void CustomPlotController::doReplot()
 {
-    customPlotPtr->replot();
+    customPlotPtr->layer("liveGraph")->replot();
 }
 
 void CustomPlotController::reCalc()
@@ -86,7 +94,7 @@ void CustomPlotController::reCalc()
             }
             readTrigSelectionFromConfig();
             customPlotPtr->graph(3)->setData(keyValues, fill);
-            customPlotPtr->replot();
+            customPlotPtr->layer("triggerLayer")->replot();
         }
     }
 }
@@ -169,9 +177,9 @@ void CustomPlotController::trigExcludeAll()
     for (int i=0; i<plotResolution; i++) {
         freqSelection[i] = 0;
     }
-    //saveTrigSelectionToConfig();
-    QStringList tmp = { "0", "0" };
+    QStringList tmp = { "0", "1" };
     config->setTrigFrequencies(tmp); // deletes all settings
+    saveTrigSelectionToConfig();
 }
 
 void CustomPlotController::readTrigSelectionFromConfig()
@@ -219,6 +227,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
     if (!tmp.isEmpty())
         config->setTrigFrequencies(tmp);
 
+    reCalc();
     emit freqSelectionChanged();
 }
 
@@ -256,12 +265,14 @@ void CustomPlotController::stopFlashTrigline()
 {
     flashTimer->stop();
     customPlotPtr->graph(2)->setVisible(true);
+    customPlotPtr->layer("triggerLayer")->replot();
 }
 
 void CustomPlotController::flashRoutine()
 {
     customPlotPtr->graph(2)->setVisible(flip = !flip);
-    customPlotPtr->replot();
+    customPlotPtr->layer("triggerLayer")->replot();
+    //customPlotPtr->replot();
 }
 
 void CustomPlotController::updDeviceConnected(bool b)

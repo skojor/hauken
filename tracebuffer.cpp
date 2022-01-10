@@ -98,8 +98,8 @@ void TraceBuffer::calcMaxhold()
     }
 
     QVector<double> maxhold;
-    if (maxholdBuffer.isEmpty()) maxhold.fill(-300, plotResolution);
-    else maxhold = maxholdBuffer.first();
+    if (maxholdBufferAggregate.isEmpty()) maxhold = maxholdBuffer.first();
+    else maxhold = maxholdBufferAggregate; // to include last ms of traces in the calc.
 
     if (!maxholdBuffer.isEmpty()) {
         int size = maxholdBuffer.size();

@@ -19,6 +19,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     mainLayout->addRow(cbOpt3);
     cbOpt3->setText("Add position data from GNSS (mobile setting)");
     cbOpt3->setToolTip("If checked the current position will be appended to the trace data. For mobile usage.");
+    cbOpt3->setDisabled(true);
     cbOpt3->setChecked(config->getSdefAddPosition());
 
     mainLayout->addRow(new QLabel("Username (Støygolvet login)"), leOpt1);
