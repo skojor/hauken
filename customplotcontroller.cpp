@@ -249,6 +249,7 @@ void CustomPlotController::updSettings()
         customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
         customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
         reCalc();
+        customPlotPtr->replot();
     }
     if (config->getInstrNormalizeSpectrum())
         customPlotPtr->yAxis->setLabel("dBμV (normalized)");
