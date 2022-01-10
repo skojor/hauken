@@ -191,6 +191,8 @@ void TraceBuffer::emptyBuffer()
     displayBuffer.clear();
     averageDispLevel.clear();
     averageDispLevelNormalized.clear();
+    maxholdBuffer.clear();
+    maxholdBufferAggregate.clear();
     restartCalcAvgLevel();
 }
 
