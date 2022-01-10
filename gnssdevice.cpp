@@ -71,6 +71,7 @@ void GnssDevice::connectToPort()
 void GnssDevice::handleBuffer()
 {
     while (gnssBuffer.contains('\n')) {
+        QByteArray sentence = gnssBuffer.split('\n').at(0);
         if (gnssBuffer.at(0) == (char)0xb5 && gnssBuffer.at(1) == (char)0x62) { //binary header
             quint16 size = 8 + (quint16)gnssBuffer.at(4) + (quint16)(gnssBuffer.at(5) << 8);
             if (gnssBuffer.size() >= size) {
@@ -80,7 +81,6 @@ void GnssDevice::handleBuffer()
             }
         }
 
-        QByteArray sentence = gnssBuffer.split('\n').at(0);
         gnssBuffer.remove(0, gnssBuffer.indexOf('\n') + 1); // deletes one sentence from the buffer
         if (logToFile) appendToLogfile(sentence);
 

@@ -14,6 +14,7 @@ void TraceBuffer::start()
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
     //connect(averageLevelDoneTimer, &QTimer::timeout, this, &TraceBuffer::finishAvgLevelCalc);
     connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+    maxholdBufferElapsedTimer->start();
 }
 
 void TraceBuffer::deleteOlderThan()
@@ -23,8 +24,9 @@ void TraceBuffer::deleteOlderThan()
         while (!datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
-            displayBuffer.removeFirst();
+            //displayBuffer.removeFirst();
         }
+        while (maxholdBuffer.size() > 120) maxholdBuffer.removeLast();
     }
     mutex.unlock();
 }
@@ -32,37 +34,37 @@ void TraceBuffer::deleteOlderThan()
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
     emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
-
+    
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
             emptyBuffer();
     }
-
+    
     if (normalizeSpectrum)
         traceBuffer.append(calcNormalizedTrace(data));
     else
         traceBuffer.append(data);
-
+    
     if (recording)
         emit traceToRecorder(traceBuffer.last());
-
+    
     datetimeBuffer.append(QDateTime::currentDateTime());
     addDisplayBufferTrace(data);
-
+    
     if (!throttleTimer->isValid())
         throttleTimer->start();
-
+    
     if (throttleTimer->elapsed() > throttleTime) {
         throttleTimer->start();
-        emit newDispTrace(displayBuffer.last());
+        emit newDispTrace(displayBuffer);
         if (maxholdTime > 0) calcMaxhold();
         emit reqReplot();
     }
     mutex.unlock();
-
+    
     if (tracesUsedInAvg <= tracesNeededForAvg)
-    //if (averageLevelDoneTimer->isActive())
+        //if (averageLevelDoneTimer->isActive())
         calcAvgLevel(data);
 }
 
@@ -81,27 +83,38 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
 
 void TraceBuffer::calcMaxhold()
 {
-    if (displayBuffer.size() > 2) {
-        QVector<double> maxhold(displayBuffer.last());
-        //QElapsedTimer timer; timer.start();
-        int iterator = displayBuffer.size() - 2;
-        int size = displayBuffer.last().size();
-        while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(QDateTime::currentDateTime()) < maxholdTime) {
-            for (int i=0; i<size; i++) {
-                if (maxhold.at(i) < displayBuffer.at(iterator).at(i))
-                    maxhold[i] = displayBuffer.at(iterator).at(i);
-            }
-            iterator--;
+    if (maxholdBufferAggregate.isEmpty()) maxholdBufferAggregate = displayBuffer;
+
+    else if (maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold every second, then updates the maxhold container
+        for (int i=0; i<plotResolution; i++) {
+            if (maxholdBufferAggregate[i] < displayBuffer[i]) maxholdBufferAggregate[i] = displayBuffer[i];
         }
-        //qDebug() << timer.nsecsElapsed()/1000;
-        emit newDispMaxhold(maxhold);
     }
+
+    else {
+        maxholdBufferElapsedTimer->start();
+        maxholdBuffer.prepend(maxholdBufferAggregate);
+        maxholdBufferAggregate.clear();
+    }
+
+    QVector<double> maxhold;
+    if (maxholdBuffer.isEmpty()) maxhold.fill(-300, plotResolution);
+    else maxhold = maxholdBuffer.first();
+
+    if (!maxholdBuffer.isEmpty()) {
+        int size = maxholdBuffer.size();
+        for (int seconds = 0; seconds < maxholdTime && seconds < size; seconds++) {
+            for (int i=0; i<plotResolution; i++) {
+                if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
+            }
+        }
+    }
+    emit newDispMaxhold(maxhold);
 }
 
 void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points
 {
-    QVector<double>displayData(plotResolution);
-
+    displayBuffer.clear();
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
@@ -110,21 +123,19 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
                 if (val < data.at(rate * i + j))
                     val = data.at(rate * i + j); // pick the strongest sample to show in plot
             }
-            displayData[i] = (double)val / 10;
+            displayBuffer.append((double)val / 10);
         }
     }
     else {
         double rate = (double)plotResolution / data.size();
         for (int i=0; i<plotResolution; i++) {
-            displayData[i] = (double)data.at((int)((double)i / rate)) / 10;
+            displayBuffer.append((double)data.at((int)((double)i / rate)) / 10);
         }
     }
     if (normalizeSpectrum && !averageDispLevel.isEmpty()) {
-        for (int i=0; i<displayData.size(); i++)
-            displayData[i] -= averageDispLevel.at(i);
+        for (int i=0; i<plotResolution; i++)
+            displayBuffer[i] -= averageDispLevel.at(i);
     }
-
-    displayBuffer.append(displayData);
 }
 
 void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
@@ -144,7 +155,7 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                 double rate = (double)data.size() / plotResolution;
                 for (int i=0; i<plotResolution; i++) {
                     averageDispLevel[i] = (double)averageLevel.at((int)(rate * i)) / 10;
-
+                    
                 }
             }
             else {
@@ -153,10 +164,10 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10;
                 }
             }
-
+            
         }
     }
-
+    
     if (normalizeSpectrum) {
         if (averageDispLevelNormalized.isEmpty())
             averageDispLevelNormalized.fill(trigLevel, plotResolution);
@@ -166,7 +177,7 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
         QVector<double> copy = averageDispLevel;
         for (auto &val : copy)
             val += trigLevel;
-
+        
         emit newDispTriglevel(copy);
     }
     tracesUsedInAvg++;

@@ -101,7 +101,6 @@ void GnssAnalyzer::updDisplay()
     if (gnssData.inUse) {
         QString out;
         QTextStream ts(&out);
-        //bool valid = gnssData.posValid;
         if (gnssData.posValid)
             ts << "<table style='color:black'>";
         else
@@ -113,7 +112,7 @@ void GnssAnalyzer::updDisplay()
            << "<tr><td>Time offset</td><td align=right>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << "</td><td>ms</td></tr>"
            << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
         if (gnssData.agc > 0)
-            ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.altOffset << " (" << gnssData.agcOffset << ")</td><td>m</td></tr>";
+            ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>m</td></tr>";
 
         ts << "<tr><td>Sats tracked</td><td align=right>" << gnssData.satsTracked << "</td></tr>"
            << "<tr><td>GNSS type</td><td align=right>" << gnssData.gnssType << "</td></tr>"

@@ -71,7 +71,8 @@ private:
     QVector<qint16> averageLevel;
     QVector<double> averageDispLevel;
     QVector<double> averageDispLevelNormalized;
-    QList<QVector<double>> displayBuffer;
+    QVector<double> displayBuffer;
+    QList<QVector<double>> maxholdBuffer;
     int maxholdTime = 10;
     const int bufferAge = 120; // always hold 120 seconds of buffer. maxhold/other output adjusted to their own settings
     QTimer *deleteOlderThanTimer;
@@ -88,6 +89,8 @@ private:
     bool recording = false;
     int tracesUsedInAvg = 0;
     int plotResolution;
+    QElapsedTimer *maxholdBufferElapsedTimer = new QElapsedTimer;
+    QVector<double> maxholdBufferAggregate;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 60; // secs
