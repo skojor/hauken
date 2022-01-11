@@ -14,7 +14,6 @@ void TraceBuffer::start()
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
     //connect(averageLevelDoneTimer, &QTimer::timeout, this, &TraceBuffer::finishAvgLevelCalc);
     connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
-    maxholdBufferElapsedTimer->start();
 }
 
 void TraceBuffer::deleteOlderThan()
@@ -50,15 +49,15 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
         emit traceToRecorder(traceBuffer.last());
     
     datetimeBuffer.append(QDateTime::currentDateTime());
-    addDisplayBufferTrace(data);
     
     if (!throttleTimer->isValid())
         throttleTimer->start();
     
     if (throttleTimer->elapsed() > throttleTime) {
         throttleTimer->start();
+        addDisplayBufferTrace(data);
+        calcMaxhold();
         emit newDispTrace(displayBuffer);
-        if (maxholdTime > 0) calcMaxhold();
         emit reqReplot();
     }
     mutex.unlock();
@@ -83,33 +82,42 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
 
 void TraceBuffer::calcMaxhold()
 {
-    if (maxholdBufferAggregate.isEmpty()) maxholdBufferAggregate = displayBuffer;
+    QVector<double> maxhold;
+    maxhold.fill(-100, plotResolution);
 
-    else if (maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold every second, then updates the maxhold container
-        for (int i=0; i<plotResolution; i++) {
-            if (maxholdBufferAggregate[i] < displayBuffer[i]) maxholdBufferAggregate[i] = displayBuffer[i];
-        }
+    if (!maxholdBufferElapsedTimer->isValid()) maxholdBufferElapsedTimer->start();
+
+    if (maxholdBuffer.isEmpty()) maxholdBuffer.append(displayBuffer);
+
+    if (maxholdBufferAggregate.isEmpty()) {
+        maxholdBufferElapsedTimer->start();
+        maxholdBufferAggregate = displayBuffer;
     }
 
-    else {
+    else if (!maxholdBufferAggregate.isEmpty() && maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold every second, then updates the maxhold container
+        for (int i=0; i<plotResolution; i++) {
+            if (maxholdBufferAggregate.at(i) < displayBuffer.at(i)) maxholdBufferAggregate[i] = displayBuffer.at(i);
+        }
+        maxhold = maxholdBufferAggregate;
+    }
+    else if (maxholdBufferElapsedTimer->elapsed() >= 1000) {
         maxholdBufferElapsedTimer->start();
+        maxhold = maxholdBufferAggregate;
         maxholdBuffer.prepend(maxholdBufferAggregate);
         maxholdBufferAggregate.clear();
     }
 
-    QVector<double> maxhold;
-    if (maxholdBufferAggregate.isEmpty()) maxhold = maxholdBuffer.first();
-    else maxhold = maxholdBufferAggregate; // to include last ms of traces in the calc.
-
-    if (!maxholdBuffer.isEmpty()) {
-        int size = maxholdBuffer.size();
-        for (int seconds = 0; seconds < maxholdTime && seconds < size; seconds++) {
-            for (int i=0; i<plotResolution; i++) {
-                if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
+    if (!maxholdBufferAggregate.isEmpty()) {
+        if (!maxholdBuffer.isEmpty()) {
+            int size = maxholdBuffer.size();
+            for (int seconds = 0; seconds < maxholdTime && seconds < size; seconds++) {
+                for (int i=0; i<plotResolution; i++) {
+                    if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
+                }
             }
         }
+        if (maxholdTime > 0) emit newDispMaxhold(maxhold);
     }
-    emit newDispMaxhold(maxhold);
 }
 
 void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points

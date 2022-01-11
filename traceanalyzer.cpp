@@ -63,9 +63,10 @@ void TraceAnalyzer::setAverageTrace(const QVector<qint16> &data)
 
 void TraceAnalyzer::updTrigFrequencyTable()
 {
+    trigFrequenciesList.clear();
     QStringList freqList = config->getTrigFrequencies();
     if (freqList.isEmpty()) {
-        trigFrequenciesList.append(QPair<double, double>(0, 0)); // nothing will be detected, ever!
+        trigFrequenciesList.append(QPair<double, double>(0, 0.001)); // nothing will be detected, ever!
     }
     else {
         for (int i=0; i<freqList.size();) {
