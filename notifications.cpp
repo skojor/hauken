@@ -18,6 +18,7 @@ void Notifications::toIncidentLog(const QString id, const QString name, const QS
     QString msg = string;
     if (id.contains("measurementDevice", Qt::CaseInsensitive)) msg.prepend(name + ": ");
     else if (id.contains("gnss", Qt::CaseInsensitive)) msg.prepend("GNSS" + name + ": ");
+    //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(msg);
     appendLogFile(msg);
 }

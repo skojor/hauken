@@ -47,6 +47,8 @@ public slots:
     void setInstrPort(int val) { settings->setValue("instr/Port", val); emit settingsUpdated(); }
     QString getInstrId() { return settings->value("instr/Id").toString();}
     void setInstrId(QString s) { settings->setValue("instr/Id", s);}
+    QString getMeasurementDeviceName() { return measurementDeviceName;}
+    void setMeasurementDeviceName(QString s) { measurementDeviceName = s;}
 
     // spectrum criterias
     int getInstrTrigLevel() { return settings->value("instr/TrigLevel", 15.0).toInt(); }
@@ -144,7 +146,7 @@ public slots:
     bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
     void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); emit settingsUpdated();}
 
-    // Email options
+    // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
     void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s);}
     QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString();}
@@ -157,6 +159,10 @@ public slots:
     void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b);}
     bool getEmailNotifyGnssIncidents() { return settings->value("email/NotifyGnssIncidents", false).toBool();}
     void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b);}
+    int getEmailMinTimeBetweenEmails() { return settings->value("email/MinTimeBetweenEmails", 60).toInt();}
+    void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);}
+    int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
+    void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
@@ -184,6 +190,7 @@ private:
     QString curFile = basicSettings->value("lastFile", "default.ini").toString();
     QSettings *settings = new QSettings(curFile, QSettings::IniFormat);
     bool ready = false;
+    QString measurementDeviceName;
     const int plotResolution = 1200;
 };
 

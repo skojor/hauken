@@ -266,6 +266,8 @@ void MeasurementDevice::checkId(const QByteArray buffer)
         emit status(msg);
         devicePtr->longId = tr(buffer.simplified());
         config->setInstrId(devicePtr->longId);
+        config->setMeasurementDeviceName(devicePtr->id);
+
         emit instrId(devicePtr->longId);
         askUdp();
     }

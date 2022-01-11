@@ -83,7 +83,7 @@ void MainWindow::createActions()
     optSdef->setStatusTip(tr("Configuration of 1809 format and options"));
     connect(optSdef, &QAction::triggered, this, &MainWindow::sdefConfig);
 
-    optEmail = new QAction(tr("&Email notifications"), this);
+    optEmail = new QAction(tr("&Notifications"), this);
     optEmail->setStatusTip(tr("Setup of email server and notfications"));
     connect(optEmail, &QAction::triggered, this, [this]{ this->emailOptions->start();});
 
@@ -488,7 +488,11 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
-    connect(notifications, &Notifications::showIncident, this, [this] (QString s) {this->incidentLog->insertHtml(s);});
+    connect(notifications, &Notifications::showIncident, this, [this] (QString s)
+    {
+        this->incidentLog->insertHtml(s);
+        this->incidentLog->verticalScrollBar()->setValue(this->incidentLog->verticalScrollBar()->maximum());
+    });
 
     sdefRecorderThread->start();
     notificationsThread->start();
