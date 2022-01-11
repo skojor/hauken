@@ -48,10 +48,10 @@ void TraceAnalyzer::alarmTriggered()
     if (!alarmEmitted) {
         alarmEmitted = true;
         if (config->getSdefSaveToFile())
-            emit toIncidentLog("Recording triggered by measurement receiver (" +
+            emit toIncidentLog("traceAnalyzer", "", "Recording triggered by measurement receiver (" +
                                QString::number((int)khzAboveLimit) + " kHz above limit)");
         else
-            emit toIncidentLog("Incident registered, " + QString::number((int)khzAboveLimit) +
+            emit toIncidentLog("traceAnalyzer", "", "Incident registered, " + QString::number((int)khzAboveLimit) +
                                " kHz above limit. Recording is not enabled.");
     }
 }

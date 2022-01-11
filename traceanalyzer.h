@@ -29,7 +29,7 @@ public slots:
 
 signals:
     void alarm();
-    void toIncidentLog(QString);
+    void toIncidentLog(QString, QString, QString);
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);

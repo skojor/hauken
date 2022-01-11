@@ -144,6 +144,20 @@ public slots:
     bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
     void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); emit settingsUpdated();}
 
+    // Email options
+    QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
+    void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s);}
+    QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString();}
+    void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s);}
+    QString getEmailRecipients() { return settings->value("email/Recipients").toString();}
+    void setEmailRecipients(QString s) { settings->setValue("email/Recipients", s);}
+    bool getEmailNotifyMeasurementDeviceHighLevel() { return settings->value("email/NotifyMeasurementDeviceHighLevel", false).toBool();}
+    void setEmailNotifyMeasurementDeviceHighLevel(bool b) { settings->setValue("email/NotifyMeasurementDeviceHighLevel", b);}
+    bool getEmailNotifyMeasurementDeviceDisconnected() { return settings->value("email/NotifyMeasurementDeviceDisconnected", false).toBool();}
+    void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b);}
+    bool getEmailNotifyGnssIncidents() { return settings->value("email/NotifyGnssIncidents", false).toBool();}
+    void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b);}
+
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}

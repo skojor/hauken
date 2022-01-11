@@ -50,7 +50,7 @@ private slots:
 signals:
     void recordingStarted();
     void recordingEnded();
-    void toIncidentLog(QString);
+    void toIncidentLog(QString, QString, QString);
     void reqTraceHistory(int);
     void warning(QString);
 

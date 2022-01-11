@@ -131,7 +131,7 @@ void GnssAnalyzer::checkPosValid(GnssData &data)
 
     if (!data.posValid && !posInvalidTriggered) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
                                                   // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
-        ts << "GNSS " << data.id << ": Position invalid"
+        ts << "Position invalid"
            ;//<< (logToFile ? ". Recording":"");
         posInvalidTriggered = true;
         /*if (logToFile) {
@@ -139,10 +139,10 @@ void GnssAnalyzer::checkPosValid(GnssData &data)
         }*/
     }
     else if (data.posValid && posInvalidTriggered) {
-        ts << "GNSS " << data.id << ": Position valid";
+        ts << "Position valid";
         posInvalidTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(msg);
+    if (!msg.isEmpty()) emit toIncidentLog("gnss", QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkPosOffset(GnssData &data)
@@ -153,7 +153,7 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && posOffsetLimit > 0 && data.posOffset > posOffsetLimit) {
-        if (!posOffsetTriggered) ts << "GNSS " << data.id << ": Position offset triggered, current offset: "
+        if (!posOffsetTriggered) ts << "Position offset triggered, current offset: "
                                     << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m"
                                     << (logToFile ? ". Recording":"");
         posOffsetTriggered = true;
@@ -162,10 +162,10 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
         }
     }
     else {
-        if (data.posValid && posOffsetTriggered) ts << "GNSS " << data.id << ": Position offset normal";
+        if (data.posValid && posOffsetTriggered) ts << "Position offset normal";
         posOffsetTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(msg);
+    if (!msg.isEmpty()) emit toIncidentLog("gnss", QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkAltOffset(GnssData &data)
@@ -176,7 +176,7 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && altOffsetLimit > 0 && data.altOffset > altOffsetLimit) {
-        if (!altOffsetTriggered) ts << "GNSS " << data.id << ": Altitude offset triggered, current offset: "
+        if (!altOffsetTriggered) ts << "Altitude offset triggered, current offset: "
                                     << data.altOffset << " m" << (logToFile ? ". Recording":"");
         altOffsetTriggered = true;
         if (logToFile) {
@@ -184,10 +184,10 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
         }
     }
     else {
-        if (data.posValid && altOffsetTriggered) ts << "GNSS " << data.id << ": Altitude offset normal";
+        if (data.posValid && altOffsetTriggered) ts << "Altitude offset normal";
         altOffsetTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(msg);
+    if (!msg.isEmpty()) emit toIncidentLog("gnss", QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkTimeOffset(GnssData &data)
@@ -198,7 +198,7 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && timeOffsetLimit > 0 && data.timeOffset > timeOffsetLimit) {
-        if (!timeOffsetTriggered) ts << "GNSS " << data.id << ": Time offset triggered, current offset: "
+        if (!timeOffsetTriggered) ts << "Time offset triggered, current offset: "
                                      << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms"
                                      << (logToFile ? ". Recording":"");
         timeOffsetTriggered = true;
@@ -207,10 +207,10 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
         }
     }
     else {
-        if (data.posValid && timeOffsetTriggered) ts << "GNSS " << data.id << ": Time offset normal";
+        if (data.posValid && timeOffsetTriggered) ts << "Time offset normal";
         timeOffsetTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(msg);
+    if (!msg.isEmpty()) emit toIncidentLog("gnss", QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkCnoOffset(GnssData &data)
@@ -221,7 +221,7 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && cnoLimit > 0 && data.cnoOffset > cnoLimit) {
-        if (!cnoLimitTriggered) ts << "GNSS " << data.id << ": C/No offset triggered, current offset: " << data.cnoOffset << " dB"
+        if (!cnoLimitTriggered) ts << "C/No offset triggered, current offset: " << data.cnoOffset << " dB"
                                    << (logToFile ? ". Recording":"");
         cnoLimitTriggered = true;
         if (logToFile) {
@@ -229,10 +229,10 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
         }
     }
     else {
-        if (data.posValid && cnoLimitTriggered) ts << "GNSS " << data.id << ": C/No offset normal";
+        if (data.posValid && cnoLimitTriggered) ts << ": C/No offset normal";
         cnoLimitTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(msg);
+    if (!msg.isEmpty()) emit toIncidentLog("gnss", QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkAgcOffset(GnssData &data)
@@ -243,7 +243,7 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && agcLimit > 0 && data.agcOffset > agcLimit) {
-        if (!agcLimitTriggered) ts << "GNSS " << data.id << ": AGC offset triggered, current offset: "
+        if (!agcLimitTriggered) ts << "AGC offset triggered, current offset: "
                                    << data.agcOffset << " m" << (logToFile ? ". Recording":"");
         agcLimitTriggered = true;
         if (logToFile) {
@@ -251,8 +251,8 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
         }
     }
     else {
-        if (data.posValid && agcLimitTriggered) ts << "GNSS " << data.id << ": AGC offset normal";
+        if (data.posValid && agcLimitTriggered) ts << "AGC offset normal";
         agcLimitTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(msg);
+    if (!msg.isEmpty()) emit toIncidentLog("gnss", QString::number(data.id), msg);
 }

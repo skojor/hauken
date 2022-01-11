@@ -46,7 +46,7 @@ signals:
     void newDispMaxhold(const QVector<double> &data);
     void newDispTriglevel(const QVector<double> &data);
     void showMaxhold(const bool);
-    void toIncidentLog(QString);
+    void toIncidentLog(QString, QString, QString);
     void reqReplot();
     void averageLevelReady(const QVector<qint16> &data);
     void stopAvgLevelFlash();

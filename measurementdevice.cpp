@@ -78,7 +78,7 @@ void MeasurementDevice::instrDisconnect()
 {
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
-        emit toIncidentLog("Measurement receiver disconnected");
+        emit toIncidentLog("measurementDevice", devicePtr->id, "Disconnected");
     }
     tcpTimeoutTimer->stop();
     emit instrId(QString());
@@ -420,11 +420,11 @@ void MeasurementDevice::stateConnected()
     if (!autoReconnectInProgress) { // don't nag user if this is an auto reconnect call
         tcpTimeoutTimer->stop();
         emit status("Connected, setting up device");
-        emit toIncidentLog("Measurement receiver connected: " + devicePtr->longId);
+        emit toIncidentLog("measurementDevice", devicePtr->id, "Connected to " + devicePtr->longId);
         scpiConnected();
     }
     else
-        emit toIncidentLog(devicePtr->id + ": Reconnected");
+        emit toIncidentLog("measurementDevice", devicePtr->id, "Reconnected");
 
     autoReconnectInProgress = false;
     runAfterConnected();
@@ -577,10 +577,10 @@ void MeasurementDevice::handleStreamTimeout()
         tcpTimeoutTimer->stop();
         if (autoReconnect) { // check stream settings regularly to see if device is available again
             autoReconnectTimer->start(15000);
-            if (!autoReconnectInProgress) emit toIncidentLog(devicePtr->id + ": Lost datastream. Auto reconnect enabled, waiting for device to be available again");
+            if (!autoReconnectInProgress) emit toIncidentLog("measurementDevice", devicePtr->id, "Lost datastream. Auto reconnect enabled, waiting for device to be available again");
         }
         else {
-            emit toIncidentLog(devicePtr->id + ": Datastream timed out and reconnect is disabled, disconnecting");
+            emit toIncidentLog("measurementDevice", devicePtr->id, "Datastream timed out and reconnect is disabled, disconnecting");
             instrDisconnect();
         }
     }

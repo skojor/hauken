@@ -13,9 +13,24 @@ RC_ICONS = icons/icon.ico
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    SimpleMail/emailaddress.cpp \
+    SimpleMail/mimeattachment.cpp \
+    SimpleMail/mimecontentformatter.cpp \
+    SimpleMail/mimefile.cpp \
+    SimpleMail/mimehtml.cpp \
+    SimpleMail/mimeinlinefile.cpp \
+    SimpleMail/mimemessage.cpp \
+    SimpleMail/mimemultipart.cpp \
+    SimpleMail/mimepart.cpp \
+    SimpleMail/mimetext.cpp \
+    SimpleMail/quotedprintable.cpp \
+    SimpleMail/sender.cpp \
+    SimpleMail/server.cpp \
+    SimpleMail/serverreply.cpp \
     config.cpp \
     customplotcontroller.cpp \
     datastreambaseclass.cpp \
+    emailoptions.cpp \
     generaloptions.cpp \
     gnssanalyzer.cpp \
     gnssdevice.cpp \
@@ -23,6 +38,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     measurementdevice.cpp \
+    notifications.cpp \
     optionsbaseclass.cpp \
     qcustomplot.cpp \
     receiveroptions.cpp \
@@ -34,15 +50,40 @@ SOURCES += \
     udpdatastream.cpp
 
 HEADERS += \
+    SimpleMail/SimpleMail \
+    SimpleMail/emailaddress.h \
+    SimpleMail/emailaddress_p.h \
+    SimpleMail/mimeattachment.h \
+    SimpleMail/mimecontentformatter.h \
+    SimpleMail/mimefile.h \
+    SimpleMail/mimehtml.h \
+    SimpleMail/mimeinlinefile.h \
+    SimpleMail/mimemessage.h \
+    SimpleMail/mimemessage_p.h \
+    SimpleMail/mimemultipart.h \
+    SimpleMail/mimemultipart_p.h \
+    SimpleMail/mimepart.h \
+    SimpleMail/mimepart_p.h \
+    SimpleMail/mimetext.h \
+    SimpleMail/quotedprintable.h \
+    SimpleMail/sender.h \
+    SimpleMail/sender_p.h \
+    SimpleMail/server.h \
+    SimpleMail/server_p.h \
+    SimpleMail/serverreply.h \
+    SimpleMail/serverreply_p.h \
+    SimpleMail/smtpexports.h \
     config.h \
     customplotcontroller.h \
     datastreambaseclass.h \
+    emailoptions.h \
     generaloptions.h \
     gnssanalyzer.h \
     gnssdevice.h \
     gnssoptions.h \
     mainwindow.h \
     measurementdevice.h \
+    notifications.h \
     optionsbaseclass.h \
     qcustomplot.h \
     receiveroptions.h \
@@ -63,7 +104,7 @@ RESOURCES += \
     icons.qrc
 #
 win32 {
-  LIBS += -lOpenGL32
+  LIBS += -lOpenGL32 \
 }
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
@@ -77,3 +118,6 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #win32 {
 #    VERSION ~= s/-\d+-g[a-f0-9]{6,}//
 #}
+
+DISTFILES += \
+    libs/libSimpleMail2Qt5.dll

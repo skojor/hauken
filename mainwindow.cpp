@@ -11,10 +11,6 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
-    incidentLogfile->setFileName(config->getWorkFolder() + "/incident.log");
-    incidentLogfile->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
-
-    //qApp->setFont(QFont("Arial", 8, QFont::Normal, true)); //(QApplication::font("QMessageBox"));
     QFont font = QApplication::font("QMessageBox");
     font.setPixelSize(11);
     qApp->setFont(font);
@@ -28,9 +24,15 @@ MainWindow::MainWindow(QWidget *parent)
     gnssOptions = new GnssOptions(config);
     receiverOptions = new ReceiverOptions(config);
     sdefOptions = new SdefOptions(config);
+    emailOptions = new EmailOptions(config);
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
+    notificationsThread->setObjectName("Notifications");
+    notifications->moveToThread(notificationsThread);
+
+    incidentLog->setAcceptRichText(true);
+    incidentLog->setReadOnly(true);
 
     createActions();
     createMenus();
@@ -39,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent)
     setValidators();
     setSignals();
     getConfigValues();
-    setupIncidentTable();
     instrConnected(false); // to set initial inputs state
     instrAutoConnect();
 }
@@ -47,7 +48,6 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete measurementDevice;
-    incidentLogfile->close();
 }
 
 void MainWindow::createActions()
@@ -71,17 +71,21 @@ void MainWindow::createActions()
     optStation->setStatusTip(tr("Basic station setup (position, folders, etc.)"));
     connect(optStation, &QAction::triggered, this, &MainWindow::stnConfig);
 
-    optGnss = new QAction(tr("G&NSS"), this);
+    optGnss = new QAction(tr("G&NSS setup"), this);
     optGnss->setStatusTip(tr("GNSS ports and logging configuration"));
     connect(optGnss, &QAction::triggered, this, &MainWindow::gnssConfig);
 
-    optStream = new QAction(tr("&Receiver setup"), this);
+    optStream = new QAction(tr("&Receiver options"), this);
     optStream->setStatusTip(tr("Measurement receiver device options"));
     connect(optStream, &QAction::triggered, this, &MainWindow::streamConfig);
 
-    optSdef = new QAction(tr("&SDEF"), this);
+    optSdef = new QAction(tr("&SDEF (1809 format) options"), this);
     optSdef->setStatusTip(tr("Configuration of 1809 format and options"));
     connect(optSdef, &QAction::triggered, this, &MainWindow::sdefConfig);
+
+    optEmail = new QAction(tr("&Email notifications"), this);
+    optEmail->setStatusTip(tr("Setup of email server and notfications"));
+    connect(optEmail, &QAction::triggered, this, [this]{ this->emailOptions->start();});
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -121,6 +125,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optGnss);
     optionMenu->addAction(optStream);
     optionMenu->addAction(optSdef);
+    optionMenu->addAction(optEmail);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
@@ -415,7 +420,7 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::popup, this, &MainWindow::generatePopup);
     connect(measurementDevice, &MeasurementDevice::status, this, &MainWindow::updateStatusLine);
     connect(measurementDevice, &MeasurementDevice::instrId, this, &MainWindow::updWindowTitle);
-    connect(measurementDevice, &MeasurementDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(measurementDevice, &MeasurementDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(measurementDevice, &MeasurementDevice::bytesPerSec, this, &MainWindow::showBytesPerSec);
     connect(measurementDevice, &MeasurementDevice::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
 
@@ -427,7 +432,7 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::newDispMaxhold, customPlotController, &CustomPlotController::plotMaxhold);
     connect(traceBuffer, &TraceBuffer::showMaxhold, customPlotController, &CustomPlotController::showMaxhold);
     connect(traceBuffer, &TraceBuffer::newDispTriglevel, customPlotController, &CustomPlotController::plotTriglevel);
-    connect(traceBuffer, &TraceBuffer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(traceBuffer, &TraceBuffer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(traceBuffer, &TraceBuffer::reqReplot, customPlotController, &CustomPlotController::doReplot);
     connect(customPlotController, &CustomPlotController::reqTrigline, traceBuffer, &TraceBuffer::sendDispTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, customPlotController, &CustomPlotController::flashTrigline);
@@ -444,7 +449,7 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::averageLevelReady, traceAnalyzer, &TraceAnalyzer::setAverageTrace);
     connect(traceBuffer, &TraceBuffer::traceToAnalyzer, traceAnalyzer, &TraceAnalyzer::setTrace);
 
-    connect(traceAnalyzer, &TraceAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(traceAnalyzer, &TraceAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(customPlotController, &CustomPlotController::freqSelectionChanged, traceAnalyzer, &TraceAnalyzer::updTrigFrequencyTable);
 
     connect(config.data(), &Config::settingsUpdated, customPlotController, &CustomPlotController::updSettings);
@@ -456,6 +461,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssDevice2, &GnssDevice::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer1, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer2, &GnssAnalyzer::updSettings);
+    connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
@@ -465,23 +471,27 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::traceToRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
-    connect(sdefRecorder, &SdefRecorder::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(sdefRecorder, &SdefRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
+    connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
     connect(gnssAnalyzer1, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(gnssAnalyzer1, &GnssAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
-    connect(gnssDevice1, &GnssDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssAnalyzer1, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(gnssDevice1, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssAnalyzer2, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice2, &GnssDevice::analyzeThisData, gnssAnalyzer2, &GnssAnalyzer::getData);
     connect(gnssAnalyzer2, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, this, &MainWindow::appendToIncidentLog);
-    connect(gnssDevice2, &GnssDevice::toIncidentLog, this, &MainWindow::appendToIncidentLog);
+    connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
+
+    connect(notifications, &Notifications::showIncident, this, [this] (QString s) {this->incidentLog->insertHtml(s);});
 
     sdefRecorderThread->start();
+    notificationsThread->start();
 }
 
 void MainWindow::instrStartFreqChanged()
@@ -732,30 +742,6 @@ void MainWindow::saveConfigValues()
     config->setGnssPosOffset(gnssPosOffset->value());
     config->setGnssAltOffset(gnssAltOffset->value());
     config->setGnssTimeOffset(gnssTimeOffset->value());
-}
-
-void MainWindow::appendToIncidentLog(QString incident)
-{
-    QString text;
-    QTextStream ts(&text);
-    ts << "<tr><td>" << QDate::currentDate().toString("dd.MM.yy") << "</td><td>"
-       << QTime::currentTime().toString("hh:mm:ss") << "</td><td>" << incident
-       << "</td></tr>";
-
-    incidentLog->append(text);
-
-    text.clear();
-    ts << QDateTime::currentDateTime().toString("dd.MM.yy hh:mm:ss") << "\t" << incident << "\n";
-    incidentLogfile->write(text.toLocal8Bit());
-    incidentLogfile->flush();
-}
-
-void MainWindow::setupIncidentTable()
-{
-    incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(true);
-    incidentLog->append("<table><td><th width=\50>Date</th><th width=50>Time</th><th width=100 valign=left>Text</th>");
-    appendToIncidentLog("Application started");
 }
 
 void MainWindow::showBytesPerSec(int val)

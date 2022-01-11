@@ -36,7 +36,7 @@ public slots:
 
 signals:
     void analyzeThisData(GnssData &);
-    void toIncidentLog(QString);
+    void toIncidentLog(QString, QString, QString);
 
 private slots:
     void handleBuffer();

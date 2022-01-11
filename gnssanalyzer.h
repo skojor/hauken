@@ -19,7 +19,7 @@ public slots:
 
 signals:
     void alarm();
-    void toIncidentLog(QString);
+    void toIncidentLog(QString, QString, QString);
     void displayGnssData(QString, int, bool);
 
 private slots:

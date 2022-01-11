@@ -221,7 +221,6 @@ void TraceBuffer::restartCalcAvgLevel()
     averageDispLevel.clear();
     averageDispLevel.resize(plotResolution);
     averageDispLevelNormalized.clear();
-    //emit toIncidentLog("Recalculating trig level");
     emit averageLevelCalculating();
     avgFactor = 40;
 }

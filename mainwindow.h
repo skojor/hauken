@@ -34,6 +34,8 @@
 #include "sdefrecorder.h"
 #include "gnssdevice.h"
 #include "gnssanalyzer.h"
+#include "emailoptions.h"
+#include "notifications.h"
 
 class MainWindow : public QMainWindow
 {
@@ -44,7 +46,6 @@ public:
     ~MainWindow();
 
 public slots:
-    void appendToIncidentLog(QString incident);
     void resizeEvent(QResizeEvent *event); // override to save changes to win size
     void moveEvent(QMoveEvent *event); // override to save position
 protected:
@@ -92,7 +93,6 @@ private slots:
     void aboutQt();
     void changelog();
 
-    void setupIncidentTable();
     void showBytesPerSec(int val);
     void triggerSettingsUpdate();
 
@@ -149,6 +149,7 @@ private:
     QAction *optGnss;
     QAction *optStream;
     QAction *optSdef;
+    QAction *optEmail;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -159,6 +160,7 @@ private:
     GnssOptions *gnssOptions;
     ReceiverOptions *receiverOptions;
     SdefOptions *sdefOptions;
+    EmailOptions *emailOptions;
 
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;
@@ -166,12 +168,12 @@ private:
     QSpinBox *plotMaxholdTime = new QSpinBox;
 
     TraceBuffer *traceBuffer = new TraceBuffer(config);
-
     TraceAnalyzer *traceAnalyzer = new TraceAnalyzer(config);
+    Notifications *notifications = new Notifications;
+    QThread *notificationsThread = new QThread;
+
     SdefRecorder *sdefRecorder = new SdefRecorder();
     QThread *sdefRecorderThread = new QThread;
-
-    QFile *incidentLogfile = new QFile;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
