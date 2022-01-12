@@ -112,7 +112,7 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
 
 void Notifications::sendMail()
 {
-    if (simpleParametersCheck()) {
+    if (simpleParametersCheck() and !mailtext.isEmpty()) {
         auto server = new SimpleMail::Server;
         server->setHost(mailserverAddress);
         server->setPort(mailserverPort.toUInt());
@@ -130,8 +130,9 @@ void Notifications::sendMail()
             message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
         }
         mimeHtml->setHtml(mailtext);
+        mailtext.clear();
         message.addPart(mimeHtml);
-
+        qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
         SimpleMail::ServerReply *reply = server->sendMail(message);
         connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
         {

@@ -118,6 +118,3 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #win32 {
 #    VERSION ~= s/-\d+-g[a-f0-9]{6,}//
 #}
-
-DISTFILES += \
-    libs/libSimpleMail2Qt5.dll

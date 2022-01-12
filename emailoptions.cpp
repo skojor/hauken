@@ -27,7 +27,7 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
 
     layout1->addRow(new QLabel("Minimum time between emails (seconds)"), sbOpt1);
     sbOpt1->setToolTip("Used to reduce number of emails, all incidents happening within this time will be sent at once\nA value of 0 means emails will be sent without delay");
-    sbOpt1->setRange(0, 1440);
+    sbOpt1->setRange(0, 86400);
     sbOpt1->setValue(config->getEmailMinTimeBetweenEmails());
 
 
@@ -57,6 +57,7 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     layout3->addRow(new QLabel("Incident truncation time (seconds)"), sbOpt2);
     sbOpt2->setToolTip("This function awaits eventual further incidents triggered from the same device, and considers an incident ended only after the time set here.\nIf for instance a GNSS is triggered on/off several times, only one incident will be reported during the time set here.");
     sbOpt2->setValue(config->getNotifyTruncateTime());
+    sbOpt2->setRange(0, 86400);
 
     mainLayout->addWidget(groupBox1);
     mainLayout->addWidget(groupBox2);
