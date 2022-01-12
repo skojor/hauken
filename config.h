@@ -163,6 +163,8 @@ public slots:
     void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);}
     int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
     void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);}
+    QString getEmailFromAddress() { return settings->value("email/FromAddress").toString();}
+    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}

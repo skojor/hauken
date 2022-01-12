@@ -15,6 +15,7 @@
 #include <QDateTime>
 #include <QElapsedTimer>
 #include "config.h"
+#include "typedefs.h"
 
 /*
  * Class to take care of recording to file in sdef format.
@@ -50,7 +51,7 @@ private slots:
 signals:
     void recordingStarted();
     void recordingEnded();
-    void toIncidentLog(QString, QString, QString);
+    void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void reqTraceHistory(int);
     void warning(QString);
 

@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <QDebug>
 #include "config.h"
+#include "typedefs.h"
 #include "SimpleMail/SimpleMail"
 
 /*
@@ -17,6 +18,22 @@
  * incident logfile. It also takes care of notifications per email, sorting what should be sent
  * and whatnot.
  */
+
+class NotificationsBuffer
+{
+public:
+    NotificationsBuffer(NOTIFY::TYPE _t, QDateTime _dt, QString _id, QString _msg)
+    {
+        type = _t;
+        timeReceived = _dt;
+        id = _id;
+        msg = _msg;
+    }
+    NOTIFY::TYPE type;
+    QDateTime timeReceived;
+    QString id;
+    QString msg;
+};
 
 class Notifications : public Config
 {
@@ -27,24 +44,35 @@ public:
 public slots:
     void start();
     void updSettings();
-    void toIncidentLog(const QString id, const QString name, const QString string);
+    void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
 
 private slots:
-    void appendIncidentLog(const QString string);
-    void appendLogFile(const QString string);
+    void appendIncidentLog(QDateTime dt, const QString string);
+    void appendLogFile(QDateTime dt, const QString string);
+    void appendEmailText(QDateTime dt, const QString string);
     void setupIncidentTable();
+    bool simpleParametersCheck();
+    void sendMail();
+    void checkTruncate();
+    void generateMsg(NOTIFY::TYPE t, const QString name, const QString string, QDateTime dt = QDateTime::currentDateTime());
 
 signals:
     void showIncident(QString);
+    void warning(QString);
 
 private:
-    QFile *incidentLogfile = new QFile;
+    QFile *incidentLogfile;
+    QString mailtext;
 
     // config cache
-    QTextEdit *incidentLogPtr;
-    QString server, port;
+    QString mailserverAddress, mailserverPort;
     QString recipients;
+    QString fromAddress;
     QString workFolder;
+    int truncateTime;
+    QList<NotificationsBuffer> truncateList;
+    QTimer *truncateTimer;
+    QTimer *mailDelayTimer;
 };
 
 #endif // NOTIFICATIONS_H

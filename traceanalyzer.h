@@ -7,6 +7,7 @@
 #include <QList>
 #include <QPair>
 #include "config.h"
+#include "typedefs.h"
 
 class TraceAnalyzer : public QObject
 {
@@ -22,14 +23,14 @@ public slots:
     void updTrigFrequencyTable();
     void updSettings();
     void recorderStarted() { recorderRunning = true;}
-    void recorderEnded() { recorderRunning = alarmEmitted = false;}
+    void recorderEnded() { recorderRunning  = false;}
     double getKhzAboveLimit() { return khzAboveLimit; }
     void setAnalyzerReady() { ready = true;}
     void setAnalyzerNotReady() { ready = false;}
 
 signals:
     void alarm();
-    void toIncidentLog(QString, QString, QString);
+    void toIncidentLog(const NOTIFY::TYPE, const QString,const QString);
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);

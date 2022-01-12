@@ -21,6 +21,10 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;");
     leOpt3->setText(config->getEmailRecipients());
 
+    layout1->addRow(new QLabel("Own email address"), leOpt4);
+    leOpt4->setToolTip("Set the address the email will show as sent from. Should be a valid address");
+    leOpt4->setText(config->getEmailFromAddress());
+
     layout1->addRow(new QLabel("Minimum time between emails (seconds)"), sbOpt1);
     sbOpt1->setToolTip("Used to reduce number of emails, all incidents happening within this time will be sent at once\nA value of 0 means emails will be sent without delay");
     sbOpt1->setRange(0, 1440);
@@ -74,6 +78,7 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailSmtpServer(leOpt1->text());
     config->setEmailSmtpPort(leOpt2->text());
     config->setEmailRecipients(leOpt3->text());
+    config->setEmailFromAddress(leOpt4->text());
     config->setEmailMinTimeBetweenEmails(sbOpt1->value());
     config->setEmailNotifyMeasurementDeviceHighLevel(cbOpt1->isChecked());
     config->setEmailNotifyMeasurementDeviceDisconnected(cbOpt2->isChecked());

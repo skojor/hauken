@@ -38,6 +38,10 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
         }
         else {
             if (elapsedTimer) elapsedTimer->invalidate();
+            if (alarmEmitted) {
+                emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Normal signal levels");
+                alarmEmitted = false;
+            }
         }
     }
 }
@@ -48,10 +52,10 @@ void TraceAnalyzer::alarmTriggered()
     if (!alarmEmitted) {
         alarmEmitted = true;
         if (config->getSdefSaveToFile())
-            emit toIncidentLog("traceAnalyzer", "", "Recording triggered by measurement receiver (" +
+            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver (" +
                                QString::number((int)khzAboveLimit) + " kHz above limit)");
         else
-            emit toIncidentLog("traceAnalyzer", "", "Incident registered, " + QString::number((int)khzAboveLimit) +
+            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Incident registered, " + QString::number((int)khzAboveLimit) +
                                " kHz above limit. Recording is not enabled.");
     }
 }

@@ -81,7 +81,7 @@ QString SdefRecorder::createFilename()
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
     if (!historicDataSaved) {
-        emit toIncidentLog("sdefRecorder", "", "Trace history data not saved correctly");
+        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Trace history data not saved correctly");
         failed = true;
         file.close();
     }
@@ -159,7 +159,7 @@ void SdefRecorder::finishRecording()
 {
     emit recordingEnded();
     if (getSdefSaveToFile())
-        if (recordingTimeoutTimer->isActive()) emit toIncidentLog("sdefRecorder", "", "Recording ended after "
+        if (recordingTimeoutTimer->isActive()) emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
                                                                   + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
                                                                        QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
                                                                        + " seconds" :
@@ -185,11 +185,11 @@ bool SdefRecorder::uploadToCasper()
     // parameters check
     if (getSdefStationInitals().isEmpty() or getSdefUsername().isEmpty() or getSdefPassword().isEmpty()
             or getStationName().isEmpty()) {
-        emit toIncidentLog("sdefRecorder", "", "Upload requested, but some parameters are missing in the config. Check it out");
+        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but some parameters are missing in the config. Check it out");
         return false;
     }
     if ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0) {
-        emit toIncidentLog("sdefRecorder", "", "Upload requested, but the current position is set to equator. Somehow I doubt it");
+        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but the current position is set to equator. Somehow I doubt it");
         return false;
     }
 

@@ -37,7 +37,7 @@ signals:
     void status(QString);
     void instrId(QString);
     void initiateDatastream();
-    void toIncidentLog(QString, QString, QString);
+    void toIncidentLog(const NOTIFY::TYPE,const QString,const QString);
     void bytesPerSec(int);
     void tracesPerSec(double);
     void newTrace(const QVector<qint16> &);

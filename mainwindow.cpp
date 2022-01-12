@@ -493,6 +493,7 @@ void MainWindow::setSignals()
         this->incidentLog->insertHtml(s);
         this->incidentLog->verticalScrollBar()->setValue(this->incidentLog->verticalScrollBar()->maximum());
     });
+    connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
 
     sdefRecorderThread->start();
     notificationsThread->start();

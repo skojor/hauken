@@ -36,7 +36,7 @@ public slots:
 
 signals:
     void analyzeThisData(GnssData &);
-    void toIncidentLog(QString, QString, QString);
+    void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 
 private slots:
     void handleBuffer();

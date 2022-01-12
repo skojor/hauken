@@ -5,6 +5,16 @@
 #include <QStringList>
 #include <QDateTime>
 
+namespace NOTIFY {
+enum class TYPE {
+    MEASUREMENTDEVICE,
+    GNSSDEVICE,
+    GNSSANALYZER,
+    TRACEANALYZER,
+    SDEFRECORDER
+};
+}
+
 namespace Instrument {
 enum class Mode {
     PSCAN,
