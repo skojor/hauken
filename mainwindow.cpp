@@ -645,8 +645,9 @@ void MainWindow::about()
 {
     QString txt;
     QTextStream ts(&txt);
-    ts << "Application version " << SW_VERSION;
-    ts << "\nABuild date " << BUILD_DATE;
+    ts << "Application version " << SW_VERSION << "\n";
+    ts << "Build date " << BUILD_DATE << "\n";
+    ts << "<a href=\"https://github.com/cutelyst/simple-mail\">SimpleMail Qt library SMTP mail client</a> - LGPL 2.1 license" << "\n\n";
     ts << "Questions/support? => JSK";
     QMessageBox::about(this, "About Hauken", txt);
 }

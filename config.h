@@ -105,8 +105,8 @@ public slots:
     void setSdefUploadFile(bool b) { settings->setValue("sdef/UploadFile", b); emit settingsUpdated();}
     QString getSdefUsername() { return settings->value("sdef/Username", "").toString();}
     void setSdefUsername(QString s) { settings->setValue("sdef/Username", s); emit settingsUpdated();}
-    QString getSdefPassword() { return settings->value("sdef/Password", "").toString();}
-    void setSdefPassword(QString s) { settings->setValue("sdef/Password", s); emit settingsUpdated();}
+    QString getSdefPassword() { return simpleEncr(settings->value("sdef/Password", "").toString());}
+    void setSdefPassword(QString s) { settings->setValue("sdef/Password", simpleEncr(s)); emit settingsUpdated();}
     bool getSdefAddPosition() { return settings->value("sdef/AddPosition", false).toBool();}
     void setSdefAddPosition(bool b) { settings->setValue("sdef/AddPosition", b); emit settingsUpdated();}
     int getSdefRecordTime() { return settings->value("sdef/RecordTime", 2).toUInt();}
@@ -168,8 +168,8 @@ public slots:
     void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s);}
     QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString();}
     void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s);}
-    QString getEmailSmtpPassword() { return settings->value("email/smtpPassword").toString();}
-    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", s);}
+    QString getEmailSmtpPassword() { return simpleEncr(settings->value("email/smtpPassword").toString());}
+    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s));}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
@@ -190,6 +190,9 @@ public slots:
 
     //internal
     void newFileName(const QString file);
+
+private slots:
+    QString simpleEncr(QString);
 
 private:
     QString basicFile = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/hauken.conf";
