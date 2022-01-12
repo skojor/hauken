@@ -146,6 +146,7 @@ public slots:
     bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
     void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); emit settingsUpdated();}
 
+
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
     void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s);}
