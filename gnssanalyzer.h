@@ -28,7 +28,6 @@ private slots:
     double arcInRadians(GnssData &data);
     double distanceInMeters(GnssData &data);
     void updDisplay();
-    void checkPosValid(GnssData &data);
     void checkPosOffset(GnssData &data);
     void checkAltOffset(GnssData &data);
     void checkTimeOffset(GnssData &data);
@@ -45,7 +44,6 @@ private:
     bool timeOffsetTriggered = false;
     bool cnoLimitTriggered = false;
     bool agcLimitTriggered = false;
-    bool posInvalidTriggered = true; // don't trigger any recording on inital startup
 
     // config cache below here
     double cnoLimit, agcLimit;

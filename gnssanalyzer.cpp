@@ -49,7 +49,6 @@ void GnssAnalyzer::analyze(GnssData &data)
     data.cnoOffset = abs(data.cno - data.avgCno);
     data.agcOffset = abs(data.agc - data.avgAgc);
 
-    checkPosValid(data);
     checkPosOffset(data);
     checkAltOffset(data);
     checkTimeOffset(data);
@@ -120,29 +119,6 @@ void GnssAnalyzer::updDisplay()
         emit displayGnssData(out, gnssData.id, gnssData.posValid);
     }
     mutex.unlock();
-}
-
-void GnssAnalyzer::checkPosValid(GnssData &data)
-{
-    QString msg;
-    QTextStream ts(&msg);
-    ts.setRealNumberNotation(QTextStream::FixedNotation);
-    ts.setRealNumberPrecision(1);
-
-    if (!data.posValid && !posInvalidTriggered) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
-                                                  // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
-        ts << "Position invalid"
-           ;//<< (logToFile ? ". Recording":"");
-        posInvalidTriggered = true;
-        /*if (logToFile) {
-            emit alarm();
-        }*/
-    }
-    else if (data.posValid && posInvalidTriggered) {
-        ts << "Position valid";
-        posInvalidTriggered = false;
-    }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkPosOffset(GnssData &data)
@@ -229,7 +205,7 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
         }
     }
     else {
-        if (data.posValid && cnoLimitTriggered) ts << ": C/No offset normal";
+        if (data.posValid && cnoLimitTriggered) ts << "C/No offset normal";
         cnoLimitTriggered = false;
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);

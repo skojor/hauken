@@ -14,6 +14,7 @@ GnssDevice::GnssDevice(QObject *parent, int val)
     connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
     {
         if (this->gnss->isOpen()) emit analyzeThisData(gnssData);
+        checkPosValid(); // run once per sec
     });
 
     start();
@@ -280,3 +281,23 @@ void GnssDevice::appendToLogfile(const QByteArray &data)
         qDebug() << "GNSS logfile closed, starting new";
     }
 }
+
+void GnssDevice::checkPosValid()
+{
+    QString msg;
+    QTextStream ts(&msg);
+    ts.setRealNumberNotation(QTextStream::FixedNotation);
+    ts.setRealNumberPrecision(1);
+
+    if (!gnssData.posValid && !posInvalidTriggered) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
+                                                  // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
+        ts << "Position invalid";
+        posInvalidTriggered = true;
+    }
+    else if (gnssData.posValid && posInvalidTriggered) {
+        ts << "Position valid";
+        posInvalidTriggered = false;
+    }
+    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
+}
+

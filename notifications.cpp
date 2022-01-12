@@ -54,7 +54,7 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
-    if (getEmailNotifyGnssIncidents() && (type == NOTIFY::TYPE::GNSSANALYZER || type == NOTIFY::TYPE::GNSSDEVICE))
+    if (getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
         appendEmailText(dt, msg);
     else if (getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER)
         appendEmailText(dt, msg);
@@ -105,9 +105,9 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>      "; // spaces because the stupid simplemail class seems to cut the end of the text!
+    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>"; // spaces because the stupid simplemail class seems to cut the end of the text!
     mailtext.append(text);
-    if (!mailDelayTimer->isActive()) mailDelayTimer->start(30 * 1e3);
+    if (!mailDelayTimer->isActive()) mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
 }
 
 void Notifications::sendMail()
@@ -116,6 +116,11 @@ void Notifications::sendMail()
         auto server = new SimpleMail::Server;
         server->setHost(mailserverAddress);
         server->setPort(mailserverPort.toUInt());
+
+        if (!smtpUser.isEmpty() || !smtpPass.isEmpty()) {
+            server->setUsername(smtpUser);
+            server->setPassword(smtpPass);
+        }
 
         QStringList mailRecipients;
         if (recipients.contains(';')) mailRecipients = recipients.split(';');
@@ -129,7 +134,7 @@ void Notifications::sendMail()
         for (auto &val : mailRecipients) {
             message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
         }
-        mimeHtml->setHtml(mailtext);
+        mimeHtml->setHtml("<table>" + mailtext + "</table>   ");
         message.addPart(mimeHtml);
         qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
         SimpleMail::ServerReply *reply = server->sendMail(message);
@@ -140,6 +145,8 @@ void Notifications::sendMail()
             reply->deleteLater();
             mailtext.clear();
         });
+        //delete mimeHtml;
+        //server->deleteLater(); //CRASH
     }
     else {
         emit warning("Email notifications is enabled, but one or more of the parameters are missing. Check your configuration!");
@@ -168,6 +175,8 @@ void Notifications::updSettings()
 {
     mailserverAddress = getEmailSmtpServer();
     mailserverPort = getEmailSmtpPort();
+    smtpUser = getEmailSmtpUser();
+    smtpPass = getEmailSmtpPassword();
     recipients = getEmailRecipients();
     fromAddress = getEmailFromAddress();
     truncateTime = getNotifyTruncateTime();

@@ -17,6 +17,15 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     leOpt2->setToolTip("Port used to connect to SMTP server");
     leOpt2->setText(config->getEmailSmtpPort());
 
+    layout1->addRow(new QLabel("SMTP username (if needed)"), leOpt5);
+    leOpt5->setToolTip("If the SMTP server requires you to login, insert username here");
+    leOpt5->setText(config->getEmailSmtpUser());
+
+    layout1->addRow(new QLabel("SMTP password (if needed)"), leOpt6);
+    leOpt6->setToolTip("If required by the SMTP server, set the password here");
+    leOpt6->setText(config->getEmailSmtpPassword());
+    leOpt6->setEchoMode(QLineEdit::Password);
+
     layout1->addRow(new QLabel("Email recipients"), leOpt3);
     leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;");
     leOpt3->setText(config->getEmailRecipients());
@@ -78,6 +87,8 @@ void EmailOptions::saveCurrentSettings()
 {
     config->setEmailSmtpServer(leOpt1->text());
     config->setEmailSmtpPort(leOpt2->text());
+    config->setEmailSmtpUser(leOpt5->text());
+    config->setEmailSmtpPassword(leOpt6->text());
     config->setEmailRecipients(leOpt3->text());
     config->setEmailFromAddress(leOpt4->text());
     config->setEmailMinTimeBetweenEmails(sbOpt1->value());

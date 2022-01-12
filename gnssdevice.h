@@ -49,6 +49,7 @@ private slots:
     void decodeBinary(const QByteArray &val);
     bool checkBinaryChecksum(const QByteArray &val);
     void appendToLogfile(const QByteArray &data);
+    void checkPosValid();
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -61,6 +62,7 @@ private:
     QFile logfile;
     bool logToFile = false;
     QDate logfileStartedDate;
+    bool posInvalidTriggered = true; // don't trigger any recording on inital startup
 };
 
 #endif // GNSSDEVICE_H

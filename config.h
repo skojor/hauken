@@ -160,12 +160,16 @@ public slots:
     void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b);}
     bool getEmailNotifyGnssIncidents() { return settings->value("email/NotifyGnssIncidents", false).toBool();}
     void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b);}
-    int getEmailMinTimeBetweenEmails() { return settings->value("email/MinTimeBetweenEmails", 60).toInt();}
+    int getEmailMinTimeBetweenEmails() { return settings->value("email/MinTimeBetweenEmails", 3600).toInt();}
     void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);}
     int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
     void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);}
     QString getEmailFromAddress() { return settings->value("email/FromAddress").toString();}
     void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s);}
+    QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString();}
+    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s);}
+    QString getEmailSmtpPassword() { return settings->value("email/smtpPassword").toString();}
+    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", s);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}

@@ -65,7 +65,7 @@ private:
     QString mailtext;
 
     // config cache
-    QString mailserverAddress, mailserverPort;
+    QString mailserverAddress, mailserverPort, smtpUser, smtpPass;
     QString recipients;
     QString fromAddress;
     QString workFolder;
