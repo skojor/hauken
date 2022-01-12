@@ -105,7 +105,7 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts << dt.toString("dd.MM.yy hh:mm:ss  ") << string;
+    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>";
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) mailDelayTimer->start(30 * 1e3);
 }
@@ -130,7 +130,6 @@ void Notifications::sendMail()
             message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
         }
         mimeHtml->setHtml(mailtext);
-        mailtext.clear();
         message.addPart(mimeHtml);
         qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
         SimpleMail::ServerReply *reply = server->sendMail(message);
@@ -139,6 +138,7 @@ void Notifications::sendMail()
             qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
             if (reply->error()) emit this->warning("Email SMTP error: " + reply->responseText());
             reply->deleteLater();
+            mailtext.clear();
         });
     }
     else {
