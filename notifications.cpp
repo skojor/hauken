@@ -136,7 +136,7 @@ void Notifications::sendMail()
         connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
         {
             qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
-            if (reply->error()) emit this->warning(reply->responseText());
+            if (reply->error()) emit this->warning("Email SMTP error: " + reply->responseText());
             reply->deleteLater();
         });
     }
