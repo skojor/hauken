@@ -105,7 +105,7 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>";
+    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>      "; // spaces because the stupid simplemail class seems to cut the end of the text!
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) mailDelayTimer->start(30 * 1e3);
 }
