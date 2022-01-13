@@ -3,8 +3,9 @@
 #include <QDebug>
 #include <QString>
 #include <QStringList>
+#include <QDir>
 
-const QString logFilePath = "debug.log";
+const QString logFilePath = QDir(QCoreApplication::applicationDirPath()).absolutePath() +"/debug.log";
 bool logToFile = false;
 
 void customMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<QList<QDateTime> >("QList<QDateTime>");
     qRegisterMetaType<NOTIFY::TYPE>("NOTIFY::TYPE");
 
-    if (qgetenv("QTDIR").isEmpty())   //  check if the app is ran in Qt Creator
+    if (qEnvironmentVariableIsEmpty("QTDIR"))   //  check if the app is ran in Qt Creator
          logToFile = true;
     qInstallMessageHandler(customMessageOutput); // custom message handler for debugging
 
