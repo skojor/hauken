@@ -47,7 +47,8 @@ SOURCES += \
     tcpdatastream.cpp \
     traceanalyzer.cpp \
     tracebuffer.cpp \
-    udpdatastream.cpp
+    udpdatastream.cpp \
+    waterfall.cpp
 
 HEADERS += \
     SimpleMail/SimpleMail \
@@ -93,7 +94,8 @@ HEADERS += \
     traceanalyzer.h \
     tracebuffer.h \
     typedefs.h \
-    udpdatastream.h
+    udpdatastream.h \
+    waterfall.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

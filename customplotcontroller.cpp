@@ -14,6 +14,7 @@ void CustomPlotController::init()
 {
     setupBasics();
     updSettings();
+    customPlotPtr->replot();
 }
 
 void CustomPlotController::setupBasics()

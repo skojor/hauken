@@ -36,6 +36,7 @@
 #include "gnssanalyzer.h"
 #include "emailoptions.h"
 #include "notifications.h"
+#include "waterfall.h"
 
 class MainWindow : public QMainWindow
 {
@@ -102,7 +103,7 @@ private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
     QWidget *centralWidget = new QWidget;
     QStatusBar *statusBar = new QStatusBar;
-    QCustomPlot *customPlot = new QCustomPlot;
+    QCustomPlot *customPlot;
     QMenu *fileMenu, *optionMenu, *helpMenu;
     QDoubleSpinBox *instrStartFreq = new QDoubleSpinBox;
     QDoubleSpinBox *instrStopFreq = new QDoubleSpinBox;
@@ -140,6 +141,7 @@ private:
     GnssDevice *gnssDevice2 = new GnssDevice(this, 2);
     GnssAnalyzer *gnssAnalyzer1 = new GnssAnalyzer(this, 1);
     GnssAnalyzer *gnssAnalyzer2 = new GnssAnalyzer(this, 2);
+    Waterfall *waterfall;
 
     QAction *newAct;
     QAction *openAct;

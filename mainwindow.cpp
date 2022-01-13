@@ -6,8 +6,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setStatusBar(statusBar);
     updWindowTitle();
-    resize(1200, 650);
-    setMinimumSize(1024, 650);
+    resize(1200, 680);
+    setMinimumSize(1024, 680);
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
@@ -17,8 +17,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     instrMode->addItems(QStringList() << "PScan" << "FFM");
 
+    customPlot = new QCustomPlot;
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
+    waterfall = new Waterfall(config, customPlot);
+    waterfall->start();
 
     generalOptions = new GeneralOptions(config);
     gnssOptions = new GnssOptions(config);
@@ -43,6 +46,8 @@ MainWindow::MainWindow(QWidget *parent)
     getConfigValues();
     instrConnected(false); // to set initial inputs state
     instrAutoConnect();
+
+    qDebug() << customPlot->axisRect()->rect();
 }
 
 MainWindow::~MainWindow()
@@ -144,8 +149,8 @@ void MainWindow::createLayout()
 
     QFormLayout *instrForm = new QFormLayout;
     QGroupBox *instrGroupBox = new QGroupBox("Measurement receiver");
-    instrGroupBox->setMinimumWidth(250);
-    instrGroupBox->setMaximumWidth(250);
+    instrGroupBox->setMinimumWidth(280);
+    instrGroupBox->setMaximumWidth(280);
 
     instrForm->addRow(startFreqLabel, instrStartFreq);
     instrForm->addRow(stopFreqLabel, instrStopFreq);
@@ -176,8 +181,8 @@ void MainWindow::createLayout()
     trigForm->addRow(new QLabel("Altitude offset (m)"), gnssAltOffset);
     trigForm->addRow(new QLabel("Time offset (msec)"), gnssTimeOffset);
     trigGroupBox->setLayout(trigForm);
-    trigGroupBox->setMinimumWidth(250);
-    trigGroupBox->setMaximumWidth(250);
+    trigGroupBox->setMinimumWidth(280);
+    trigGroupBox->setMaximumWidth(280);
 
     trigGroupBox->setLayout(trigForm);
 
@@ -188,7 +193,7 @@ void MainWindow::createLayout()
     QGroupBox *incBox = new QGroupBox("Incident log");
     incLayout->addWidget(incidentLog);
     incBox->setLayout(incLayout);
-    incBox->setMaximumHeight(150);
+    incBox->setMaximumHeight(180);
 
     QHBoxLayout *bottomBox = new QHBoxLayout;
     bottomBox->addWidget(incBox);
@@ -198,7 +203,7 @@ void MainWindow::createLayout()
     rightLayout->addWidget(gnssStatus);
     rightBox->setLayout(rightLayout);
     rightBox->setMaximumWidth(200);
-    rightBox->setMaximumHeight(150);
+    rightBox->setMaximumHeight(180);
     rightLayout->addWidget(gnssStatus);
 
     QHBoxLayout *statusBox = new QHBoxLayout;
@@ -220,6 +225,9 @@ void MainWindow::createLayout()
     plotMinScroll->setValue(config->getPlotYMin());
     plotMaxholdTime->setFixedSize(40,30);
     plotMaxholdTime->setRange(0, 120);
+
+    waterfall->updMaxScale(config->getPlotYMax());
+    waterfall->updMinScale(config->getPlotYMin());
 
     gridLayout->addLayout(leftLayout, 0, 0, 2, 1);
     gridLayout->addLayout(plotLayout, 0, 1, 1, 2);
@@ -425,10 +433,14 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
 
     connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMax);
+    connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), waterfall, &Waterfall::updMaxScale);
     connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMin);
+    connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), waterfall, &Waterfall::updMinScale);
     connect(plotMaxholdTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotMaxholdTime);
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
+    connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+
     connect(traceBuffer, &TraceBuffer::newDispMaxhold, customPlotController, &CustomPlotController::plotMaxhold);
     connect(traceBuffer, &TraceBuffer::showMaxhold, customPlotController, &CustomPlotController::showMaxhold);
     connect(traceBuffer, &TraceBuffer::newDispTriglevel, customPlotController, &CustomPlotController::plotTriglevel);
@@ -442,7 +454,6 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, traceAnalyzer, &TraceAnalyzer::setAnalyzerReady);
 
     connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
-    //connect(measurementDevice, &MeasurementDevice::newTrace, traceAnalyzer, &TraceAnalyzer::setTrace);
     connect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::resetAverageLevel);
@@ -778,6 +789,8 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     config->setWindowGeometry(saveGeometry());
     QWidget::resizeEvent(event);
+    qDebug() << customPlot->axisRect()->rect();
+    waterfall->updSize(customPlot->axisRect()->rect());
 }
 
 void MainWindow::moveEvent(QMoveEvent *event)
