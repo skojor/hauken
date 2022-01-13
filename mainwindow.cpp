@@ -647,11 +647,16 @@ void MainWindow::about()
 {
     QString txt;
     QTextStream ts(&txt);
-    ts << "Application version " << SW_VERSION << "\n";
-    ts << "Build date " << BUILD_DATE << "\n";
-    ts << "<a href=\"https://github.com/cutelyst/simple-mail\">SimpleMail Qt library SMTP mail client</a> - LGPL 2.1 license" << "\n\n";
-    ts << "Questions/support? => JSK";
-    QMessageBox::about(this, "About Hauken", txt);
+    QMessageBox box;
+    box.setTextFormat(Qt::RichText);
+    box.setStandardButtons(QMessageBox::Ok);
+
+    ts << "<table><tr><td>Application version</td><td>" << SW_VERSION << "</td></tr>";
+    ts << "<tr><td>Build date</td><td>" << BUILD_DATE << "</td></tr><tr></tr>";
+    ts << "<tr><td><a href='https://github.com/cutelyst/simple-mail'>SimpleMail Qt library SMTP mail client</a></td><td>LGPL 2.1 license" << "</td></tr>";
+    ts << "<tr><td>Questions/support? => JSK</td></tr></table>";
+    box.setText(txt);
+    box.exec();
 }
 
 void MainWindow::aboutQt()
@@ -666,6 +671,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.6</td><td>Email notifications, inline pictures in email</td></tr>"
        << "<tr><td>2.5</td><td>Dual GNSS support added</td></tr>"
        << "<tr><td>2.4</td><td>Auto upload to Casper added, minor bugfixes</td></tr>"
        << "<tr><td>2.3</td><td>Instrument support: ESMB, EM100, EM200, EB500, USRP/Tracy</td></tr>"
@@ -750,6 +756,12 @@ void MainWindow::saveConfigValues()
     config->setGnssPosOffset(gnssPosOffset->value());
     config->setGnssAltOffset(gnssAltOffset->value());
     config->setGnssTimeOffset(gnssTimeOffset->value());
+
+    generalOptions->saveCurrentSettings();
+    gnssOptions->saveCurrentSettings();
+    receiverOptions->saveCurrentSettings();
+    sdefOptions->saveCurrentSettings();
+    emailOptions->saveCurrentSettings();
 }
 
 void MainWindow::showBytesPerSec(int val)
