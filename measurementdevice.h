@@ -145,7 +145,7 @@ private:
     QByteArray tcpOwnAdress = "127.0.0.1";
     QByteArray tcpOwnPort = "0";
     QSharedPointer<Config> config;
-    double tracesPerSecValue;
+    double tracesPerSecValue = 0;
 
     const int scpiThrottleTime = 5; // ms
 };
