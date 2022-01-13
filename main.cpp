@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QString>
 #include <QStringList>
-#include <QDir>
+#include <QStandardPaths>
 
 QString logFilePath;
 bool logToFile = false;
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     if (qEnvironmentVariableIsEmpty("QTDIR"))   //  check if the app is ran in Qt Creator
          logToFile = true;
     qInstallMessageHandler(customMessageOutput); // custom message handler for debugging
-    logFilePath = QDir(QCoreApplication::applicationDirPath()).absolutePath() +"/debug.log";
+    logFilePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/debug.log";
     a.setApplicationVersion(ver);
 
     MainWindow w;
