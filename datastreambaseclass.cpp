@@ -170,7 +170,8 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                 if (fft.size() == calcPscanPointsPerTrace())
                     emit newFftData(fft);
 
-                else if (fft.size() > calcPscanPointsPerTrace() && devicePtr->id.contains("USRP")) { // usrp exception, keep those data even if it's too much
+                else if (fft.size() > calcPscanPointsPerTrace() && (devicePtr->id.contains("USRP") ||
+                         devicePtr->id.contains("EM100"))) { // usrp/em100 exception, keep those data even if it's too much
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);

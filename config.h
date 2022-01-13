@@ -184,7 +184,7 @@ public slots:
     void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr);}
     QByteArray getWindowState() { return settings->value("windowState", "").toByteArray();}
     void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
-    int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 1).toUInt();}
+    int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 30).toUInt();}
     void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
     int getPlotResolution() { return plotResolution;}
     // trig line
