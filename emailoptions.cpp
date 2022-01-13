@@ -67,6 +67,7 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     layout2->addRow(new QLabel("Delay before taking image snapshots"), sbOpt3);
     sbOpt3->setToolTip("Wait this many seconds before making a snapshot of the trace and the waterfall. Useful to see more waterfall before mail is sent.\nThis value cannot be higher than the double of incident truncation time (because then the email is sent, and it's a little late to include attachments...");
     sbOpt3->setValue(config->getEmailDelayBeforeAddingImages());
+    sbOpt3->setRange(0, 86400);
 
     QGroupBox *groupBox3 = new QGroupBox("General notifications configuration");
     QFormLayout *layout3 = new QFormLayout;
