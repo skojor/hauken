@@ -170,6 +170,10 @@ public slots:
     void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s);}
     QString getEmailSmtpPassword() { return simpleEncr(settings->value("email/smtpPassword").toByteArray());}
     void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.toLocal8Bit()));}
+    bool getEmailAddImages() { return settings->value("email/AddImages", true).toBool();}
+    void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b);}
+    int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
+    void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}

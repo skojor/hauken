@@ -494,6 +494,8 @@ void MainWindow::setSignals()
         this->incidentLog->verticalScrollBar()->setValue(this->incidentLog->verticalScrollBar()->maximum());
     });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
+    connect(notifications, &Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
+    connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot); // be nice and send it then!
 
     sdefRecorderThread->start();
     notificationsThread->start();

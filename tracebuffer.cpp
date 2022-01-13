@@ -264,6 +264,7 @@ QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
 
 void TraceBuffer::maintainAvgLevel()
 {
+    avgFactor = 3;
     calcAvgLevel();
     emit averageLevelReady(averageLevel); // update trace analyzer with the new avg level data
 }

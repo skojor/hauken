@@ -59,6 +59,15 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt3->setToolTip("Will notify on all GNSS incidents triggered. Warning! Can generate a lot of emails!");
     cbOpt3->setChecked(config->getEmailNotifyGnssIncidents());
 
+    layout2->addRow(cbOpt4);
+    cbOpt4->setText("Add image of traceplot and waterfall to email");
+    cbOpt4->setToolTip("Includes images of the trace and waterfall in the notification email");
+    cbOpt4->setChecked(config->getEmailAddImages());
+
+    layout2->addRow(new QLabel("Delay before taking image snapshots"), sbOpt3);
+    sbOpt3->setToolTip("Wait this many seconds before making a snapshot of the trace and the waterfall. Useful to see more waterfall before mail is sent.\nThis value cannot be higher than the double of incident truncation time (because then the email is sent, and it's a little late to include attachments...");
+    sbOpt3->setValue(config->getEmailDelayBeforeAddingImages());
+
     QGroupBox *groupBox3 = new QGroupBox("General notifications configuration");
     QFormLayout *layout3 = new QFormLayout;
     groupBox3->setLayout(layout3);
@@ -95,6 +104,8 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailNotifyMeasurementDeviceHighLevel(cbOpt1->isChecked());
     config->setEmailNotifyMeasurementDeviceDisconnected(cbOpt2->isChecked());
     config->setEmailNotifyGnssIncidents(cbOpt3->isChecked());
+    config->setEmailAddImages(cbOpt4->isChecked());
+    config->setEmailDelayBeforeAddingImages(sbOpt3->value());
     config->setNotifyTruncateTime(sbOpt2->value());
 
     dialog->close();

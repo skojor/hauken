@@ -17,7 +17,7 @@ void Notifications::start()
 
     connect(truncateTimer, &QTimer::timeout, this, &Notifications::checkTruncate);
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
-    truncateTimer->setSingleShot(true);
+    //truncateTimer->setSingleShot(true);
     mailDelayTimer->setSingleShot(true);
 }
 
@@ -32,7 +32,7 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
                     truncateThis = true;
                     truncateList.removeAt(i);
                     truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, string)); // remove the previous buffer line and insert the last one, then wait truncateTime seconds before ev. posting
-                    truncateTimer->start(truncateTime * 1e3);
+                    truncateTimer->start(1000);
                 }
             }
         }
@@ -71,8 +71,8 @@ void Notifications::checkTruncate()
                 truncateList.removeAt(i);
             }
         }
-        if (!truncateList.isEmpty()) // could happen if two truncateable classes reports at almost the same time, let's rerun the timer just to check
-            truncateTimer->start(truncateTime * 1e3);
+        if (truncateList.isEmpty())
+            truncateTimer->stop();
     }
 }
 
@@ -107,7 +107,12 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
     QTextStream ts(&text);
     ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>"; // spaces because the stupid simplemail class seems to cut the end of the text!
     mailtext.append(text);
-    if (!mailDelayTimer->isActive()) mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
+    if (!mailDelayTimer->isActive()) {
+        mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
+        int delay = getEmailDelayBeforeAddingImages();
+        if (delay > truncateTime * 2) delay = (truncateTime * 2) - 1; // no point in requesting an image after the mail is sent...
+        QTimer::singleShot(delay * 1e3, this, [this] { emit reqTracePlot(); }); // also ask for a plot image at this time
+    }
 }
 
 void Notifications::sendMail()
@@ -134,8 +139,14 @@ void Notifications::sendMail()
         for (auto &val : mailRecipients) {
             message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
         }
-        mimeHtml->setHtml("<table>" + mailtext + "</table>   ");
+        mimeHtml->setHtml("<table>" + mailtext + "</table><hr><img src='cid:image1' />   ");
         message.addPart(mimeHtml);
+
+        auto image1 = new SimpleMail::MimeInlineFile(new QFile(workFolder + "/.traceplot.png"));
+        image1->setContentId("image1");
+        image1->setContentType("image/png");
+        message.addPart(image1);
+
         qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
         SimpleMail::ServerReply *reply = server->sendMail(message);
         connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
@@ -169,6 +180,12 @@ void Notifications::setupIncidentTable()
 {
     emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
     appendIncidentLog(QDateTime::currentDateTime(), "Application started");
+}
+
+void Notifications::recTracePlot(const QPixmap *pic)
+{
+    pic->save(workFolder + "/.traceplot.png", "png");
+    qDebug() << "traceplot now";
 }
 
 void Notifications::updSettings()

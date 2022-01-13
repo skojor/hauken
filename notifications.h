@@ -9,6 +9,8 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QDebug>
+#include <QPixmap>
+#include <QBuffer>
 #include "config.h"
 #include "typedefs.h"
 #include "SimpleMail/SimpleMail"
@@ -45,6 +47,8 @@ public slots:
     void start();
     void updSettings();
     void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
+    void recTracePlot(const QPixmap *pic);
+    //void recWaterfall(QPixmap *pic) { waterfall = pic;}
 
 private slots:
     void appendIncidentLog(QDateTime dt, const QString string);
@@ -59,6 +63,8 @@ private slots:
 signals:
     void showIncident(QString);
     void warning(QString);
+    void reqTracePlot();
+    void reqWaterfall();
 
 private:
     QFile *incidentLogfile;
@@ -73,6 +79,8 @@ private:
     QList<NotificationsBuffer> truncateList;
     QTimer *truncateTimer;
     QTimer *mailDelayTimer;
+    QByteArray tracePlot;
+    QByteArray waterfall;
 };
 
 #endif // NOTIFICATIONS_H

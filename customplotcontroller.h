@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <QTimer>
 #include <QSharedPointer>
+#include <QPixmap>
 #include "qcustomplot.h"
 #include "config.h"
 #include "typedefs.h"
@@ -36,6 +37,7 @@ public slots:
     void flashTrigline();
     void stopFlashTrigline();
     void updDeviceConnected(bool b);
+    void reqTracePlot() { *tracePlot = customPlotPtr->toPixmap(); emit retTracePlot(tracePlot);}
 
 private slots:
     void setupBasics();
@@ -51,6 +53,7 @@ private slots:
 signals:
     void reqTrigline();
     void freqSelectionChanged();
+    void retTracePlot(QPixmap *);
 
 private:
     QSharedPointer<Config> config;
@@ -70,6 +73,7 @@ private:
     bool flip = true;
     bool deviceConnected = false;
     int plotResolution;
+    QPixmap *tracePlot = new QPixmap;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H
