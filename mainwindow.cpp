@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
     customPlot = new QCustomPlot;
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
-    waterfall = new Waterfall(config, customPlot);
+    waterfall = new Waterfall(config);
     waterfall->start();
 
     generalOptions = new GeneralOptions(config);
@@ -46,8 +46,11 @@ MainWindow::MainWindow(QWidget *parent)
     getConfigValues();
     instrConnected(false); // to set initial inputs state
     instrAutoConnect();
+    QTimer::singleShot(50, customPlotController, [this] {
+        //customPlotController->updSettings();
+        waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
+    });
 
-    qDebug() << customPlot->axisRect()->rect();
 }
 
 MainWindow::~MainWindow()
@@ -439,7 +442,7 @@ void MainWindow::setSignals()
     connect(plotMaxholdTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotMaxholdTime);
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
-    connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+    connect(traceBuffer, &TraceBuffer::newDispMaxhold, waterfall, &Waterfall::receiveTrace);
 
     connect(traceBuffer, &TraceBuffer::newDispMaxhold, customPlotController, &CustomPlotController::plotMaxhold);
     connect(traceBuffer, &TraceBuffer::showMaxhold, customPlotController, &CustomPlotController::showMaxhold);
@@ -508,6 +511,11 @@ void MainWindow::setSignals()
     connect(notifications, &Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
     connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot); // be nice and send it then!
 
+    connect(waterfall, &Waterfall::imageReady, customPlot, [&] (QPixmap *pixmap)
+    {
+        customPlot->axisRect()->setBackground(*pixmap, false);
+        customPlot->replot();
+    });
     sdefRecorderThread->start();
     notificationsThread->start();
 }
@@ -789,7 +797,6 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     config->setWindowGeometry(saveGeometry());
     QWidget::resizeEvent(event);
-    qDebug() << customPlot->axisRect()->rect();
     waterfall->updSize(customPlot->axisRect()->rect());
 }
 

@@ -1,19 +1,21 @@
 #ifndef WATERFALL_H
 #define WATERFALL_H
 
-#include <QWidget>
+#include <QObject>
 #include <QPainter>
 #include <QDebug>
 #include <QSharedPointer>
 #include <QPixmap>
 #include <QDateTime>
+#include <QTimer>
+#include <math.h>
 #include "config.h"
 
-class Waterfall : public QWidget
+class Waterfall : public QObject
 {
     Q_OBJECT
 public:
-    explicit Waterfall(QSharedPointer<Config> c, QWidget *parent);
+    explicit Waterfall(QSharedPointer<Config> c);
 
 public slots:
     void start();
@@ -30,13 +32,14 @@ private slots:
     void redraw();
 
 protected:
-    void paintEvent(QPaintEvent *) override;
+    //void paintEvent(QPaintEvent *) override;
 
 private:
+    QTimer *testDraw;
     QList<QDateTime> traceDateLog;
     QList<double> traceLog;
     QSharedPointer<Config> config;
-    QPixmap *pixmap;
+    QPixmap *pixmap = nullptr;
     int xBeginOffset, yBeginOffset;
     int scaleMin, scaleMax;
 };

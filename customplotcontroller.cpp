@@ -256,6 +256,8 @@ void CustomPlotController::updSettings()
         customPlotPtr->yAxis->setLabel("dBμV (normalized)");
     else
         customPlotPtr->yAxis->setLabel("dBμV");
+    qDebug() << customPlotPtr->axisRect()->rect();
+
 }
 
 void CustomPlotController::flashTrigline()
