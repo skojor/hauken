@@ -695,6 +695,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.7</td><td>Waterfall added with a ton of colors. Minor notifications bugfixes</td></tr>"
        << "<tr><td>2.6</td><td>Email notifications, inline pictures in email</td></tr>"
        << "<tr><td>2.5</td><td>Dual GNSS support added</td></tr>"
        << "<tr><td>2.4</td><td>Auto upload to Casper added, minor bugfixes</td></tr>"
