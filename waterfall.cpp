@@ -105,6 +105,7 @@ void Waterfall::updSettings()
         mode = config->getShowWaterfall();
         if (mode == "Grey")
             greyscale = true;
-        else greyscale = false;
+        else if (mode == "Pride")
+            greyscale = false;
     }
 }
