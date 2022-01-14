@@ -149,31 +149,31 @@ public slots:
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
-    void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s);}
+    void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s); emit settingsUpdated();}
     QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString();}
-    void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s);}
+    void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s); emit settingsUpdated();}
     QString getEmailRecipients() { return settings->value("email/Recipients").toString();}
-    void setEmailRecipients(QString s) { settings->setValue("email/Recipients", s);}
+    void setEmailRecipients(QString s) { settings->setValue("email/Recipients", s); emit settingsUpdated();}
     bool getEmailNotifyMeasurementDeviceHighLevel() { return settings->value("email/NotifyMeasurementDeviceHighLevel", false).toBool();}
-    void setEmailNotifyMeasurementDeviceHighLevel(bool b) { settings->setValue("email/NotifyMeasurementDeviceHighLevel", b);}
+    void setEmailNotifyMeasurementDeviceHighLevel(bool b) { settings->setValue("email/NotifyMeasurementDeviceHighLevel", b); emit settingsUpdated();}
     bool getEmailNotifyMeasurementDeviceDisconnected() { return settings->value("email/NotifyMeasurementDeviceDisconnected", false).toBool();}
-    void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b);}
+    void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b); emit settingsUpdated();}
     bool getEmailNotifyGnssIncidents() { return settings->value("email/NotifyGnssIncidents", false).toBool();}
-    void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b);}
+    void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b); emit settingsUpdated();}
     int getEmailMinTimeBetweenEmails() { return settings->value("email/MinTimeBetweenEmails", 3600).toInt();}
-    void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);}
+    void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s); emit settingsUpdated();}
     int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
-    void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);}
+    void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s); emit settingsUpdated();}
     QString getEmailFromAddress() { return settings->value("email/FromAddress").toString();}
-    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s);}
+    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s); emit settingsUpdated();}
     QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString();}
-    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s);}
+    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s); emit settingsUpdated();}
     QString getEmailSmtpPassword() { return simpleEncr(settings->value("email/smtpPassword").toByteArray());}
-    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.toLocal8Bit()));}
+    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.toLocal8Bit())); emit settingsUpdated();}
     bool getEmailAddImages() { return settings->value("email/AddImages", true).toBool();}
-    void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b);}
+    void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b); emit settingsUpdated();}
     int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
-    void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val);}
+    void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val); emit settingsUpdated();}
 
 
     // Window specific settings
@@ -187,8 +187,10 @@ public slots:
     void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
     int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 30).toUInt();}
     void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
-    bool getShowWaterfall() { return settings->value("plot/ShowWaterfall", true).toBool();}
-    void setShowWaterfall(bool b) { settings->setValue("plot/ShowWaterfall", b);}
+    QString getShowWaterfall() { return settings->value("plot/ShowWaterfall", "Off").toString();}
+    void setShowWaterfall(QString b) { settings->setValue("plot/ShowWaterfall", b); emit settingsUpdated();}
+    int getWaterfallTime() { return settings->value("plot/WaterfallTime", 120).toInt();}
+    void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val); emit settingsUpdated();}
     int getPlotResolution() { return plotResolution;}
     // trig line
 

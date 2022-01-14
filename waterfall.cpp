@@ -44,8 +44,13 @@ void Waterfall::updTimerCallback()
         else if (percent > 1) percent = 1;
 
         iterator += ratio;
-        int hue = 240 - (240 * percent);
-        color.setHsv(hue, 180, 255, 65);
+        if (!greyscale) {
+            int hue = 190 - (190 * percent);
+            color.setHsv(hue, 180, 255, 65);
+        }
+        else {
+            color.setHsv(180, 0, 255 - (255 * percent), 255);
+        }
 
         QPen pen;
         pen.setColor(color);
@@ -54,7 +59,7 @@ void Waterfall::updTimerCallback()
         painter.drawPoint(x, 0);
     }
     emit imageReady(pixmap);
-    double interval = 1000.0 / ((double)pixmap->height() / 120.0);
+    double interval = 1000.0 / ((double)pixmap->height() / waterfallTime);
     updIntervalTimer->start((int)interval);
 }
 
@@ -92,5 +97,14 @@ void Waterfall::updSettings()
         resolution = config->getInstrResolution();
         fftMode = config->getInstrFftMode();
         restartPlot();
+    }
+    if (waterfallTime != config->getWaterfallTime()) {
+        waterfallTime = config->getWaterfallTime();
+    }
+    if (!mode.contains(config->getShowWaterfall())) {
+        mode = config->getShowWaterfall();
+        if (mode == "Grey")
+            greyscale = true;
+        else greyscale = false;
     }
 }

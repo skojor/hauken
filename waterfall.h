@@ -45,6 +45,9 @@ private:
     quint64 startfreq, stopfreq;
     QString resolution;
     QString fftMode;
+    int waterfallTime = 120;
+    QString mode;
+    bool greyscale = false;
 };
 
 #endif // WATERFALL_H

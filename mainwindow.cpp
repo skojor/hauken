@@ -22,6 +22,13 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController->init();
     waterfall = new Waterfall(config);
     waterfall->start();
+    showWaterfall->addItems(QStringList() << "Off" << "Pride" << "Grey");
+    qcpImage = new QCPItemPixmap(customPlot);
+    qcpImage->setVisible(true);
+    customPlot->addLayer("image");
+    qcpImage->setLayer("image");
+    customPlot->layer("image")->setMode(QCPLayer::lmBuffered);
+    qcpImage->setScaled(false);
 
     generalOptions = new GeneralOptions(config);
     gnssOptions = new GnssOptions(config);
@@ -219,8 +226,10 @@ void MainWindow::createLayout()
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
     bottomPlotLayout->addWidget(plotMaxholdTime);
+    bottomPlotLayout->addWidget(new QLabel("Waterfall type"));
     bottomPlotLayout->addWidget(showWaterfall);
-    showWaterfall->setText("Show waterfall");
+    bottomPlotLayout->addWidget(new QLabel("Waterfall speed"));
+    bottomPlotLayout->addWidget(waterfallTime);
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
     plotMaxScroll->setFixedSize(40, 30);
     plotMaxScroll->setRange(-30,200);
@@ -228,8 +237,9 @@ void MainWindow::createLayout()
     plotMinScroll->setRange(-50, 170);
     plotMaxScroll->setValue(config->getPlotYMax());
     plotMinScroll->setValue(config->getPlotYMin());
-    plotMaxholdTime->setFixedSize(40,30);
+    plotMaxholdTime->setFixedSize(40,20);
     plotMaxholdTime->setRange(0, 120);
+    waterfallTime->setRange(2, 86400);
 
     gridLayout->addLayout(leftLayout, 0, 0, 2, 1);
     gridLayout->addLayout(plotLayout, 0, 1, 1, 2);
@@ -287,7 +297,8 @@ void MainWindow::setToolTips()
     plotMaxScroll->setToolTip("Set the max. scale in dBuV");
     plotMinScroll->setToolTip("Set the min. scale in dBuV");
     plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no maxhold.\nOnly affects displayed maxhold");
-    showWaterfall->setToolTip("Hide or show the waterfall as an overlay");
+    showWaterfall->setToolTip("Select type of waterfall overlay");
+    waterfallTime->setToolTip("Select the time in seconds a signal will be visible in the waterfall");
 }
 
 void MainWindow::getConfigValues()
@@ -326,7 +337,10 @@ void MainWindow::getConfigValues()
     gnssTimeOffset->setValue(config->getGnssTimeOffset());
 
     plotMaxholdTime->setValue(config->getPlotMaxholdTime());
-    showWaterfall->setChecked(config->getShowWaterfall());
+    showWaterfall->setCurrentText(config->getShowWaterfall());
+    setWaterfallOption(showWaterfall->currentText());
+    waterfallTime->setValue(config->getWaterfallTime());
+
     updConfigSettings();
 }
 
@@ -440,7 +454,8 @@ void MainWindow::setSignals()
     connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMax);
     connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMin);
     connect(plotMaxholdTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotMaxholdTime);
-    connect(showWaterfall, &QCheckBox::toggled, this, &MainWindow::setWaterfallOption);
+    connect(showWaterfall, &QComboBox::currentTextChanged, this, &MainWindow::setWaterfallOption);
+    connect(waterfallTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setWaterfallTime);
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
@@ -517,6 +532,10 @@ void MainWindow::setSignals()
     {
         if (dispWaterfall) {
             customPlot->axisRect()->setBackground(*pixmap, false);
+            //customPlot->replot();
+            //qcpImage->setPixmap(*pixmap);
+            //customPlot->layer("image")->replot();
+            //qDebug() << qcpImage->clipAxisRect()->rect() << qcpImage->pixmap().size();
             customPlot->replot();
         }
     });
@@ -849,12 +868,20 @@ void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
     }
 }
 
-void MainWindow::setWaterfallOption(bool b)
+void MainWindow::setWaterfallOption(QString s)
 {
-    dispWaterfall = b;
-    if (!b) {
+    if (s == "Off") dispWaterfall = false;
+    else dispWaterfall = true;
+
+    if (!dispWaterfall) {
         customPlot->axisRect()->setBackground(QPixmap());
         customPlot->replot();
     }
-    config->setShowWaterfall(b);
+    if (s == "Grey")
+        customPlot->graph(0)->setPen(QPen(Qt::blue));
+    else
+        customPlot->graph(0)->setPen(QPen(Qt::black));
+
+
+    config->setShowWaterfall(s);
 }

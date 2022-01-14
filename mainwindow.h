@@ -98,7 +98,7 @@ private slots:
     void triggerSettingsUpdate();
 
     void updGnssBox(const QString txt, const int id, bool valid);
-    void setWaterfallOption(bool b);
+    void setWaterfallOption(QString s);
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -169,7 +169,9 @@ private:
     QSpinBox *plotMaxScroll = new QSpinBox;
     QSpinBox *plotMinScroll = new QSpinBox;
     QSpinBox *plotMaxholdTime = new QSpinBox;
-    QCheckBox *showWaterfall = new QCheckBox;
+    QComboBox *showWaterfall = new QComboBox;
+    QSpinBox *waterfallTime = new QSpinBox;
+    QCPItemPixmap *qcpImage;
 
     TraceBuffer *traceBuffer = new TraceBuffer(config);
     TraceAnalyzer *traceAnalyzer = new TraceAnalyzer(config);
