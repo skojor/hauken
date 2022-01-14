@@ -54,8 +54,8 @@ void Waterfall::updTimerCallback()
         painter.drawPoint(x, 0);
     }
     emit imageReady(pixmap);
-    int interval = 1000 / (pixmap->height() / 120);
-    updIntervalTimer->start(interval);
+    double interval = 1000.0 / ((double)pixmap->height() / 120.0);
+    updIntervalTimer->start((int)interval);
 }
 
 void Waterfall::redraw()
