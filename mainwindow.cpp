@@ -228,10 +228,10 @@ void MainWindow::createLayout()
     bottomPlotLayout->addWidget(plotMaxholdTime);
     bottomPlotLayout->addWidget(new QLabel("Waterfall type"));
     bottomPlotLayout->addWidget(showWaterfall);
-    bottomPlotLayout->addWidget(new QLabel("Waterfall speed"));
+    bottomPlotLayout->addWidget(new QLabel("Waterfall time"));
     bottomPlotLayout->addWidget(waterfallTime);
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
-    plotMaxScroll->setFixedSize(40, 30);
+    //plotMaxScroll->setFixedSize(40, 30);
     plotMaxScroll->setRange(-30,200);
     plotMinScroll->setFixedSize(40, 30);
     plotMinScroll->setRange(-50, 170);
