@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
     waterfall = new Waterfall(config);
-    waterfall->start();
+    //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Pride" << "Grey");
     qcpImage = new QCPItemPixmap(customPlot);
     qcpImage->setVisible(true);
@@ -40,6 +40,8 @@ MainWindow::MainWindow(QWidget *parent)
     sdefRecorder->moveToThread(sdefRecorderThread);
     notificationsThread->setObjectName("Notifications");
     notifications->moveToThread(notificationsThread);
+    waterfallThread->setObjectName("Waterfall");
+    waterfall->moveToThread(waterfallThread);
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -507,6 +509,7 @@ void MainWindow::setSignals()
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
+    connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -541,6 +544,7 @@ void MainWindow::setSignals()
     });
     sdefRecorderThread->start();
     notificationsThread->start();
+    waterfallThread->start();
 }
 
 void MainWindow::instrStartFreqChanged()

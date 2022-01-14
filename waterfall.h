@@ -8,7 +8,6 @@
 #include <QPixmap>
 #include <QDateTime>
 #include <QTimer>
-#include <QElapsedTimer>
 #include <math.h>
 #include "config.h"
 
@@ -31,7 +30,6 @@ signals:
     void imageReady(QPixmap *);
 
 private slots:
-    void redraw();
     void updTimerCallback();
 
 private:
