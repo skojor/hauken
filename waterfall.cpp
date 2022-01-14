@@ -7,8 +7,6 @@ Waterfall::Waterfall(QSharedPointer<Config> c)
 
 void Waterfall::start()
 {
-    xBeginOffset = 0;
-    yBeginOffset = 0;
     testDraw = new QTimer;
     connect(testDraw, &QTimer::timeout, this, [this]
     {
@@ -17,51 +15,82 @@ void Waterfall::start()
             test.append(-2.5 + sin(i));
         receiveTrace(test);
     });
-    testDraw->start(2000);
+    //testDraw->start(2000);
+    updIntervalTimer = new QTimer;
+    updIntervalTimer->setSingleShot(true);
+    connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
 }
 
-void Waterfall::receiveTrace(QVector<double> trace)
+void Waterfall::receiveTrace(const QVector<double> &trace)
+{
+    traceCopy = trace;
+    if (!updIntervalTimer->isActive()) updIntervalTimer->start(100); // first call
+}
+
+void Waterfall::updTimerCallback()
 {
     pixmap->scroll(0, 1, pixmap->rect());
     QPainter painter(pixmap);
     QColor color;
-    qDebug() << trace.size() << pixmap->size().width() << pixmap->size().height() << scaleMax << scaleMin;
-    int size = trace.size();
-    for (int x=0; x<pixmap->width(); x+= size/pixmap->width()) {
-        int percent = (trace.at(x) - scaleMin) / (scaleMax - scaleMin); // 0 - 100 % range
+
+    int traceSize = traceCopy.size();
+    int pixmapSize = pixmap->width();
+    double iterator = 0;
+    double ratio = (double)traceSize / (double)pixmapSize;
+
+    for (int x=0; x<pixmapSize; x++) {
+        double percent = (traceCopy.at((int)iterator) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
+        if (percent < 0) percent = 0;
+        else if (percent > 1) percent = 1;
+
+        iterator += ratio;
         int hue = 240 - (240 * percent);
-        color.setHsv(hue, 180, 255, 127);
-        qDebug() << hue;
-        painter.setPen(color);
+        color.setHsv(hue, 180, 255, 65);
+
+        QPen pen;
+        pen.setColor(color);
+        pen.setWidth(1);
+        painter.setPen(pen);
         painter.drawPoint(x, 0);
     }
-
-    //update();
     emit imageReady(pixmap);
+    int interval = 1000 / (pixmap->height() / 120);
+    updIntervalTimer->start(interval);
 }
-
-/*void Waterfall::paintEvent(QPaintEvent *)
-{
-    QPainter painter(pixmap);
-    painter.drawPixmap(xBeginOffset, yBeginOffset, *pixmap);
-}*/
 
 void Waterfall::redraw()
 {
 
 }
 
+void Waterfall::restartPlot()
+{
+    QSize size(640, 480);
+    if (pixmap != nullptr) {
+        size = pixmap->size();
+        delete pixmap;
+    }
+    pixmap = new QPixmap(size);
+}
+
 void Waterfall::updSize(QRect s)
 {
-    QSize size(s.width() + s.left(), s.height() + s.top());
-    xBeginOffset = s.left();
-    yBeginOffset = s.top();
+    QSize size(s.width(), s.height());
     if (pixmap != nullptr)
         delete pixmap;
     pixmap = new QPixmap(size);
-    pixmap->fill(Qt::yellow);
-    qDebug() << pixmap->width() << pixmap->height();
     redraw();
-    //this->resize(size);
-    //qDebug() << this->width() << this->height() << s.height() << s.bottom() << s.top();
+}
+
+void Waterfall::updSettings()
+{
+    scaleMin = config->getPlotYMin();
+    scaleMax = config->getPlotYMax();
+    if (startfreq != config->getInstrStartFreq() || stopfreq != config->getInstrStopFreq() || !resolution.contains(config->getInstrResolution()) || !fftMode.contains(config->getInstrFftMode())) {
+        startfreq = config->getInstrStartFreq();
+        stopfreq = config->getInstrStopFreq();
+        resolution = config->getInstrResolution();
+        fftMode = config->getInstrFftMode();
+        restartPlot();
+    }
 }

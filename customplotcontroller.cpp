@@ -25,7 +25,7 @@ void CustomPlotController::setupBasics()
     customPlotPtr->addGraph();
     customPlotPtr->yAxis->setLabel("dBμV");
     customPlotPtr->xAxis->setLabel("MHz");
-    customPlotPtr->graph(0)->setPen(QPen(Qt::blue));
+    customPlotPtr->graph(0)->setPen(QPen(Qt::black));
     customPlotPtr->graph(1)->setPen(QPen(Qt::red));
     customPlotPtr->graph(2)->setSelectable(QCP::stWhole);
     customPlotPtr->graph(2)->setLineStyle(QCPGraph::lsLine);
@@ -33,7 +33,7 @@ void CustomPlotController::setupBasics()
     pen.setWidth(1);
     pen.setColor(QColor(0, 100, 0, 255));
     customPlotPtr->graph(2)->setPen(pen);
-    customPlotPtr->graph(2)->setBrush(QColor(0, 150, 0, 30));
+    customPlotPtr->graph(2)->setBrush(QColor(0, 150, 0, 127));
     customPlotPtr->graph(2)->setChannelFillGraph(customPlotPtr->graph(3));
 
     customPlotPtr->setInteraction(QCP::iRangeDrag, true);
@@ -256,7 +256,7 @@ void CustomPlotController::updSettings()
         customPlotPtr->yAxis->setLabel("dBμV (normalized)");
     else
         customPlotPtr->yAxis->setLabel("dBμV");
-    qDebug() << customPlotPtr->axisRect()->rect();
+   // qDebug() << customPlotPtr->axisRect()->rect();
 
 }
 

@@ -98,6 +98,7 @@ private slots:
     void triggerSettingsUpdate();
 
     void updGnssBox(const QString txt, const int id, bool valid);
+    void setWaterfallOption(bool b);
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -168,6 +169,7 @@ private:
     QSpinBox *plotMaxScroll = new QSpinBox;
     QSpinBox *plotMinScroll = new QSpinBox;
     QSpinBox *plotMaxholdTime = new QSpinBox;
+    QCheckBox *showWaterfall = new QCheckBox;
 
     TraceBuffer *traceBuffer = new TraceBuffer(config);
     TraceAnalyzer *traceAnalyzer = new TraceAnalyzer(config);
@@ -179,5 +181,6 @@ private:
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
+    bool dispWaterfall;
 };
 #endif // MAINWINDOW_H

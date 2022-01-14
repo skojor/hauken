@@ -54,6 +54,7 @@ signals:
     void historicData(const QList<QDateTime>, const QList<QVector<qint16> >data);
     void traceToAnalyzer(const QVector<qint16> &data);
     void traceToRecorder(const QVector<qint16> &data);
+    void newDispMaxholdToWaterfall(const QVector<double> data);
 
 private slots:
     void deleteOlderThan();

@@ -19,6 +19,9 @@ void Notifications::start()
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
     //truncateTimer->setSingleShot(true);
     mailDelayTimer->setSingleShot(true);
+
+    timeBetweenEmailsTimer = new QTimer;
+    timeBetweenEmailsTimer->setSingleShot(true);
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -105,62 +108,67 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>"; // spaces because the stupid simplemail class seems to cut the end of the text!
+    ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>";
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) {
         mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
         int delay = getEmailDelayBeforeAddingImages();
         if (delay > truncateTime * 2) delay = (truncateTime * 2) - 1; // no point in requesting an image after the mail is sent...
+        qDebug() << "singleshot in" << delay;
         QTimer::singleShot(delay * 1e3, this, [this] { emit reqTracePlot(); }); // also ask for a plot image at this time
     }
 }
 
 void Notifications::sendMail()
 {
-    if (simpleParametersCheck() and !mailtext.isEmpty()) {
-        auto server = new SimpleMail::Server;
-        server->setHost(mailserverAddress);
-        server->setPort(mailserverPort.toUInt());
+    if (!timeBetweenEmailsTimer->isActive()) {
+        if (simpleParametersCheck() and !mailtext.isEmpty()) {
+            auto server = new SimpleMail::Server;
+            server->setHost(mailserverAddress);
+            server->setPort(mailserverPort.toUInt());
 
-        if (!smtpUser.isEmpty() || !smtpPass.isEmpty()) {
-            server->setUsername(smtpUser);
-            server->setPassword(smtpPass);
+            if (!smtpUser.isEmpty() || !smtpPass.isEmpty()) {
+                server->setUsername(smtpUser);
+                server->setPassword(smtpPass);
+            }
+
+            QStringList mailRecipients;
+            if (recipients.contains(';')) mailRecipients = recipients.split(';');
+            else mailRecipients.append(recipients);
+
+            auto mimeHtml = new SimpleMail::MimeHtml;
+            SimpleMail::MimeMessage message;
+            message.setSubject("Notification " + getStationName());
+            message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), getStationName()));
+
+            for (auto &val : mailRecipients) {
+                message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+            }
+            mimeHtml->setHtml("<table>" + mailtext + "</table><hr><img src='cid:image1' />   ");
+            message.addPart(mimeHtml);
+
+            auto image1 = new SimpleMail::MimeInlineFile(new QFile(workFolder + "/.traceplot.png"));
+            image1->setContentId("image1");
+            image1->setContentType("image/png");
+            message.addPart(image1);
+
+            qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
+            SimpleMail::ServerReply *reply = server->sendMail(message);
+            connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
+            {
+                qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
+                if (reply->error()) emit this->warning("Email SMTP error: " + reply->responseText());
+                reply->deleteLater();
+                mailtext.clear();
+            });
+            timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
         }
-
-        QStringList mailRecipients;
-        if (recipients.contains(';')) mailRecipients = recipients.split(';');
-        else mailRecipients.append(recipients);
-
-        auto mimeHtml = new SimpleMail::MimeHtml;
-        SimpleMail::MimeMessage message;
-        message.setSubject("Notification " + getStationName());
-        message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), getStationName()));
-
-        for (auto &val : mailRecipients) {
-            message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+        else {
+            emit warning("Email notifications is enabled, but one or more of the parameters are missing. Check your configuration!");
         }
-        mimeHtml->setHtml("<table>" + mailtext + "</table><hr><img src='cid:image1' />   ");
-        message.addPart(mimeHtml);
-
-        auto image1 = new SimpleMail::MimeInlineFile(new QFile(workFolder + "/.traceplot.png"));
-        image1->setContentId("image1");
-        image1->setContentType("image/png");
-        message.addPart(image1);
-
-        qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
-        SimpleMail::ServerReply *reply = server->sendMail(message);
-        connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
-        {
-            qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
-            if (reply->error()) emit this->warning("Email SMTP error: " + reply->responseText());
-            reply->deleteLater();
-            mailtext.clear();
-        });
-        //delete mimeHtml;
-        //server->deleteLater(); //CRASH
     }
     else {
-        emit warning("Email notifications is enabled, but one or more of the parameters are missing. Check your configuration!");
+        mailDelayTimer->start(timeBetweenEmailsTimer->remainingTime()); // rerun timer calling this routine in x msec
     }
 }
 
@@ -201,5 +209,6 @@ void Notifications::updSettings()
         workFolder = getWorkFolder();
         if (incidentLogfile->isOpen()) incidentLogfile->close(); // in case user changes folder settings
     }
+    delayBetweenEmails = getEmailMinTimeBetweenEmails();
 }
 

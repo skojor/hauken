@@ -69,6 +69,7 @@ signals:
 private:
     QFile *incidentLogfile;
     QString mailtext;
+    QTimer *timeBetweenEmailsTimer;
 
     // config cache
     QString mailserverAddress, mailserverPort, smtpUser, smtpPass;
@@ -81,6 +82,7 @@ private:
     QTimer *mailDelayTimer;
     QByteArray tracePlot;
     QByteArray waterfall;
+    int delayBetweenEmails;
 };
 
 #endif // NOTIFICATIONS_H

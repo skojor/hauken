@@ -52,11 +52,12 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     
     if (!throttleTimer->isValid())
         throttleTimer->start();
-    
+
+    addDisplayBufferTrace(data);
+    calcMaxhold();
+
     if (throttleTimer->elapsed() > throttleTime) {
         throttleTimer->start();
-        addDisplayBufferTrace(data);
-        calcMaxhold();
         emit newDispTrace(displayBuffer);
         emit reqReplot();
     }
@@ -104,6 +105,7 @@ void TraceBuffer::calcMaxhold()
         maxholdBufferElapsedTimer->start();
         maxhold = maxholdBufferAggregate;
         maxholdBuffer.prepend(maxholdBufferAggregate);
+        emit newDispMaxholdToWaterfall(maxholdBufferAggregate); // for waterfall calc.
         maxholdBufferAggregate.clear();
     }
 

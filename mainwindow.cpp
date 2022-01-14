@@ -219,6 +219,8 @@ void MainWindow::createLayout()
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
     bottomPlotLayout->addWidget(plotMaxholdTime);
+    bottomPlotLayout->addWidget(showWaterfall);
+    showWaterfall->setText("Show waterfall");
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
     plotMaxScroll->setFixedSize(40, 30);
     plotMaxScroll->setRange(-30,200);
@@ -228,9 +230,6 @@ void MainWindow::createLayout()
     plotMinScroll->setValue(config->getPlotYMin());
     plotMaxholdTime->setFixedSize(40,30);
     plotMaxholdTime->setRange(0, 120);
-
-    waterfall->updMaxScale(config->getPlotYMax());
-    waterfall->updMinScale(config->getPlotYMin());
 
     gridLayout->addLayout(leftLayout, 0, 0, 2, 1);
     gridLayout->addLayout(plotLayout, 0, 1, 1, 2);
@@ -288,6 +287,7 @@ void MainWindow::setToolTips()
     plotMaxScroll->setToolTip("Set the max. scale in dBuV");
     plotMinScroll->setToolTip("Set the min. scale in dBuV");
     plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no maxhold.\nOnly affects displayed maxhold");
+    showWaterfall->setToolTip("Hide or show the waterfall as an overlay");
 }
 
 void MainWindow::getConfigValues()
@@ -326,6 +326,7 @@ void MainWindow::getConfigValues()
     gnssTimeOffset->setValue(config->getGnssTimeOffset());
 
     plotMaxholdTime->setValue(config->getPlotMaxholdTime());
+    showWaterfall->setChecked(config->getShowWaterfall());
     updConfigSettings();
 }
 
@@ -434,15 +435,15 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(measurementDevice, &MeasurementDevice::bytesPerSec, this, &MainWindow::showBytesPerSec);
     connect(measurementDevice, &MeasurementDevice::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
+    //connect(measurementDevice, &MeasurementDevice::tracesPerSec, waterfall, &Waterfall::updTracesPerSecond);
 
     connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMax);
-    connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), waterfall, &Waterfall::updMaxScale);
     connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMin);
-    connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), waterfall, &Waterfall::updMinScale);
     connect(plotMaxholdTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotMaxholdTime);
+    connect(showWaterfall, &QCheckBox::toggled, this, &MainWindow::setWaterfallOption);
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
-    connect(traceBuffer, &TraceBuffer::newDispMaxhold, waterfall, &Waterfall::receiveTrace);
+    connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
 
     connect(traceBuffer, &TraceBuffer::newDispMaxhold, customPlotController, &CustomPlotController::plotMaxhold);
     connect(traceBuffer, &TraceBuffer::showMaxhold, customPlotController, &CustomPlotController::showMaxhold);
@@ -476,6 +477,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer1, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer2, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
+    connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
@@ -513,8 +515,10 @@ void MainWindow::setSignals()
 
     connect(waterfall, &Waterfall::imageReady, customPlot, [&] (QPixmap *pixmap)
     {
-        customPlot->axisRect()->setBackground(*pixmap, false);
-        customPlot->replot();
+        if (dispWaterfall) {
+            customPlot->axisRect()->setBackground(*pixmap, false);
+            customPlot->replot();
+        }
     });
     sdefRecorderThread->start();
     notificationsThread->start();
@@ -580,9 +584,10 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         instrStartFreq->setMinimum(measurementDevice->getDeviceMinFreq() / 1e6);
         instrStopFreq->setMaximum(measurementDevice->getDeviceMaxFreq() / 1e6);
     }
-    else
+    else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
-
+        waterfall->stopPlot();
+    }
 }
 
 void MainWindow::setInputsState(const bool state)
@@ -841,4 +846,14 @@ void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
         rightBox->setTitle("GNSS " + QString::number(id) + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
         gnssStatus->setText(txt);
     }
+}
+
+void MainWindow::setWaterfallOption(bool b)
+{
+    dispWaterfall = b;
+    if (!b) {
+        customPlot->axisRect()->setBackground(QPixmap());
+        customPlot->replot();
+    }
+    config->setShowWaterfall(b);
 }

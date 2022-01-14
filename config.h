@@ -186,6 +186,8 @@ public slots:
     void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
     int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 30).toUInt();}
     void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
+    bool getShowWaterfall() { return settings->value("plot/ShowWaterfall", true).toBool();}
+    void setShowWaterfall(bool b) { settings->setValue("plot/ShowWaterfall", b);}
     int getPlotResolution() { return plotResolution;}
     // trig line
 

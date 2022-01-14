@@ -8,6 +8,7 @@
 #include <QPixmap>
 #include <QDateTime>
 #include <QTimer>
+#include <QElapsedTimer>
 #include <math.h>
 #include "config.h"
 
@@ -19,29 +20,31 @@ public:
 
 public slots:
     void start();
-    void receiveTrace(QVector<double> trace);
+    void receiveTrace(const QVector<double> &trace);
     QPixmap * retWaterfall() { return pixmap;}
-    void updMinScale(int low) { scaleMin = low;}
-    void updMaxScale(int high) { scaleMax = high;}
     void updSize(QRect s);
+    void updSettings();
+    void restartPlot();
+    void stopPlot() { updIntervalTimer->stop();}
 
 signals:
     void imageReady(QPixmap *);
 
 private slots:
     void redraw();
-
-protected:
-    //void paintEvent(QPaintEvent *) override;
+    void updTimerCallback();
 
 private:
     QTimer *testDraw;
-    QList<QDateTime> traceDateLog;
-    QList<double> traceLog;
+    QTimer *updIntervalTimer;
+    QVector<double> traceCopy;
     QSharedPointer<Config> config;
     QPixmap *pixmap = nullptr;
-    int xBeginOffset, yBeginOffset;
+    // config cache
     int scaleMin, scaleMax;
+    quint64 startfreq, stopfreq;
+    QString resolution;
+    QString fftMode;
 };
 
 #endif // WATERFALL_H
