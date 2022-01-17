@@ -179,6 +179,8 @@ private:
 
     SdefRecorder *sdefRecorder = new SdefRecorder();
     QThread *sdefRecorderThread = new QThread;
+    Waterfall *waterfall;
+    QThread *waterfallThread = new QThread;
 
     Waterfall *waterfall;
     QThread *waterfallThread;

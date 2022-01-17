@@ -7,18 +7,20 @@ Waterfall::Waterfall(QSharedPointer<Config> c)
 
 void Waterfall::start()
 {
-    testDraw = new QTimer;
-    connect(testDraw, &QTimer::timeout, this, [this]
-    {
-        QVector<double> test;
-        for (int i=0; i<config->getPlotResolution(); i++)
-            test.append(-2.5 + sin(i));
-        receiveTrace(test);
-    });
-    //testDraw->start(2000);
     updIntervalTimer = new QTimer;
     updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
+
+/*    testDraw = new QTimer;
+    connect(testDraw, &QTimer::timeout, this, [this] {
+        QVector<double> tmp;
+        for (int i=0; i<config->getPlotResolution(); i++) {
+           tmp.append(double((rand()) % 100 - 30) / 10.0);
+        }
+        this->receiveTrace(tmp);
+        if (!updIntervalTimer->isActive()) this->updIntervalTimer->start();
+    });
+    testDraw->start(200);*/
 }
 
 void Waterfall::receiveTrace(const QVector<double> &trace)
@@ -39,12 +41,16 @@ void Waterfall::updTimerCallback()
     int pixmapSize = pixmap->width();
     double iterator = 0;
     double ratio = (double)traceSize / (double)pixmapSize;
+    QPen pen;
+    painter.setPen(pen);
+    pen.setWidth(1);
 
     for (int x=0; x<pixmapSize; x++) {
         double percent = (traceCopy.at((int)iterator) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
+        iterator += ratio;
+
         if (percent < 0) percent = 0;
         else if (percent > 1) percent = 1;
-
         iterator += ratio;
 
         if (colorset == COLORS::GREY)
@@ -87,7 +93,8 @@ void Waterfall::updSettings()
 {
     scaleMin = config->getPlotYMin();
     scaleMax = config->getPlotYMax();
-    if (startfreq != config->getInstrStartFreq() || stopfreq != config->getInstrStopFreq() || !resolution.contains(config->getInstrResolution()) || !fftMode.contains(config->getInstrFftMode())) {
+    if (startfreq != config->getInstrStartFreq() || stopfreq != config->getInstrStopFreq()
+            || !resolution.contains(config->getInstrResolution()) || !fftMode.contains(config->getInstrFftMode())) {
         startfreq = config->getInstrStartFreq();
         stopfreq = config->getInstrStopFreq();
         resolution = config->getInstrResolution();

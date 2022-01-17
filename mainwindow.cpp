@@ -23,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
     waterfall = new Waterfall(config);
     //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
+
     qcpImage = new QCPItemPixmap(customPlot);
     qcpImage->setVisible(true);
     customPlot->addLayer("image");
@@ -40,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     sdefRecorder->moveToThread(sdefRecorderThread);
     notificationsThread->setObjectName("Notifications");
     notifications->moveToThread(notificationsThread);
+
     waterfallThread = new QThread;
     waterfallThread->setObjectName("waterfall");
     waterfall->moveToThread(waterfallThread);
