@@ -201,6 +201,7 @@ public slots:
 
     //internal
     void newFileName(const QString file);
+    QString getCurrentFilename() { return curFile;}
 
 private slots:
     QByteArray simpleEncr(QByteArray);

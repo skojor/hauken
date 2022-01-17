@@ -626,7 +626,6 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
     }
     else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
-        //waterfall->stopPlot();
     }
 }
 
@@ -704,7 +703,8 @@ void MainWindow::updWindowTitle(const QString msg)
 {
     QString extra;
     if (!msg.isEmpty()) extra = tr(" using ") + msg;
-    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra);
+    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra
+                   + " (" + config->getCurrentFilename().split('/').last() + ")");
 }
 
 void MainWindow::about()
@@ -780,6 +780,7 @@ void MainWindow::newFile()
     if (measurementDevice->isConnected())
         measurementDevice->instrDisconnect();
     getConfigValues();
+    updWindowTitle();
 }
 
 void MainWindow::open()
@@ -790,6 +791,7 @@ void MainWindow::open()
 
     if (!fileName.isEmpty()) config->newFileName(fileName);
     getConfigValues();
+    updWindowTitle();
 }
 
 void MainWindow::save()
@@ -797,8 +799,12 @@ void MainWindow::save()
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save current configuration"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));
-    if (!fileName.isEmpty()) config->newFileName(fileName);
+    if (!fileName.isEmpty()) {  //config->newFileName(fileName);
+        QFile::copy(config->getCurrentFilename(), fileName);
+        config->newFileName(fileName);
+    }
     saveConfigValues();
+    updWindowTitle();
 }
 
 void MainWindow::saveConfigValues()
