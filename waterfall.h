@@ -8,9 +8,17 @@
 #include <QPixmap>
 #include <QDateTime>
 #include <QTimer>
-#include <QElapsedTimer>
 #include <math.h>
 #include "config.h"
+
+enum class COLORS
+{
+    OFF,
+    GREY,
+    RED,
+    BLUE,
+    PRIDE
+};
 
 class Waterfall : public QObject
 {
@@ -25,13 +33,12 @@ public slots:
     void updSize(QRect s);
     void updSettings();
     void restartPlot();
-    void stopPlot() { updIntervalTimer->stop();}
+    void stopPlot(bool b) { if (!b) updIntervalTimer->stop();}
 
 signals:
     void imageReady(QPixmap *);
 
 private slots:
-    void redraw();
     void updTimerCallback();
 
 private:
@@ -47,6 +54,7 @@ private:
     QString fftMode;
     int waterfallTime = 120;
     QString mode;
+    COLORS colorset;
     bool greyscale = false;
 };
 

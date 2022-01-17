@@ -19,8 +19,10 @@ DataStreamBaseClass::DataStreamBaseClass(QObject *parent)
 
 void DataStreamBaseClass::processData(const QByteArray &buf)
 {
-    if (checkHeader(buf) && checkOptHeader(buf)) // checks passed, let's fill up our trace vector
+    if (checkHeader(buf) && checkOptHeader(buf) && attrHeader.tag != (int)Instrument::Tags::GPSC) // checks passed, let's fill up our trace vector
         fillFft(buf);
+    else if (attrHeader.tag == (int)Instrument::Tags::GPSC)
+        readGpscompassData(buf);
 }
 
 bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the initial bytes of every packet and does a quick sanity check of the data
@@ -52,7 +54,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
     else if (devicePtr->advProtocol)
         readAdvHeader(ds);
 
-    if (devicePtr->mode == Instrument::Mode::PSCAN) {
+    if (devicePtr->mode == Instrument::Mode::PSCAN && attrHeader.tag != (int)Instrument::Tags::GPSC) { // skip this for gpsc
         quint64 startFreq = 0, stopFreq = 0;
         quint32 stepFreq = 0;
 
@@ -78,7 +80,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
                      << stepFreq << devicePtr->pscanResolution;
             errorCtr++;
 
-            if (!errorHandleSent && errorCtr > 20) {
+            if (!errorHandleSent && errorCtr > 100) {
                 emit streamErrorResetFreq();
                 errorHandleSent = true;
             }
@@ -91,7 +93,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
         }
     }
 
-    else if (devicePtr->mode == Instrument::Mode::FFM) {
+    else if (devicePtr->mode == Instrument::Mode::FFM && attrHeader.tag != (int)Instrument::Tags::GPSC) {
         readIfpanOptHeader(ds);
         quint64 ffmFreq = (quint64)optHeaderIfPanEb500.freqHigh << 32 | optHeaderIfPanEb500.freqLow;
         if (ffmFreq != devicePtr->ffmCenterFrequency ||
@@ -171,7 +173,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                     emit newFftData(fft);
 
                 else if (fft.size() > calcPscanPointsPerTrace() && (devicePtr->id.contains("USRP") ||
-                         devicePtr->id.contains("EM100"))) { // usrp/em100 exception, keep those data even if it's too much
+                                                                    devicePtr->id.contains("EM100"))) { // usrp/em100 exception, keep those data even if it's too much
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);
@@ -234,4 +236,35 @@ void DataStreamBaseClass::timeoutCallback()
 {
     closeListener();
     emit timeout();
+}
+
+void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
+{
+    QDataStream ds(buf);
+    qint16 gpsValid = 0, heading = 0, sats = 0, latRef = 0, latDeg = 0, lonRef = 0, lonDeg = 0;
+    float latMin = 0, lonMin = 0, dilution = 0;
+    qint32 altitude = 0;
+    ds.setFloatingPointPrecision(QDataStream::SinglePrecision);
+    if (ds.skipRawData(36) == -1) qDebug() << "GNSS tag, error skipping 36 bytes";
+    else ds >> heading;
+    if (ds.skipRawData(2) == -1) qDebug() << "GNSS tag, error skipping 2 bytes";
+    else ds >> gpsValid >> sats >> latRef >> latDeg >> latMin >> lonRef >> lonDeg >> lonMin >> dilution;
+    if (ds.skipRawData(24) == -1) qDebug() << "GNSS tag, error skipping 24 bytes";
+    else ds >> altitude;
+    //qDebug() << (float)heading / 10.0 << gpsValid << sats << latRef << latDeg << latMin << lonRef << lonDeg << lonMin << dilution;
+
+    if (ds.status() == QDataStream::Ok) {
+        //gnss.altitude = static_cast<double>(altitude) / 100.0;
+        //gnss.dop = dilution;
+        double lat = latDeg + (latMin * 0.0166666667);
+        if (latRef == 'S') lat *= -1;
+        double lng = lonDeg + (lonMin * 0.0166666667);
+        if (lonRef == 'W') lng *= -1;
+        if (lat != 0 && lng != 0) {
+            devicePtr->latitude = lat;
+            devicePtr->longitude = lng;
+        }
+        if (gpsValid > 0) devicePtr->positionValid = true;
+        else devicePtr->positionValid = false;
+    }
 }

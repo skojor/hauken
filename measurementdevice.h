@@ -42,6 +42,7 @@ signals:
     void tracesPerSec(double);
     void newTrace(const QVector<qint16> &);
     void resetBuffers();
+    void positionUpdate(bool b, double lat, double lng);
 
 public slots:
     void start();
@@ -86,6 +87,10 @@ public slots:
     QStringList getDeviceFftModes() { return devicePtr->fftModes;}
     quint64 getDeviceMinFreq() { return devicePtr->minFrequency;}
     quint64 getDeviceMaxFreq() { return devicePtr->maxFrequency;}
+
+    void reqPosition() { emit positionUpdate(devicePtr->positionValid,
+                                             devicePtr->latitude,
+                                             devicePtr->longitude);}
 
 private slots:
     void scpiConnected();
@@ -147,6 +152,9 @@ private:
     QSharedPointer<Config> config;
     double tracesPerSecValue = 0;
 
+    double latitude = 0, longitude = 0;
+    bool posValid = false;
+    bool askForPosition = false;
     const int scpiThrottleTime = 5; // ms
 };
 

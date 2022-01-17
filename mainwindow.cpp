@@ -21,8 +21,8 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
     waterfall = new Waterfall(config);
-    waterfall->start();
-    showWaterfall->addItems(QStringList() << "Off" << "Pride" << "Grey");
+    //waterfall->start();
+    showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
     qcpImage = new QCPItemPixmap(customPlot);
     qcpImage->setVisible(true);
     customPlot->addLayer("image");
@@ -40,6 +40,9 @@ MainWindow::MainWindow(QWidget *parent)
     sdefRecorder->moveToThread(sdefRecorderThread);
     notificationsThread->setObjectName("Notifications");
     notifications->moveToThread(notificationsThread);
+    waterfallThread = new QThread;
+    waterfallThread->setObjectName("waterfall");
+    waterfall->moveToThread(waterfallThread);
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -440,6 +443,7 @@ void MainWindow::setSignals()
     connect(gnssTimeOffset, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setGnssTimeOffset);
 
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, &MainWindow::instrConnected);
+    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, waterfall, &Waterfall::stopPlot); // own thread, needs own signal
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
 
@@ -507,6 +511,7 @@ void MainWindow::setSignals()
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
+    connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -539,8 +544,21 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
+
+    connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
+    connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
+    connect(measurementDevice, &MeasurementDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
+    connect(sdefRecorder, &SdefRecorder::reqPositionFrom, this, [this] (POSITIONSOURCE p) {
+        if (p == POSITIONSOURCE::GNSSDEVICE1)
+            gnssDevice1->reqPosition();
+        else if (p == POSITIONSOURCE::GNSSDEVICE2)
+            gnssDevice2->reqPosition();
+        else
+         measurementDevice->reqPosition();
+    });
     sdefRecorderThread->start();
     notificationsThread->start();
+    waterfallThread->start();
 }
 
 void MainWindow::instrStartFreqChanged()
@@ -558,6 +576,7 @@ void MainWindow::instrStartFreqChanged()
 void MainWindow::instrStopFreqChanged()
 {
     if (config->getInstrMode() == 0) { //Pscan
+        config->setInstrStartFreq(instrStartFreq->value());
         config->setInstrStopFreq(instrStopFreq->value());
     }
     if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
@@ -605,7 +624,7 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
     }
     else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
-        waterfall->stopPlot();
+        //waterfall->stopPlot();
     }
 }
 
@@ -714,6 +733,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.8</td><td>SDeF mobile position added. Minor bugfixes in waterfall code</td></tr>"
        << "<tr><td>2.7</td><td>Waterfall added with a ton of colors. Minor notifications bugfixes</td></tr>"
        << "<tr><td>2.6</td><td>Email notifications, inline pictures in email</td></tr>"
        << "<tr><td>2.5</td><td>Dual GNSS support added</td></tr>"
@@ -877,7 +897,7 @@ void MainWindow::setWaterfallOption(QString s)
         customPlot->axisRect()->setBackground(QPixmap());
         customPlot->replot();
     }
-    if (s == "Grey")
+    if (s != "Pride")
         customPlot->graph(0)->setPen(QPen(Qt::blue));
     else
         customPlot->graph(0)->setPen(QPen(Qt::black));

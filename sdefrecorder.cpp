@@ -10,16 +10,18 @@ void SdefRecorder::start()
     process = new QProcess;
     recordingStartedTimer = new QTimer;
     recordingTimeoutTimer = new QTimer;
+    reqPositionTimer = new QTimer;
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
     connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::finishRecording);
     connect(recordingTimeoutTimer, &QTimer::timeout, this, &SdefRecorder::restartRecording);
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [=](int exitCode, QProcess::ExitStatus exitStatus)
-    {
+        [=](int exitCode, QProcess::ExitStatus exitStatus) {
         qDebug() << "process exit code" << exitStatus << exitCode;
     });
-
+    connect(reqPositionTimer, &QTimer::timeout, this, [this] {
+        emit reqPositionFrom(positionSource);
+    });
 }
 
 void SdefRecorder::updSettings()
@@ -27,6 +29,18 @@ void SdefRecorder::updSettings()
     saveToSdef = getSdefSaveToFile();
     recordTime = getSdefRecordTime() * 60e3;
     maxRecordTime = getSdefMaxRecordTime() * 60e3;
+    addPosition = getSdefAddPosition();
+    QString src = getSdefGpsSource();
+    if (src == "InstrumentGnss")
+        positionSource = POSITIONSOURCE::INSTRUMENTGNSS;
+    else if (src.contains("1"))
+        positionSource = POSITIONSOURCE::GNSSDEVICE1;
+    else
+        positionSource = POSITIONSOURCE::GNSSDEVICE2;
+    prevLat = getStnLatitude().toDouble(); // failsafe if position is missing
+    prevLng = getStnLongitude().toDouble();
+
+    if (addPosition && !reqPositionTimer->isActive()) reqPositionTimer->start(1000); // ask for position once per sec.
 }
 
 void SdefRecorder::triggerRecording()
@@ -86,35 +100,56 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         file.close();
     }
 
-    QByteArray buf = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
-    for (auto val : data) {
-        buf += QByteArray::number((int)(val / 10)) + ',';
+    QByteArray byteArray = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
+    if (addPosition) {
+        byteArray +=
+            QByteArray::number(positionHistory.last().first, 'f', 6) + "," +
+            QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
     }
-    buf.remove(buf.size() - 1, 1); // remove last comma
-    buf += "\n";
-    file.write(buf);
+
+    for (auto val : data) {
+        byteArray += QByteArray::number((int)(val / 10)) + ',';
+    }
+    byteArray.remove(byteArray.size() - 1, 1); // remove last comma
+    byteArray += "\n";
+    file.write(byteArray);
 }
 
 void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QList<QVector<qint16> > data)
 {
     QElapsedTimer timer; timer.start();
-    QByteArray tmpBuf;
+    QByteArray byteArray;
+    QDateTime startTime = datetime.last();
+    int dateIterator = positionHistory.size() - 1 - getSdefPreRecordTime(); // to iterate through the pos. history. this one gets weird if recording is triggered before trace buffer is filled, but no worries
+    if (dateIterator < 0) dateIterator = 0;
+
     for (int i=data.size() - 1; i >= 0; i--) {
-        tmpBuf.clear();
+        byteArray.clear();
         bool ok = true;
 
-        tmpBuf += datetime.at(i).toString("hh:mm:ss").toLocal8Bit() + ',';
-        //if (mobileData) tmpBuf += QString::number(lat->at(i), 'f', 6) + "," + QString::number(lng->at(i), 'f', 6) + ",";
+        byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit() + ',';
+        if (addPosition) {
+            if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed
+                    dateIterator++;
+                    startTime = datetime.at(i);
+            }
+            if (dateIterator > positionHistory.size() - 1) // should never happen except in early startup
+                dateIterator = positionHistory.size() - 1;
+            byteArray +=
+                QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + "," +
+                QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6) + ",";
+            qDebug() << i << dateIterator;
+        }
 
         for (auto val : data.at(i)) {
-            tmpBuf += QByteArray::number((int)(val / 10)) + ',';
+            byteArray += QByteArray::number((int)(val / 10)) + ',';
             if (val < -999 || val >= 2000) ok = false;
         }
-        tmpBuf.remove(tmpBuf.size()-1, 1); // remove last comma
-        tmpBuf += '\n';
+        byteArray.remove(byteArray.size()-1, 1); // remove last comma
+        byteArray += '\n';
 
-        if (ok) file.write(tmpBuf);
-        else qDebug() << "This backlog line failed:" << tmpBuf;
+        if (ok) file.write(byteArray);
+        else qDebug() << "This backlog line failed:" << byteArray;
     }
     historicDataSaved = true;
 }
@@ -212,4 +247,20 @@ bool SdefRecorder::uploadToCasper()
     process->startDetached();
 
     return true;
+}
+
+void SdefRecorder::updPosition(bool b, double l1, double l2)
+{
+     if (b) {
+         positionHistory.append(QPair<double, double>(l1, l2));
+         prevLat = l1;
+         prevLng = l2;
+     }
+     else {
+         positionHistory.append(QPair<double, double>(prevLat, prevLng));
+    }
+     qDebug() << l1 << l2 << b << positionHistory.size();
+     while (positionHistory.size() > 120) { // keeps a constant 120 values in buffer
+         positionHistory.removeFirst();
+     }
 }

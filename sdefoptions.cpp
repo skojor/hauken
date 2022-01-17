@@ -19,8 +19,13 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     mainLayout->addRow(cbOpt3);
     cbOpt3->setText("Add position data from GNSS (mobile setting)");
     cbOpt3->setToolTip("If checked the current position will be appended to the trace data. For mobile usage.");
-    cbOpt3->setDisabled(true);
     cbOpt3->setChecked(config->getSdefAddPosition());
+
+    mainLayout->addRow(new QLabel("Position source"), comboOpt1);
+    comboOpt1->setToolTip("Select which device should be used for SDEF file position updates.\nGNSS device 1 and 2 are the ones selected in the GNSS options dialog");
+    comboOpt1->addItems(QStringList() << "InstrumentGnss" << "GNSS device 1" << "GNSS device 2");
+    comboOpt1->setCurrentText(config->getSdefGpsSource());
+    comboOpt1->setEnabled(cbOpt3->isChecked());
 
     mainLayout->addRow(new QLabel("Username (Støygolvet login)"), leOpt1);
     leOpt1->setToolTip("Username required to enable Casper uploads");
@@ -52,6 +57,9 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    connect(cbOpt3, &QCheckBox::toggled, this, [this] (bool b) {
+        comboOpt1->setEnabled(b);
+    });
 
     mainLayout->addWidget(btnBox);
 }
@@ -65,6 +73,7 @@ void SdefOptions::saveCurrentSettings()
 {
     config->setSdefSaveToFile(cbOpt1->isChecked());
     config->setSdefUploadFile(cbOpt2->isChecked());
+    config->setSdefGpsSource(comboOpt1->currentText());
     config->setSdefUsername(leOpt1->text());
     config->setSdefPassword(leOpt2->text());
     config->setSdefAddPosition(cbOpt3->isChecked());

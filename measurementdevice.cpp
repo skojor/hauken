@@ -57,7 +57,7 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
         askId();
         emit status("Measurement device connected, asking for ID");
     }
-   /* else if (state == QAbstractSocket::UnconnectedState && connected) // unlikely, but could happen
+    /* else if (state == QAbstractSocket::UnconnectedState && connected) // unlikely, but could happen
         instrDisconnect();*/
 }
 
@@ -522,6 +522,8 @@ void MeasurementDevice::setupTcpStream()
     }
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
 
+    QByteArray gpsc;
+    if (askForPosition) gpsc = ", gpsc";
     QByteArray em200Specific;
     if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
 
@@ -531,7 +533,7 @@ void MeasurementDevice::setupTcpStream()
               //scpiSocket->localAddress().toString().toLocal8Bit() +
               //"', " +
               tcpOwnPort + ", " +
-              modeStr);
+              modeStr + gpsc);
     scpiWrite("trac:tcp:flag:on " +
               tcpOwnAdress +
               ", " +
@@ -549,6 +551,8 @@ void MeasurementDevice::setupUdpStream()
     else if (mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
     else if (mode == Mode::FFM) modeStr = "ifpan";
 
+    QByteArray gpsc;
+    if (askForPosition) gpsc = ", gpsc";
     QByteArray em200Specific;
     if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
 
@@ -556,7 +560,7 @@ void MeasurementDevice::setupUdpStream()
               scpiSocket->localAddress().toString().toLocal8Bit() +
               "', " +
               QByteArray::number(udpStream->getUdpPort()) + ", " +
-              modeStr);
+              modeStr + gpsc);
     scpiWrite("trac:udp:flag:on '" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
               "', " +
@@ -648,6 +652,15 @@ void MeasurementDevice::updSettings()
 
     if (useUdpStream != !config->getInstrUseTcpDatastream())
         useUdpStream = !config->getInstrUseTcpDatastream();
+
+    if (config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument"))  {// only ask device for position if it is needed
+        if (!askForPosition) restartStream(); // user changed this live, lets reconnect streams
+        askForPosition = true;
+    }
+    else {
+        if (askForPosition) restartStream(); // user changed this live, lets reconnect streams
+        askForPosition = false;
+    }
 }
 
 void MeasurementDevice::resetFreqSettings()
@@ -656,5 +669,5 @@ void MeasurementDevice::resetFreqSettings()
     setPscanResolution();
     setFfmCenterFrequency();
     setFfmFrequencySpan();
-    qDebug() << "error handling freq settings";
+    qDebug() << "error handling freq settings" << devicePtr->pscanStartFrequency << devicePtr->pscanStopFrequency << devicePtr->pscanResolution;
 }

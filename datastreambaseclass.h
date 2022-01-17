@@ -72,6 +72,7 @@ public slots:
     void calcBytesPerSecond();
     int calcPscanPointsPerTrace();
     void timeoutCallback();
+    void readGpscompassData(const QByteArray &buf);
 
 signals:
     void connectedState(bool);

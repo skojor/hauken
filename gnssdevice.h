@@ -33,10 +33,12 @@ public slots:
     void start();
     void connectToPort();
     void updSettings();
+    void reqPosition() { emit positionUpdate(gnssData.posValid, gnssData.latitude, gnssData.longitude);}
 
 signals:
     void analyzeThisData(GnssData &);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
+    void positionUpdate(bool b, double lat, double lng);
 
 private slots:
     void handleBuffer();

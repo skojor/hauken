@@ -5,6 +5,12 @@
 #include <QStringList>
 #include <QDateTime>
 
+enum class POSITIONSOURCE {
+    INSTRUMENTGNSS,
+    GNSSDEVICE1,
+    GNSSDEVICE2
+};
+
 namespace NOTIFY {
 enum class TYPE {
     MEASUREMENTDEVICE,
@@ -399,6 +405,8 @@ public:
     QStringList ffmSpans;
     QStringList pscanResolutions;
     QStringList fftModes;
+    double latitude = 0, longitude = 0;
+    bool positionValid = false;
 };
 
 class GnssData

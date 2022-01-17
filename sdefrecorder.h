@@ -39,6 +39,7 @@ public slots:
     void updTracesPerSecond(double d) { tracePerSecond = d;}
     void deviceDisconnected(bool b) { if (!b) finishRecording();}
     void endRecording() { finishRecording();}
+    void updPosition(bool b, double l1, double l2);
 
 private slots:
     QByteArray createHeader();
@@ -54,6 +55,7 @@ signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void reqTraceHistory(int);
     void warning(QString);
+    void reqPositionFrom(POSITIONSOURCE);
 
 private:
     //QSharedPointer<Config> config;
@@ -62,13 +64,18 @@ private:
     QDateTime dateTimeRecordingStarted;
     QTimer *recordingStartedTimer;
     QTimer *recordingTimeoutTimer;
+    QTimer *reqPositionTimer;
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
     bool saveToSdef;
     int recordTime;
     int maxRecordTime;
+    bool addPosition;
     QProcess *process;
+    double prevLat, prevLng;
+    POSITIONSOURCE positionSource;
+    QList<QPair<double, double>> positionHistory;
 };
 
 #endif // SDEFRECORDER_H

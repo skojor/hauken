@@ -50,6 +50,8 @@ int main(int argc, char *argv[])
     qRegisterMetaType<QList<QVector<qint16>> >("QList<QVector<qint16>>");
     qRegisterMetaType<QList<QDateTime> >("QList<QDateTime>");
     qRegisterMetaType<NOTIFY::TYPE>("NOTIFY::TYPE");
+    qRegisterMetaType<QVector<double> >("QVector<double>");
+    qRegisterMetaType<POSITIONSOURCE>("POSITIONSOURCE");
 
     if (qEnvironmentVariableIsEmpty("QTDIR"))   //  check if the app is ran in Qt Creator
          logToFile = true;

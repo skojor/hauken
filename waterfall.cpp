@@ -32,6 +32,8 @@ void Waterfall::updTimerCallback()
     pixmap->scroll(0, 1, pixmap->rect());
     QPainter painter(pixmap);
     QColor color;
+    QPen pen;
+    pen.setWidth(1);
 
     int traceSize = traceCopy.size();
     int pixmapSize = pixmap->width();
@@ -44,28 +46,23 @@ void Waterfall::updTimerCallback()
         else if (percent > 1) percent = 1;
 
         iterator += ratio;
-        if (!greyscale) {
-            int hue = 190 - (190 * percent);
-            color.setHsv(hue, 180, 255, 65);
-        }
-        else {
-            color.setHsv(180, 0, 255 - (255 * percent), 255);
-        }
 
-        QPen pen;
+        if (colorset == COLORS::GREY)
+            color.setHsv(180, 0, 255 - (255 * percent), 255);
+        else if (colorset == COLORS::BLUE)
+            color.setHsv(240, (255 * percent), 255, 255);
+        else if (colorset == COLORS::RED)
+            color.setHsv(0, (255 * percent), 255, 255);
+        else
+            color.setHsv(190 - (190 * percent), 180, 255, 65);
+
         pen.setColor(color);
-        pen.setWidth(1);
         painter.setPen(pen);
         painter.drawPoint(x, 0);
     }
     emit imageReady(pixmap);
     double interval = 1000.0 / ((double)pixmap->height() / waterfallTime);
     updIntervalTimer->start((int)interval);
-}
-
-void Waterfall::redraw()
-{
-
 }
 
 void Waterfall::restartPlot()
@@ -84,7 +81,6 @@ void Waterfall::updSize(QRect s)
     if (pixmap != nullptr)
         delete pixmap;
     pixmap = new QPixmap(size);
-    redraw();
 }
 
 void Waterfall::updSettings()
@@ -104,8 +100,14 @@ void Waterfall::updSettings()
     if (!mode.contains(config->getShowWaterfall())) {
         mode = config->getShowWaterfall();
         if (mode == "Grey")
-            greyscale = true;
+            colorset = COLORS::GREY;
+        else if (mode == "Red")
+            colorset = COLORS::RED;
+        else if (mode == "Blue")
+            colorset = COLORS::BLUE;
         else if (mode == "Pride")
-            greyscale = false;
+            colorset = COLORS::PRIDE;
+        /*else
+            colorset = COLORS::OFF;*/
     }
 }

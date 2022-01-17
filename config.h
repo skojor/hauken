@@ -109,6 +109,8 @@ public slots:
     void setSdefPassword(QString s) { settings->setValue("sdef/Password", simpleEncr(s.toLocal8Bit())); emit settingsUpdated();}
     bool getSdefAddPosition() { return settings->value("sdef/AddPosition", false).toBool();}
     void setSdefAddPosition(bool b) { settings->setValue("sdef/AddPosition", b); emit settingsUpdated();}
+    QString getSdefGpsSource() { return settings->value("sdef/GpsSource").toString();}
+    void setSdefGpsSource(QString s) { settings->setValue("sdef/GpsSource", s);}
     int getSdefRecordTime() { return settings->value("sdef/RecordTime", 2).toUInt();}
     void setSdefRecordTime(int val) { settings->setValue("sdef/RecordTime", val); emit settingsUpdated();}
     int getSdefMaxRecordTime() { return settings->value("sdef/MaxRecordTime", 60).toUInt();}
