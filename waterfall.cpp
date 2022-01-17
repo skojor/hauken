@@ -7,6 +7,7 @@ Waterfall::Waterfall(QSharedPointer<Config> c)
 
 void Waterfall::start()
 {
+    pixmap = new QPixmap;
     updIntervalTimer = new QTimer;
     updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
@@ -25,12 +26,15 @@ void Waterfall::start()
 
 void Waterfall::receiveTrace(const QVector<double> &trace)
 {
+    mutex.lock();
     traceCopy = trace;
+    mutex.unlock();
     if (!updIntervalTimer->isActive()) updIntervalTimer->start(100); // first call
 }
 
 void Waterfall::updTimerCallback()
 {
+    mutex.lock(); // this needs exclusive access to containers and pixmap pointer
     pixmap->scroll(0, 1, pixmap->rect());
     QPainter painter(pixmap);
     QColor color;
@@ -39,19 +43,14 @@ void Waterfall::updTimerCallback()
 
     int traceSize = traceCopy.size();
     int pixmapSize = pixmap->width();
-    double iterator = 0;
     double ratio = (double)traceSize / (double)pixmapSize;
-    QPen pen;
-    painter.setPen(pen);
-    pen.setWidth(1);
 
     for (int x=0; x<pixmapSize; x++) {
-        double percent = (traceCopy.at((int)iterator) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
-        iterator += ratio;
+        double percent = 0;
+        percent = (traceCopy.at((int)(ratio * x)) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
 
         if (percent < 0) percent = 0;
         else if (percent > 1) percent = 1;
-        iterator += ratio;
 
         if (colorset == COLORS::GREY)
             color.setHsv(180, 0, 255 - (255 * percent), 255);
@@ -67,26 +66,23 @@ void Waterfall::updTimerCallback()
         painter.drawPoint(x, 0);
     }
     emit imageReady(pixmap);
+    mutex.unlock(); // done with the exclusive work here
     double interval = 1000.0 / ((double)pixmap->height() / waterfallTime);
     updIntervalTimer->start((int)interval);
 }
 
 void Waterfall::restartPlot()
 {
-    QSize size(640, 480);
-    if (pixmap != nullptr) {
-        size = pixmap->size();
-        delete pixmap;
-    }
-    pixmap = new QPixmap(size);
+    mutex.lock();
+    *pixmap = QPixmap(pixmap->size());
+    mutex.unlock();
 }
 
 void Waterfall::updSize(QRect s)
 {
-    QSize size(s.width(), s.height());
-    if (pixmap != nullptr)
-        delete pixmap;
-    pixmap = new QPixmap(size);
+    mutex.lock();
+    *pixmap = QPixmap(s.width(), s.height());
+    mutex.unlock();
 }
 
 void Waterfall::updSettings()

@@ -16,7 +16,7 @@ void SdefRecorder::start()
     connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::finishRecording);
     connect(recordingTimeoutTimer, &QTimer::timeout, this, &SdefRecorder::restartRecording);
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [=](int exitCode, QProcess::ExitStatus exitStatus) {
+            [=](int exitCode, QProcess::ExitStatus exitStatus) {
         qDebug() << "process exit code" << exitStatus << exitCode;
     });
     connect(reqPositionTimer, &QTimer::timeout, this, [this] {
@@ -99,20 +99,21 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         failed = true;
         file.close();
     }
+    else {
+        QByteArray byteArray = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
+        if (addPosition) {
+            byteArray +=
+                    QByteArray::number(positionHistory.last().first, 'f', 6) + "," +
+                    QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
+        }
 
-    QByteArray byteArray = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
-    if (addPosition) {
-        byteArray +=
-            QByteArray::number(positionHistory.last().first, 'f', 6) + "," +
-            QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
+        for (auto val : data) {
+            byteArray += QByteArray::number((int)(val / 10)) + ',';
+        }
+        byteArray.remove(byteArray.size() - 1, 1); // remove last comma
+        byteArray += "\n";
+        file.write(byteArray);
     }
-
-    for (auto val : data) {
-        byteArray += QByteArray::number((int)(val / 10)) + ',';
-    }
-    byteArray.remove(byteArray.size() - 1, 1); // remove last comma
-    byteArray += "\n";
-    file.write(byteArray);
 }
 
 void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QList<QVector<qint16> > data)
@@ -130,15 +131,14 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
         byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit() + ',';
         if (addPosition) {
             if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed
-                    dateIterator++;
-                    startTime = datetime.at(i);
+                dateIterator++;
+                startTime = datetime.at(i);
             }
             if (dateIterator > positionHistory.size() - 1) // should never happen except in early startup
                 dateIterator = positionHistory.size() - 1;
             byteArray +=
-                QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + "," +
-                QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6) + ",";
-            qDebug() << i << dateIterator;
+                    QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + "," +
+                    QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6) + ",";
         }
 
         for (auto val : data.at(i)) {
@@ -196,10 +196,10 @@ void SdefRecorder::finishRecording()
     if (getSdefSaveToFile())
         if (recordingTimeoutTimer->isActive()) emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
                                                                   + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
-                                                                       QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
-                                                                       + " seconds" :
-                                                                   QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
+                                                                         QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
+                                                                         + " seconds" :
+                                                                         QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                                                                         + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
 
     if (file.isOpen()) file.close();
     if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) uploadToCasper();
@@ -251,16 +251,15 @@ bool SdefRecorder::uploadToCasper()
 
 void SdefRecorder::updPosition(bool b, double l1, double l2)
 {
-     if (b) {
-         positionHistory.append(QPair<double, double>(l1, l2));
-         prevLat = l1;
-         prevLng = l2;
-     }
-     else {
-         positionHistory.append(QPair<double, double>(prevLat, prevLng));
+    if (b) {
+        positionHistory.append(QPair<double, double>(l1, l2));
+        prevLat = l1;
+        prevLng = l2;
     }
-     qDebug() << l1 << l2 << b << positionHistory.size();
-     while (positionHistory.size() > 120) { // keeps a constant 120 values in buffer
-         positionHistory.removeFirst();
-     }
+    else {
+        positionHistory.append(QPair<double, double>(prevLat, prevLng));
+    }
+    while (positionHistory.size() > 120) { // keeps a constant 120 values in buffer
+        positionHistory.removeFirst();
+    }
 }

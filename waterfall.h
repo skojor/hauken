@@ -8,6 +8,7 @@
 #include <QPixmap>
 #include <QDateTime>
 #include <QTimer>
+#include <QMutex>
 #include <math.h>
 #include "config.h"
 
@@ -46,7 +47,7 @@ private:
     QTimer *updIntervalTimer;
     QVector<double> traceCopy;
     QSharedPointer<Config> config;
-    QPixmap *pixmap = nullptr;
+    QPixmap *pixmap;
     // config cache
     int scaleMin, scaleMax;
     quint64 startfreq, stopfreq;
@@ -56,6 +57,7 @@ private:
     QString mode;
     COLORS colorset;
     bool greyscale = false;
+    QMutex mutex;
 };
 
 #endif // WATERFALL_H
