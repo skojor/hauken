@@ -132,8 +132,9 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
             for (int j=1; j<(int)rate; j++) {
                 if (val < data.at(rate * i + j))
                     val = data.at(rate * i + j); // pick the strongest sample to show in plot
+                //val += data.at(rate * i + j);
             }
-            displayBuffer.append((double)val / 10);
+            displayBuffer.append((double)(val / 10));// / (int)rate + 1);
         }
     }
     else {
@@ -159,12 +160,16 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     if (averageLevel.at(i) < data.at(i)) averageLevel[i] += avgFactor;
                     else averageLevel[i] -= avgFactor;
                 }
-                if (avgFactor > 1) avgFactor *= 0.96;
+                //if (avgFactor > 1) avgFactor *= 0.96;
             }
             if (data.size() > plotResolution) {
                 double rate = (double)data.size() / plotResolution;
                 for (int i=0; i<plotResolution; i++) {
-                    averageDispLevel[i] = (double)averageLevel.at((int)(rate * i)) / 10;
+                    int val = averageLevel.at(rate * i);
+                    for (int j=1; j<(int)rate; j++) {
+                        val += averageLevel.at(rate * i + j);
+                    }
+                    averageDispLevel[i] = (double)(val / 10) / (int)rate + 1;
                     
                 }
             }

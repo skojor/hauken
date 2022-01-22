@@ -11,6 +11,8 @@
 #include <QDebug>
 #include <QPixmap>
 #include <QBuffer>
+#include <QFile>
+#include <QDirIterator>
 #include "config.h"
 #include "typedefs.h"
 #include "SimpleMail/SimpleMail"
@@ -59,6 +61,7 @@ private slots:
     void sendMail();
     void checkTruncate();
     void generateMsg(NOTIFY::TYPE t, const QString name, const QString string, QDateTime dt = QDateTime::currentDateTime());
+    void retryEmails();
 
 signals:
     void showIncident(QString);
@@ -70,6 +73,10 @@ private:
     QFile *incidentLogfile;
     QString mailtext;
     QTimer *timeBetweenEmailsTimer;
+    QTimer *retryEmailsTimer;
+    QList<SimpleMail::MimeInlineFile *> emailPictures;
+    QList<SimpleMail::MimeMessage> emailBacklog;
+    QString lastPicFilename;
 
     // config cache
     QString mailserverAddress, mailserverPort, smtpUser, smtpPass;

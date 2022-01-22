@@ -16,6 +16,7 @@
 #include <QElapsedTimer>
 #include "config.h"
 #include "typedefs.h"
+#include "quazip/JlCompress.h"
 
 /*
  * Class to take care of recording to file in sdef format.
@@ -34,20 +35,23 @@ public slots:
     void start();
     void updSettings();
     void triggerRecording(); // to be called as long as incident is happening!
+    void manualTriggeredRecording();
     void receiveTraceBuffer(const QList<QDateTime> datetime, const QList<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
     void receiveTrace(const QVector<qint16> data); // new data arrives here
     void updTracesPerSecond(double d) { tracePerSecond = d;}
-    void deviceDisconnected(bool b) { if (!b) finishRecording();}
+    void deviceDisconnected(bool b) { if (!b) finishRecording(); deviceConnected = b;}
     void endRecording() { finishRecording();}
     void updPosition(bool b, double l1, double l2);
+    void finishRecording();
 
 private slots:
     QByteArray createHeader();
     QString convertDdToddmmss(const double d, const bool lat = true);
-    void finishRecording();
     void restartRecording();
     QString createFilename();
-    bool uploadToCasper();
+    bool curlLogin();
+    void curlUpload();
+    void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
 
 signals:
     void recordingStarted();
@@ -65,6 +69,7 @@ private:
     QTimer *recordingStartedTimer;
     QTimer *recordingTimeoutTimer;
     QTimer *reqPositionTimer;
+    QTimer *periodicCheckUploadsTimer;
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
@@ -76,6 +81,11 @@ private:
     double prevLat, prevLng;
     POSITIONSOURCE positionSource;
     QList<QPair<double, double>> positionHistory;
+    bool deviceConnected = false;
+    QString finishedFilename;
+    bool stateCurlAwaitingLogin = false;
+    bool stateCurlAwaitingFileUpload = false;
+    QStringList filesAwaitingUpload;
 };
 
 #endif // SDEFRECORDER_H

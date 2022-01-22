@@ -3,7 +3,6 @@
 Notifications::Notifications(QObject *parent)
     : Config{parent}
 {
-
 }
 
 void Notifications::start()
@@ -11,17 +10,27 @@ void Notifications::start()
     incidentLogfile = new QFile;
     truncateTimer = new QTimer;
     mailDelayTimer = new QTimer;
+    retryEmailsTimer = new QTimer;
 
     updSettings();
     setupIncidentTable();
 
     connect(truncateTimer, &QTimer::timeout, this, &Notifications::checkTruncate);
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
+    connect(retryEmailsTimer, &QTimer::timeout, this, &Notifications::retryEmails);
+
     //truncateTimer->setSingleShot(true);
     mailDelayTimer->setSingleShot(true);
 
     timeBetweenEmailsTimer = new QTimer;
     timeBetweenEmailsTimer->setSingleShot(true);
+    retryEmailsTimer->setSingleShot(true);
+
+    QDirIterator it(workFolder, {".traceplot*"});
+    while (it.hasNext()){
+        QFile(it.next()).remove();
+    }
+
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -114,7 +123,6 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
         mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
         int delay = getEmailDelayBeforeAddingImages();
         if (delay > truncateTime * 2) delay = (truncateTime * 2) - 1; // no point in requesting an image after the mail is sent...
-        qDebug() << "singleshot in" << delay;
         QTimer::singleShot(delay * 1e3, this, [this] { emit reqTracePlot(); }); // also ask for a plot image at this time
     }
 }
@@ -147,19 +155,30 @@ void Notifications::sendMail()
             mimeHtml->setHtml("<table>" + mailtext + "</table><hr><img src='cid:image1' />   ");
             message.addPart(mimeHtml);
 
-            auto image1 = new SimpleMail::MimeInlineFile(new QFile(workFolder + "/.traceplot.png"));
+            auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
+
             image1->setContentId("image1");
             image1->setContentType("image/png");
-            message.addPart(image1);
+            //message.addPart(&image1);
+            emailPictures.append(image1);
+            message.addPart(emailPictures.last());
+            //qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
+            emailBacklog.append(message);
+            mailtext.clear();
 
-            qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
             SimpleMail::ServerReply *reply = server->sendMail(message);
             connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
             {
                 qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
-                if (reply->error()) emit this->warning("Email SMTP error: " + reply->responseText());
+                if (reply->error()) {
+                    toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Email notification failed, trying again later");
+                    this->retryEmailsTimer->start(90 * 1e3); // check again in 15 min
+                }
+                else {
+                    this->emailBacklog.removeLast();
+                    this->emailPictures.removeLast();
+                }
                 reply->deleteLater();
-                mailtext.clear();
             });
             timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
         }
@@ -192,8 +211,11 @@ void Notifications::setupIncidentTable()
 
 void Notifications::recTracePlot(const QPixmap *pic)
 {
-    pic->save(workFolder + "/.traceplot.png", "png");
-    qDebug() << "traceplot now";
+    pic->save(workFolder +
+              "/.traceplot" +
+              QDateTime::currentDateTime().toString("ddhhmmss") +
+              ".png", "png");
+    lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".png";
 }
 
 void Notifications::updSettings()
@@ -212,3 +234,42 @@ void Notifications::updSettings()
     delayBetweenEmails = getEmailMinTimeBetweenEmails();
 }
 
+void Notifications::retryEmails()
+{
+    qDebug() << "mail retry?" << emailBacklog.size();
+
+    if (!emailBacklog.isEmpty()) {
+        if (simpleParametersCheck()) {
+            auto server = new SimpleMail::Server;
+            server->setHost(mailserverAddress);
+            server->setPort(mailserverPort.toUInt());
+
+            if (!smtpUser.isEmpty() || !smtpPass.isEmpty()) {
+                server->setUsername(smtpUser);
+                server->setPassword(smtpPass);
+            }
+
+            QStringList mailRecipients;
+            if (recipients.contains(';')) mailRecipients = recipients.split(';');
+            else mailRecipients.append(recipients);
+
+            for (int i=0; i<emailBacklog.size(); i++) {
+                SimpleMail::ServerReply *reply = server->sendMail(emailBacklog.at(i));
+                connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply, i]
+                {
+                    qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
+                    if (reply->error()) {
+                        this->retryEmailsTimer->start(900 * 1e3); // check again in 15 min
+                    }
+                    else {
+                        this->emailBacklog.removeAt(i);
+                        this->emailPictures.removeAt(i);
+                    }
+                    reply->deleteLater();
+                });
+            }
+        }
+        if (!emailBacklog.isEmpty()) // still emails left in the queue, retry later
+            retryEmailsTimer->start(900 * 1e3);
+    }
+}

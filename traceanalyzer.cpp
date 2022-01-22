@@ -17,8 +17,9 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
                 if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
                         && data.at(i) > averageData.at(i) + trigLevel * 10) // * 10 because we have values in 1/10 dBuV!
                     valuesAboveLimit++;
-                else if (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                         && data.at(i) < averageData.at(i) + trigLevel * 10) { // previously trace point high, not this one. reset counter and calc BW of signal
+                else if ((valuesAboveLimit && !checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))) ||
+                         (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
+                         && data.at(i) < averageData.at(i) + trigLevel * 10)) { // previously trace point high, not this one. reset counter and calc BW of signal
                     double khzOfIncident = valuesAboveLimit * resolution;
                     if (khzOfIncident > khzAboveLimit)
                         khzAboveLimit = khzOfIncident;

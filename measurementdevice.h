@@ -43,6 +43,7 @@ signals:
     void newTrace(const QVector<qint16> &);
     void resetBuffers();
     void positionUpdate(bool b, double lat, double lng);
+    void deviceStreamTimeout(); // signal to stop eventual recording
 
 public slots:
     void start();

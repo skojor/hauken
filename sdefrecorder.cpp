@@ -11,17 +11,28 @@ void SdefRecorder::start()
     recordingStartedTimer = new QTimer;
     recordingTimeoutTimer = new QTimer;
     reqPositionTimer = new QTimer;
+    periodicCheckUploadsTimer = new QTimer;
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
     connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::finishRecording);
     connect(recordingTimeoutTimer, &QTimer::timeout, this, &SdefRecorder::restartRecording);
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            [=](int exitCode, QProcess::ExitStatus exitStatus) {
-        qDebug() << "process exit code" << exitStatus << exitCode;
-    });
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &SdefRecorder::curlCallback);
     connect(reqPositionTimer, &QTimer::timeout, this, [this] {
         emit reqPositionFrom(positionSource);
     });
+    connect(periodicCheckUploadsTimer, &QTimer::timeout, this, &SdefRecorder::curlUpload);
+
+    process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
+    process->setStandardOutputFile(getWorkFolder() + "/.process.out");
+    process->setStandardErrorFile(getWorkFolder() + "/.process.err");
+    if (QSysInfo::kernelType().contains("win")) {
+        process->setProgram("curl.exe");
+    }
+
+    else if (QSysInfo::kernelType().contains("linux")) {
+        process->setProgram("curl");
+    }
+    periodicCheckUploadsTimer->start(1800 * 1e3); // check if any files still waits for upload every half hour
 }
 
 void SdefRecorder::updSettings()
@@ -45,29 +56,37 @@ void SdefRecorder::updSettings()
 
 void SdefRecorder::triggerRecording()
 {
-    recordingStartedTimer->start(recordTime); // minutes. restarts every time routine is called, which means it will run for x minutes after incident ended
+    if (deviceConnected) { // never start a recording unless some device is connected!
+        recordingStartedTimer->start(recordTime); // minutes. restarts every time routine is called, which means it will run for x minutes after incident ended
 
-    if (!recording && saveToSdef) {
-        recording = true;
-        dateTimeRecordingStarted = QDateTime::currentDateTime(); // for incident log
+        if (!recording && saveToSdef) {
+            recording = true;
+            dateTimeRecordingStarted = QDateTime::currentDateTime(); // for incident log
 
-        emit recordingStarted();
+            emit recordingStarted();
 
-        if (!recordingTimeoutTimer->isActive())
-            recordingTimeoutTimer->start(maxRecordTime); // only call once
+            if (!recordingTimeoutTimer->isActive())
+                recordingTimeoutTimer->start(maxRecordTime); // only call once
 
-        file.setFileName(createFilename());
-        if (failed || !file.open(QIODevice::WriteOnly)) {
-            emit warning("Error creating file " + file.fileName());
-            failed = true;
-            finishRecording();
-        }
-        else {
-            file.write(createHeader());
-            if (getSdefPreRecordTime() > 0) emit reqTraceHistory(getSdefPreRecordTime());
-            else historicDataSaved = true;
+            file.setFileName(createFilename());
+            if (failed || !file.open(QIODevice::WriteOnly)) {
+                emit warning("Error creating file " + file.fileName());
+                failed = true;
+                finishRecording();
+            }
+            else {
+                file.write(createHeader());
+                if (getSdefPreRecordTime() > 0) emit reqTraceHistory(getSdefPreRecordTime());
+                else historicDataSaved = true;
+            }
         }
     }
+}
+
+void SdefRecorder::manualTriggeredRecording()
+{
+    emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
+    triggerRecording();
 }
 
 QString SdefRecorder::createFilename()
@@ -202,7 +221,10 @@ void SdefRecorder::finishRecording()
                                                                          + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
 
     if (file.isOpen()) file.close();
-    if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) uploadToCasper();
+    finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+
+    if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
+        QTimer::singleShot(10000, this, &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
 
@@ -215,8 +237,9 @@ void SdefRecorder::restartRecording()
     finishRecording(); // basically the same operation, recording should restart anyway.
 }
 
-bool SdefRecorder::uploadToCasper()
+bool SdefRecorder::curlLogin()
 {
+
     // parameters check
     if (getSdefStationInitals().isEmpty() or getSdefUsername().isEmpty() or getSdefPassword().isEmpty()
             or getStationName().isEmpty()) {
@@ -228,25 +251,68 @@ bool SdefRecorder::uploadToCasper()
         return false;
     }
 
+    if (!JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
+        qDebug() << "Compression of" << finishedFilename << "failed";
+    }
+    else {
+        QFile::remove(file.fileName());
+    }
+    filesAwaitingUpload.append(finishedFilename); // add to transmit queue
+
     QStringList l;
-    process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
-    process->setStandardOutputFile(getWorkFolder() + "/.process.out");
-    process->setStandardErrorFile(getWorkFolder() + "/.process.err");
+    l << "-H" << "'application/x-www-form-url-encoded'"
+      << "-F" << "'brukernavn=" << getSdefUsername() << "'"
+      << "-F" << "'passord=" << getSdefPassword() << "'"
+      << "--cookie-jar" << ".kake"
+      << "http://stoygolvet.npta.no/logon.php";
 
-    if (QSysInfo::kernelType().contains("win")) {
-        l << "/C" << "upload.bat" << file.fileName() << getSdefUsername() << getSdefPassword();
-        process->setProgram("cmd.exe");
-    }
-    else if (QSysInfo::kernelType().contains("linux")) {
-        l << "upload.sh" << file.fileName() << getSdefUsername() << getSdefPassword();
-        process->setProgram("bash");
-    }
-
-    qDebug() << "starting upload process";
     process->setArguments(l);
-    process->startDetached();
+    process->start();
+    stateCurlAwaitingLogin = true;
+
+    qDebug() << "Calling curl login" << l << process->processId();
 
     return true;
+}
+
+void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    if (exitCode != 0) {
+        if (stateCurlAwaitingLogin)
+            qDebug() << "Curl login failed:" << exitStatus << exitCode;
+        else if (stateCurlAwaitingFileUpload) {
+            qDebug() << "Curl file upload failed:" << exitStatus << exitCode;
+            stateCurlAwaitingFileUpload = false;
+        }
+    }
+    else if (stateCurlAwaitingLogin) { // curl has successfully logged in, continue
+        stateCurlAwaitingLogin = false;
+        curlUpload();
+    }
+    else if (stateCurlAwaitingFileUpload) {
+        stateCurlAwaitingFileUpload = false;
+        qDebug() << "Curl upload successful, removing" << filesAwaitingUpload.first() << "from queue";
+        filesAwaitingUpload.removeFirst();
+    }
+}
+
+void SdefRecorder::curlUpload()
+{
+    if (filesAwaitingUpload.size()) {
+        QString filename = filesAwaitingUpload.first();
+
+        QStringList l;
+        l << "--cookie" << ".kake"
+          << "-X" << "POST"
+          << "-F" << "file=" + filename + ".zip"
+          << "-f"
+          << "http://stoygolvet.npta.no/Casper/lastopp_fil.php";
+
+        process->setArguments(l);
+        process->start();
+        stateCurlAwaitingFileUpload = true;
+        qDebug() << "Calling curl file upload" << l << process->processId();
+    }
 }
 
 void SdefRecorder::updPosition(bool b, double l1, double l2)

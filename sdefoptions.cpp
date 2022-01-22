@@ -40,7 +40,6 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(new QLabel("Record time before incident (seconds)"), sbOpt3);
     sbOpt3->setToolTip("Record traces this many seconds before incident was triggered. Maximum 120 seconds.");
-    sbOpt3->setValue(config->getSdefPreRecordTime());
     sbOpt3->setRange(0, 120);
 
     mainLayout->addRow(new QLabel("Username for uploads (Station initials)"), leOpt3);
@@ -66,6 +65,7 @@ void SdefOptions::start()
     sbOpt2->setValue(config->getSdefMaxRecordTime());
     leOpt3->setText(config->getSdefStationInitals());
     comboOpt1->setCurrentText(config->getSdefGpsSource());
+    sbOpt3->setValue(config->getSdefPreRecordTime());
     dialog->exec();
 }
 
@@ -80,6 +80,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefStationInitials(leOpt3->text());
+    config->setSdefPreRecordTime(sbOpt3->value());
     emit updSettings();
     dialog->close();
 }

@@ -84,6 +84,7 @@ void EmailOptions::start()
     leOpt3->setText(config->getEmailRecipients());
     leOpt4->setText(config->getEmailFromAddress());
     sbOpt1->setValue(config->getEmailMinTimeBetweenEmails());
+    cbOpt1->setChecked(config->getEmailNotifyMeasurementDeviceHighLevel());
     cbOpt2->setChecked(config->getEmailNotifyMeasurementDeviceDisconnected());
     cbOpt3->setChecked(config->getEmailNotifyGnssIncidents());
     cbOpt4->setChecked(config->getEmailAddImages());

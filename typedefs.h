@@ -13,6 +13,7 @@ enum class POSITIONSOURCE {
 
 namespace NOTIFY {
 enum class TYPE {
+    GENERAL,
     MEASUREMENTDEVICE,
     GNSSDEVICE,
     GNSSANALYZER,

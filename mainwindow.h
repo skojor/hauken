@@ -124,6 +124,7 @@ private:
 
     QPushButton *instrConnect = new QPushButton("Connect");
     QPushButton *instrDisconnect = new QPushButton("Disconnect");
+    QPushButton *btnTrigRecording = new QPushButton("Trigger recording");
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
     QDoubleSpinBox *instrTrigBandwidth = new QDoubleSpinBox;

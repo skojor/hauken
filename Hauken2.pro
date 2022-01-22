@@ -1,6 +1,6 @@
 QT       += core gui serialport network
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia
 
 CONFIG += c++11
 QMAKE_CXXFLAGS += -pthread
@@ -105,9 +105,13 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 RESOURCES += \
     icons.qrc
 #
+INCLUDEPATH += $$PWD/quazip
+LIBS += -L$$PWD/quazip -lquazip1-qt5
+
 win32 {
-  LIBS += -lOpenGL32 \
+  LIBS += -lOpenGL32
 }
+
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"

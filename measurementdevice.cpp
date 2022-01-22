@@ -583,7 +583,10 @@ void MeasurementDevice::handleStreamTimeout()
         tcpTimeoutTimer->stop();
         if (autoReconnect) { // check stream settings regularly to see if device is available again
             autoReconnectTimer->start(15000);
-            if (!autoReconnectInProgress) emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Lost datastream. Auto reconnect enabled, waiting for device to be available again");
+            if (!autoReconnectInProgress) {
+                emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Lost datastream. Auto reconnect enabled, waiting for device to be available again");
+                emit deviceStreamTimeout();
+            }
         }
         else {
             emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Datastream timed out and reconnect is disabled, disconnecting");

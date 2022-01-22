@@ -229,6 +229,8 @@ void MainWindow::createLayout()
     plotLayout->addWidget(plotMinScroll, 2, 0, 1, 1);
     plotLayout->addWidget(customPlot, 0, 1, 3, 1);
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
+    bottomPlotLayout->addWidget(btnTrigRecording);
+    btnTrigRecording->setFixedWidth(100);
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
     bottomPlotLayout->addWidget(plotMaxholdTime);
     bottomPlotLayout->addWidget(new QLabel("Waterfall type"));
@@ -304,6 +306,7 @@ void MainWindow::setToolTips()
     plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no maxhold.\nOnly affects displayed maxhold");
     showWaterfall->setToolTip("Select type of waterfall overlay");
     waterfallTime->setToolTip("Select the time in seconds a signal will be visible in the waterfall");
+    btnTrigRecording->setToolTip("Starts a recording manually. The recording will end after the time specified in SDeF options: Recording time after incident,\nunless a real trig happens within this time, as this will extend the recording further.");
 }
 
 void MainWindow::getConfigValues()
@@ -403,7 +406,7 @@ void MainWindow::setValidators()
     instrIpAddr->setInputMask("000.000.000.000");
     instrIpAddr->setCursorPosition(0);
 
-    instrTrigLevel->setRange(0, 200);
+    instrTrigLevel->setRange(-50, 200);
     instrTrigLevel->setDecimals(0);
     instrTrigTime->setRange(0, 9e5);
     instrTrigBandwidth->setRange(0, 9.99e9);
@@ -509,6 +512,7 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
     connect(sdefRecorder, &SdefRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
@@ -558,6 +562,8 @@ void MainWindow::setSignals()
         else
          measurementDevice->reqPosition();
     });
+
+    connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, SdefRecorder::manualTriggeredRecording);
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
@@ -647,6 +653,7 @@ void MainWindow::setInputsState(const bool state)
     instrIpAddr->setDisabled(state);
     instrPort->setDisabled(state);
     instrAntPort->setEnabled(state);
+    btnTrigRecording->setEnabled(state);
 }
 
 void MainWindow::setResolutionFunction()
