@@ -563,7 +563,7 @@ void MainWindow::setSignals()
          measurementDevice->reqPosition();
     });
 
-    connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, SdefRecorder::manualTriggeredRecording);
+    connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, &SdefRecorder::manualTriggeredRecording);
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
