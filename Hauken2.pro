@@ -106,7 +106,8 @@ RESOURCES += \
     icons.qrc
 #
 INCLUDEPATH += $$PWD/quazip
-LIBS += "-L$$PWD/quazip" -lquazip1-qt5
+win32:CONFIG(release, debug|release): LIBS += "$$PWD/quazip" -lquazip1-qt5
+unix: LIBS += -L$$PWD/quazip -lquazip1-qt5
 
 win32 {
   LIBS += -lOpenGL32

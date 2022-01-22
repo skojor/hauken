@@ -214,7 +214,6 @@ private:
     bool ready = false;
     QString measurementDeviceName;
     const int plotResolution = 1200;
-
 };
 
 #endif // CONFIG_H
