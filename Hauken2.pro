@@ -107,7 +107,7 @@ RESOURCES += \
 #
 INCLUDEPATH += $$PWD/quazip
 win32: LIBS += -L$$PWD/quazip -lquazip1-qt5
-unix: LIBS += "-L$$PWD/quazip" -lz -lquazip1-qt5
+unix: LIBS += -lquazip5
 
 win32 {
   LIBS += -lOpenGL32
