@@ -742,6 +742,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.9</td><td>File upload and email notification auto resend on failure. Manual trig added. Minor trace display bugfixes</td></tr>"
        << "<tr><td>2.8</td><td>SDeF mobile position added. Minor bugfixes in waterfall code</td></tr>"
        << "<tr><td>2.7</td><td>Waterfall added with a ton of colors. Minor notifications bugfixes</td></tr>"
        << "<tr><td>2.6</td><td>Email notifications, inline pictures in email</td></tr>"
