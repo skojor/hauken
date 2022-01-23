@@ -318,6 +318,7 @@ void SdefRecorder::curlUpload()
 
 void SdefRecorder::updPosition(bool b, double l1, double l2)
 {
+    qDebug() << b << l1 << l2;
     if (b) {
         positionHistory.append(QPair<double, double>(l1, l2));
         prevLat = l1;
