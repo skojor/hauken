@@ -22,8 +22,8 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(cbOpt4);
     cbOpt4->setText("Normalize RF spectrum");
-    cbOpt4->setToolTip("The spectrum will be \"corrected\" for any unlinear responses in the frequency range,"\
-                                  "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven"\
+    cbOpt4->setToolTip("The spectrum will be \"corrected\" for any unlinear responses in the frequency range, "\
+                                  "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven "\
                                   "amplifier response");
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);

@@ -278,6 +278,7 @@ bool SdefRecorder::curlLogin()
 void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
 {
     if (exitCode != 0) {
+        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Uploading of SDeF data failed, trying again later");
         if (stateCurlAwaitingLogin)
             qDebug() << "Curl login failed:" << exitStatus << exitCode;
         else if (stateCurlAwaitingFileUpload) {

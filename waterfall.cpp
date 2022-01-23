@@ -11,17 +11,6 @@ void Waterfall::start()
     updIntervalTimer = new QTimer;
     updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
-
-/*    testDraw = new QTimer;
-    connect(testDraw, &QTimer::timeout, this, [this] {
-        QVector<double> tmp;
-        for (int i=0; i<config->getPlotResolution(); i++) {
-           tmp.append(double((rand()) % 100 - 30) / 10.0);
-        }
-        this->receiveTrace(tmp);
-        if (!updIntervalTimer->isActive()) this->updIntervalTimer->start();
-    });
-    testDraw->start(200);*/
 }
 
 void Waterfall::receiveTrace(const QVector<double> &trace)
