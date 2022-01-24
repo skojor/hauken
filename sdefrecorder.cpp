@@ -180,8 +180,8 @@ QByteArray SdefRecorder::createHeader() //TODO: Own dynamic position update!
 
     stream << (getSdefAddPosition()?"FileType MobileData":"FileType Standard Data exchange Format 2.0") << '\n'
            << "LocationName " << getStationName() << "\n"
-           << "Latitude " << convertDdToddmmss(getStnLatitude().toDouble()) << "\n"
-           << "Longitude " << convertDdToddmmss(getStnLongitude().toDouble(), false) << '\n'
+           << "Latitude " << convertDdToddmmss((addPosition ? prevLat : getStnLatitude().toDouble())) << "\n"
+           << "Longitude " << convertDdToddmmss((addPosition ? prevLng : getStnLongitude().toDouble()), false) << '\n'
            << "FreqStart " << QString::number(getInstrStartFreq() * 1e3, 'f', 0) << '\n'
            << "FreqStop " << QString::number(getInstrStopFreq() * 1e3, 'f', 0) << '\n'
            << "AntennaType NoAntenna" << '\n'
@@ -318,7 +318,7 @@ void SdefRecorder::curlUpload()
 
 void SdefRecorder::updPosition(bool b, double l1, double l2)
 {
-    qDebug() << b << l1 << l2;
+    //qDebug() << b << l1 << l2;
     if (b) {
         positionHistory.append(QPair<double, double>(l1, l2));
         prevLat = l1;

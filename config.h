@@ -110,15 +110,15 @@ public slots:
     bool getSdefAddPosition() { return settings->value("sdef/AddPosition", false).toBool();}
     void setSdefAddPosition(bool b) { settings->setValue("sdef/AddPosition", b); emit settingsUpdated();}
     QString getSdefGpsSource() { return settings->value("sdef/GpsSource").toString();}
-    void setSdefGpsSource(QString s) { settings->setValue("sdef/GpsSource", s);}
+    void setSdefGpsSource(QString s) { settings->setValue("sdef/GpsSource", s); emit settingsUpdated();}
     int getSdefRecordTime() { return settings->value("sdef/RecordTime", 2).toUInt();}
     void setSdefRecordTime(int val) { settings->setValue("sdef/RecordTime", val); emit settingsUpdated();}
     int getSdefMaxRecordTime() { return settings->value("sdef/MaxRecordTime", 60).toUInt();}
     void setSdefMaxRecordTime(int val) { settings->setValue("sdef/MaxRecordTime", val); emit settingsUpdated();}
     QString getSdefStationInitals() { return settings->value("sdef/StationInitials", "").toString();}
-    void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s);}
+    void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s); emit settingsUpdated();}
     int getSdefPreRecordTime() { return settings->value("sdef/PreRecordTime", 30).toUInt();}
-    void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val);}
+    void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val); emit settingsUpdated();}
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
