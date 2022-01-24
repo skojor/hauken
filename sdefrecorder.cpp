@@ -261,16 +261,16 @@ bool SdefRecorder::curlLogin()
 
     QStringList l;
     l << "-H" << "'application/x-www-form-url-encoded'"
-      << "-F" << "'brukernavn=" << getSdefUsername() << "'"
-      << "-F" << "'passord=" << getSdefPassword() << "'"
-      << "--cookie-jar" << ".kake"
+      << "-F" << "brukernavn=" + getSdefUsername()
+      << "-F" << "passord=" + getSdefPassword()
+      << "--cookie-jar" << getWorkFolder() + "/.kake"
       << "http://stoygolvet.npta.no/logon.php";
 
     process->setArguments(l);
     process->start();
     stateCurlAwaitingLogin = true;
 
-    qDebug() << "Calling curl login" << l << process->processId();
+    qDebug() << "Calling curl login" << process->program() << process->arguments();
 
     return true;
 }
@@ -288,7 +288,7 @@ void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
     }
     else if (stateCurlAwaitingLogin) { // curl has successfully logged in, continue
         stateCurlAwaitingLogin = false;
-        curlUpload();
+        QTimer::singleShot(5000, this, &SdefRecorder::curlUpload);
     }
     else if (stateCurlAwaitingFileUpload) {
         stateCurlAwaitingFileUpload = false;
@@ -303,16 +303,16 @@ void SdefRecorder::curlUpload()
         QString filename = filesAwaitingUpload.first();
 
         QStringList l;
-        l << "--cookie" << ".kake"
+        l << "--cookie" << getWorkFolder() + "/.kake"
           << "-X" << "POST"
-          << "-F" << "file=" + filename + ".zip"
+          << "-F" << "file=@" + filename + ".zip"
           << "-f"
           << "http://stoygolvet.npta.no/Casper/lastopp_fil.php";
 
         process->setArguments(l);
         process->start();
         stateCurlAwaitingFileUpload = true;
-        qDebug() << "Calling curl file upload" << l << process->processId();
+        qDebug() << "Calling curl file upload" << process->program() << process->arguments();
     }
 }
 

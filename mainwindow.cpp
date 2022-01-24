@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     receiverOptions = new ReceiverOptions(config);
     sdefOptions = new SdefOptions(config);
     emailOptions = new EmailOptions(config);
+    cameraOptions = new CameraOptions(config);
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
@@ -106,6 +107,10 @@ void MainWindow::createActions()
     optEmail = new QAction(tr("&Notifications"), this);
     optEmail->setStatusTip(tr("Setup of email server and notfications"));
     connect(optEmail, &QAction::triggered, this, [this]{ this->emailOptions->start();});
+
+    optCamera = new QAction(tr("&Camera"), this);
+    optCamera->setStatusTip("Setup of camera recording");
+    connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));

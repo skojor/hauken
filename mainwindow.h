@@ -37,6 +37,7 @@
 #include "emailoptions.h"
 #include "notifications.h"
 #include "waterfall.h"
+#include "cameraoptions.h"
 
 class MainWindow : public QMainWindow
 {
@@ -153,6 +154,7 @@ private:
     QAction *optStream;
     QAction *optSdef;
     QAction *optEmail;
+    QAction *optCamera;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -164,6 +166,7 @@ private:
     ReceiverOptions *receiverOptions;
     SdefOptions *sdefOptions;
     EmailOptions *emailOptions;
+    CameraOptions *cameraOptions;
 
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;

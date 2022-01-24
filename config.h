@@ -177,6 +177,11 @@ public slots:
     int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
     void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val); emit settingsUpdated();}
 
+    // Camera options
+    QString getCameraName() { return settings->value("camera/Name").toString();}
+    void setCameraName(QString s) { settings->setValue("camera/Name", s);}
+    bool getCameraDeviceTrigger() { return settings->value("camera/DeviceTrigger").toBool();}
+    void setCameraDeviceTrigger(bool b) { settings->setValue("camera/DeviceTrigger", b);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
@@ -194,8 +199,8 @@ public slots:
     int getWaterfallTime() { return settings->value("plot/WaterfallTime", 120).toInt();}
     void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val); emit settingsUpdated();}
     int getPlotResolution() { return plotResolution;}
-    // trig line
 
+    // trig line
     QStringList getTrigFrequencies() { return settings->value("trigFrequencies").toStringList();}
     void setTrigFrequencies(QStringList list) { settings->setValue("trigFrequencies", list); emit settingsUpdated();}
 
