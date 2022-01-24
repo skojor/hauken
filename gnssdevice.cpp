@@ -108,6 +108,11 @@ bool GnssDevice::decodeGsa(const QByteArray &val)
         gnssData.gsaValid = true;
         gnssData.hdop = split.at(16).toDouble();
 
+        if (val.contains("$GN")) gnssData.gnssType = "GPS+GLONASS";
+        else if (val.contains("$GP")) gnssData.gnssType = "GPS";
+        else if (val.contains("$GL")) gnssData.gnssType = "GLONASS";
+        else gnssData.gnssType = "Other";
+
         if (split.at(2).toInt() == 3) gnssData.fixType = "3D";
         else if (split.at(2).toInt() == 2) gnssData.fixType = "2D";
         else gnssData.fixType = "No fix";
@@ -159,11 +164,6 @@ bool GnssDevice::decodeGsv(const QByteArray &val)
 {
     QList<QByteArray> split = val.split(',');
     if (split.size() > 4) {
-        if (val.contains("$GN")) gnssData.gnssType = "GPS+GLONASS";
-        else if (val.contains("$GP")) gnssData.gnssType = "GPS";
-        else if (val.contains("$GL")) gnssData.gnssType = "GLONASS";
-        else gnssData.gnssType = "Other";
-
         if (split.at(2).toInt() == gsvSentences.size() + 1)
             gsvSentences.append(val);
     }
