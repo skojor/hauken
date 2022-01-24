@@ -77,7 +77,6 @@ private:
     int maxholdTime = 10;
     const int bufferAge = 120; // always hold 120 seconds of buffer. maxhold/other output adjusted to their own settings
     QTimer *deleteOlderThanTimer;
-    QTimer *averageLevelDoneTimer = new QTimer;
     QTimer *averageLevelMaintenanceTimer = new QTimer;
     QElapsedTimer *throttleTimer;
     QMutex mutex;
@@ -94,7 +93,7 @@ private:
     QVector<double> maxholdBufferAggregate;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
-    const int avgLevelMaintenanceTime = 30; // secs
+    const int avgLevelMaintenanceTime = 10; // secs
     const int tracesNeededForAvg = 250;
 };
 

@@ -488,12 +488,14 @@ void MeasurementDevice::startDevice()
 
 void MeasurementDevice::restartStream()
 {
-    delUdpStreams();
-    if (devicePtr->tcpStream) delTcpStreams();
-    if (useUdpStream)
-        setupUdpStream();
-    else
-        setupTcpStream();
+    if (connected) {
+        delUdpStreams();
+        if (devicePtr->tcpStream) delTcpStreams();
+        if (useUdpStream)
+            setupUdpStream();
+        else
+            setupTcpStream();
+    }
 }
 
 void MeasurementDevice::setupTcpStream()
