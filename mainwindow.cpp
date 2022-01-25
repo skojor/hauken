@@ -47,6 +47,11 @@ MainWindow::MainWindow(QWidget *parent)
     waterfallThread->setObjectName("waterfall");
     waterfall->moveToThread(waterfallThread);
 
+    cameraRecorder = new CameraRecorder(config);
+    cameraThread = new QThread;
+    cameraThread->setObjectName("camera");
+    cameraRecorder->moveToThread(cameraThread);
+
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
 
@@ -151,6 +156,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optStream);
     optionMenu->addAction(optSdef);
     optionMenu->addAction(optEmail);
+    optionMenu->addAction(optCamera);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
@@ -507,6 +513,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer2, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
+    connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
@@ -523,6 +530,7 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
+    connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -534,6 +542,7 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer2, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
     {
@@ -572,6 +581,7 @@ void MainWindow::setSignals()
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
+    cameraThread->start();
 }
 
 void MainWindow::instrStartFreqChanged()
@@ -809,14 +819,16 @@ void MainWindow::open()
 
 void MainWindow::save()
 {
+    qDebug() << "før" << config->getCurrentFilename() << config->getWorkFolder();
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save current configuration"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));
     if (!fileName.isEmpty()) {  //config->newFileName(fileName);
         QFile::copy(config->getCurrentFilename(), fileName);
         config->newFileName(fileName);
+        qDebug() << "etter" << fileName << config->getCurrentFilename();
     }
-    saveConfigValues();
+    //saveConfigValues();
     updWindowTitle();
 }
 

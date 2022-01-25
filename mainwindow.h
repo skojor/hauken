@@ -38,6 +38,7 @@
 #include "notifications.h"
 #include "waterfall.h"
 #include "cameraoptions.h"
+#include "camerarecorder.h"
 
 class MainWindow : public QMainWindow
 {
@@ -186,6 +187,9 @@ private:
 
     Waterfall *waterfall;
     QThread *waterfallThread;
+
+    CameraRecorder *cameraRecorder;
+    QThread *cameraThread;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();

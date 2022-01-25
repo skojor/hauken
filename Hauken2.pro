@@ -28,6 +28,7 @@ SOURCES += \
     SimpleMail/server.cpp \
     SimpleMail/serverreply.cpp \
     cameraoptions.cpp \
+    camerarecorder.cpp \
     config.cpp \
     customplotcontroller.cpp \
     datastreambaseclass.cpp \
@@ -76,6 +77,7 @@ HEADERS += \
     SimpleMail/serverreply_p.h \
     SimpleMail/smtpexports.h \
     cameraoptions.h \
+    camerarecorder.h \
     config.h \
     customplotcontroller.h \
     datastreambaseclass.h \

@@ -220,7 +220,7 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
 
     if (data.posValid && agcLimit > 0 && data.agcOffset > agcLimit) {
         if (!agcLimitTriggered) ts << "AGC offset triggered, current offset: "
-                                   << data.agcOffset << " m" << (logToFile ? ". Recording":"");
+                                   << data.agcOffset << (logToFile ? ". Recording":"");
         agcLimitTriggered = true;
         if (logToFile) {
             emit alarm();

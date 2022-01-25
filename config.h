@@ -180,8 +180,12 @@ public slots:
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
     void setCameraName(QString s) { settings->setValue("camera/Name", s);}
+    QString getCameraStreamAddress() { return settings->value("camera/StreamAddress").toString();}
+    void setCameraStreamAddress(QString s) { settings->setValue("camera/StreamAddress", s);}
     bool getCameraDeviceTrigger() { return settings->value("camera/DeviceTrigger").toBool();}
     void setCameraDeviceTrigger(bool b) { settings->setValue("camera/DeviceTrigger", b);}
+    int getCameraRecordTime() { return settings->value("camera/RecordTime", 60).toInt();}
+    void setCameraRecordTime(int s) { settings->setValue("camera/RecordTime", s);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
