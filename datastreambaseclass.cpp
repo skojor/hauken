@@ -168,7 +168,6 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
             }
             else if (data != 2000) fft.append(data);
             else {
-                qDebug() << "2000!!!";
                 if (fft.size() == calcPscanPointsPerTrace())
                     emit newFftData(fft);
 
