@@ -60,7 +60,7 @@ void UdpDataStream::newData()
             else
                 headerIsRead = true;
         }
-        else if (headerIsRead && udpBuffer.size() >= (int)header.dataSize) {
+        else if (headerIsRead && udpBuffer.size() == (int)header.dataSize) {
             qDebug() << "processing" << udpBuffer.size();
             processData(udpBuffer);
             headerIsRead = false;

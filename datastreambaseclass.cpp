@@ -23,6 +23,8 @@ void DataStreamBaseClass::processData(const QByteArray &buf)
         fillFft(buf);
     else if (attrHeader.tag == (int)Instrument::Tags::GPSC)
         readGpscompassData(buf);
+    else
+        qDebug() << "which boobiio?" << checkHeader(buf) << checkOptHeader(buf);
 }
 
 bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the initial bytes of every packet and does a quick sanity check of the data
