@@ -9,6 +9,7 @@ CameraOptions::CameraOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("USB camera source"), comboOpt1);
     fillCameraCombo();
     comboOpt1->setToolTip("Select which USB camera device to use, or none to disable");
+    comboOpt1->setDisabled(true);
 
     mainLayout->addRow(new QLabel("Network camera address"), leOpt1);
     leOpt1->setToolTip("Input the RTSP stream address to use, or leave blank to disable\nRTSP streams typically looks something like this:\nrtsp://192.168.100.100:554/stream1");
@@ -18,7 +19,7 @@ CameraOptions::CameraOptions(QSharedPointer<Config> c)
     cbOpt1->setToolTip("If checked, the above chosen camera will be used to create a recording\nwhenever signal levels exceeds the limit settings");
 
     mainLayout->addRow(new QLabel("Record time (seconds)"), sbOpt1);
-    sbOpt1->setToolTip("Time in seconds to record a video after the incident was triggered");
+    sbOpt1->setToolTip("Time in seconds to record a video after the incident ended");
     sbOpt1->setRange(1, 86400);
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &CameraOptions::saveCurrentSettings);
