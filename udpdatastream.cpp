@@ -42,30 +42,31 @@ void UdpDataStream::newData()
         rxData.fill(0, udpSocket->pendingDatagramSize());
         qDebug() << "filling" << rxData.size();
         udpSocket->readDatagram(rxData.data(), rxData.size());
-    }
-    byteCtr += rxData.size();
-    //processData(rxData);
-    QDataStream ds(rxData);
 
-    while (!ds.atEnd()) {
-        uchar tmp;
-        ds >> tmp;
-        udpBuffer.append(tmp);
+        byteCtr += rxData.size();
+        //processData(rxData);
+        QDataStream ds(rxData);
 
-        if (!headerIsRead and udpBuffer.size() > 15) {
-            if (!checkHeader(udpBuffer)) {
-                qDebug() << "udp header fail" << header.dataSize;
+        while (!ds.atEnd()) {
+            uchar tmp;
+            ds >> tmp;
+            udpBuffer.append(tmp);
+
+            if (!headerIsRead and udpBuffer.size() > 15) {
+                if (!checkHeader(udpBuffer)) {
+                    qDebug() << "udp header fail" << header.dataSize;
+                    udpBuffer.clear();
+                }
+                else {
+                    headerIsRead = true;
+                    qDebug() << header.seqNumber << header.dataSize;
+                }
+            }
+            else if (headerIsRead && udpBuffer.size() == (int)header.dataSize) {
+                processData(udpBuffer);
+                headerIsRead = false;
                 udpBuffer.clear();
             }
-            else {
-                headerIsRead = true;
-                qDebug() << header.seqNumber << header.dataSize;
-            }
-        }
-        else if (headerIsRead && udpBuffer.size() == (int)header.dataSize) {
-            processData(udpBuffer);
-            headerIsRead = false;
-            udpBuffer.clear();
         }
     }
 }
