@@ -174,11 +174,12 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
 
                 else if (fft.size() > calcPscanPointsPerTrace() && (devicePtr->id.contains("USRP") ||
                                                                     devicePtr->id.contains("EM100"))) { // usrp/em100 exception, keep those data even if it's too much
-                    qDebug() << "big load, removing" << fft.size() - calcPscanPointsPerTrace() << fft.size() << calcPscanPointsPerTrace();
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);
                 }
+                else if (fft.size() < calcPscanPointsPerTrace())
+                    qDebug() << "WTF?" << fft.size() << calcPscanPointsPerTrace();
                 fft.clear();
                 traceCtr++;
                 if (!traceTimer->isValid())
