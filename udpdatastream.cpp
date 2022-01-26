@@ -40,6 +40,7 @@ void UdpDataStream::newData()
 
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
         rxData.fill(0, udpSocket->pendingDatagramSize());
+        qDebug() << "filling" << rxData.size();
         udpSocket->readDatagram(rxData.data(), rxData.size());
     }
     byteCtr += rxData.size();
@@ -56,8 +57,9 @@ void UdpDataStream::newData()
                 qDebug() << "udp header fail" << header.dataSize;
                 udpBuffer.clear();
             }
-            else
+            else {
                 headerIsRead = true;
+                qDebug() << header.seqNumber << header.dataSize;
         }
         else if (headerIsRead && udpBuffer.size() == (int)header.dataSize) {
             processData(udpBuffer);
