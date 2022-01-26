@@ -7,7 +7,6 @@
 #include <QString>
 #include <QDebug>
 
-
 class Config : public QObject
 {
     Q_OBJECT
