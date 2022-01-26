@@ -76,7 +76,7 @@ void Waterfall::updSize(QRect s)
 
 void Waterfall::updSettings()
 {
-    scaleMin = config->getPlotYMin();
+    scaleMin = config->getPlotYMin() + 2; // +2 to clean up the screen when no signal is present
     scaleMax = config->getPlotYMax();
     if (startfreq != config->getInstrStartFreq() || stopfreq != config->getInstrStopFreq()
             || !resolution.contains(config->getInstrResolution()) || !fftMode.contains(config->getInstrFftMode())) {
