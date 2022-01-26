@@ -819,14 +819,12 @@ void MainWindow::open()
 
 void MainWindow::save()
 {
-    qDebug() << "før" << config->getCurrentFilename() << config->getWorkFolder();
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save current configuration"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));
     if (!fileName.isEmpty()) {  //config->newFileName(fileName);
         QFile::copy(config->getCurrentFilename(), fileName);
         config->newFileName(fileName);
-        qDebug() << "etter" << fileName << config->getCurrentFilename();
     }
     //saveConfigValues();
     updWindowTitle();
