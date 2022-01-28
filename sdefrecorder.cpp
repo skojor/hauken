@@ -173,7 +173,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
     historicDataSaved = true;
 }
 
-QByteArray SdefRecorder::createHeader() //TODO: Own dynamic position update!
+QByteArray SdefRecorder::createHeader()
 {
     QString buf;
     QTextStream stream(&buf, QIODevice::ReadWrite);

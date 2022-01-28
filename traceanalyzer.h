@@ -25,6 +25,7 @@ public slots:
     void recorderStarted() { recorderRunning = true;}
     void recorderEnded() { recorderRunning  = false;}
     double getKhzAboveLimit() { return khzAboveLimit; }
+    double getKhzAboveLimitTotal() { return khzAboveLimitTotal; }
     void setAnalyzerReady() { ready = true;}
     void setAnalyzerNotReady() { ready = false;}
 
@@ -40,15 +41,18 @@ private:
     QSharedPointer<Config> config;
     QElapsedTimer *elapsedTimer = new QElapsedTimer;
     QVector<qint16> averageData;
-    double trigLevel;
-    double trigBandwidth;
-    int trigTime;
-    double startFreq, stopFreq, resolution;
     bool alarmEmitted = false;
     QList<QPair<double, double>> trigFrequenciesList;
     bool recorderRunning = false;
-    double khzAboveLimit = 0;
+    double khzAboveLimit = 0, khzAboveLimitTotal = 0;
     bool ready = false;
+
+    // config cache
+    double trigLevel;
+    double singleTrigBandwidth, totalTrigBandwidth;
+    int trigTime;
+    double startFreq, stopFreq, resolution;
+
 };
 
 #endif // TRACEANALYZER_H

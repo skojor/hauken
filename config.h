@@ -54,6 +54,8 @@ public slots:
     void setInstrTrigLevel(int val) { settings->setValue("instr/TrigLevel", val); emit settingsUpdated(); }
     int getInstrMinTrigBW() { return settings->value("instr/MinTrigBW", 50).toInt(); }
     void setInstrMinTrigBW(int val) { settings->setValue("instr/MinTrigBW", val); emit settingsUpdated(); }
+    int getInstrTotalTrigBW() { return settings->value("instr/TotalTrigBW", 500).toInt();}
+    void setInstrTotalTrigBW(int val) { settings->setValue("instr/TotalTrigBW", val); emit settingsUpdated();}
     int getInstrMinTrigTime() { return settings->value("instr/MinTrigTime", 18).toInt(); }
     void setInstrMinTrigTime(int val) { settings->setValue("instr/MinTrigTime", val); emit settingsUpdated(); }
 

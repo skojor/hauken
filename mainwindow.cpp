@@ -196,7 +196,8 @@ void MainWindow::createLayout()
     QFormLayout *trigForm = new QFormLayout;
     QGroupBox *trigGroupBox = new QGroupBox("Trigger settings");
     trigForm->addRow(new QLabel("Trig level (dB)"), instrTrigLevel);
-    trigForm->addRow(new QLabel("Min. trig bandwidth (kHz)"), instrTrigBandwidth);
+    trigForm->addRow(new QLabel("Single trig bandwidth (kHz)"), instrTrigBandwidth);
+    trigForm->addRow(new QLabel("Total trig bandwidth (kHz)"), instrTrigTotalBandwidth);
     trigForm->addRow(new QLabel("Min. trig time (msec)"), instrTrigTime);
     trigForm->addRow(separator);
 
@@ -290,8 +291,11 @@ void MainWindow::setToolTips()
     instrTrigLevel->setToolTip("Decides how much above the average noise floor in dB a signal must be "\
                                "to trigger an incident. 10 dB is a reasonable value. "\
                                "See also the other trigger settings below.");
-    instrTrigBandwidth->setToolTip("An incident is triggered only if the continous bandwidth of a "\
-                                   "signal above the set trig level is higher than this setting.");
+    instrTrigBandwidth->setToolTip("An incident is triggered if the continous bandwidth of a "\
+                                   "signal above the set trig level is higher than this setting."\
+                                   " See also the total bandwidth setting.");
+    instrTrigTotalBandwidth->setToolTip("An incident is triggered if the total contribution of signals "\
+                                        "above the trig limit is higher than this setting.");
     instrTrigTime->setToolTip("Decides how long an incident must be present before an incident is "\
                               "triggered and a recording is started. "\
                               "Previously the \"trace count before recording is triggered\" setting.");
@@ -347,6 +351,7 @@ void MainWindow::getConfigValues()
 
     instrTrigLevel->setValue(config->getInstrTrigLevel());
     instrTrigBandwidth->setValue(config->getInstrMinTrigBW());
+    instrTrigTotalBandwidth->setValue(config->getInstrTotalTrigBW());
     instrTrigTime->setValue(config->getInstrMinTrigTime());
 
     gnssCNo->setValue(config->getGnssCnoDeviation());
@@ -422,7 +427,8 @@ void MainWindow::setValidators()
     instrTrigTime->setRange(0, 9e5);
     instrTrigBandwidth->setRange(0, 9.99e9);
     instrTrigBandwidth->setDecimals(0);
-
+    instrTrigTotalBandwidth->setRange(0, 9.99e9);
+    instrTrigTotalBandwidth->setDecimals(0);
     gnssCNo->setRange(0,1000);
     gnssAgc->setRange(0, 8000);
     gnssPosOffset->setRange(0, 48e6);
@@ -450,6 +456,7 @@ void MainWindow::setSignals()
 
     connect(instrTrigLevel, QOverload<double>::of(&QDoubleSpinBox::valueChanged), config.data(), &Config::setInstrTrigLevel);
     connect(instrTrigBandwidth, QOverload<double>::of(&QDoubleSpinBox::valueChanged), config.data(), &Config::setInstrMinTrigBW);
+    connect(instrTrigTotalBandwidth, QOverload<double>::of(&QDoubleSpinBox::valueChanged), config.data(), &Config::setInstrTotalTrigBW);
     connect(instrTrigTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMinTrigTime);
 
     connect(gnssCNo, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setGnssCnoDeviation);
@@ -846,6 +853,7 @@ void MainWindow::saveConfigValues()
     config->setInstrPort(instrPort->text().toUInt());
     config->setInstrTrigLevel(instrTrigLevel->value());
     config->setInstrMinTrigBW(instrTrigBandwidth->value());
+    config->setInstrTotalTrigBW(instrTrigTotalBandwidth->value());
     config->setInstrMinTrigTime(instrTrigTime->value());
     config->setGnssCnoDeviation(gnssCNo->value());
     config->setGnssAgcDeviation(gnssAgc->value());
@@ -865,8 +873,11 @@ void MainWindow::showBytesPerSec(int val)
     QString msg = "Traffic " + QString::number(val / 1000) + " kB/sec";
     if (measurementDevice->getTracesPerSec() > 0)
         msg += ", " + QString::number(measurementDevice->getTracesPerSec(), 'f', 1) + " traces/sec";
-    if (traceAnalyzer->getKhzAboveLimit() > 0)
-        msg += ", " + QString::number(traceAnalyzer->getKhzAboveLimit(), 'f', 0) + " kHz above limit";
+    int khzAboveLimit = traceAnalyzer->getKhzAboveLimit();
+    int khzAboveLimitTotal = traceAnalyzer->getKhzAboveLimitTotal();
+    if (khzAboveLimit || khzAboveLimitTotal)
+        msg += ", single/total signal above limit: " + QString::number(khzAboveLimit) + " / " + QString::number(khzAboveLimitTotal) + " kHz";
+
     statusBar->showMessage(msg, 2000);
 }
 

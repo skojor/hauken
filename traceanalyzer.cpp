@@ -10,13 +10,15 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 {
     if (ready) { // dont do anything until trace buffer says go
 
-        khzAboveLimit = 0;
-        int valuesAboveLimit = 0;
+        khzAboveLimit = khzAboveLimitTotal = 0;
+        int valuesAboveLimit = 0, valuesAboveLimitTotal = 0;
         if (averageData.size() == data.size()) {
             for (int i=0; i<data.size(); i++) {
                 if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                        && data.at(i) > averageData.at(i) + trigLevel * 10) // * 10 because we have values in 1/10 dBuV!
+                        && data.at(i) > averageData.at(i) + trigLevel * 10) { // * 10 because we have values in 1/10 dBuV!
                     valuesAboveLimit++;
+                    valuesAboveLimitTotal++;
+                }
                 else if ((valuesAboveLimit && !checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))) ||
                          (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
                          && data.at(i) < averageData.at(i) + trigLevel * 10)) { // previously trace point high, not this one. reset counter and calc BW of signal
@@ -26,8 +28,9 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
                     valuesAboveLimit = 0;
                 }
             }
+            khzAboveLimitTotal = valuesAboveLimitTotal * resolution;
         }
-        if (khzAboveLimit > trigBandwidth) {
+        if (khzAboveLimit > singleTrigBandwidth || khzAboveLimitTotal > totalTrigBandwidth) {
             if (trigTime == 0) { // trig time 0 means sound the alarm immediately
                 alarmTriggered();
             }
@@ -52,12 +55,18 @@ void TraceAnalyzer::alarmTriggered()
     emit alarm();
     if (!alarmEmitted) {
         alarmEmitted = true;
-        if (config->getSdefSaveToFile())
-            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver (" +
-                               QString::number((int)khzAboveLimit) + " kHz above limit)");
+        QString alarmText;
+        if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth)
+            alarmText = "single cont. signal above limit: " + QString::number((int)khzAboveLimit) + " kHz";
+        else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth)
+            alarmText = "total signal above limit: " + QString::number((int)khzAboveLimitTotal) + " kHz";
         else
-            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Incident registered, " + QString::number((int)khzAboveLimit) +
-                               " kHz above limit. Recording is not enabled.");
+            alarmText = "both single and total signal levels triggered (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz";
+
+        if (config->getSdefSaveToFile())
+            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver, " + alarmText);
+        else
+            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Incident registered, " + alarmText + ". Recording is not enabled");
     }
 }
 
@@ -94,7 +103,8 @@ bool TraceAnalyzer::checkIfFrequencyIsInTrigArea(double freq)
 void TraceAnalyzer::updSettings()
 {
     trigLevel = config->getInstrTrigLevel();
-    trigBandwidth = config->getInstrMinTrigBW();
+    singleTrigBandwidth = config->getInstrMinTrigBW();
+    totalTrigBandwidth = config->getInstrTotalTrigBW();
     trigTime = config->getInstrMinTrigTime();
     startFreq = config->getInstrStartFreq();
     stopFreq = config->getInstrStopFreq();

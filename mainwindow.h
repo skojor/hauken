@@ -130,6 +130,7 @@ private:
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
     QDoubleSpinBox *instrTrigBandwidth = new QDoubleSpinBox;
+    QDoubleSpinBox *instrTrigTotalBandwidth = new QDoubleSpinBox;
     QSpinBox *instrTrigTime = new QSpinBox;
 
     QSpinBox *gnssCNo = new QSpinBox;
