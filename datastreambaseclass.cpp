@@ -180,9 +180,8 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                 else if (fft.size() < calcPscanPointsPerTrace())
                     qDebug() << "WTF?" << fft.size() << calcPscanPointsPerTrace();
                 fft.clear();
-                traceCtr++;
-                if (!traceTimer->isValid())
-                    traceTimer->start();
+                if (traceTimer->isValid()) emit tracesPerSecond(1e9 / traceTimer->nsecsElapsed());
+                traceTimer->start();
             }
         }
     }
@@ -198,16 +197,15 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
             if (data != 2000) fft.append(data);
             else {
                 if (fft.size() >= calcPscanPointsPerTrace()) {
-                    if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "stor pakke" << fft.size() << calcPscanPointsPerTrace();
+                    //if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "stor pakke" << fft.size() << calcPscanPointsPerTrace();
 
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();
                     emit newFftData(fft);
                 }
                 fft.clear();
-                traceCtr++;
-                if (!traceTimer->isValid())
-                    traceTimer->start();
+                if (traceTimer->isValid()) emit tracesPerSecond(1e9 / traceTimer->nsecsElapsed());
+                traceTimer->start();
             }
         }
     }
@@ -221,11 +219,6 @@ void DataStreamBaseClass::calcBytesPerSecond()
     bytesPerSecTimer->start();
     emit bytesPerSecond(byteCtr);
     byteCtr = 0;
-    if (traceTimer->isValid()) {
-        emit tracesPerSecond((double)traceCtr * 1e9 / traceTimer->nsecsElapsed());
-        traceCtr = 0;
-        traceTimer->start();
-    }
 }
 
 int DataStreamBaseClass::calcPscanPointsPerTrace()

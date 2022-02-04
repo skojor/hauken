@@ -61,7 +61,7 @@ void TraceAnalyzer::alarmTriggered()
         else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth)
             alarmText = "total signal above limit: " + QString::number((int)khzAboveLimitTotal) + " kHz";
         else
-            alarmText = "both single and total signal levels triggered (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz";
+            alarmText = "both single and total signal levels triggered (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz)";
 
         if (config->getSdefSaveToFile())
             emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver, " + alarmText);
