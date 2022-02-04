@@ -157,6 +157,8 @@ private:
     bool posValid = false;
     bool askForPosition = false;
     const int scpiThrottleTime = 5; // ms
+
+    bool scpiReconnect = false;
 };
 
 #endif // MEASUREMENTDEVICE_H

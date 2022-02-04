@@ -44,7 +44,6 @@ public:
     GenAttrAdvanced genAttrAdvHeader;
     QTimer *timeoutTimer = new QTimer;
     QElapsedTimer *traceTimer = new QElapsedTimer;
-    int traceCtr = 0;
     int errorCtr = 0;
     bool errorHandleSent = false;
     const int timeoutInMs = 20000;

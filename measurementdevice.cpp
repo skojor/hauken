@@ -40,7 +40,7 @@ void MeasurementDevice::instrConnect()
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
-    tcpTimeoutTimer->start(2000);
+    if (!scpiReconnect) tcpTimeoutTimer->start(20000);
 }
 
 void MeasurementDevice::scpiConnected()
@@ -57,8 +57,12 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
         askId();
         emit status("Measurement device connected, asking for ID");
     }
-    /* else if (state == QAbstractSocket::UnconnectedState && connected) // unlikely, but could happen
-        instrDisconnect();*/
+    else if (state == QAbstractSocket::UnconnectedState && connected) { // happens if instrument restarts or SCPI conn. goes away otherwise
+        if (autoReconnect)
+            scpiReconnect = true;
+        instrDisconnect();
+        autoReconnectTimer->start(15000);
+    }
 }
 
 void MeasurementDevice::scpiWrite(QByteArray data)
@@ -78,14 +82,14 @@ void MeasurementDevice::instrDisconnect()
 {
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
-        emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Disconnected");
+        emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect ? ". Trying to reconnect" : " "));
     }
     tcpTimeoutTimer->stop();
     emit instrId(QString());
     emit status("Disconnecting measurement device");
     if (connected) {
-        delUdpStreams();
-        delTcpStreams();
+        if (useUdpStream) delUdpStreams();
+        else delTcpStreams();
         scpiSocket->waitForBytesWritten(1000);
     }
     scpiSocket->close();
@@ -237,7 +241,7 @@ void MeasurementDevice::askId()
 {
     scpiWrite("*idn?");
     instrumentState = InstrumentState::CHECK_INSTR_ID;
-    tcpTimeoutTimer->start(2000);
+    tcpTimeoutTimer->start(20000);
 }
 
 void MeasurementDevice::checkId(const QByteArray buffer)
@@ -298,7 +302,7 @@ void MeasurementDevice::askUdp()
     if (devicePtr->udpStream) {
         scpiWrite("trac:udp?");
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_UDP;
-        tcpTimeoutTimer->start(2000);
+        tcpTimeoutTimer->start(20000);
     }
 }
 
@@ -351,7 +355,7 @@ void MeasurementDevice::askTcp()
     if (devicePtr->tcpStream) {
         scpiWrite("trac:tcp?");
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_TCP;
-        tcpTimeoutTimer->start(2000);
+        tcpTimeoutTimer->start(20000);
     }
     else
         stateConnected();
@@ -377,7 +381,7 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
             askUser();
         else if (inUse && deviceInUseWarningIssued) { // overtake device
             deviceInUseWarningIssued = false;
-            delTcpStreams();
+            if (!useUdpStream) delTcpStreams();
             stateConnected();
         }
         else { // all checks done, we are cool to go
@@ -398,7 +402,7 @@ void MeasurementDevice::askUser()
     if (devicePtr->systManLocName) {
         scpiWrite("syst:man:loc:name?");
         instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
-        tcpTimeoutTimer->start(2000);
+        tcpTimeoutTimer->start(20000);
     }
     else
         checkUser("");
@@ -490,7 +494,7 @@ void MeasurementDevice::restartStream()
 {
     if (connected) {
         delUdpStreams();
-        if (devicePtr->tcpStream) delTcpStreams();
+        delTcpStreams();
         if (useUdpStream)
             setupUdpStream();
         else
@@ -603,8 +607,14 @@ void MeasurementDevice::handleStreamTimeout()
 
 void MeasurementDevice::autoReconnectCheckStatus()
 {
-    autoReconnectInProgress = true;
-    askUdp(); // the udp routine will call askTcp() for us, no worries
+    if (scpiReconnect && !scpiSocket->isOpen()) {
+        instrConnect();
+    }
+    else {
+        scpiReconnect = false;
+        autoReconnectInProgress = true;
+        askUdp(); // the udp routine will call askTcp() for us, no worries
+    }
 }
 
 void MeasurementDevice::updSettings()
