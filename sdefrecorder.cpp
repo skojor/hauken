@@ -113,12 +113,13 @@ QString SdefRecorder::createFilename()
 }
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
-    if (!historicDataSaved) {
+    /*if (!historicDataSaved) {
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Trace history data not saved correctly");
         failed = true;
         file.close();
     }
-    else {
+    else*/
+    if (historicDataSaved) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
         QByteArray byteArray = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
         if (addPosition) {
             byteArray +=
