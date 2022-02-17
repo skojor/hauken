@@ -427,11 +427,12 @@ void MeasurementDevice::stateConnected()
         tcpTimeoutTimer->stop();
         emit status("Connected, setting up device");
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
-        scpiConnected();
     }
-    else
+    else {
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Reconnected");
+    }
 
+    scpiConnected();
     autoReconnectInProgress = false;
     runAfterConnected();
     instrumentState = InstrumentState::CONNECTED;
