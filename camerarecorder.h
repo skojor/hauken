@@ -6,6 +6,8 @@
 #include <QMultimedia>
 #include <QObject>
 #include <QMediaRecorder>
+#include <QNetworkRequest>
+#include <QMediaPlayer>
 #include <QDebug>
 #include <QDateTime>
 #include <QTimer>

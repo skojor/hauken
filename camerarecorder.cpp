@@ -14,6 +14,23 @@ void CameraRecorder::start()
 
 void CameraRecorder::selectCamera()
 {
+    const QUrl url = QUrl("http://195.196.36.242/mjpg/video.mjpg");
+    const QNetworkRequest requestRtsp(url);
+    QMediaPlayer *player = new QMediaPlayer;
+    player->setMedia(requestRtsp);
+    player->play();
+
+    recorder = new QMediaRecorder(player);
+    /*QVideoEncoderSettings settings = recorder->videoSettings();
+    settings.setResolution(1280,720);
+    settings.setQuality(QMultimedia::VeryHighQuality);
+    settings.setFrameRate(30.0);*/
+
+    //recorder->setVideoSettings(settings);
+    recorder->setOutputLocation(QUrl::fromLocalFile("test.mpg")); //config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".mpg"));
+
+    qDebug() << recorder->outputLocation() << player->availability() << recorder->isAvailable();
+
 /*    qDebug() << usbCamName << rtspStream;
     if (!usbCamName.contains("None", Qt::CaseInsensitive) && !rtspStream.isEmpty())
         //emit toIncidentLog(NOTIFY::TYPE::CAMERARECORDER, "", "Both USB and network camera selected as source, which is it?");
