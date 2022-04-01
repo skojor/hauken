@@ -33,6 +33,9 @@ void MeasurementDevice::start()
 
     connect(tcpStream, &TcpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
     connect(udpStream, &UdpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
+
+    connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
+    updGnssDisplayTimer->start(1000);
 }
 
 void MeasurementDevice::instrConnect()
@@ -686,4 +689,23 @@ void MeasurementDevice::resetFreqSettings()
     setFfmCenterFrequency();
     setFfmFrequencySpan();
     qDebug() << "error handling freq settings" << devicePtr->pscanStartFrequency << devicePtr->pscanStopFrequency << devicePtr->pscanResolution;
+}
+
+void MeasurementDevice::updGnssDisplay()
+{
+    QString out;
+    QTextStream ts(&out);
+    if (devicePtr->positionValid)
+        ts << "<table style='color:black'>";
+    else
+        ts << "<table style='color:grey'>";
+    ts.setRealNumberNotation(QTextStream::FixedNotation);
+    ts.setRealNumberPrecision(5);
+    ts << "<tr><td>Latitude</td><td align=right>" << devicePtr->latitude << "</td></tr>"
+       << "<tr><td>Longitude</td><td align=right>" << devicePtr->longitude << "</td></tr>";
+    ts.setRealNumberPrecision(1);
+    ts << "<tr><td>Altitude</td><td align=right>" << devicePtr->altitude / 100 << "</td></tr>"
+       << "<tr><td>DOP</td><td align=right>" << devicePtr->dop << "</td></tr>"
+       << "</font></table>";
+    if (connected) emit displayGnssData(out, 2, devicePtr->positionValid);
 }

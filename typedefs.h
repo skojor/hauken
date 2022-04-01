@@ -407,7 +407,7 @@ public:
     QStringList ffmSpans;
     QStringList pscanResolutions;
     QStringList fftModes;
-    double latitude = 0, longitude = 0;
+    double latitude = 0, longitude = 0, altitude = 0, dop = 0;
     bool positionValid = false;
 };
 

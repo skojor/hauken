@@ -551,6 +551,8 @@ void MainWindow::setSignals()
     connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
+    connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
+
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
     {
         this->incidentLog->insertHtml(s);
@@ -922,11 +924,12 @@ void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
 {
     if (id == gnssLastDisplayedId) { // same as previous update, just show result
         gnssStatus->setText(txt);
+        rightBox->setTitle((id < 2 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
     }
     else if (gnssLastDisplayedTime.secsTo(QDateTime::currentDateTime()) >= 5) {
         gnssLastDisplayedId = id;
         gnssLastDisplayedTime = QDateTime::currentDateTime();
-        rightBox->setTitle("GNSS " + QString::number(id) + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
+        rightBox->setTitle((id < 2 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
         gnssStatus->setText(txt);
     }
 }

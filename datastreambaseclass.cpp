@@ -257,6 +257,8 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
         if (lat != 0 && lng != 0) {
             devicePtr->latitude = lat;
             devicePtr->longitude = lng;
+            devicePtr->altitude = altitude;
+            devicePtr->dop = dilution;
         }
         if (gpsValid > 0) devicePtr->positionValid = true;
         else devicePtr->positionValid = false;

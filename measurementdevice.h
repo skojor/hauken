@@ -44,6 +44,7 @@ signals:
     void resetBuffers();
     void positionUpdate(bool b, double lat, double lng);
     void deviceStreamTimeout(); // signal to stop eventual recording
+    void displayGnssData(QString, int, bool);
 
 public slots:
     void start();
@@ -119,6 +120,7 @@ private slots:
     void resetFreqSettings();
     void abor() { scpiWrite("abor");}
     void initImm() { scpiWrite("init:imm");}
+    void updGnssDisplay();
 
 private:
     bool connected = false;
@@ -159,6 +161,7 @@ private:
     const int scpiThrottleTime = 5; // ms
 
     bool scpiReconnect = false;
+    QTimer *updGnssDisplayTimer = new QTimer;
 };
 
 #endif // MEASUREMENTDEVICE_H
