@@ -260,5 +260,6 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
         }
         if (gpsValid > 0) devicePtr->positionValid = true;
         else devicePtr->positionValid = false;
+        //qDebug() << "GPS debug" << gpsValid << lat << lng;
     }
 }

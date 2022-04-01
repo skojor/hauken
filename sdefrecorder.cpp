@@ -48,8 +48,8 @@ void SdefRecorder::updSettings()
         positionSource = POSITIONSOURCE::GNSSDEVICE1;
     else
         positionSource = POSITIONSOURCE::GNSSDEVICE2;
-    prevLat = getStnLatitude().toDouble(); // failsafe if position is missing
-    prevLng = getStnLongitude().toDouble();
+    //prevLat = getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
+    //prevLng = getStnLongitude().toDouble();
 
     if (addPosition && !reqPositionTimer->isActive()) reqPositionTimer->start(1000); // ask for position once per sec.
 }
