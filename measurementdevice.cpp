@@ -707,5 +707,5 @@ void MeasurementDevice::updGnssDisplay()
     ts << "<tr><td>Altitude</td><td align=right>" << devicePtr->altitude / 100 << "</td></tr>"
        << "<tr><td>DOP</td><td align=right>" << devicePtr->dop << "</td></tr>"
        << "</font></table>";
-    if (connected && config->getSdefAddPosition()) emit displayGnssData(out, 2, devicePtr->positionValid);
+    if (connected) emit displayGnssData(out, 3, devicePtr->positionValid);
 }

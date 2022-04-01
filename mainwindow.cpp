@@ -924,7 +924,7 @@ void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
 {
     if (id == gnssLastDisplayedId) { // same as previous update, just show result
         gnssStatus->setText(txt);
-        rightBox->setTitle((id < 2 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
+        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
     }
     else if (gnssLastDisplayedTime.secsTo(QDateTime::currentDateTime()) >= 5) {
         gnssLastDisplayedId = id;
