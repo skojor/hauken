@@ -9,7 +9,7 @@ void CameraRecorder::start()
 {
     qDebug() << "Cam recorder thread started";
     updSettings();
-    selectCamera();
+    //selectCamera();
 }
 
 void CameraRecorder::selectCamera()
