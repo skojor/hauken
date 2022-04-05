@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QTimer>
 #include <QFile>
+#include <QDataStream>
 #include "config.h"
 #include "typedefs.h"
 
