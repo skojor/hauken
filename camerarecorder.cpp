@@ -85,11 +85,11 @@ void CameraRecorder::selectCamera()
 
     while (av_read_frame(format_ctx, &packet) >= 0 && cnt < 1000) { //read ~ 1000 frames
 
-        std::cout << "1 Frame: " << cnt << std::endl;
+        qDebug()  << "1 Frame: " << cnt;
         if (packet.stream_index == video_stream_index) {    //packet is video
-            std::cout << "2 Is Video" << std::endl;
+            qDebug()  << "2 Is Video" << ;
             if (stream == NULL) {    //create stream in file
-                std::cout << "3 create stream" << std::endl;
+                qDebug()  << "3 create stream";
                 stream = avformat_new_stream(output_ctx,
                                              format_ctx->streams[video_stream_index]->codec->codec);
                 avcodec_copy_context(stream->codec,
@@ -99,10 +99,9 @@ void CameraRecorder::selectCamera()
             }
             int check = 0;
             packet.stream_index = stream->id;
-            std::cout << "4 decoding" << std::endl;
+            qDebug() << "4 decoding";
             int result = avcodec_decode_video2(codec_ctx, picture, &check, &packet);
-            std::cout << "Bytes decoded " << result << " check " << check
-                      << std::endl;
+            qDebug() << "Bytes decoded " << result << " check " << check;
             if (cnt > 100)    //cnt < 0)
             {
                 sws_scale(img_convert_ctx, picture->data, picture->linesize, 0,
