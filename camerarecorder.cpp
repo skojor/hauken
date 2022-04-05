@@ -61,7 +61,6 @@ void CameraRecorder::selectCamera()
 
     avcodec_get_context_defaults3(codec_ctx, codec);
     avcodec_copy_context(codec_ctx, format_ctx->streams[video_stream_index]->codec);
-    QFile output_file;
 
     if (avcodec_open2(codec_ctx, codec, NULL) < 0)
         exit(1);
@@ -107,7 +106,8 @@ void CameraRecorder::selectCamera()
                 sws_scale(img_convert_ctx, picture->data, picture->linesize, 0,
                           codec_ctx->height, picture_rgb->data, picture_rgb->linesize);
                 QString file_name = "test.ppm";
-                output_file.open(file_name);
+                QFile output_file(file_name);
+                output_file.open(QIODevice::WriteOnly);
                 QDataStream output(&output_file);
 
                 output << "P3 " << codec_ctx->width << " " << codec_ctx->height
