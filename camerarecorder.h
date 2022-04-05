@@ -1,19 +1,14 @@
 #ifndef CAMERARECORDER_H
 #define CAMERARECORDER_H
 
-#include <QCamera>
-#include <QCameraInfo>
-#include <QMultimedia>
 #include <QObject>
-#include <QMediaRecorder>
-#include <QNetworkRequest>
-#include <QMediaPlayer>
 #include <QDebug>
 #include <QDateTime>
 #include <QTimer>
-#include <QUrl>
+#include <QFile>
 #include "config.h"
 #include "typedefs.h"
+
 
 #ifdef __linux__
 extern "C" {
@@ -47,8 +42,6 @@ private:
     QString usbCamName, rtspStream;
     bool doRecord;
     int recordTime;
-    QCamera *camera = nullptr;
-    QMediaRecorder *recorder;
 };
 
 #endif // CAMERARECORDER_H
