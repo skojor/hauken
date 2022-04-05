@@ -107,7 +107,7 @@ void CameraRecorder::selectCamera()
                 sws_scale(img_convert_ctx, picture->data, picture->linesize, 0,
                           codec_ctx->height, picture_rgb->data, picture_rgb->linesize);
                 QString file_name = "test.ppm";
-                output_file.open(file_name.str().c_str());
+                output_file.open(file_name.data());
                 output_file << "P3 " << codec_ctx->width << " " << codec_ctx->height
                             << " 255\n";
                 for (int y = 0; y < codec_ctx->height; y++) {
