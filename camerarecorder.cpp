@@ -108,11 +108,13 @@ void CameraRecorder::selectCamera()
                           codec_ctx->height, picture_rgb->data, picture_rgb->linesize);
                 QString file_name = "test.ppm";
                 output_file.open(file_name);
-                output_file << "P3 " << codec_ctx->width << " " << codec_ctx->height
+                QDataStream output(&output_file);
+
+                output << "P3 " << codec_ctx->width << " " << codec_ctx->height
                             << " 255\n";
                 for (int y = 0; y < codec_ctx->height; y++) {
                     for (int x = 0; x < codec_ctx->width * 3; x++)
-                        output_file
+                        output
                                 << (int) (picture_rgb->data[0]
                                    + y * picture_rgb->linesize[0])[x] << " ";
                 }
