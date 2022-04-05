@@ -15,6 +15,15 @@
 #include "config.h"
 #include "typedefs.h"
 
+#ifdef __linux__
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavformat/avio.h>
+#include <libswscale/swscale.h>
+}
+#endif
+
 class CameraRecorder : public QObject
 {
     Q_OBJECT

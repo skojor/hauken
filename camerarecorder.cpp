@@ -14,6 +14,16 @@ void CameraRecorder::start()
 
 void CameraRecorder::selectCamera()
 {
+#ifdef __linux__
+    AVFormatContext* format_ctx = avformat_alloc_context();
+    AVCodecContext* codec_ctx = NULL;
+    int video_stream_index;
+    if (avformat_open_input(&format_ctx, "http://195.196.36.242/mjpg/video.mjpg",
+                            NULL, NULL) != 0) {
+        qDebug() << "Cannot open RTSP stream";
+    }
+#endif
+
     const QUrl url = QUrl("http://195.196.36.242/mjpg/video.mjpg");
     const QNetworkRequest requestRtsp(url);
     QMediaPlayer *player = new QMediaPlayer;
@@ -31,7 +41,7 @@ void CameraRecorder::selectCamera()
 
     qDebug() << recorder->outputLocation() << player->availability() << recorder->isAvailable();
 
-/*    qDebug() << usbCamName << rtspStream;
+    /*    qDebug() << usbCamName << rtspStream;
     if (!usbCamName.contains("None", Qt::CaseInsensitive) && !rtspStream.isEmpty())
         //emit toIncidentLog(NOTIFY::TYPE::CAMERARECORDER, "", "Both USB and network camera selected as source, which is it?");
         qDebug() << "Both USB and network camera selected as source, which is it?";
