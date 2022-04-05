@@ -18,7 +18,7 @@ void CameraRecorder::selectCamera()
     AVFormatContext* format_ctx = avformat_alloc_context();
     AVCodecContext* codec_ctx = NULL;
     int video_stream_index;
-    if (avformat_open_input(&format_ctx, "http://195.196.36.242/mjpg/video.mjpg",
+    if (avformat_open_input(&format_ctx, "http://195.196.36.2242/mjpg/video.mjpg",
                             NULL, NULL) != 0) {
         qDebug() << "Cannot open RTSP stream";
     }
