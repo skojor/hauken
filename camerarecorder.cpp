@@ -87,7 +87,7 @@ void CameraRecorder::selectCamera()
 
         qDebug()  << "1 Frame: " << cnt;
         if (packet.stream_index == video_stream_index) {    //packet is video
-            qDebug()  << "2 Is Video" << ;
+            qDebug()  << "2 Is Video";
             if (stream == NULL) {    //create stream in file
                 qDebug()  << "3 create stream";
                 stream = avformat_new_stream(output_ctx,
