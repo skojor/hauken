@@ -40,6 +40,7 @@ void MeasurementDevice::start()
 
 void MeasurementDevice::instrConnect()
 {
+    discPressed = false;
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
@@ -60,7 +61,7 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
         askId();
         emit status("Measurement device connected, asking for ID");
     }
-    else if (state == QAbstractSocket::UnconnectedState && connected) { // happens if instrument restarts or SCPI conn. goes away otherwise
+    else if (state == QAbstractSocket::UnconnectedState && connected && !discPressed) { // happens if instrument restarts or SCPI conn. goes away otherwise
         if (autoReconnect)
             scpiReconnect = true;
         instrDisconnect();
@@ -83,15 +84,13 @@ void MeasurementDevice::scpiWrite(QByteArray data)
 
 void MeasurementDevice::instrDisconnect()
 {
-    connected = false;
+    discPressed = true;
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
-        emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect ? ". Trying to reconnect" : " "));
+        emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect && !discPressed ? ". Trying to reconnect" : " "));
     }
     tcpTimeoutTimer->stop();
-    qDebug() << "Stopping auto recon. timer" << autoReconnectTimer->remainingTime();
     autoReconnectTimer->stop();
-    qDebug() << "Stopping auto recon. timer" << autoReconnectTimer->remainingTime();
     emit instrId(QString());
     emit status("Disconnecting measurement device");
     if (connected) {

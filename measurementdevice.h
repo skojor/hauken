@@ -160,7 +160,7 @@ private:
     bool askForPosition = false;
     const int scpiThrottleTime = 5; // ms
 
-    bool scpiReconnect = false;
+    bool scpiReconnect = false, discPressed = false;
     QTimer *updGnssDisplayTimer = new QTimer;
 };
 
