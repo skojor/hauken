@@ -83,11 +83,15 @@ void MeasurementDevice::scpiWrite(QByteArray data)
 
 void MeasurementDevice::instrDisconnect()
 {
+    connected = false;
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect ? ". Trying to reconnect" : " "));
     }
     tcpTimeoutTimer->stop();
+    qDebug() << "Stopping auto recon. timer" << autoReconnectTimer->remainingTime();
+    autoReconnectTimer->stop();
+    qDebug() << "Stopping auto recon. timer" << autoReconnectTimer->remainingTime();
     emit instrId(QString());
     emit status("Disconnecting measurement device");
     if (connected) {
