@@ -177,8 +177,8 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                         fft.removeLast();
                     emit newFftData(fft);
                 }
-                else if (fft.size() < calcPscanPointsPerTrace())
-                    qDebug() << "WTF?" << fft.size() << calcPscanPointsPerTrace();
+                /*else if (fft.size() < calcPscanPointsPerTrace())
+                    qDebug() << "WTF?" << fft.size() << calcPscanPointsPerTrace();*/
                 fft.clear();
                 if (traceTimer->isValid()) emit tracesPerSecond(1e9 / traceTimer->nsecsElapsed());
                 traceTimer->start();

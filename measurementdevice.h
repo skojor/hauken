@@ -162,6 +162,7 @@ private:
 
     bool scpiReconnect = false, discPressed = false;
     QTimer *updGnssDisplayTimer = new QTimer;
+    bool firstConnection = true;
 };
 
 #endif // MEASUREMENTDEVICE_H

@@ -60,6 +60,7 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
     if (state == QAbstractSocket::ConnectedState) {
         askId();
         emit status("Measurement device connected, asking for ID");
+        firstConnection = false; // now we know network is up, keep calm and drink tea
     }
     else if (state == QAbstractSocket::UnconnectedState && connected && !discPressed) { // happens if instrument restarts or SCPI conn. goes away otherwise
         if (autoReconnect)
@@ -448,9 +449,15 @@ void MeasurementDevice::stateConnected()
 
 void MeasurementDevice::tcpTimeout()
 {
-    if (instrumentState != InstrumentState::CONNECTED) {  // sth timed out, give a warning and disconnect
-        instrDisconnect();
-        emit popup("TCP socket operation timed out, disconnecting");
+    if (instrumentState != InstrumentState::CONNECTED) {  // sth timed out
+        if (firstConnection && config->getInstrConnectOnStartup()) {  // First time connecting and we are set to connect on startup, let's give it some time and retry
+            emit status("TCP timeout, retrying in 15 seconds");
+            QTimer::singleShot(15000, this, &MeasurementDevice::instrConnect);
+        }
+        else {
+            instrDisconnect();
+            emit popup("TCP socket operation timed out, disconnecting");
+        }
     }
 }
 
