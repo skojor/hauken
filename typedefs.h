@@ -444,5 +444,13 @@ public:
     int agcOffset = 0;
 };
 
+class ConnectionStatus
+{
+public:
+    ConnectionStatus();
+    bool connected = false;
+    bool reconnect = false;
+};
+
 #endif // TYPEDEFS_H
 

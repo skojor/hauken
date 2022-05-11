@@ -599,6 +599,8 @@ void MeasurementDevice::fftDataHandler(QVector<qint16> &data)
 
 void MeasurementDevice::handleStreamTimeout()
 {
+    qDebug() << "Stream timeout triggered" << connected;
+
     if (connected) {
         tcpTimeoutTimer->stop();
         if (autoReconnect) { // check stream settings regularly to see if device is available again
@@ -621,6 +623,8 @@ void MeasurementDevice::handleStreamTimeout()
 
 void MeasurementDevice::autoReconnectCheckStatus()
 {
+    qDebug() << "Auto reconnect check" << scpiReconnect << scpiSocket->isOpen();
+
     if (scpiReconnect && !scpiSocket->isOpen()) {
         instrConnect();
     }
