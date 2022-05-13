@@ -422,10 +422,17 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
         msg += tr(" by ") + QString(buffer).simplified();
     }
     msg += tr(". Press connect once more to override");
-    tcpTimeoutTimer->stop();
-    instrDisconnect();
-    deviceInUseWarningIssued = true;
-    emit popup(msg);
+    if (!buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
+        tcpTimeoutTimer->stop();
+        instrDisconnect();
+        deviceInUseWarningIssued = true;
+        emit popup(msg);
+    }
+    else {
+        qDebug() << "In use by myself, how silly! Continuing...";
+        deviceInUseWarningIssued = true;
+        askUdp();
+    }
 }
 
 void MeasurementDevice::stateConnected()
