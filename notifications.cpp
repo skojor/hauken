@@ -40,7 +40,7 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
     if (truncateTime && (type == NOTIFY::TYPE::GNSSANALYZER || type == NOTIFY::TYPE::TRACEANALYZER)) { // check if certain notifications should be truncated
         if (!truncateList.isEmpty()) { // check if we recently got a notification from the same type of notifier
             for (int i=0; i < truncateList.size(); i++) {
-                if (truncateList.at(i).type == type && truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) < truncateTime) { // found one, it seems we should truncate this
+                if (truncateList.at(i).type == type && truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) < truncateTime * 1e3) { // found one, it seems we should truncate this
                     truncateThis = true;
                     truncateList.removeAt(i);
                     truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, string)); // remove the previous buffer line and insert the last one, then wait truncateTime seconds before ev. posting
@@ -78,7 +78,7 @@ void Notifications::checkTruncate()
 {
     if (!truncateList.isEmpty()) {
         for (int i=0; i<truncateList.size(); i++) {
-            if (truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) >= truncateTime) { // found msg ready to be shown
+            if (truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) >= truncateTime * 1e3) { // found msg ready to be shown
                 generateMsg(truncateList.at(i).type, truncateList.at(i).id, truncateList.at(i).msg, truncateList.at(i).timeReceived);
                 truncateList.removeAt(i);
             }
