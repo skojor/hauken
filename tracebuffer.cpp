@@ -126,13 +126,15 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
-            int val = data.at(rate * i);
+            int val = data.at(rate * i), top = -100;
             for (int j=1; j<(int)rate; j++) {
-                /*if (val < data.at(rate * i + j))
-                    val = data.at(rate * i + j); // pick the strongest sample to show in plot*/
+                if (top < data.at(rate * i + j))
+                    top = data.at(rate * i + j); // pick the strongest sample to show in plot
                 val += data.at(rate * i + j);
             }
-            displayBuffer.append((double)(val / 10) / (int)rate + 1);
+            val /= (int)rate + 1;
+            if (top > 100) val = top; // hack to boost display of small bw signals
+            displayBuffer.append((double)(val / 10)); // / (int)rate + 1);
         }
     }
     else {
