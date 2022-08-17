@@ -410,7 +410,7 @@ void MainWindow::setValidators()
     instrStopFreq->setRange(20, 6e3);
     instrStopFreq->setDecimals(0);
     instrMeasurementTime->setRange(1, 5000);
-    instrAtt->setRange(0, 40);
+    instrAtt->setRange(-40, 40);
 
     QString ipRange = "(([ 0]+)|([ 0]*[0-9] *)|([0-9][0-9] )|([ 0][0-9][0-9])|(1[0-9][0-9])|([2][0-4][0-9])|(25[0-5]))";
     QRegExp ipRegex ("^" + ipRange
