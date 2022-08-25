@@ -188,6 +188,17 @@ public slots:
     int getCameraRecordTime() { return settings->value("camera/RecordTime", 60).toInt();}
     void setCameraRecordTime(int s) { settings->setValue("camera/RecordTime", s);}
 
+    // Relay control (and temp) via serial (Arduino custom)
+    QString getArduinoSerialName() { return settings->value("arduino/serialName", "").toString();}
+    void setArduinoSerialName(QString s) { settings->setValue("arduino/serialName", s);}
+    QString getArduinoBaudrate() { return settings->value("arduino/baudrate").toString();}
+    void setArduinoBaudrate(QString s) { settings->setValue("arduino/baudrate", s);}
+    bool getArduinoReadTemperature() { return settings->value("arduino/temperature", false).toBool();}
+    void setArduinoReadTemperature(bool b) { settings->setValue("arduino/temperature", b);}
+    bool getArduinoEnable() { return settings->value("arduino/enable", false).toBool();}
+    void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b);}
+
+
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}

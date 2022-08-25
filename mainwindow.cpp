@@ -37,6 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
     sdefOptions = new SdefOptions(config);
     emailOptions = new EmailOptions(config);
     cameraOptions = new CameraOptions(config);
+    arduinoOptions = new ArduinoOptions(config);
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
@@ -117,6 +118,10 @@ void MainWindow::createActions()
     optCamera->setStatusTip("Setup of camera recording");
     connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});
 
+    optArduino = new QAction(tr("&Arduino"), this);
+    optArduino->setStatusTip("Setup of Arduino relay/temperature control");
+    connect(optArduino, &QAction::triggered, this, [this] { this->arduinoOptions->start();});
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -157,6 +162,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optSdef);
     optionMenu->addAction(optEmail);
     optionMenu->addAction(optCamera);
+    optionMenu->addAction(optArduino);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);

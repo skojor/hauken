@@ -39,6 +39,8 @@
 #include "waterfall.h"
 #include "cameraoptions.h"
 #include "camerarecorder.h"
+#include "arduinooptions.h"
+#include "arduino.h"
 
 class MainWindow : public QMainWindow
 {
@@ -157,6 +159,7 @@ private:
     QAction *optSdef;
     QAction *optEmail;
     QAction *optCamera;
+    QAction *optArduino;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -169,6 +172,7 @@ private:
     SdefOptions *sdefOptions;
     EmailOptions *emailOptions;
     CameraOptions *cameraOptions;
+    ArduinoOptions *arduinoOptions;
 
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;
@@ -191,6 +195,8 @@ private:
 
     CameraRecorder *cameraRecorder;
     QThread *cameraThread;
+
+    Arduino *arduinoPtr = new Arduino;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
