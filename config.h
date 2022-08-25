@@ -197,7 +197,10 @@ public slots:
     void setArduinoReadTemperature(bool b) { settings->setValue("arduino/temperature", b);}
     bool getArduinoEnable() { return settings->value("arduino/enable", false).toBool();}
     void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b);}
-
+    QString getArduinoRelayOnText() { return settings->value("arduino/relayOnText", "on").toString(); }
+    void setArduinoRelayOnText(QString s) { settings->setValue("arduino/relayOnText", s);}
+    QString getArduinoRelayOffText() { return settings->value("arduino/relayOffText", "off").toString(); }
+    void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s);}
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}

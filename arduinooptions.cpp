@@ -23,6 +23,10 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     connect(btnBox, &QDialogButtonBox::accepted, this, &ArduinoOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
+    mainLayout->addRow(new QLabel("Relay on text"), leOpt1);
+    mainLayout->addRow(new QLabel("Relay off text"), leOpt2);
+
+    mainLayout->addRow(new QLabel("A restart is needed to activate any changes here"));
     mainLayout->addWidget(btnBox);
 }
 
@@ -40,6 +44,8 @@ void ArduinoOptions::start()
     comboOpt2->setCurrentIndex(comboOpt2->findText(config->getArduinoBaudrate()));
     cbOpt1->setChecked(config->getArduinoReadTemperature());
     cbOpt2->setChecked(config->getArduinoEnable());
+    leOpt1->setText(config->getArduinoRelayOnText());
+    leOpt2->setText(config->getArduinoRelayOffText());
     dialog->exec();
 }
 
@@ -49,5 +55,7 @@ void ArduinoOptions::saveCurrentSettings()
     config->setArduinoBaudrate(comboOpt2->currentText());
     config->setArduinoReadTemperature(cbOpt1->isChecked());
     config->setArduinoEnable(cbOpt2->isChecked());
+    config->setArduinoRelayOnText(leOpt1->text());
+    config->setArduinoRelayOffText(leOpt2->text());
     dialog->close();
 }

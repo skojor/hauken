@@ -19,8 +19,8 @@ void Arduino::start()
 
     QWidget *wdg = new QWidget;
 
-    relayOnBtn->setText("Relay on");
-    relayOffBtn->setText("Relay off");
+    relayOnBtn->setText(getArduinoRelayOnText());
+    relayOffBtn->setText(getArduinoRelayOffText());
 
     connect(relayOnBtn, &QPushButton::clicked, this, &Arduino::relayBtnOnPressed);
     connect(relayOffBtn, &QPushButton::clicked, this, &Arduino::relayBtnOffPressed);
@@ -40,6 +40,8 @@ void Arduino::start()
     if (arduino->isOpen()) {
         wdg->show();
     }
+
+    tempBox->setEnabled(getArduinoReadTemperature());
 }
 
 void Arduino::connectToPort()
@@ -77,10 +79,10 @@ void Arduino::handleBuffer()
         }
         buffer.clear();
     }
-    if (relayState) relayStateText->setText("on");
-    else relayStateText->setText("off");
+    if (relayState) relayStateText->setText(getArduinoRelayOnText());
+    else relayStateText->setText(getArduinoRelayOffText());
 
-    tempBox->setText(QString::number(temperature));
+    tempBox->setText(QString::number(temperature) + " °C");
 }
 
 void Arduino::relayBtnOnPressed()
