@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
     a.setApplicationVersion(ver);
 
     MainWindow w;
+    w.setAttribute(Qt::WA_DeleteOnClose);
+
     w.show();
     return a.exec();
 }

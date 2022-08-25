@@ -75,6 +75,8 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete measurementDevice;
+    arduinoPtr->close();
+    delete arduinoPtr;
 }
 
 void MainWindow::createActions()

@@ -17,7 +17,8 @@ void Arduino::start()
 {
     if (getArduinoEnable()) connectToPort();
 
-    QWidget *wdg = new QWidget;
+    wdg->setAttribute(Qt::WA_QuitOnClose);
+    wdg->setWindowFlag(Qt::WindowStaysOnTopHint);
 
     relayOnBtn->setText(getArduinoRelayOnText());
     relayOffBtn->setText(getArduinoRelayOffText());

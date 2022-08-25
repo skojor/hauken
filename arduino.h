@@ -34,6 +34,7 @@ public:
     explicit Arduino(QObject *parent = nullptr);
     void connectToPort();
     void start();
+    void close() { wdg->close(); }
 
 private slots:
     void handleBuffer();
@@ -41,13 +42,14 @@ private slots:
     void relayBtnOffPressed();
 
 private:
+    QWidget *wdg = new QWidget;
     QSerialPort *arduino = new QSerialPort;
     QByteArray buffer;
     float temperature = 0;
     bool relayState = false;
     QFormLayout *mainLayout = new QFormLayout;
     QLabel *tempBox = new QLabel("0");
-    QLabel *relayStateText= new QLabel("off");
+    QLabel *relayStateText = new QLabel(getArduinoRelayOffText());
     QPushButton *relayOnBtn = new QPushButton;
     QPushButton *relayOffBtn = new QPushButton;
 };
