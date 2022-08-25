@@ -772,6 +772,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.15</td><td>Added elementary support for Arduino IO via serial (for relay control, temperature sensor, so on)</td></tr>"
        << "<tr><td>2.14</td><td>Wait for network available if set to connect on startup</td></tr>"
        << "<tr><td>2.13</td><td>InstrGNSS status window. Silly auto reconnect bugfix</td></tr>"
        << "<tr><td>2.10</td><td>Added camera options. UDP lost datagram bugfix</td></tr>"
