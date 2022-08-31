@@ -133,6 +133,6 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-#win32 {
-#    VERSION ~= s/-\d+-g[a-f0-9]{6,}//
-#}
+win32 {
+    VERSION ~= s/-\d+-g[a-f0-9]{6,}//
+}

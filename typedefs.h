@@ -316,6 +316,7 @@ public:
             hasAttOnOff = true;
         }
         else if (type == Instrument::InstrumentType::PR100) {
+            udpStream = true;
             hasPscan = true;
             hasAvgType = false;
             hasAutoAtt = true;

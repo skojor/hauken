@@ -82,7 +82,7 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
 void TraceBuffer::calcMaxhold()
 {
     QVector<double> maxhold;
-    maxhold.fill(-100, plotResolution);
+    maxhold.fill(-500, plotResolution);
 
     if (!maxholdBufferElapsedTimer->isValid()) maxholdBufferElapsedTimer->start();
 
@@ -126,7 +126,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
-            int val = data.at(rate * i), top = -100;
+            int val = data.at(rate * i), top = -500;
             for (int j=1; j<(int)rate; j++) {
                 if (top < data.at(rate * i + j))
                     top = data.at(rate * i + j); // pick the strongest sample to show in plot
