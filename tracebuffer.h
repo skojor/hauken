@@ -93,7 +93,7 @@ private:
     QVector<double> maxholdBufferAggregate;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
-    const int avgLevelMaintenanceTime = 5000; // msecs
+    const int avgLevelMaintenanceTime = 10000; // msecs
     const int tracesNeededForAvg = 250;
 };
 
