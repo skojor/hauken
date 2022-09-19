@@ -257,6 +257,7 @@ bool SdefRecorder::curlLogin()
     }
     else {
         QFile::remove(file.fileName());
+        finishedFilename += ".zip";
     }
     filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
@@ -306,7 +307,7 @@ void SdefRecorder::curlUpload()
         QStringList l;
         l << "--cookie" << getWorkFolder() + "/.kake"
           << "-X" << "POST"
-          << "-F" << "file=@" + filename + ".zip"
+          << "-F" << "file=@" + filename // + ".zip"
           << "-f"
           << "http://stoygolvet.npta.no/Casper/lastopp_fil.php";
 
