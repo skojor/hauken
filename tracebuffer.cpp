@@ -215,7 +215,7 @@ void TraceBuffer::emptyBuffer()
 
 void TraceBuffer::finishAvgLevelCalc()
 {
-    averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime * 1e3); // routine to keep updating the average level at a very slow interval
+    averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime); // routine to keep updating the average level at a very slow interval
     emit averageLevelReady(averageLevel);
     emit stopAvgLevelFlash();
 }
@@ -270,7 +270,8 @@ QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
 
 void TraceBuffer::maintainAvgLevel()
 {
-    if (avgFactor < 2) avgFactor = 2;
-    calcAvgLevel();
+    if (avgFactor < 1) avgFactor = 1;
+    if (!traceBuffer.isEmpty()) calcAvgLevel(traceBuffer.last());
+    //qDebug() << "avg level maintenance update";
     emit averageLevelReady(averageLevel); // update trace analyzer with the new avg level data
 }
