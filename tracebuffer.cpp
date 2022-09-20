@@ -39,8 +39,10 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
             emptyBuffer();
     }
     
-    if (normalizeSpectrum)
+    if (normalizeSpectrum) {
+        traceCopy = data;
         traceBuffer.append(calcNormalizedTrace(data));
+    }
     else
         traceBuffer.append(data);
     
@@ -270,8 +272,9 @@ QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
 
 void TraceBuffer::maintainAvgLevel()
 {
-    if (avgFactor < 1) avgFactor = 1;
-    if (!traceBuffer.isEmpty()) calcAvgLevel(traceBuffer.last());
+    avgFactor = 1;
+    if (!normalizeSpectrum && !traceBuffer.isEmpty()) calcAvgLevel(traceBuffer.last());
+    else if (normalizeSpectrum && !traceCopy.isEmpty()) calcAvgLevel(traceCopy);
     //qDebug() << "avg level maintenance update";
     emit averageLevelReady(averageLevel); // update trace analyzer with the new avg level data
 }

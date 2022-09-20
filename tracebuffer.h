@@ -69,6 +69,7 @@ private:
     QSharedPointer<Config> config;
     QList<QDateTime> datetimeBuffer;
     QList<QVector<qint16>> traceBuffer;
+    QVector<qint16> traceCopy;
     QVector<qint16> averageLevel;
     QVector<double> averageDispLevel;
     QVector<double> averageDispLevelNormalized;
@@ -93,7 +94,7 @@ private:
     QVector<double> maxholdBufferAggregate;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
-    const int avgLevelMaintenanceTime = 10000; // msecs
+    const int avgLevelMaintenanceTime = 30000; // msecs
     const int tracesNeededForAvg = 250;
 };
 
