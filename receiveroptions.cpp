@@ -26,6 +26,12 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
                                   "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven "\
                                   "amplifier response");
 
+    mainLayout->addRow(new QLabel(tr("Minimum number of traces used for average calculation")), sbOpt1);
+    sbOpt1->setToolTip("When started, and whenever any relevant settings are changed, "\
+                       "the software will gather traces for average calculation before trig line is \"armed\". "\
+                       "Default value is 250. The average calculation will slow down gradually when enough traces are gathered");
+    sbOpt1->setRange(0, 1e9);
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -38,6 +44,7 @@ void ReceiverOptions::start()
     cbOpt2->setChecked(config->getInstrUseTcpDatastream());
     cbOpt3->setChecked(config->getInstrAutoReconnect());
     cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
+    sbOpt1->setValue(config->getInstrTracesNeededForAverage());
     dialog->exec();
 }
 
@@ -47,6 +54,7 @@ void ReceiverOptions::saveCurrentSettings()
     config->setInstrUseTcpDatastream(cbOpt2->isChecked());
     config->setInstrAutoReconnect(cbOpt3->isChecked());
     config->setInstrNormalizeSpectrum(cbOpt4->isChecked());
+    config->setInstrTracesNeededForAverage(sbOpt1->value());
     emit updSettings();
 
     dialog->close();

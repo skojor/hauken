@@ -98,6 +98,8 @@ public slots:
     void setInstrAutoReconnect(bool b) { settings->setValue("instr/AutoReconnect", b); emit settingsUpdated(); }
     bool getInstrNormalizeSpectrum() { return settings->value("instr/NormalizeSpectrum", false).toBool(); }
     void setInstrNormalizeSpectrum(bool b) { settings->setValue("instr/NormalizeSpectrum", b); emit settingsUpdated(); }
+    int getInstrTracesNeededForAverage() { return settings->value("instr/tracesNeededForAverage", 250).toInt();}
+    void setInstrTracesNeededForAverage(int i) { settings->setValue("instr/tracesNeededForAverage", i);}
 
     // SDeF options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}

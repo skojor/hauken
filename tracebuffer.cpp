@@ -252,6 +252,7 @@ void TraceBuffer::updSettings()
     }
     normalizeSpectrum = config->getInstrNormalizeSpectrum();
     averageDispLevelNormalized.clear();
+    tracesNeededForAvg = config->getInstrTracesNeededForAverage();
     maintainAvgLevel();
 }
 

@@ -95,7 +95,7 @@ private:
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 30000; // msecs
-    const int tracesNeededForAvg = 250;
+    int tracesNeededForAvg = 250;
 };
 
 #endif // TRACEBUFFER_H
