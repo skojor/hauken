@@ -208,7 +208,6 @@ public slots:
     bool getAutoRecorderActivate() { return settings->value("autorecorder/activate", false).toBool();}
     void setAutoRecorderActivate(bool b) { settings->setValue("autorecorder/activate", b);}
 
-
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}
