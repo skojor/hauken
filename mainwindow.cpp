@@ -779,6 +779,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.17</td><td>Auto recording option added, for continous recording on startup</td></tr>"
        << "<tr><td>2.16</td><td>Added option for variable trace average calculation</td></tr>"
        << "<tr><td>2.15</td><td>Added elementary support for Arduino IO via serial (for relay control, temperature sensor, so on)</td></tr>"
        << "<tr><td>2.14</td><td>Wait for network available if set to connect on startup</td></tr>"
