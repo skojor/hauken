@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     emailOptions = new EmailOptions(config);
     cameraOptions = new CameraOptions(config);
     arduinoOptions = new ArduinoOptions(config);
+    autoRecorderOptions = new AutoRecorderOptions(config);
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
@@ -69,7 +70,6 @@ MainWindow::MainWindow(QWidget *parent)
         //customPlotController->updSettings();
         waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
-
 }
 
 MainWindow::~MainWindow()
@@ -124,6 +124,10 @@ void MainWindow::createActions()
     optArduino->setStatusTip("Setup of Arduino relay/temperature control");
     connect(optArduino, &QAction::triggered, this, [this] { this->arduinoOptions->start();});
 
+    optAutoRecorder = new QAction(tr("A&uto recorder"), this);
+    optAutoRecorder->setStatusTip("Setup of Hauken autorecorder");
+    connect(optAutoRecorder, &QAction::triggered, this, [this] { this->autoRecorderOptions->start();});
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -165,6 +169,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optEmail);
     optionMenu->addAction(optCamera);
     optionMenu->addAction(optArduino);
+    optionMenu->addAction(optAutoRecorder);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);

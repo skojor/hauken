@@ -12,6 +12,8 @@ void SdefRecorder::start()
     recordingTimeoutTimer = new QTimer;
     reqPositionTimer = new QTimer;
     periodicCheckUploadsTimer = new QTimer;
+    autorecorderTimer = new QTimer;
+
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
     connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::finishRecording);
@@ -21,6 +23,7 @@ void SdefRecorder::start()
         emit reqPositionFrom(positionSource);
     });
     connect(periodicCheckUploadsTimer, &QTimer::timeout, this, &SdefRecorder::curlUpload);
+    connect(autorecorderTimer, &QTimer::timeout, this, &SdefRecorder::triggerRecording); // auto recording triggers recording here
 
     process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
     process->setStandardOutputFile(getWorkFolder() + "/.process.out");
@@ -52,6 +55,16 @@ void SdefRecorder::updSettings()
     //prevLng = getStnLongitude().toDouble();
 
     if (addPosition && !reqPositionTimer->isActive()) reqPositionTimer->start(1000); // ask for position once per sec.
+
+    if (getAutoRecorderActivate()) {
+        if (!autorecorderTimer->isActive()) {
+            autorecorderTimer->start(10000);
+            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Auto recording is activated, starting recording of currently chosen frequency spectrum and resolution in 10 seconds");
+        }
+    }
+    else {
+        if (autorecorderTimer->isActive()) autorecorderTimer->stop();
+    }
 }
 
 void SdefRecorder::triggerRecording()
@@ -213,13 +226,17 @@ QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
 void SdefRecorder::finishRecording()
 {
     emit recordingEnded();
-    if (getSdefSaveToFile())
-        if (recordingTimeoutTimer->isActive()) emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
+    if (getSdefSaveToFile()) {
+        if (recordingTimeoutTimer->isActive()) {
+            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
                                                                   + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
                                                                          QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
                                                                          + " seconds" :
                                                                          QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
                                                                          + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
+            if (autorecorderTimer->isActive()) autorecorderTimer->stop();
+        }
+    }
 
     if (file.isOpen()) file.close();
     finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
@@ -231,6 +248,7 @@ void SdefRecorder::finishRecording()
 
     if (!failed)
         recording = historicDataSaved = failed = false;
+
 }
 
 void SdefRecorder::restartRecording()

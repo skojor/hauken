@@ -41,6 +41,7 @@
 #include "camerarecorder.h"
 #include "arduinooptions.h"
 #include "arduino.h"
+#include "autorecorderoptions.h"
 
 class MainWindow : public QMainWindow
 {
@@ -160,6 +161,7 @@ private:
     QAction *optEmail;
     QAction *optCamera;
     QAction *optArduino;
+    QAction *optAutoRecorder;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -173,6 +175,7 @@ private:
     EmailOptions *emailOptions;
     CameraOptions *cameraOptions;
     ArduinoOptions *arduinoOptions;
+    AutoRecorderOptions *autoRecorderOptions;
 
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;

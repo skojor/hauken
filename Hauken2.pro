@@ -29,6 +29,7 @@ SOURCES += \
     SimpleMail/serverreply.cpp \
     arduino.cpp \
     arduinooptions.cpp \
+    autorecorderoptions.cpp \
     cameraoptions.cpp \
     camerarecorder.cpp \
     config.cpp \
@@ -80,6 +81,7 @@ HEADERS += \
     SimpleMail/smtpexports.h \
     arduino.h \
     arduinooptions.h \
+    autorecorderoptions.h \
     cameraoptions.h \
     camerarecorder.h \
     config.h \

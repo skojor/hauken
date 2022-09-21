@@ -70,6 +70,7 @@ private:
     QTimer *recordingTimeoutTimer;
     QTimer *reqPositionTimer;
     QTimer *periodicCheckUploadsTimer;
+    QTimer *autorecorderTimer;
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;

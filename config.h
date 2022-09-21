@@ -204,6 +204,11 @@ public slots:
     QString getArduinoRelayOffText() { return settings->value("arduino/relayOffText", "off").toString(); }
     void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s);}
 
+    // AutoRecorder options
+    bool getAutoRecorderActivate() { return settings->value("autorecorder/activate", false).toBool();}
+    void setAutoRecorderActivate(bool b) { settings->setValue("autorecorder/activate", b);}
+
+
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}
