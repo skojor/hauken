@@ -243,6 +243,9 @@ void SdefRecorder::finishRecording()
 
     if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
         QTimer::singleShot(10000, this, &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
+    else
+        if (getSdefZipFiles()) zipit(); // Zip the file anyways, we don't shit storage space here
+
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
 
@@ -270,13 +273,7 @@ bool SdefRecorder::curlLogin()
         return false;
     }
 
-    if (!JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
-        qDebug() << "Compression of" << finishedFilename << "failed";
-    }
-    else {
-        QFile::remove(file.fileName());
-        finishedFilename += ".zip";
-    }
+    if (getSdefZipFiles()) zipit();
     filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
     QStringList l;
@@ -349,5 +346,16 @@ void SdefRecorder::updPosition(bool b, double l1, double l2)
     }
     while (positionHistory.size() > 120) { // keeps a constant 120 values in buffer
         positionHistory.removeFirst();
+    }
+}
+
+void SdefRecorder::zipit()
+{
+    if (!JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
+        qDebug() << "Compression of" << finishedFilename << "failed";
+    }
+    else {
+        QFile::remove(file.fileName());
+        finishedFilename += ".zip";
     }
 }

@@ -18,6 +18,10 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt3->setText("Add position data from GNSS (mobile setting)");
     cbOpt3->setToolTip("If checked the current position will be appended to the trace data. For mobile usage.");
 
+    mainLayout->addRow(cbOpt4);
+    cbOpt4->setText("Compress files in zip format");
+    cbOpt4->setToolTip("If checked the measurement file will be zipped after recording. In general this is a good thing");
+
     mainLayout->addRow(new QLabel("Position source"), comboOpt1);
     comboOpt1->setToolTip("Select which device should be used for SDEF file position updates.\nGNSS device 1 and 2 are the ones selected in the GNSS options dialog");
     comboOpt1->addItems(QStringList() << "InstrumentGnss" << "GNSS device 1" << "GNSS device 2");
@@ -60,6 +64,7 @@ void SdefOptions::start()
     cbOpt2->setChecked(config->getSdefUploadFile());
     leOpt2->setText(config->getSdefPassword());
     cbOpt3->setChecked(config->getSdefAddPosition());
+    cbOpt4->setChecked(config->getSdefZipFiles());
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
     sbOpt2->setValue(config->getSdefMaxRecordTime());
@@ -77,6 +82,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefUsername(leOpt1->text());
     config->setSdefPassword(leOpt2->text());
     config->setSdefAddPosition(cbOpt3->isChecked());
+    config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefStationInitials(leOpt3->text());

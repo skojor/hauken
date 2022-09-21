@@ -122,6 +122,8 @@ public slots:
     void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s); emit settingsUpdated();}
     int getSdefPreRecordTime() { return settings->value("sdef/PreRecordTime", 30).toUInt();}
     void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val); emit settingsUpdated();}
+    bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
+    void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b);}
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}

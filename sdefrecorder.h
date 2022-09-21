@@ -52,6 +52,7 @@ private slots:
     bool curlLogin();
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
+    void zipit();
 
 signals:
     void recordingStarted();
