@@ -45,6 +45,7 @@ SOURCES += \
     measurementdevice.cpp \
     notifications.cpp \
     optionsbaseclass.cpp \
+    pmrtablewdg.cpp \
     qcustomplot.cpp \
     receiveroptions.cpp \
     sdefoptions.cpp \
@@ -96,6 +97,7 @@ HEADERS += \
     measurementdevice.h \
     notifications.h \
     optionsbaseclass.h \
+    pmrtablewdg.h \
     qcustomplot.h \
     receiveroptions.h \
     sdefoptions.h \

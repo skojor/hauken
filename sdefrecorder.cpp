@@ -351,10 +351,10 @@ void SdefRecorder::updPosition(bool b, double l1, double l2)
 
 void SdefRecorder::zipit()
 {
-    if (!JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
+    if (finishedFilename.size() > 1 && !JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
         qDebug() << "Compression of" << finishedFilename << "failed";
     }
-    else {
+    else if (finishedFilename.size() > 1) {
         QFile::remove(file.fileName());
         finishedFilename += ".zip";
     }

@@ -38,8 +38,9 @@ public slots:
         else emit newDispTriglevel(averageDispLevel);}
     void updSettings();
     void deviceDisconnected();
-    void recorderStarted() { recording = true;}
-    void recorderEnded() { recording = false;}
+    void recorderStarted();
+    void recorderEnded();
+    void incidenceTriggered();
 
 signals:
     void newDispTrace(const QVector<double> &data);
@@ -79,10 +80,11 @@ private:
     const int bufferAge = 120; // always hold 120 seconds of buffer. maxhold/other output adjusted to their own settings
     QTimer *deleteOlderThanTimer;
     QTimer *averageLevelMaintenanceTimer = new QTimer;
+    QTimer *maintenanceRestartTimer = new QTimer;
     QElapsedTimer *throttleTimer;
     QMutex mutex;
     int trigLevel;
-    double avgFactor;
+    double avgFactor = 40;
     QString fftMode, antPort;
     bool autoAtt;
     int att;
@@ -94,7 +96,7 @@ private:
     QVector<double> maxholdBufferAggregate;
     const int throttleTime = 100; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
-    const int avgLevelMaintenanceTime = 30000; // msecs
+    const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;
 };
 

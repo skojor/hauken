@@ -13,6 +13,12 @@ void TraceBuffer::start()
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
     connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+
+    connect(maintenanceRestartTimer, &QTimer::timeout, this, [this]() {
+        maintenanceRestartTimer->stop();
+        averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime);
+        qDebug() << "Restarting avg calc. after incident";
+    });
 }
 
 void TraceBuffer::deleteOlderThan()
@@ -128,7 +134,8 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
-            int val = data.at(rate * i), top = -500;
+            //int val = data.at(rate * i);
+            int top = -500;
             for (int j=1; j<(int)rate; j++) {
                 if (top < data.at(rate * i + j))
                     top = data.at(rate * i + j); // pick the strongest sample to show in plot
@@ -163,7 +170,7 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     if (averageLevel.at(i) < data.at(i)) averageLevel[i] += avgFactor;
                     else averageLevel[i] -= avgFactor;
                 }
-                if (avgFactor > 2) avgFactor *= 0.98;
+                if (avgFactor > 1) avgFactor -= avgFactor * 10 / tracesNeededForAvg; //avgFactor *= 0.98;
                 //qDebug() << "avgfactor:" << avgFactor;
             }
             if (data.size() > plotResolution) {
@@ -273,9 +280,37 @@ QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
 
 void TraceBuffer::maintainAvgLevel()
 {
-    avgFactor = 1;
+    if (avgFactor < 3) avgFactor = 1;
     if (!normalizeSpectrum && !traceBuffer.isEmpty()) calcAvgLevel(traceBuffer.last());
     else if (normalizeSpectrum && !traceCopy.isEmpty()) calcAvgLevel(traceCopy);
     //qDebug() << "avg level maintenance update";
     emit averageLevelReady(averageLevel); // update trace analyzer with the new avg level data
+}
+
+void TraceBuffer::recorderStarted()
+{
+    recording = true;
+    /*if (averageLevelMaintenanceTimer->isActive()) { // stop averaging if incident started. add timer to restart it later when recording ends
+        averageLevelMaintenanceTimer->stop();
+        qDebug() << "TraceBuffer: Incidence reported, halting level averaging until it ends";
+    }*/
+}
+
+void TraceBuffer::recorderEnded()
+{
+    recording = false;
+    /*if (!averageLevelMaintenanceTimer->isActive() && avgFactor <= 1) {
+        averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime);
+        qDebug() << "TraceBuffer: Incidence ended, resuming level averaging";
+    }*/
+}
+
+void TraceBuffer::incidenceTriggered() // called whenever sth is above trig line in spectrum
+{
+    //qDebug() << "TraceBuffer: Incidence triggered, status" << averageLevelMaintenanceTimer->isActive() << maintenanceRestartTimer->isActive();
+
+    if (!maintenanceRestartTimer->isActive() && averageLevelMaintenanceTimer->isActive() && avgFactor <= 1) { // we have a situation, halt averaging until incidence has gone away
+        averageLevelMaintenanceTimer->stop();
+        maintenanceRestartTimer->start(120000);
+    }
 }

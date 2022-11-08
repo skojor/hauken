@@ -42,6 +42,7 @@
 #include "arduinooptions.h"
 #include "arduino.h"
 #include "autorecorderoptions.h"
+#include "pmrtablewdg.h"
 
 class MainWindow : public QMainWindow
 {
@@ -130,6 +131,7 @@ private:
     QPushButton *instrConnect = new QPushButton("Connect");
     QPushButton *instrDisconnect = new QPushButton("Disconnect");
     QPushButton *btnTrigRecording = new QPushButton("Trigger recording");
+    QPushButton *btnPmrTable = new QPushButton("PMR table");
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
     QDoubleSpinBox *instrTrigBandwidth = new QDoubleSpinBox;
@@ -176,6 +178,8 @@ private:
     CameraOptions *cameraOptions;
     ArduinoOptions *arduinoOptions;
     AutoRecorderOptions *autoRecorderOptions;
+
+    PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;

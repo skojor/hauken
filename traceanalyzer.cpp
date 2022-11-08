@@ -10,7 +10,7 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 {
     if (ready) { // dont do anything until trace buffer says go
 
-        khzAboveLimit = khzAboveLimitTotal = 0;
+        khzAboveLimit = khzAboveLimitTotal = singleTrigCenterFrequency = 0;
         int valuesAboveLimit = 0, valuesAboveLimitTotal = 0;
         if (averageData.size() == data.size()) {
             for (int i=0; i<data.size(); i++) {
@@ -23,8 +23,14 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
                          (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
                          && data.at(i) < averageData.at(i) + trigLevel * 10)) { // previously trace point high, not this one. reset counter and calc BW of signal
                     double khzOfIncident = valuesAboveLimit * resolution;
-                    if (khzOfIncident > khzAboveLimit)
+                    if (khzOfIncident > khzAboveLimit) {
                         khzAboveLimit = khzOfIncident;
+                        singleTrigCenterFrequency = startFreq + (resolution/1e3 * i) - (khzAboveLimit/2000);
+                        if (pmrMode) {
+                        }
+                    }
+                    pmrCheckUptime(singleTrigCenterFrequency * 1e6, (khzAboveLimit > khzOfIncident?true:false));
+
                     valuesAboveLimit = 0;
                 }
             }
@@ -43,7 +49,7 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
         else {
             if (elapsedTimer) elapsedTimer->invalidate();
             if (alarmEmitted) {
-                emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Normal signal levels");
+                if (!pmrMode) emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Normal signal levels");
                 alarmEmitted = false;
             }
         }
@@ -57,7 +63,8 @@ void TraceAnalyzer::alarmTriggered()
         alarmEmitted = true;
         QString alarmText;
         if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth)
-            alarmText = "single cont. signal above limit: " + QString::number((int)khzAboveLimit) + " kHz";
+            if (!pmrMode) alarmText = "single cont. signal above limit at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 5) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+            else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 5) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
         else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth)
             alarmText = "total signal above limit: " + QString::number((int)khzAboveLimitTotal) + " kHz";
         else
@@ -65,8 +72,10 @@ void TraceAnalyzer::alarmTriggered()
 
         if (config->getSdefSaveToFile())
             emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver, " + alarmText);
-        else
-            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Incident registered, " + alarmText + ". Recording is not enabled");
+        else {
+            if (!pmrMode) emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Incident registered, " + alarmText + ". Recording is not enabled");
+            else emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "PMR " + alarmText);
+        }
     }
 }
 
@@ -109,4 +118,32 @@ void TraceAnalyzer::updSettings()
     startFreq = config->getInstrStartFreq();
     stopFreq = config->getInstrStopFreq();
     resolution = config->getInstrResolution().toDouble();
+    pmrMode = config->getPmrMode();
+}
+
+void TraceAnalyzer::pmrCheckUptime(const unsigned long frequency, const bool active)
+{
+ /*   bool foundIt = false;
+    if (!pmrTable.isEmpty()) {                  // check if this one was up before
+        for (auto &row : pmrTable) {
+            if (row.centerFrequency == frequency) { // already in the table;
+                if (active) row.totalDurationInMilliseconds += QDateTime::currentDateTime().msecsTo(row.startTime);
+                foundIt = true;
+                break;
+            }
+        }
+        if (!foundIt) {
+            PmrTable table;
+            table.centerFrequency = frequency;
+            if (active) table.startTime = QDateTime::currentDateTime();
+
+            pmrTable.append(table);
+        }
+    }
+    else {
+        PmrTable table;
+        table.centerFrequency = frequency;
+        if (active) table.startTime = QDateTime::currentDateTime();
+        pmrTable.append(table);
+    }*/
 }

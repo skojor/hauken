@@ -453,5 +453,26 @@ public:
     bool reconnect = false;
 };
 
+class Pmr
+{
+public:
+    Pmr(unsigned long freq = 0, unsigned int spacing = 0) { centerFrequency = freq; channelSpacing = spacing; }
+    QChar           type = 0;
+    unsigned long   centerFrequency;
+    unsigned int    channelSpacing = 0;
+    unsigned int    ifBandwidth = 0;
+    QDateTime       startTime;
+    QDateTime       endTime;
+    unsigned long   totalDurationInMilliseconds = 0;
+    QString         comment;
+    QString         demod;
+    QString         casperComment;
+    unsigned int    squelchLevel = 0;
+    bool            squelchState = true;
+    bool            active = false;
+    bool            attenuation = false;
+    int             maxLevel = -999;
+};
+
 #endif // TYPEDEFS_H
 

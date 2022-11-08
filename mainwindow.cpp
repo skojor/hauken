@@ -74,9 +74,20 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    delete measurementDevice;
-    arduinoPtr->close();
-    delete arduinoPtr;
+    QApplication::exit();
+    /*measurementDevice->instrDisconnect();
+    sdefRecorderThread->quit();
+    delete sdefRecorder;
+    notificationsThread->quit();
+    delete notifications;
+    waterfallThread->quit();
+    delete waterfall;
+    cameraThread->quit();
+    delete cameraRecorder;
+    //delete measurementDevice;
+    //arduinoPtr->close();
+    //delete arduinoPtr;
+    QApplication::closeAllWindows();*/
 }
 
 void MainWindow::createActions()
@@ -262,6 +273,8 @@ void MainWindow::createLayout()
     bottomPlotLayout->addWidget(showWaterfall);
     bottomPlotLayout->addWidget(new QLabel("Waterfall time"));
     bottomPlotLayout->addWidget(waterfallTime);
+    if (config->getPmrMode()) bottomPlotLayout->addWidget(btnPmrTable);
+
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
     //plotMaxScroll->setFixedSize(40, 30);
     plotMaxScroll->setRange(-30,200);
@@ -335,6 +348,7 @@ void MainWindow::setToolTips()
     showWaterfall->setToolTip("Select type of waterfall overlay");
     waterfallTime->setToolTip("Select the time in seconds a signal will be visible in the waterfall");
     btnTrigRecording->setToolTip("Starts a recording manually. The recording will end after the time specified in SDeF options: Recording time after incident,\nunless a real trig happens within this time, as this will extend the recording further.");
+    btnPmrTable->setToolTip("Edit the PMR table in the currently chosen frequency range");
 }
 
 void MainWindow::getConfigValues()
@@ -536,6 +550,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceBuffer, &TraceBuffer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceAnalyzer, &TraceAnalyzer::recorderEnded);
@@ -600,6 +615,7 @@ void MainWindow::setSignals()
     });
 
     connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, &SdefRecorder::manualTriggeredRecording);
+    connect(btnPmrTable, &QPushButton::clicked, pmrTableWdg, &PmrTableWdg::start);
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
@@ -779,6 +795,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.18</td><td>Average calculation halted while ongoing incident</td></tr>"
        << "<tr><td>2.17</td><td>Auto recording option added, for continous recording on startup</td></tr>"
        << "<tr><td>2.16</td><td>Added option for variable trace average calculation</td></tr>"
        << "<tr><td>2.15</td><td>Added elementary support for Arduino IO via serial (for relay control, temperature sensor, so on)</td></tr>"

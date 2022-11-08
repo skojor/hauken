@@ -46,6 +46,11 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt1->setText("Create a new folder for every incident");
     cbOpt1->setToolTip("Enabling this will create a folder named after the current date and time for the relevant logfiles");
 
+    mainLayout->addRow(cbOpt2);
+    cbOpt2->setText("PMR mode");
+    cbOpt2->setToolTip("Enabling this will put Hauken in PMR mode. This will change a number of options to optimize for PMR detection");
+    cbOpt2->setDisabled(true);
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -61,6 +66,7 @@ void GeneralOptions::start()
     leOpt5->setText(config->getWorkFolder());
     leOpt6->setText(config->getLogFolder());
     cbOpt1->setChecked(config->getNewLogFolder());
+    cbOpt2->setChecked(config->getPmrMode());
     dialog->exec();
 }
 
@@ -81,5 +87,8 @@ void GeneralOptions::saveCurrentSettings()
             QMessageBox::warning(this, "File error", "Couldn't create folder " + leOpt6->text());
 
     config->setNewLogFolder(cbOpt1->isChecked());
+    config->setPmrMode(cbOpt2->isChecked());
+
+
     dialog->close();
 }

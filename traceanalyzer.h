@@ -36,6 +36,7 @@ signals:
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
     void alarmTriggered();
+    void pmrCheckUptime(const unsigned long frequency, const bool active);
 
 private:
     QSharedPointer<Config> config;
@@ -49,10 +50,11 @@ private:
 
     // config cache
     double trigLevel;
-    double singleTrigBandwidth, totalTrigBandwidth;
+    double singleTrigBandwidth, totalTrigBandwidth, singleTrigCenterFrequency;
     int trigTime;
     double startFreq, stopFreq, resolution;
-
+    bool pmrMode;
+    //QList<PmrTable> pmrTable;
 };
 
 #endif // TRACEANALYZER_H

@@ -88,6 +88,8 @@ public slots:
     void setLogFolder(QString s) { settings->setValue("logFolder", s); emit settingsUpdated(); }
     bool getNewLogFolder() { return settings->value("newLogFolder", false).toBool(); }
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); emit settingsUpdated(); }
+    bool getPmrMode() { return settings->value("pmr/mode", false).toBool();}
+    void setPmrMode(bool b) { settings->setValue("pmr/mode", b);}
 
     // Receiver options
     bool getInstrConnectOnStartup() { return settings->value("instr/ConnectOnStartup", false).toBool(); }
@@ -235,6 +237,16 @@ public slots:
     //internal
     void newFileName(const QString file);
     QString getCurrentFilename() { return curFile;}
+
+    // PMR
+    bool getPmrUseReds() { return settings->value("pmr/useReds", true).toBool();}
+    void setPmrUseReds(bool b) { settings->setValue("pmr/useReds", b);}
+    bool getPmrUseYellows() { return settings->value("pmr/useYellows", true).toBool();}
+    void setPmrUseYellows(bool b) { settings->setValue("pmr/useYellows", b);}
+    bool getPmrUseGreens() { return settings->value("pmr/useGreens", true).toBool();}
+    void setPmrUseGreens(bool b) { settings->setValue("pmr/useGreens", b);}
+    bool getPmrUseWhites() { return settings->value("pmr/useWhites", true).toBool();}
+    void setPmrUseWhites(bool b) { settings->setValue("pmr/useWhites", b);}
 
 private slots:
     QByteArray simpleEncr(QByteArray);
