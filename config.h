@@ -200,8 +200,10 @@ public slots:
     void setArduinoSerialName(QString s) { settings->setValue("arduino/serialName", s);}
     QString getArduinoBaudrate() { return settings->value("arduino/baudrate").toString();}
     void setArduinoBaudrate(QString s) { settings->setValue("arduino/baudrate", s);}
-    bool getArduinoReadTemperature() { return settings->value("arduino/temperature", false).toBool();}
-    void setArduinoReadTemperature(bool b) { settings->setValue("arduino/temperature", b);}
+    bool getArduinoReadTemperatureAndRelay() { return settings->value("arduino/temperature", false).toBool();}
+    void setArduinoReadTemperatureAndRelay(bool b) { settings->setValue("arduino/temperature", b);}
+    bool getArduinoReadDHT20() { return settings->value("arduino/dht20", false).toBool();}
+    void setArduinoReadDHT20(bool b) { settings->setValue("arduino/dht20", b);}
     bool getArduinoEnable() { return settings->value("arduino/enable", false).toBool();}
     void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b);}
     QString getArduinoRelayOnText() { return settings->value("arduino/relayOnText", "on").toString(); }
@@ -222,6 +224,8 @@ public slots:
     void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr);}
     QByteArray getWindowState() { return settings->value("windowState", "").toByteArray();}
     void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
+    QByteArray getArduinoWindowState() { return settings->value("arduino/windowState", "").toByteArray();}
+    void setArduinoWindowState(QByteArray arr)  { settings->setValue("arduino/windowState", arr);}
     int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 30).toUInt();}
     void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
     QString getShowWaterfall() { return settings->value("plot/ShowWaterfall", "Off").toString();}

@@ -18,8 +18,12 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     comboOpt2->setToolTip("Arduino baudrate");
 
     mainLayout->addRow(cbOpt1);
-    cbOpt1->setText("Read temperature from device");
-    cbOpt1->setToolTip("Enable only if temperature sensor is connected");
+    cbOpt1->setText("Arduino with temperature and relay control");
+    cbOpt1->setToolTip("Enable only if analog temperature sensor and relay port is connected to the Arduino");
+
+    mainLayout->addRow(cbOpt3);
+    cbOpt3->setText("Arduino with temperature and humidity sensor (DHT20)");
+    cbOpt3->setToolTip("Enable only if DHT20 sensor is connected to the Arduino");
     connect(btnBox, &QDialogButtonBox::accepted, this, &ArduinoOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -28,6 +32,13 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(new QLabel("A restart is needed to activate any changes here"));
     mainLayout->addWidget(btnBox);
+
+    connect(cbOpt1, &QCheckBox::clicked, this, [this](bool b) {
+        this->cbOpt3->setChecked(!b);
+    });
+    connect(cbOpt3, &QCheckBox::clicked, this, [this](bool b) {
+        this->cbOpt1->setChecked(!b);
+    });
 }
 
 QStringList ArduinoOptions::getAvailablePorts()
@@ -42,8 +53,9 @@ void ArduinoOptions::start()
 {
     comboOpt1->setCurrentIndex(comboOpt1->findText(config->getArduinoSerialName()));
     comboOpt2->setCurrentIndex(comboOpt2->findText(config->getArduinoBaudrate()));
-    cbOpt1->setChecked(config->getArduinoReadTemperature());
+    cbOpt1->setChecked(config->getArduinoReadTemperatureAndRelay());
     cbOpt2->setChecked(config->getArduinoEnable());
+    cbOpt3->setChecked(config->getArduinoReadDHT20());
     leOpt1->setText(config->getArduinoRelayOnText());
     leOpt2->setText(config->getArduinoRelayOffText());
     dialog->exec();
@@ -53,8 +65,9 @@ void ArduinoOptions::saveCurrentSettings()
 {
     config->setArduinoSerialName(comboOpt1->currentText());
     config->setArduinoBaudrate(comboOpt2->currentText());
-    config->setArduinoReadTemperature(cbOpt1->isChecked());
+    config->setArduinoReadTemperatureAndRelay(cbOpt1->isChecked());
     config->setArduinoEnable(cbOpt2->isChecked());
+    config->setArduinoReadDHT20(cbOpt3->isChecked());
     config->setArduinoRelayOnText(leOpt1->text());
     config->setArduinoRelayOffText(leOpt2->text());
     dialog->close();

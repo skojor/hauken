@@ -2,7 +2,8 @@
 
 Arduino::Arduino(QObject *parent)
 {
-    (void)parent;
+    //(void)parent;
+    this->setParent(parent);
 
     connect(arduino, &QSerialPort::readyRead, this, [this]
     {
@@ -23,6 +24,9 @@ void Arduino::start()
     relayOnBtn->setText(getArduinoRelayOnText());
     relayOffBtn->setText(getArduinoRelayOffText());
 
+    tempRelayActive = getArduinoReadTemperatureAndRelay();
+    dht20Active = getArduinoReadDHT20();
+
     connect(relayOnBtn, &QPushButton::clicked, this, &Arduino::relayBtnOnPressed);
     connect(relayOffBtn, &QPushButton::clicked, this, &Arduino::relayBtnOffPressed);
 
@@ -31,18 +35,26 @@ void Arduino::start()
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->addWidget(new QLabel("Temperature"), 0, 0);
     mainLayout->addWidget(tempBox, 0, 1);
-    mainLayout->addWidget(new QLabel("Relay state"), 1, 0);
-    mainLayout->addWidget(relayStateText, 1, 1);
-    mainLayout->addWidget(relayOnBtn, 2, 0);
-    mainLayout->addWidget(relayOffBtn, 2, 1);
-
+    if (dht20Active) {
+        mainLayout->addWidget(new QLabel("Relative humidity"), 1, 0);
+        mainLayout->addWidget(humidityBox, 1, 1);
+    }
+    if (tempRelayActive) {
+        mainLayout->addWidget(new QLabel("Relay state"), 2, 0);
+        mainLayout->addWidget(relayStateText, 2, 1);
+        mainLayout->addWidget(relayOnBtn, 3, 0);
+        mainLayout->addWidget(relayOffBtn, 3, 1);
+    }
     wdg->setLayout(mainLayout);
 
+    wdg->setMinimumSize(200, 1);
+    //qDebug() << dialog->sizeHint();
+    wdg->adjustSize();
+
+    wdg->restoreGeometry(getArduinoWindowState());
     if (arduino->isOpen()) {
         wdg->show();
     }
-
-    tempBox->setEnabled(getArduinoReadTemperature());
 }
 
 void Arduino::connectToPort()
@@ -71,19 +83,28 @@ void Arduino::handleBuffer()
 {
     if (buffer.contains('\n')) {
         QList<QByteArray> list = buffer.split(',');
-        if (list.size() > 1) {
+        if (list.size() > 1 && !list[0].contains("dht20")) {
             bool ok = false;
             float tmp = list.at(0).toFloat(&ok);
             if (ok) temperature = tmp;
             if (list.at(1).contains("on")) relayState = true;
             else relayState = false;
+            tempBox->setText(QString::number(temperature) + " °C");
+            if (relayState) relayStateText->setText(getArduinoRelayOnText());
+            else relayStateText->setText(getArduinoRelayOffText());
+        }
+        else if (list.size() == 5 && list[0].contains("dht20")) {
+            bool ok = false;
+            float tmp = list.at(2).toFloat(&ok);
+            if (ok) temperature = tmp;
+            tmp = list.at(4).toFloat(&ok);
+            if (ok) humidity = tmp;
+            tempBox->setText(QString::number(temperature) + " °C");
+            humidityBox->setText(QString::number(humidity) + " %");
         }
         buffer.clear();
     }
-    if (relayState) relayStateText->setText(getArduinoRelayOnText());
-    else relayStateText->setText(getArduinoRelayOffText());
 
-    tempBox->setText(QString::number(temperature) + " °C");
 }
 
 void Arduino::relayBtnOnPressed()

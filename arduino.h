@@ -34,7 +34,11 @@ public:
     explicit Arduino(QObject *parent = nullptr);
     void connectToPort();
     void start();
-    void close() { wdg->close(); }
+    void close() {
+        qDebug() << "Closing...";
+        setArduinoWindowState(wdg->saveGeometry());
+        wdg->close();
+    }
 
 private slots:
     void handleBuffer();
@@ -45,13 +49,16 @@ private:
     QWidget *wdg = new QWidget;
     QSerialPort *arduino = new QSerialPort;
     QByteArray buffer;
-    float temperature = 0;
+    float temperature = 0, humidity = 0;
     bool relayState = false;
     QFormLayout *mainLayout = new QFormLayout;
-    QLabel *tempBox = new QLabel("0");
-    QLabel *relayStateText = new QLabel(getArduinoRelayOffText());
+    QLabel *tempBox = new QLabel;
+    QLabel *humidityBox = new QLabel;
+    QLabel *relayStateText = new QLabel; //(getArduinoRelayOffText());
     QPushButton *relayOnBtn = new QPushButton;
     QPushButton *relayOffBtn = new QPushButton;
+
+    bool tempRelayActive = false, dht20Active = false;
 };
 
 #endif // ARDUINO_H

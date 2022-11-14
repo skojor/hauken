@@ -40,6 +40,8 @@ MainWindow::MainWindow(QWidget *parent)
     arduinoOptions = new ArduinoOptions(config);
     autoRecorderOptions = new AutoRecorderOptions(config);
 
+    arduinoPtr = new Arduino(this);
+
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
     notificationsThread->setObjectName("Notifications");
@@ -70,24 +72,20 @@ MainWindow::MainWindow(QWidget *parent)
         //customPlotController->updSettings();
         waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
+
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    arduinoPtr->close();
+    config->setWindowGeometry(this->saveGeometry());
+    config->setWindowState(this->saveState());
+    QMainWindow::closeEvent(event);
 }
 
 MainWindow::~MainWindow()
 {
     QApplication::exit();
-    /*measurementDevice->instrDisconnect();
-    sdefRecorderThread->quit();
-    delete sdefRecorder;
-    notificationsThread->quit();
-    delete notifications;
-    waterfallThread->quit();
-    delete waterfall;
-    cameraThread->quit();
-    delete cameraRecorder;
-    //delete measurementDevice;
-    //arduinoPtr->close();
-    //delete arduinoPtr;
-    QApplication::closeAllWindows();*/
 }
 
 void MainWindow::createActions()

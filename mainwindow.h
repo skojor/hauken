@@ -105,6 +105,7 @@ private slots:
 
     void updGnssBox(const QString txt, const int id, bool valid);
     void setWaterfallOption(QString s);
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -203,7 +204,7 @@ private:
     CameraRecorder *cameraRecorder;
     QThread *cameraThread;
 
-    Arduino *arduinoPtr = new Arduino;
+    Arduino *arduinoPtr;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
