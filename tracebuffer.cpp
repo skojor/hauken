@@ -144,13 +144,13 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 
             //val /= (int)rate + 1;
             //if (top > 150) val = top; // hack to boost display of small bw signals
-            displayBuffer.append((double)(top / 10)); // / (int)rate + 1);
+            displayBuffer.append(((double)top / 10.0)); // / (int)rate + 1);
         }
     }
     else {
         double rate = (double)plotResolution / data.size();
         for (int i=0; i<plotResolution; i++) {
-            displayBuffer.append((double)data.at((int)((double)i / rate)) / 10);
+            displayBuffer.append((double)data.at((int)((double)i / rate)) / 10.0);
         }
     }
     if (normalizeSpectrum && !averageDispLevel.isEmpty()) {
@@ -180,14 +180,14 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     for (int j=1; j<(int)rate; j++) {
                         val += averageLevel.at(rate * i + j);
                     }
-                    averageDispLevel[i] = (double)(val / 10) / (int)rate + 1;
+                    averageDispLevel[i] = ((double)val / 10.0) / (int)rate + 1;
                     
                 }
             }
             else {
                 double rate = (double)plotResolution / data.size();
                 for (int i=0; i<plotResolution; i++) {
-                    averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10;
+                    averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10.0;
                 }
             }
             
