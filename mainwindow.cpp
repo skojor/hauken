@@ -391,6 +391,7 @@ void MainWindow::getConfigValues()
     waterfallTime->setValue(config->getWaterfallTime());
 
     updConfigSettings();
+
 }
 
 void MainWindow::updInstrButtonsStatus()
