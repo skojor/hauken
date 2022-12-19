@@ -1,2 +1,9 @@
 Hauken2.pro.user
 Hauken2.pro.user*
+Hauken
+*.o
+*.ini
+moc_*
+Makefile
+qrc*
+.qmake.stash
