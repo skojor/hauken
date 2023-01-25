@@ -6,7 +6,7 @@ CONFIG += c++11
 QMAKE_CXXFLAGS += -pthread
 QMAKE_CXXFLAGS += -std=c++11
 TARGET = Hauken
-RC_ICONS = icons/icon.ico
+RC_ICONS = icons/hawk.ico #icon.ico
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -137,6 +137,9 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-#win32 {
-#    SW_VERSION="2.15-6" #s/-\d+-g[a-f0-9]{6,}//
-#}
+VERSION = 2.18.5.0
+QMAKE_TARGET_COMPANY = Nkom
+QMAKE_TARGET_PRODUCT = Hauken
+QMAKE_TARGET_DESCRIPTION = Hauken
+QMAKE_TARGET_COPYRIGHT = GPL
+
