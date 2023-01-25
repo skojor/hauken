@@ -35,7 +35,6 @@ void UdpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 void UdpDataStream::newData()
 {
     timeoutTimer->start();
-
     QByteArray rxData;
 
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
@@ -59,11 +58,16 @@ void UdpDataStream::newData()
                     headerIsRead = true;
                 }
             }
-            else if (headerIsRead && udpBuffer.size() == (int)header.dataSize) {
+            /*else if (headerIsRead && udpBuffer.size() == (int)header.dataSize) {
                 processData(udpBuffer);
                 headerIsRead = false;
                 udpBuffer.clear();
-            }
+            }*/
+        }
+        if (headerIsRead && udpBuffer.size() > 15) {     // ESMB hack, no header datasize sent
+            processData(udpBuffer);
+            udpBuffer.clear();
+            headerIsRead = false;
         }
     }
 }

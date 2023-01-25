@@ -794,6 +794,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.19</td><td>ESMB UDP bugfix, other minor fixes</td></tr>"
        << "<tr><td>2.18</td><td>Average calculation halted while ongoing incident</td></tr>"
        << "<tr><td>2.17</td><td>Auto recording option added, for continous recording on startup</td></tr>"
        << "<tr><td>2.16</td><td>Added option for variable trace average calculation</td></tr>"
