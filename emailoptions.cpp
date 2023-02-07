@@ -32,6 +32,15 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     sbOpt1->setToolTip("Used to reduce number of emails, all incidents happening within this time will be sent at once\nA value of 0 means emails will be sent without delay");
     sbOpt1->setRange(0, 86400);
 
+    layout1->addRow(new QLabel("Microsoft Graph application id (BETA)"), leOpt7);
+    leOpt7->setToolTip("Application id used to identify with Microsoft Graph REST API. If set MS Graph API will be used instead of SMTP");
+
+    layout1->addRow(new QLabel("Microsoft Graph tenant id (BETA)"), leOpt5);
+    leOpt5->setToolTip("Identification used to send mail with Microsoft Graph REST API");
+
+    layout1->addRow(new QLabel("Microsoft Graph secret (BETA)"), leOpt6);
+    leOpt6->setToolTip("Secret used to identify with Microsoft Graph REST API");
+    leOpt6->setEchoMode(QLineEdit::Password);
 
     QGroupBox *groupBox2 = new QGroupBox("Email notifications configuration");
     QFormLayout *layout2 = new QFormLayout;
@@ -83,6 +92,10 @@ void EmailOptions::start()
     leOpt6->setText(config->getEmailSmtpPassword());
     leOpt3->setText(config->getEmailRecipients());
     leOpt4->setText(config->getEmailFromAddress());
+    leOpt5->setText(config->getEmailGraphTenantId());
+    leOpt6->setText(config->getEmailGraphSecret());
+    leOpt7->setText(config->getEmailGraphApplicationId());
+
     sbOpt1->setValue(config->getEmailMinTimeBetweenEmails());
     cbOpt1->setChecked(config->getEmailNotifyMeasurementDeviceHighLevel());
     cbOpt2->setChecked(config->getEmailNotifyMeasurementDeviceDisconnected());
@@ -108,6 +121,9 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailAddImages(cbOpt4->isChecked());
     config->setEmailDelayBeforeAddingImages(sbOpt3->value());
     config->setNotifyTruncateTime(sbOpt2->value());
+    config->setEmailGraphTenantId(leOpt5->text());
+    config->setEmailGraphSecret(leOpt6->text());
+    config->setEmailGraphApplicationId(leOpt7->text());
 
     dialog->close();
 }

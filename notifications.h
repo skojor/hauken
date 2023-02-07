@@ -16,6 +16,11 @@
 #include "config.h"
 #include "typedefs.h"
 #include "SimpleMail/SimpleMail"
+#include <QProcess>
+#include <QDir>
+#include <QDataStream>
+#include <QCoreApplication>
+#include <QStringList>
 
 /*
  * This class takes care of journalling the incident log, both shown on screen and written to the
@@ -62,6 +67,9 @@ private slots:
     void checkTruncate();
     void generateMsg(NOTIFY::TYPE t, const QString name, const QString string, QDateTime dt = QDateTime::currentDateTime());
     void retryEmails();
+    void authGraph();
+    void sendMailWithGraph();
+    void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
 
 signals:
     void showIncident(QString);
@@ -77,6 +85,10 @@ private:
     QList<SimpleMail::MimeInlineFile *> emailPictures;
     QList<SimpleMail::MimeMessage> emailBacklog;
     QString lastPicFilename;
+    bool graphAuthenticated = false;
+    QByteArray graphAccessToken;
+
+    QProcess *process;
 
     // config cache
     QString mailserverAddress, mailserverPort, smtpUser, smtpPass;
@@ -90,6 +102,9 @@ private:
     QByteArray tracePlot;
     QByteArray waterfall;
     int delayBetweenEmails;
+    bool msGraphConfigured = false, msGraphAuthorized = false;
+    QString msGraphTenantId, msGraphApplicationId, msGraphSecret;
+
 };
 
 #endif // NOTIFICATIONS_H

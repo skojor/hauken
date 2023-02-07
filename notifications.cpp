@@ -7,6 +7,19 @@ Notifications::Notifications(QObject *parent)
 
 void Notifications::start()
 {
+    process = new QProcess;
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Notifications::curlCallback);
+    process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
+    /*process->setStandardOutputFile(getWorkFolder() + "/.process.out");
+    process->setStandardErrorFile(getWorkFolder() + "/.process.err");*/
+    if (QSysInfo::kernelType().contains("win")) {
+        process->setProgram("curl.exe");
+    }
+
+    else if (QSysInfo::kernelType().contains("linux")) {
+        process->setProgram("curl");
+    }
+
     incidentLogfile = new QFile;
     truncateTimer = new QTimer;
     mailDelayTimer = new QTimer;
@@ -30,7 +43,6 @@ void Notifications::start()
     while (it.hasNext()){
         QFile(it.next()).remove();
     }
-
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -166,6 +178,8 @@ void Notifications::sendMail()
             emailBacklog.append(message);
             mailtext.clear();
 
+            // MS Graph code in here!
+
             SimpleMail::ServerReply *reply = server->sendMail(message);
             connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
             {
@@ -232,6 +246,14 @@ void Notifications::updSettings()
         if (incidentLogfile->isOpen()) incidentLogfile->close(); // in case user changes folder settings
     }
     delayBetweenEmails = getEmailMinTimeBetweenEmails();
+    msGraphTenantId = getEmailGraphTenantId();
+    msGraphApplicationId = getEmailGraphApplicationId();
+    msGraphSecret = getEmailGraphSecret();
+
+    if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
+        msGraphConfigured = true;
+        if (!graphAuthenticated) authGraph(); // no time to lose
+    }
 }
 
 void Notifications::retryEmails()
@@ -271,5 +293,52 @@ void Notifications::retryEmails()
         }
         if (!emailBacklog.isEmpty()) // still emails left in the queue, retry later
             retryEmailsTimer->start(900 * 1e3);
+    }
+}
+
+/*
+ *  curl -H x-www-form-urlencoded --data "grant_type=client_credentials&client_id=4dcd725c-3419-47a5-9cb6-b113c60e10bf&client_secret=du88Q~KtFpEBmA8uXkGMDMAEFVwIYkhYF9E_gaw3&scope=https://graph.microsoft.com/.default" https://login.microsoftonline.com/ad83e65c-03f6-4cfd-b799-47a2fafd7bce/oauth2/v2.0/token
+ *
+*/
+
+void Notifications::authGraph()
+{
+    graphAuthenticated = true;
+
+    //QString text = "client_id=" + getEmailGraphApplicationId() + "&client_secret=" + getEmailGraphSecret() + "&scope=https://graph.microsoft.com/.default";
+    QString url = "https://login.microsoftonline.com/" + getEmailGraphTenantId() + "/oauth2/v2.0/token";
+    QStringList l;
+    l << "-H" << "application/x-www-form-url-encoded"
+      //<< "--data" << text
+      << "--data" << "grant_type=client_credentials"
+      << "--data" << "client_id=" + getEmailGraphApplicationId()
+      << "--data" << "client_secret=" + getEmailGraphSecret()
+      << "--data" << "scope=https://graph.microsoft.com/.default"
+      << url;
+
+    process->setArguments(l);
+    //qDebug() << "Graph curl login debug:" << process->program() << process->arguments();
+    process->start();
+}
+
+void Notifications::sendMailWithGraph()
+{
+
+}
+
+void Notifications::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    if (exitCode != 0) {
+        qDebug() << "Graph auth failed, exit code" << exitCode << exitStatus;
+    }
+    else {
+        QList<QByteArray> output = process->readAllStandardOutput().split(':');
+        graphAccessToken.clear();
+
+        for (int i=0; i<output.size(); i++) {
+            if (i < output.size() - 1 && output.at(i).contains("access_token"))
+                graphAccessToken = output.at(i+1);
+        }
+        qDebug() << "graph access granted" << graphAccessToken;
     }
 }

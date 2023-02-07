@@ -127,7 +127,6 @@ public slots:
     bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
     void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b);}
 
-
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
     void setGnssSerialPort1Name(QString s) { settings->setValue("gnss/SerialPort1Name", s); emit settingsUpdated();}
@@ -142,7 +141,6 @@ public slots:
     bool getGnssSerialPort1TriggerRecording() { return settings->value("gnss/SerialPort1TriggerRecording", false).toBool();}
     void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1TriggerRecording", b); emit settingsUpdated();}
 
-
     QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2Name").toString();}
     void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2Name", s); emit settingsUpdated();}
     QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2Baudrate", "4800").toString();}
@@ -155,7 +153,6 @@ public slots:
     void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2MonitorAgc", b); emit settingsUpdated();}
     bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
     void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); emit settingsUpdated();}
-
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
@@ -184,6 +181,12 @@ public slots:
     void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b); emit settingsUpdated();}
     int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
     void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val); emit settingsUpdated();}
+    QString getEmailGraphApplicationId() { return settings->value("email/graphApplicationId", "").toString(); }
+    void setEmailGraphApplicationId(QString s) { settings->setValue("email/graphApplicationId", s); emit settingsUpdated();}
+    QString getEmailGraphTenantId() { return settings->value("email/graphTenantId", "").toString(); }
+    void setEmailGraphTenantId(QString s) { settings->setValue("email/graphTenantId", s); emit settingsUpdated();}
+    QString getEmailGraphSecret() { return simpleEncr(settings->value("email/graphSecret", "").toByteArray());}
+    void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.toLocal8Bit())); emit settingsUpdated();}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
