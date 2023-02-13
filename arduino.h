@@ -39,11 +39,15 @@ public:
         setArduinoWindowState(wdg->saveGeometry());
         wdg->close();
     }
+    void watchdogOn();
+    void watchdogOff();
+    bool isWatchdogActive() { return stateWatchdog; }
 
 private slots:
     void handleBuffer();
     void relayBtnOnPressed();
     void relayBtnOffPressed();
+    void resetWatchdog();
 
 private:
     QWidget *wdg = new QWidget;
@@ -57,8 +61,15 @@ private:
     QLabel *relayStateText = new QLabel; //(getArduinoRelayOffText());
     QPushButton *relayOnBtn = new QPushButton;
     QPushButton *relayOffBtn = new QPushButton;
+    QLabel *watchdogText = new QLabel;
+    QPushButton *btnWatchdogOn = new QPushButton("Activate watchdog");
+    QPushButton *btnWatchdogOff = new QPushButton("Deactivate watchdog");
 
-    bool tempRelayActive = false, dht20Active = false;
+    bool tempRelayActive = false, dht20Active = false, dht20andRelayActive = false;
+    int secondsLeft;
+
+    bool stateWatchdog = false;
+    QTimer *watchdogTimer = new QTimer;
 };
 
 #endif // ARDUINO_H

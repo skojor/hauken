@@ -252,7 +252,7 @@ void Notifications::updSettings()
 
     if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
         msGraphConfigured = true;
-        if (!graphAuthenticated) authGraph(); // no time to lose
+        //if (!graphAuthenticated) authGraph(); // no time to lose
     }
 }
 

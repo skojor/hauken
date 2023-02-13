@@ -77,6 +77,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    if (arduinoPtr->isWatchdogActive()) arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
