@@ -20,6 +20,7 @@
 #include <QPushButton>
 #include "config.h"
 #include "typedefs.h"
+#include <QProcess>
 
 /*
  *  Class connecting to an Arduino via serial port.
@@ -39,6 +40,8 @@ public:
         setArduinoWindowState(wdg->saveGeometry());
         wdg->close();
     }
+    void updSettings();
+
     void watchdogOn();
     void watchdogOff();
     bool isWatchdogActive() { return stateWatchdog; }
@@ -48,6 +51,8 @@ private slots:
     void relayBtnOnPressed();
     void relayBtnOffPressed();
     void resetWatchdog();
+    void ping();
+    void pong(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
     QWidget *wdg = new QWidget;
@@ -70,6 +75,13 @@ private:
 
     bool stateWatchdog = false;
     QTimer *watchdogTimer = new QTimer;
+    QTimer *pingTimer = new QTimer;
+    QProcess *pingProcess = new QProcess;
+    bool pingActivated = false, lastPingValid = false;
+
+    // Config cache
+    QString pingAddress;
+    int pingInterval;
 };
 
 #endif // ARDUINO_H

@@ -200,23 +200,27 @@ public slots:
 
     // Relay control (and temp) via serial (Arduino custom)
     QString getArduinoSerialName() { return settings->value("arduino/serialName", "").toString();}
-    void setArduinoSerialName(QString s) { settings->setValue("arduino/serialName", s);}
+    void setArduinoSerialName(QString s) { settings->setValue("arduino/serialName", s); emit settingsUpdated();}
     QString getArduinoBaudrate() { return settings->value("arduino/baudrate").toString();}
-    void setArduinoBaudrate(QString s) { settings->setValue("arduino/baudrate", s);}
+    void setArduinoBaudrate(QString s) { settings->setValue("arduino/baudrate", s); emit settingsUpdated();}
     bool getArduinoReadTemperatureAndRelay() { return settings->value("arduino/temperature", false).toBool();}
-    void setArduinoReadTemperatureAndRelay(bool b) { settings->setValue("arduino/temperature", b);}
+    void setArduinoReadTemperatureAndRelay(bool b) { settings->setValue("arduino/temperature", b); emit settingsUpdated();}
     bool getArduinoReadDHT20() { return settings->value("arduino/dht20", false).toBool();}
-    void setArduinoReadDHT20(bool b) { settings->setValue("arduino/dht20", b);}
+    void setArduinoReadDHT20(bool b) { settings->setValue("arduino/dht20", b); emit settingsUpdated();}
     bool getArduinoEnable() { return settings->value("arduino/enable", false).toBool();}
-    void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b);}
+    void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b); emit settingsUpdated();}
     QString getArduinoRelayOnText() { return settings->value("arduino/relayOnText", "on").toString(); }
-    void setArduinoRelayOnText(QString s) { settings->setValue("arduino/relayOnText", s);}
+    void setArduinoRelayOnText(QString s) { settings->setValue("arduino/relayOnText", s); emit settingsUpdated();}
     QString getArduinoRelayOffText() { return settings->value("arduino/relayOffText", "off").toString(); }
-    void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s);}
+    void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s); emit settingsUpdated();}
     bool getArduinoDHT20andWatchdog() { return settings->value("arduino/dht20Watchdog", false).toBool();}
-    void setArduinoDHT20andWatchdog(bool b) { settings->setValue("arduino/dht20Watchdog", b);}
+    void setArduinoDHT20andWatchdog(bool b) { settings->setValue("arduino/dht20Watchdog", b); emit settingsUpdated();}
     bool getArduinoActivateWatchdog() { return settings->value("arduino/activateWatchdog", false).toBool();}
-    void setArduinoActivateWatchdog(bool b) { settings->setValue("arduino/activateWatchdog", b);}
+    void setArduinoActivateWatchdog(bool b) { settings->setValue("arduino/activateWatchdog", b); emit settingsUpdated();}
+    QString getArduinoPingAddress() { return settings->value("arduino/pingAddress", "").toString();}
+    void setArduinoPingAddress(QString s) { settings->setValue("arduino/pingAddress", s); emit settingsUpdated();}
+    int getArduinoPingInterval() { return settings->value("arduino/pingInterval", 60).toInt();}
+    void setArduinoPingInterval(int i) { settings->setValue("arduino/pingInterval", i); emit settingsUpdated();}
 
     // AutoRecorder options
     bool getAutoRecorderActivate() { return settings->value("autorecorder/activate", false).toBool();}

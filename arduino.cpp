@@ -11,8 +11,11 @@ Arduino::Arduino(QObject *parent)
         this->handleBuffer();
     });
 
-    connect (watchdogTimer, &QTimer::timeout, this, &Arduino::resetWatchdog);
+    connect(watchdogTimer, &QTimer::timeout, this, &Arduino::resetWatchdog);
+    connect(pingTimer, &QTimer::timeout, this, &Arduino::ping);
+    connect(pingProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Arduino::pong);
 
+    updSettings();
     start();
 }
 
@@ -25,10 +28,6 @@ void Arduino::start()
 
     relayOnBtn->setText(getArduinoRelayOnText());
     relayOffBtn->setText(getArduinoRelayOffText());
-
-    tempRelayActive = getArduinoReadTemperatureAndRelay();
-    dht20Active = getArduinoReadDHT20();
-    dht20andRelayActive = getArduinoDHT20andWatchdog();
 
     connect(relayOnBtn, &QPushButton::clicked, this, &Arduino::relayBtnOnPressed);
     connect(relayOffBtn, &QPushButton::clicked, this, &Arduino::relayBtnOffPressed);
@@ -169,7 +168,7 @@ void Arduino::relayBtnOffPressed()
 
 void Arduino::resetWatchdog()
 {
-    arduino->write("1");
+    if (pingTimer->isActive() && lastPingValid) arduino->write("1");
 }
 
 void Arduino::watchdogOn()
@@ -180,4 +179,47 @@ void Arduino::watchdogOn()
 void Arduino::watchdogOff()
 {
     arduino->write("w");
+}
+
+void Arduino::updSettings()
+{
+    pingAddress = getArduinoPingAddress();
+    pingInterval = getArduinoPingInterval();
+    tempRelayActive = getArduinoReadTemperatureAndRelay();
+    dht20Active = getArduinoReadDHT20();
+    dht20andRelayActive = getArduinoDHT20andWatchdog();
+
+    if (!pingAddress.isEmpty() && pingInterval > 0) {
+        pingTimer->start(pingInterval * 1e3);
+    }
+    else if (pingAddress.isEmpty() || pingInterval <= 0) pingTimer->stop();
+}
+
+void Arduino::ping()
+{
+    qDebug() << "ping";
+    if (QSysInfo::kernelType().contains("win")) {
+        pingProcess->setProgram("ping.exe");
+        pingProcess->setArguments(QStringList() << "-n" << "1" << pingAddress);
+    }
+
+    else if (QSysInfo::kernelType().contains("linux")) {
+        pingProcess->setProgram("ping");
+        pingProcess->setArguments(QStringList() << "-c" << "1" << pingAddress);
+    }
+    pingProcess->start();
+}
+
+void Arduino::pong(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    (void)exitStatus;
+
+    if (exitCode != 0) {
+        qDebug() << "No pong";
+        lastPingValid = false;
+    }
+    else {
+        qDebug() << "pong";
+        lastPingValid = true;
+    }
 }

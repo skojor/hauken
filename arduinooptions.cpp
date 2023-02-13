@@ -34,6 +34,12 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     cbOpt5->setToolTip("This will activate the Arduino watchdog on program start, and periodically send a null string to the serial line to reset the watchdog.\n" \
                        "If the program crashes the watchdog will eventually switch the relay ON (thus disconnect the load on NC), and switch relay back OFF.\n");
 
+    mainLayout->addRow(new QLabel("Watchdog ping address"), leOpt3);
+    leOpt3->setToolTip("If set the watchdog will be reset only if the given address is pingable");
+
+    mainLayout->addRow(new QLabel("Seconds between ping attempts"), sbOpt1);
+    sbOpt1->setToolTip("How long to wait between each ping attempt");
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &ArduinoOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -64,9 +70,13 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
         this->cbOpt1->setChecked(false);
         this->cbOpt3->setChecked(false);
         this->cbOpt5->setEnabled(b);
+        this->leOpt3->setEnabled(b);
+        this->sbOpt1->setEnabled(b);
         if (!b && cbOpt5->isChecked()) {
             this->cbOpt5->setChecked(false);
             this->cbOpt5->setEnabled(false);
+            this->leOpt3->setEnabled(false);
+            this->sbOpt1->setEnabled(false);
         }
     });
 }
@@ -92,6 +102,10 @@ void ArduinoOptions::start()
 
     cbOpt5->setEnabled(cbOpt4->isChecked());
     cbOpt5->setChecked(config->getArduinoActivateWatchdog());
+
+    leOpt3->setText(config->getArduinoPingAddress());
+    sbOpt1->setValue(config->getArduinoPingInterval());
+
     dialog->exec();
 }
 
@@ -106,5 +120,8 @@ void ArduinoOptions::saveCurrentSettings()
     config->setArduinoRelayOnText(leOpt1->text());
     config->setArduinoRelayOffText(leOpt2->text());
     config->setArduinoActivateWatchdog(cbOpt5->isChecked());
+    config->setArduinoPingAddress(leOpt3->text());
+    config->setArduinoPingInterval(sbOpt1->value());
+
     dialog->close();
 }

@@ -548,6 +548,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
     connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
+    connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
