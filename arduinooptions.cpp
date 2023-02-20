@@ -26,11 +26,11 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     cbOpt3->setToolTip("Enable only if DHT20 sensor is connected to the Arduino");
 
     mainLayout->addRow(cbOpt4);
-    cbOpt4->setText("Arduino with temperature and humidity sensor (DHT20) and watchdog relay function");
-    cbOpt4->setToolTip("Enable only if Arduino is connected to DHT20 and relay (see also activate watchdog below");
+    cbOpt4->setText("Arduino with Watchdog relay function");
+    cbOpt4->setToolTip("Enable only if Arduino is connected to a relay watchdog function (see also activate watchdog below");
 
     mainLayout->addRow(cbOpt5);
-    cbOpt5->setText("Activate Arduino watchdog function (REQUIRES custom Arduino SW!)");
+    cbOpt5->setText("Activate Arduino watchdog function");
     cbOpt5->setToolTip("This will activate the Arduino watchdog on program start, and periodically send a null string to the serial line to reset the watchdog.\n" \
                        "If the program crashes the watchdog will eventually switch the relay ON (thus disconnect the load on NC), and switch relay back OFF.\n");
 
@@ -60,7 +60,7 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     });
     connect(cbOpt3, &QCheckBox::clicked, this, [this](bool b) {
         this->cbOpt1->setChecked(false);
-        this->cbOpt4->setChecked(false);
+        //this->cbOpt4->setChecked(false);
         if (b) {
             this->cbOpt5->setChecked(false);
             this->cbOpt5->setDisabled(true);
@@ -68,15 +68,15 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     });
     connect(cbOpt4, &QCheckBox::clicked, this, [this](bool b) {
         this->cbOpt1->setChecked(false);
-        this->cbOpt3->setChecked(false);
+        //this->cbOpt3->setChecked(false);
         this->cbOpt5->setEnabled(b);
-        this->leOpt3->setEnabled(b);
+        //this->leOpt3->setEnabled(b);
         this->sbOpt1->setEnabled(b);
         if (!b && cbOpt5->isChecked()) {
             this->cbOpt5->setChecked(false);
             this->cbOpt5->setEnabled(false);
-            this->leOpt3->setEnabled(false);
-            this->sbOpt1->setEnabled(false);
+            //this->leOpt3->setEnabled(false);
+            //this->sbOpt1->setEnabled(false);
         }
     });
 }
@@ -96,7 +96,7 @@ void ArduinoOptions::start()
     cbOpt1->setChecked(config->getArduinoReadTemperatureAndRelay());
     cbOpt2->setChecked(config->getArduinoEnable());
     cbOpt3->setChecked(config->getArduinoReadDHT20());
-    cbOpt4->setChecked(config->getArduinoDHT20andWatchdog());
+    cbOpt4->setChecked(config->getArduinoWatchdogRelay());
     leOpt1->setText(config->getArduinoRelayOnText());
     leOpt2->setText(config->getArduinoRelayOffText());
 
@@ -116,7 +116,7 @@ void ArduinoOptions::saveCurrentSettings()
     config->setArduinoReadTemperatureAndRelay(cbOpt1->isChecked());
     config->setArduinoEnable(cbOpt2->isChecked());
     config->setArduinoReadDHT20(cbOpt3->isChecked());
-    config->setArduinoDHT20andWatchdog(cbOpt4->isChecked());
+    config->setArduinoWatchdogRelay(cbOpt4->isChecked());
     config->setArduinoRelayOnText(leOpt1->text());
     config->setArduinoRelayOffText(leOpt2->text());
     config->setArduinoActivateWatchdog(cbOpt5->isChecked());

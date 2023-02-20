@@ -69,8 +69,11 @@ private:
     QLabel *watchdogText = new QLabel;
     QPushButton *btnWatchdogOn = new QPushButton("Activate watchdog");
     QPushButton *btnWatchdogOff = new QPushButton("Deactivate watchdog");
+    QLabel *tempLabel = new QLabel("Temperature");
+    QLabel *humLabel = new QLabel("Humidity");
+    QLabel *pingStateText = new QLabel;
 
-    bool tempRelayActive = false, dht20Active = false, dht20andRelayActive = false;
+    bool tempRelayActive = false, dht20Active = false, watchdogRelayActive = false;
     int secondsLeft;
 
     bool stateWatchdog = false;

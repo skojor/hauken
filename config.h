@@ -213,8 +213,8 @@ public slots:
     void setArduinoRelayOnText(QString s) { settings->setValue("arduino/relayOnText", s); emit settingsUpdated();}
     QString getArduinoRelayOffText() { return settings->value("arduino/relayOffText", "off").toString(); }
     void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s); emit settingsUpdated();}
-    bool getArduinoDHT20andWatchdog() { return settings->value("arduino/dht20Watchdog", false).toBool();}
-    void setArduinoDHT20andWatchdog(bool b) { settings->setValue("arduino/dht20Watchdog", b); emit settingsUpdated();}
+    bool getArduinoWatchdogRelay() { return settings->value("arduino/watchdogRelay", false).toBool();}
+    void setArduinoWatchdogRelay(bool b) { settings->setValue("arduino/watchdogRelay", b); emit settingsUpdated();}
     bool getArduinoActivateWatchdog() { return settings->value("arduino/activateWatchdog", false).toBool();}
     void setArduinoActivateWatchdog(bool b) { settings->setValue("arduino/activateWatchdog", b); emit settingsUpdated();}
     QString getArduinoPingAddress() { return settings->value("arduino/pingAddress", "").toString();}

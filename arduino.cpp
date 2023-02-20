@@ -37,10 +37,11 @@ void Arduino::start()
     wdg->resize(250, 150);
     wdg->setWindowTitle("Arduino interface");
     QGridLayout *mainLayout = new QGridLayout;
-    mainLayout->addWidget(new QLabel("Temperature"), 0, 0);
+
+    mainLayout->addWidget(tempLabel, 0, 0);
     mainLayout->addWidget(tempBox, 0, 1);
     if (dht20Active) {
-        mainLayout->addWidget(new QLabel("Relative humidity"), 1, 0);
+        mainLayout->addWidget(humLabel, 1, 0);
         mainLayout->addWidget(humidityBox, 1, 1);
     }
     else if (tempRelayActive) {
@@ -49,13 +50,23 @@ void Arduino::start()
         mainLayout->addWidget(relayOnBtn, 3, 0);
         mainLayout->addWidget(relayOffBtn, 3, 1);
     }
-    else if (dht20andRelayActive) {
-        mainLayout->addWidget(new QLabel("Relative humidity"), 1, 0);
+
+    if (watchdogRelayActive) {
+        mainLayout->addWidget(humLabel, 1, 0);
         mainLayout->addWidget(humidityBox, 1, 1);
+        if (!dht20Active) {
+            tempLabel->setDisabled(true);
+            humLabel->setDisabled(true);
+        }
         mainLayout->addWidget(new QLabel("Watchdog state"), 2, 0);
         mainLayout->addWidget(watchdogText, 2, 1);
         mainLayout->addWidget(btnWatchdogOn, 3, 0);
         mainLayout->addWidget(btnWatchdogOff, 3, 1);
+        if (pingActivated) {
+            mainLayout->addWidget(new QLabel("Ping state"), 4, 0);
+            mainLayout->addWidget(pingStateText, 4, 1);
+            pingStateText->setText("Waiting for first ping");
+        }
     }
     wdg->setLayout(mainLayout);
 
@@ -67,7 +78,7 @@ void Arduino::start()
     if (arduino->isOpen()) {
         wdg->show();
     }
-    if (dht20andRelayActive && getArduinoActivateWatchdog()) {
+    if (watchdogRelayActive && getArduinoActivateWatchdog()) {
         watchdogTimer->start(5000); // reset watchdog every 5 sec
     }
 }
@@ -114,7 +125,7 @@ void Arduino::handleBuffer()
             if (relayState) relayStateText->setText(getArduinoRelayOnText());
             else relayStateText->setText(getArduinoRelayOffText());
         }
-        else if (dht20Active && list.size() == 5) {
+        else if (dht20Active && !watchdogRelayActive && list.size() == 5) {
             bool ok = false;
             float tmp = list.at(2).toFloat(&ok);
             if (ok) temperature = tmp;
@@ -123,14 +134,16 @@ void Arduino::handleBuffer()
             tempBox->setText(QString::number(temperature) + " °C");
             humidityBox->setText(QString::number(humidity) + " %");
         }
-        else if (dht20andRelayActive && list.size() > 4 && list.last().contains("DHT20&Watchdog")) {
+        else if (watchdogRelayActive && list.size() > 4 && list.last().contains("DHT20&Watchdog")) {
             bool ok = false;
             float tmp = list.at(0).toFloat(&ok);
             if (ok) temperature = tmp;
             tmp = list.at(1).toFloat(&ok);
             if (ok) humidity = tmp;
-            tempBox->setText(QString::number(temperature) + " °C");
-            humidityBox->setText(QString::number(humidity) + " %");
+            if (dht20Active) {
+                tempBox->setText(QString::number(temperature) + " °C");
+                humidityBox->setText(QString::number(humidity) + " %");
+            }
             int t = list.at(2).toInt(&ok);
             if (ok && t == 1) stateWatchdog = true;
             else if (ok) stateWatchdog = false;
@@ -174,11 +187,17 @@ void Arduino::resetWatchdog()
 void Arduino::watchdogOn()
 {
     arduino->write("W");
+    setArduinoActivateWatchdog(true);
+    watchdogTimer->start(5000);
+    if (pingActivated) pingTimer->start(pingInterval * 1e3);
 }
 
 void Arduino::watchdogOff()
 {
     arduino->write("w");
+    setArduinoActivateWatchdog(false);
+    pingTimer->stop();
+    watchdogTimer->stop();
 }
 
 void Arduino::updSettings()
@@ -187,17 +206,17 @@ void Arduino::updSettings()
     pingInterval = getArduinoPingInterval();
     tempRelayActive = getArduinoReadTemperatureAndRelay();
     dht20Active = getArduinoReadDHT20();
-    dht20andRelayActive = getArduinoDHT20andWatchdog();
+    watchdogRelayActive  = getArduinoWatchdogRelay();
 
     if (!pingAddress.isEmpty() && pingInterval > 0) {
         pingTimer->start(pingInterval * 1e3);
+        pingActivated = true;
     }
     else if (pingAddress.isEmpty() || pingInterval <= 0) pingTimer->stop();
 }
 
 void Arduino::ping()
 {
-    qDebug() << "ping";
     if (QSysInfo::kernelType().contains("win")) {
         pingProcess->setProgram("ping.exe");
         pingProcess->setArguments(QStringList() << "-n" << "1" << pingAddress);
@@ -215,11 +234,11 @@ void Arduino::pong(int exitCode, QProcess::ExitStatus exitStatus)
     (void)exitStatus;
 
     if (exitCode != 0) {
-        qDebug() << "No pong";
         lastPingValid = false;
+        pingStateText->setText("Last ping failed (" + pingAddress + ")");
     }
     else {
-        qDebug() << "pong";
         lastPingValid = true;
+        pingStateText->setText("Last ping ok at " + QDateTime::currentDateTime().toString("hh:mm:ss"));
     }
 }
