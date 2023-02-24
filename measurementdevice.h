@@ -45,6 +45,7 @@ signals:
     void positionUpdate(bool b, double lat, double lng);
     void deviceStreamTimeout(); // signal to stop eventual recording
     void displayGnssData(QString, int, bool);
+    void updGnssData(GnssData &);
 
 public slots:
     void start();

@@ -409,6 +409,9 @@ public:
     QStringList pscanResolutions;
     QStringList fftModes;
     double latitude = 0, longitude = 0, altitude = 0, dop = 0;
+    float sog = 0, cog = 0;
+    QDateTime gnssTimestamp;
+    int sats = 0;
     bool positionValid = false;
 };
 

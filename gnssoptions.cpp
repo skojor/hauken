@@ -66,8 +66,21 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
 
     gnss2GroupBox->setLayout(gnss2Layout);
 
+    QGroupBox *gnss3GroupBox = new QGroupBox("Use instrument GNSS receiver");
+    QFormLayout *gnss3Layout = new QFormLayout;
+    gnss3GroupBox->setLayout(gnss3Layout);
+
+    gnss3Layout->addRow(cbOpt11);
+    cbOpt11->setText("Use instrumentGNSS to validate position/time offset");
+    cbOpt11->setToolTip("Read position and time data from supported instruments and compare with position/time offsets.\n" \
+                        "Currently supported instruments are R&S PR100, PR200, EM100, EM200, EB500, and Ettus E310");
+    gnss3Layout->addRow((cbOpt12));
+    cbOpt12->setText("Detected incidents triggers spectrum recording");
+    cbOpt12->setToolTip("Any incidents detected will cause a recording to be started, and uploaded if configured");
+
     mainLayout->addWidget(gnss1GroupBox);
     mainLayout->addWidget(gnss2GroupBox);
+    mainLayout->addWidget(gnss3GroupBox);
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &GnssOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -97,6 +110,9 @@ void GnssOptions::start()
     cbOpt7->setChecked(config->getGnssSerialPort2LogToFile());
     cbOpt8->setChecked(config->getGnssSerialPort2MonitorAgc());
     cbOpt10->setChecked(config->getGnssSerialPort2TriggerRecording());
+    cbOpt11->setChecked(config->getGnssUseInstrumentGnss());
+    cbOpt12->setChecked(config->getGnssInstrumentGnssTriggerRecording());
+
     dialog->exec();
 }
 
@@ -115,6 +131,8 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssSerialPort2MonitorAgc(cbOpt8->isChecked());
     config->setGnssSerialPort2Name(comboOpt3->currentText());
     config->setGnssSerialPort2TriggerRecording(cbOpt10->isChecked());
+    config->setGnssUseInstrumentGnss(cbOpt11->isChecked());
+    config->setGnssInstrumentGnssTriggerRecording(cbOpt12->isChecked());
 
     dialog->close();
 }

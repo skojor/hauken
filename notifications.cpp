@@ -43,6 +43,7 @@ void Notifications::start()
     while (it.hasNext()){
         QFile(it.next()).remove();
     }
+    if (msGraphConfigured) authGraph();
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -252,7 +253,6 @@ void Notifications::updSettings()
 
     if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
         msGraphConfigured = true;
-        //if (!graphAuthenticated) authGraph(); // no time to lose
     }
 }
 

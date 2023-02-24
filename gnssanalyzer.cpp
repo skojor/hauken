@@ -14,7 +14,6 @@ void GnssAnalyzer::getData(GnssData &data)
     mutex.lock();
     calcAvgs(data);
     analyze(data);
-
     gnssData = data; // keep a local copy for display purposes
     mutex.unlock();
 }
@@ -43,17 +42,19 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
 
 void GnssAnalyzer::analyze(GnssData &data)
 {
-    data.posOffset = distanceInMeters(data);
-    data.altOffset = abs(ownAltitude - data.altitude);
-    data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
-    data.cnoOffset = abs(data.cno - data.avgCno);
-    data.agcOffset = abs(data.agc - data.avgAgc);
-
+        data.posOffset = distanceInMeters(data);
+        data.altOffset = abs(ownAltitude - data.altitude);
+        data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
+        if (data.id < 3) {
+        data.cnoOffset = abs(data.cno - data.avgCno);
+        data.agcOffset = abs(data.agc - data.avgAgc);
+        checkCnoOffset(data);
+        if (checkAgc) checkAgcOffset(data);
+    }
     checkPosOffset(data);
     checkAltOffset(data);
     checkTimeOffset(data);
-    checkCnoOffset(data);
-    if (checkAgc) checkAgcOffset(data);
+
 }
 
 double GnssAnalyzer::arcInRadians(GnssData &data)
@@ -88,9 +89,12 @@ void GnssAnalyzer::updSettings()
         checkAgc = getGnssSerialPort1MonitorAgc();
         logToFile = getGnssSerialPort1TriggerRecording();
     }
-    else {
+    else if (gnssData.id == 2) {
         checkAgc = getGnssSerialPort2MonitorAgc();
         logToFile = getGnssSerialPort2TriggerRecording();
+    }
+    else if (gnssData.id == 3) {
+        logToFile = getGnssInstrumentGnssTriggerRecording();
     }
 }
 
@@ -108,13 +112,16 @@ void GnssAnalyzer::updDisplay()
         ts.setRealNumberPrecision(1);
         ts << "<tr><td>Pos. offset</td><td align=right>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << "</td><td>m</td></tr>"
            << "<tr><td>Alt. offset</td><td align=right>" << gnssData.altOffset << "</td><td>m</td></tr>"
-           << "<tr><td>Time offset</td><td align=right>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << "</td><td>ms</td></tr>"
-           << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
+           << "<tr><td>Time offset</td><td align=right>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << "</td><td>ms</td></tr>";
+        if (gnssData.id != 3)
+           ts << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
         if (gnssData.agc > 0)
             ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>m</td></tr>";
 
-        ts << "<tr><td>Sats tracked</td><td align=right>" << gnssData.satsTracked << "</td></tr>"
-           << "<tr><td>GNSS type</td><td align=right>" << gnssData.gnssType << "</td></tr>"
+        ts << "<tr><td>Sats tracked</td><td align=right>" << gnssData.satsTracked;
+        if (gnssData.satsTracked == -1) ts << " (man.pos!)";
+        ts << "</td><td></td></tr>";
+        ts << "<tr><td>GNSS type</td><td align=right>" << gnssData.gnssType << "</td></tr>"
            << "</font></table>";
         emit displayGnssData(out, gnssData.id, gnssData.posValid);
     }

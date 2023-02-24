@@ -152,6 +152,7 @@ private:
     GnssDevice *gnssDevice2 = new GnssDevice(this, 2);
     GnssAnalyzer *gnssAnalyzer1 = new GnssAnalyzer(this, 1);
     GnssAnalyzer *gnssAnalyzer2 = new GnssAnalyzer(this, 2);
+    GnssAnalyzer *gnssAnalyzer3 = new GnssAnalyzer(this, 3);
 
     QAction *newAct;
     QAction *openAct;

@@ -693,13 +693,17 @@ void MeasurementDevice::updSettings()
     if (useUdpStream != !config->getInstrUseTcpDatastream())
         useUdpStream = !config->getInstrUseTcpDatastream();
 
-    if (config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument"))  {// only ask device for position if it is needed
-        if (!askForPosition) restartStream(); // user changed this live, lets reconnect streams
-        askForPosition = true;
+    if ((config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument")) || config->getGnssUseInstrumentGnss())  {// only ask device for position if it is needed
+        if (!askForPosition) {
+            askForPosition = true;
+            restartStream(); // user changed this live, lets reconnect streams
+        }
     }
     else {
-        if (askForPosition) restartStream(); // user changed this live, lets reconnect streams
-        askForPosition = false;
+        if (askForPosition) {
+            askForPosition = false;
+            restartStream(); // user changed this live, lets reconnect streams
+        }
     }
 }
 
@@ -728,5 +732,19 @@ void MeasurementDevice::updGnssDisplay()
     ts << "<tr><td>Altitude</td><td align=right>" << devicePtr->altitude / 100 << "</td></tr>"
        << "<tr><td>DOP</td><td align=right>" << devicePtr->dop << "</td></tr>"
        << "</font></table>";
-    if (connected && config->getSdefAddPosition()) emit displayGnssData(out, 3, devicePtr->positionValid);
+    if (connected && config->getSdefAddPosition() && !config->getGnssUseInstrumentGnss()) emit displayGnssData(out, 3, devicePtr->positionValid);
+    else if (connected && config->getGnssUseInstrumentGnss()) {
+        GnssData data;
+        data.id = 3; // 3 = instrumentGnss
+        data.inUse = true;
+        data.gnssType = devicePtr->id;
+        data.posValid = devicePtr->positionValid;
+        data.latitude = devicePtr->latitude;
+        data.longitude = devicePtr->longitude;
+        data.altitude = (float)devicePtr->altitude / 100.0;
+        data.hdop = devicePtr->dop;
+        data.timestamp = devicePtr->gnssTimestamp;
+        data.satsTracked = devicePtr->sats;
+        emit updGnssData(data);
+    }
 }

@@ -181,7 +181,7 @@ void Arduino::relayBtnOffPressed()
 
 void Arduino::resetWatchdog()
 {
-    if (pingTimer->isActive() && lastPingValid) arduino->write("1");
+    if (pingTimer->isActive() && lastPingValid && arduino->isOpen()) arduino->write("1");
 }
 
 void Arduino::watchdogOn()

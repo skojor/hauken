@@ -545,6 +545,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssDevice2, &GnssDevice::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer1, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer2, &GnssAnalyzer::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer3, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
     connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
@@ -581,6 +582,10 @@ void MainWindow::setSignals()
     connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
+    connect(measurementDevice, &MeasurementDevice::updGnssData, gnssAnalyzer3, &GnssAnalyzer::getData);
+    connect(gnssAnalyzer3, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssAnalyzer3, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(gnssAnalyzer3, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
     {
@@ -796,6 +801,8 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.21</td><td>EM200 GNSS suppported, added instrumentGNSS monitoring/recording</td></tr>"
+       << "<tr><td>2.20</td><td>Added Arduino watchdog</td></tr>"
        << "<tr><td>2.19</td><td>ESMB UDP bugfix, other minor fixes</td></tr>"
        << "<tr><td>2.18</td><td>Average calculation halted while ongoing incident</td></tr>"
        << "<tr><td>2.17</td><td>Auto recording option added, for continous recording on startup</td></tr>"

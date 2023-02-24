@@ -154,6 +154,11 @@ public slots:
     bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
     void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); emit settingsUpdated();}
 
+    bool getGnssUseInstrumentGnss() { return settings->value("gnss/UseInstrumentGnss", false).toBool();}
+    void setGnssUseInstrumentGnss(bool b) { settings->setValue("gnss/UseInstrumentGnss", b); emit settingsUpdated();}
+    bool getGnssInstrumentGnssTriggerRecording() { return settings->value("gnss/InstrumentGnssTriggerRecording", false).toBool();}
+    void setGnssInstrumentGnssTriggerRecording(bool b) { settings->setValue("gnss/InstrumentGnssTriggerRecording", b); emit settingsUpdated();}
+
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
     void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s); emit settingsUpdated();}

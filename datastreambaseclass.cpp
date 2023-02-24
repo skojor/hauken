@@ -19,10 +19,13 @@ DataStreamBaseClass::DataStreamBaseClass(QObject *parent)
 
 void DataStreamBaseClass::processData(const QByteArray &buf)
 {
-    if (checkHeader(buf) && checkOptHeader(buf) && attrHeader.tag != (int)Instrument::Tags::GPSC) // checks passed, let's fill up our trace vector
-        fillFft(buf);
-    else if (attrHeader.tag == (int)Instrument::Tags::GPSC)
+    if (checkHeader(buf) && checkOptHeader(buf)) {
+        if (attrHeader.tag == (int)Instrument::Tags::GPSC || genAttrAdvHeader.tag == (int)Instrument::Tags::GPSC)
         readGpscompassData(buf);
+    else
+        fillFft(buf);
+    }
+    tcpBuffer.clear();
 }
 
 bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the initial bytes of every packet and does a quick sanity check of the data
@@ -53,7 +56,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
     else if (devicePtr->advProtocol)
         readAdvHeader(ds);
 
-    if (devicePtr->mode == Instrument::Mode::PSCAN && attrHeader.tag != (int)Instrument::Tags::GPSC) { // skip this for gpsc
+    if (devicePtr->mode == Instrument::Mode::PSCAN && (attrHeader.tag != (int)Instrument::Tags::GPSC && genAttrAdvHeader.tag != (int)Instrument::Tags::GPSC)) { // skip this for gpsc
         quint64 startFreq = 0, stopFreq = 0;
         quint32 stepFreq = 0;
 
@@ -76,7 +79,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
                 stepFreq != devicePtr->pscanResolution) {
             qDebug() << "Freq/resolution mismatch" << (long)startFreq - (long)devicePtr->pscanStartFrequency
                      << (long)stopFreq - (long)devicePtr->pscanStopFrequency
-                     << stepFreq << devicePtr->pscanResolution;
+                     << stepFreq << devicePtr->pscanResolution << genAttrAdvHeader.tag;
             errorCtr++;
 
             if (!errorHandleSent && errorCtr > 100) {
@@ -92,7 +95,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
         }
     }
 
-    else if (devicePtr->mode == Instrument::Mode::FFM && attrHeader.tag != (int)Instrument::Tags::GPSC) {
+    else if (devicePtr->mode == Instrument::Mode::FFM && attrHeader.tag != (int)Instrument::Tags::GPSC && genAttrAdvHeader.tag != (int)Instrument::Tags::GPSC) {
         readIfpanOptHeader(ds);
         quint64 ffmFreq = (quint64)optHeaderIfPanEb500.freqHigh << 32 | optHeaderIfPanEb500.freqLow;
         if (ffmFreq != devicePtr->ffmCenterFrequency ||
@@ -211,8 +214,8 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
         }
     }
 
-    else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag;
-    if (tcpBuffer.size() > 0) tcpBuffer.clear();
+    else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag << genAttrAdvHeader.tag;
+    //if (tcpBuffer.size() > 0) tcpBuffer.clear();
 }
 
 void DataStreamBaseClass::calcBytesPerSecond()
@@ -239,13 +242,19 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
     qint16 gpsValid = 0, heading = 0, sats = 0, latRef = 0, latDeg = 0, lonRef = 0, lonDeg = 0;
     float latMin = 0, lonMin = 0, dilution = 0;
     qint32 altitude = 0;
+    qint16 sog = 0, cog = 0;
+    quint64 gnssTimestamp = 0;
+
     ds.setFloatingPointPrecision(QDataStream::SinglePrecision);
     if (ds.skipRawData(36) == -1) qDebug() << "GNSS tag, error skipping 36 bytes";
     else ds >> heading;
     if (ds.skipRawData(2) == -1) qDebug() << "GNSS tag, error skipping 2 bytes";
     else ds >> gpsValid >> sats >> latRef >> latDeg >> latMin >> lonRef >> lonDeg >> lonMin >> dilution;
     if (ds.skipRawData(24) == -1) qDebug() << "GNSS tag, error skipping 24 bytes";
-    else ds >> altitude;
+    else ds >> altitude >> sog >> cog;
+    if (ds.skipRawData(8) == -1) qDebug() << "GNSS tag, error skipping 8 bytes";
+    else ds >> gnssTimestamp;
+
     //qDebug() << (float)heading / 10.0 << gpsValid << sats << latRef << latDeg << latMin << lonRef << lonDeg << lonMin << dilution;
 
     if (ds.status() == QDataStream::Ok) {
@@ -260,6 +269,10 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
             devicePtr->longitude = lng;
             devicePtr->altitude = altitude;
             devicePtr->dop = dilution;
+            devicePtr->sog = (float)sog / 10.0;
+            devicePtr->cog = (float)cog / 10.0;
+            devicePtr->gnssTimestamp = QDateTime::fromMSecsSinceEpoch(gnssTimestamp / 1e6);
+            devicePtr->sats = sats;
         }
         if (gpsValid > 0) devicePtr->positionValid = true;
         else devicePtr->positionValid = false;

@@ -34,7 +34,6 @@ private slots:
     void checkCnoOffset(GnssData &data);
     void checkAgcOffset(GnssData &data);
 
-
 private:
     QMutex mutex;
     GnssData gnssData;
