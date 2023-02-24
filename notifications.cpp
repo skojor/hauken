@@ -297,7 +297,6 @@ void Notifications::retryEmails()
 }
 
 /*
- *  curl -H x-www-form-urlencoded --data "grant_type=client_credentials&client_id=4dcd725c-3419-47a5-9cb6-b113c60e10bf&client_secret=du88Q~KtFpEBmA8uXkGMDMAEFVwIYkhYF9E_gaw3&scope=https://graph.microsoft.com/.default" https://login.microsoftonline.com/ad83e65c-03f6-4cfd-b799-47a2fafd7bce/oauth2/v2.0/token
  *
 */
 
