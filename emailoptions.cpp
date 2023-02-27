@@ -35,12 +35,12 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     layout1->addRow(new QLabel("Microsoft Graph application id"), leOpt7);
     leOpt7->setToolTip("Application id used to identify with Microsoft Graph REST API. If set MS Graph API will be used instead of SMTP");
 
-    layout1->addRow(new QLabel("Microsoft Graph tenant id"), leOpt5);
-    leOpt5->setToolTip("Identification used to send mail with Microsoft Graph REST API");
+    layout1->addRow(new QLabel("Microsoft Graph tenant id"), leOpt8);
+    leOpt8->setToolTip("Identification used to send mail with Microsoft Graph REST API");
 
-    layout1->addRow(new QLabel("Microsoft Graph secret"), leOpt6);
-    leOpt6->setToolTip("Secret used to identify with Microsoft Graph REST API");
-    leOpt6->setEchoMode(QLineEdit::Password);
+    layout1->addRow(new QLabel("Microsoft Graph secret"), leOpt9);
+    leOpt9->setToolTip("Secret used to identify with Microsoft Graph REST API");
+    leOpt9->setEchoMode(QLineEdit::Password);
 
     QGroupBox *groupBox2 = new QGroupBox("Email notifications configuration");
     QFormLayout *layout2 = new QFormLayout;
@@ -92,8 +92,8 @@ void EmailOptions::start()
     leOpt6->setText(config->getEmailSmtpPassword());
     leOpt3->setText(config->getEmailRecipients());
     leOpt4->setText(config->getEmailFromAddress());
-    leOpt5->setText(config->getEmailGraphTenantId());
-    leOpt6->setText(config->getEmailGraphSecret());
+    leOpt8->setText(config->getEmailGraphTenantId());
+    leOpt9->setText(config->getEmailGraphSecret());
     leOpt7->setText(config->getEmailGraphApplicationId());
 
     sbOpt1->setValue(config->getEmailMinTimeBetweenEmails());
@@ -121,8 +121,8 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailAddImages(cbOpt4->isChecked());
     config->setEmailDelayBeforeAddingImages(sbOpt3->value());
     config->setNotifyTruncateTime(sbOpt2->value());
-    config->setEmailGraphTenantId(leOpt5->text());
-    config->setEmailGraphSecret(leOpt6->text());
+    config->setEmailGraphTenantId(leOpt8->text());
+    config->setEmailGraphSecret(leOpt9->text());
     config->setEmailGraphApplicationId(leOpt7->text());
 
     dialog->close();
