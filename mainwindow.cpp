@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     receiverOptions = new ReceiverOptions(config);
     sdefOptions = new SdefOptions(config);
     emailOptions = new EmailOptions(config);
-    cameraOptions = new CameraOptions(config);
+    //cameraOptions = new CameraOptions(config);
     arduinoOptions = new ArduinoOptions(config);
     autoRecorderOptions = new AutoRecorderOptions(config);
 
@@ -51,10 +51,10 @@ MainWindow::MainWindow(QWidget *parent)
     waterfallThread->setObjectName("waterfall");
     waterfall->moveToThread(waterfallThread);
 
-    cameraRecorder = new CameraRecorder(config);
+    /*cameraRecorder = new CameraRecorder(config);
     cameraThread = new QThread;
     cameraThread->setObjectName("camera");
-    cameraRecorder->moveToThread(cameraThread);
+    cameraRecorder->moveToThread(cameraThread);*/
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -126,9 +126,9 @@ void MainWindow::createActions()
     optEmail->setStatusTip(tr("Setup of email server and notfications"));
     connect(optEmail, &QAction::triggered, this, [this]{ this->emailOptions->start();});
 
-    optCamera = new QAction(tr("&Camera"), this);
+    /*optCamera = new QAction(tr("&Camera"), this);
     optCamera->setStatusTip("Setup of camera recording");
-    connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});
+    connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});*/
 
     optArduino = new QAction(tr("&Arduino"), this);
     optArduino->setStatusTip("Setup of Arduino relay/temperature control");
@@ -177,7 +177,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optStream);
     optionMenu->addAction(optSdef);
     optionMenu->addAction(optEmail);
-    optionMenu->addAction(optCamera);
+    //optionMenu->addAction(optCamera);
     optionMenu->addAction(optArduino);
     optionMenu->addAction(optAutoRecorder);
 
@@ -548,7 +548,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer3, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
-    connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
+    //connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
@@ -567,7 +567,7 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
-    connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
+    //connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -579,7 +579,7 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer2, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
     connect(measurementDevice, &MeasurementDevice::updGnssData, gnssAnalyzer3, &GnssAnalyzer::getData);
@@ -625,7 +625,7 @@ void MainWindow::setSignals()
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
-    cameraThread->start();
+    //cameraThread->start();
 }
 
 void MainWindow::instrStartFreqChanged()
