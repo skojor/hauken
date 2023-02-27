@@ -94,7 +94,7 @@ public slots:
     // Receiver options
     bool getInstrConnectOnStartup() { return settings->value("instr/ConnectOnStartup", false).toBool(); }
     void setInstrConnectOnStartup(bool b) { settings->setValue("instr/ConnectOnStartup", b); emit settingsUpdated(); }
-    bool getInstrUseTcpDatastream() { return settings->value("instr/UseTcpDatastream", false).toBool(); }
+    bool getInstrUseTcpDatastream() { return settings->value("instr/UseTcpDatastream", true).toBool(); }
     void setInstrUseTcpDatastream(bool b) { settings->setValue("instr/UseTcpDatastream", b); emit settingsUpdated(); }
     bool getInstrAutoReconnect() { return settings->value("instr/AutoReconnect", true).toBool(); }
     void setInstrAutoReconnect(bool b) { settings->setValue("instr/AutoReconnect", b); emit settingsUpdated(); }
