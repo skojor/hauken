@@ -801,6 +801,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.22</td><td>Microsoft Graph email notification</td></tr>"
        << "<tr><td>2.21</td><td>EM200 GNSS suppported, added instrumentGNSS monitoring/recording</td></tr>"
        << "<tr><td>2.20</td><td>Added Arduino watchdog</td></tr>"
        << "<tr><td>2.19</td><td>ESMB UDP bugfix, other minor fixes</td></tr>"

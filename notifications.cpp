@@ -43,7 +43,7 @@ void Notifications::start()
     while (it.hasNext()){
         QFile(it.next()).remove();
     }
-    if (msGraphConfigured) authGraph();
+    //if (msGraphConfigured) authGraph();
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -80,7 +80,7 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
     if (getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
-        appendEmailText(dt, msg);
+        appendEmailText(dt,  msg);
     else if (getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER)
         appendEmailText(dt, msg);
     else if (getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
@@ -160,13 +160,14 @@ void Notifications::sendMail()
             auto mimeHtml = new SimpleMail::MimeHtml;
             SimpleMail::MimeMessage message;
             message.setSubject("Notification " + getStationName());
-            message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), getStationName()));
+            message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), ""));
 
             for (auto &val : mailRecipients) {
                 message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
             mimeHtml->setHtml("<table>" + mailtext + "</table><hr><img src='cid:image1' />   ");
             message.addPart(mimeHtml);
+            htmlData = mimeHtml->html();
 
             auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
 
@@ -180,22 +181,27 @@ void Notifications::sendMail()
             mailtext.clear();
 
             // MS Graph code in here!
-
-            SimpleMail::ServerReply *reply = server->sendMail(message);
-            connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
-            {
-                qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
-                if (reply->error()) {
-                    toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Email notification failed, trying again later");
-                    this->retryEmailsTimer->start(90 * 1e3); // check again in 15 min
-                }
-                else {
-                    this->emailBacklog.removeLast();
-                    this->emailPictures.removeLast();
-                }
-                reply->deleteLater();
-            });
-            timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
+            if (msGraphConfigured) {
+                generateGraphEmail();
+                authGraph(); // try to auth and send immediately
+            }
+            else {
+                SimpleMail::ServerReply *reply = server->sendMail(message);
+                connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
+                {
+                    qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
+                    if (reply->error()) {
+                        toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Email notification failed, trying again later");
+                        this->retryEmailsTimer->start(90 * 1e3); // check again in 15 min
+                    }
+                    else {
+                        this->emailBacklog.removeLast();
+                        this->emailPictures.removeLast();
+                    }
+                    reply->deleteLater();
+                });
+                timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
+            }
         }
         else {
             emit warning("Email notifications is enabled, but one or more of the parameters are missing. Check your configuration!");
@@ -208,14 +214,23 @@ void Notifications::sendMail()
 
 bool Notifications::simpleParametersCheck()
 {
-    bool ok;
-    int val = mailserverPort.toInt(&ok);
-    if (val <= 0 || val > 65536) ok = false;
+    if (!msGraphConfigured) {
+        bool ok;
+        int val = mailserverPort.toInt(&ok);
+        if (val <= 0 || val > 65536) ok = false;
 
-    if (!ok || mailserverAddress.isEmpty() || mailserverPort.isEmpty() || recipients.isEmpty() || fromAddress.isEmpty())
-        return false;
+        if (!ok || mailserverAddress.isEmpty() || mailserverPort.isEmpty() || recipients.isEmpty() || fromAddress.isEmpty())
+            return false;
 
-    return true;
+        return true;
+    }
+    else {
+        if (getEmailFromAddress().isEmpty()) {
+            emit warning("Notification is not possible until from address is set");
+            return false;
+        }
+        return true;
+    }
 }
 
 void Notifications::setupIncidentTable()
@@ -258,7 +273,7 @@ void Notifications::updSettings()
 
 void Notifications::retryEmails()
 {
-    qDebug() << "mail retry?" << emailBacklog.size();
+    qDebug() << "mail retry?" << emailBacklog.size() << graphEmailLog.size();
 
     if (!emailBacklog.isEmpty()) {
         if (simpleParametersCheck()) {
@@ -296,19 +311,12 @@ void Notifications::retryEmails()
     }
 }
 
-/*
- *
-*/
-
 void Notifications::authGraph()
 {
-    graphAuthenticated = true;
-
-    //QString text = "client_id=" + getEmailGraphApplicationId() + "&client_secret=" + getEmailGraphSecret() + "&scope=https://graph.microsoft.com/.default";
+    simpleParametersCheck();
     QString url = "https://login.microsoftonline.com/" + getEmailGraphTenantId() + "/oauth2/v2.0/token";
     QStringList l;
     l << "-H" << "application/x-www-form-url-encoded"
-      //<< "--data" << text
       << "--data" << "grant_type=client_credentials"
       << "--data" << "client_id=" + getEmailGraphApplicationId()
       << "--data" << "client_secret=" + getEmailGraphSecret()
@@ -316,28 +324,100 @@ void Notifications::authGraph()
       << url;
 
     process->setArguments(l);
-    //qDebug() << "Graph curl login debug:" << process->program() << process->arguments();
     process->start();
+}
+
+void Notifications::generateGraphEmail()
+{
+    QJsonObject mail, message, body;
+    QJsonArray toRecipients, attachments;
+    QJsonObject att;
+
+    QStringList recipients = getEmailRecipients().split(';');
+    for (auto &recipient : recipients) {
+        QJsonObject receiver, address;
+        address.insert("address", recipient.simplified());
+        receiver.insert("emailAddress", address);
+        toRecipients.push_back(receiver);
+    }
+
+    body.insert("contentType", "html");
+    body.insert("content", htmlData);
+    QFile picture(lastPicFilename);
+    picture.open(QIODevice::ReadOnly);
+
+    att.insert("@odata.type", "#microsoft.graph.fileAttachment");
+    att.insert("name", "image1.png");
+    att.insert("contentType", "image/png");
+    att.insert("contentId", "image1");
+    att.insert("contentBytes", QString(picture.readAll().toBase64()));
+    att.insert("isInline", "true");
+    attachments.append(att);
+
+    message.insert("subject", "Notification from " + getStationName() + " " + getEmailFromAddress());
+    message.insert("body", body);
+    message.insert("toRecipients", toRecipients);
+    message.insert("attachments", attachments);
+
+    mail.insert("message", message);
+    mail.insert("saveToSentItems", "false");
+
+    QJsonDocument json(mail);
+    picture.remove(); // picture data is now stored in the json code, close and delete file
+    graphEmailLog.append(json);
+    qDebug() << toRecipients;
 }
 
 void Notifications::sendMailWithGraph()
 {
+    if (!graphEmailLog.isEmpty()) {
+        graphMailInProgress = true;
+        QStringList l;
+        QString url = "https://graph.microsoft.com/v1.0/users/" + getEmailFromAddress() + "/sendMail";
+        l << "-H" << "Content-Type: application/json; charset=ISO-8859-1"
+          << "-H" << graphAccessToken
+          << "--data-ascii" << graphEmailLog.first().toJson(QJsonDocument::Compact)
+          << url;
 
+        process->setArguments(l);
+        //qDebug() << process->arguments();
+        process->start();
+    }
 }
 
-void Notifications::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
+void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
 {
+    QList<QByteArray> output = process->readAllStandardOutput().split(':');
+    //qDebug() << output << process->readAllStandardError();
+
     if (exitCode != 0) {
-        qDebug() << "Graph auth failed, exit code" << exitCode << exitStatus;
+        qDebug() << "Graph exit code" << exitCode;
+        if (graphMailInProgress && !graphEmailLog.isEmpty()) { // sending failed, let's retry later
+            qDebug() << "Graph email failed, retrying in 15 minutes";
+            QTimer::singleShot(15 * 60e3, this, &Notifications::authGraph);
+        }
     }
-    else {
-        QList<QByteArray> output = process->readAllStandardOutput().split(':');
+
+    else if (!graphMailInProgress) {
+        //qDebug() << output;
         graphAccessToken.clear();
 
         for (int i=0; i<output.size(); i++) {
             if (i < output.size() - 1 && output.at(i).contains("access_token"))
                 graphAccessToken = output.at(i+1);
         }
-        qDebug() << "graph access granted" << graphAccessToken;
+        graphAccessToken = graphAccessToken.simplified();
+        graphAccessToken.replace('"', "");
+        graphAccessToken.replace('}', "");
+        graphAccessToken.insert(0, "Authorization: Bearer ");
+
+        qDebug() << "Graph authenticated";
+        sendMailWithGraph();
+    }
+    else {
+        qDebug() << "Mail sent successfully";
+        //Graph mail sent successfully, delete from queue
+        graphEmailLog.removeFirst();
+        graphMailInProgress = false;
     }
 }

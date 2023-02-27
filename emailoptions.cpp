@@ -32,13 +32,13 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     sbOpt1->setToolTip("Used to reduce number of emails, all incidents happening within this time will be sent at once\nA value of 0 means emails will be sent without delay");
     sbOpt1->setRange(0, 86400);
 
-    layout1->addRow(new QLabel("Microsoft Graph application id (BETA)"), leOpt7);
+    layout1->addRow(new QLabel("Microsoft Graph application id"), leOpt7);
     leOpt7->setToolTip("Application id used to identify with Microsoft Graph REST API. If set MS Graph API will be used instead of SMTP");
 
-    layout1->addRow(new QLabel("Microsoft Graph tenant id (BETA)"), leOpt5);
+    layout1->addRow(new QLabel("Microsoft Graph tenant id"), leOpt5);
     leOpt5->setToolTip("Identification used to send mail with Microsoft Graph REST API");
 
-    layout1->addRow(new QLabel("Microsoft Graph secret (BETA)"), leOpt6);
+    layout1->addRow(new QLabel("Microsoft Graph secret"), leOpt6);
     leOpt6->setToolTip("Secret used to identify with Microsoft Graph REST API");
     leOpt6->setEchoMode(QLineEdit::Password);
 

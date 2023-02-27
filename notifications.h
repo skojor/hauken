@@ -21,6 +21,11 @@
 #include <QDataStream>
 #include <QCoreApplication>
 #include <QStringList>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QJsonArray>
 
 /*
  * This class takes care of journalling the incident log, both shown on screen and written to the
@@ -69,7 +74,8 @@ private slots:
     void retryEmails();
     void authGraph();
     void sendMailWithGraph();
-    void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
+    void generateGraphEmail();
+    void curlCallback(int exitCode, QProcess::ExitStatus);
 
 signals:
     void showIncident(QString);
@@ -87,6 +93,10 @@ private:
     QString lastPicFilename;
     bool graphAuthenticated = false;
     QByteArray graphAccessToken;
+    QByteArray mimeData;
+    bool graphMailInProgress = false;
+    QString htmlData;
+    QList<QJsonDocument> graphEmailLog;
 
     QProcess *process;
 
@@ -104,7 +114,6 @@ private:
     int delayBetweenEmails;
     bool msGraphConfigured = false, msGraphAuthorized = false;
     QString msGraphTenantId, msGraphApplicationId, msGraphSecret;
-
 };
 
 #endif // NOTIFICATIONS_H
