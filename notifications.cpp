@@ -354,7 +354,7 @@ void Notifications::generateGraphEmail()
     att.insert("isInline", "true");
     attachments.append(att);
 
-    message.insert("subject", "Notification from " + getStationName() + " " + getEmailFromAddress());
+    message.insert("subject", "Notification from " + getStationName());
     message.insert("body", body);
     message.insert("toRecipients", toRecipients);
     message.insert("attachments", attachments);
