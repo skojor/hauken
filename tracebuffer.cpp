@@ -171,7 +171,7 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     else averageLevel[i] -= (int)(avgFactor + 0.5);
                 }
                 if (avgFactor > 1) avgFactor -= avgFactor * 10 / tracesNeededForAvg; //avgFactor *= 0.98;
-                qDebug() << "avgfactor:" << avgFactor;
+                //qDebug() << "avgfactor:" << avgFactor;
             }
             if (data.size() > plotResolution) {
                 double rate = (double)data.size() / plotResolution;
