@@ -43,7 +43,7 @@ void Notifications::start()
     while (it.hasNext()){
         QFile(it.next()).remove();
     }
-    if (msGraphConfigured) authGraph();
+    //if (msGraphConfigured) authGraph();
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -416,7 +416,7 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         }*/
             graphAccessToken.insert(0, "Authorization: Bearer ");
 
-            qDebug() << "Graph authenticated" << graphAccessToken;
+            qDebug() << "Graph authenticated"; // << graphAccessToken;
             sendMailWithGraph();
         }
         else emit warning("No valid response from MS Graph authentication server");
