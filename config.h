@@ -161,7 +161,7 @@ public slots:
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
-    void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s); emit settingsUpdated();}
+    void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s.simplified()); emit settingsUpdated();}
     QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString();}
     void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s); emit settingsUpdated();}
     QString getEmailRecipients() { return settings->value("email/Recipients").toString();}
@@ -177,21 +177,21 @@ public slots:
     int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
     void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s); emit settingsUpdated();}
     QString getEmailFromAddress() { return settings->value("email/FromAddress").toString();}
-    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s); emit settingsUpdated();}
+    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s.simplified()); emit settingsUpdated();}
     QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString();}
-    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s); emit settingsUpdated();}
+    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s.simplified()); emit settingsUpdated();}
     QString getEmailSmtpPassword() { return simpleEncr(settings->value("email/smtpPassword").toByteArray());}
-    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.toLocal8Bit())); emit settingsUpdated();}
+    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.simplified().toLocal8Bit())); emit settingsUpdated();}
     bool getEmailAddImages() { return settings->value("email/AddImages", true).toBool();}
     void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b); emit settingsUpdated();}
     int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
     void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val); emit settingsUpdated();}
     QString getEmailGraphApplicationId() { return settings->value("email/graphApplicationId", "").toString(); }
-    void setEmailGraphApplicationId(QString s) { settings->setValue("email/graphApplicationId", s); emit settingsUpdated();}
+    void setEmailGraphApplicationId(QString s) { settings->setValue("email/graphApplicationId", s.simplified()); emit settingsUpdated();}
     QString getEmailGraphTenantId() { return settings->value("email/graphTenantId", "").toString(); }
-    void setEmailGraphTenantId(QString s) { settings->setValue("email/graphTenantId", s); emit settingsUpdated();}
+    void setEmailGraphTenantId(QString s) { settings->setValue("email/graphTenantId", s.simplified()); emit settingsUpdated();}
     QString getEmailGraphSecret() { return simpleEncr(settings->value("email/graphSecret", "").toByteArray());}
-    void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.toLocal8Bit())); emit settingsUpdated();}
+    void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.simplified().toLocal8Bit())); emit settingsUpdated();}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}

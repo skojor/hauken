@@ -43,7 +43,7 @@ void Notifications::start()
     while (it.hasNext()){
         QFile(it.next()).remove();
     }
-    //if (msGraphConfigured) authGraph();
+    if (msGraphConfigured) authGraph();
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -387,8 +387,8 @@ void Notifications::sendMailWithGraph()
 
 void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
 {
-    QList<QByteArray> output = process->readAllStandardOutput().split(':');
-    qDebug() << output << process->readAllStandardError();
+    QByteArray output = process->readAllStandardOutput();
+    //qDebug() << output << process->readAllStandardError();
 
     if (exitCode != 0) {
         qDebug() << "Graph exit code" << exitCode;
@@ -399,20 +399,26 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
     }
 
     else if (!graphMailInProgress) {
-        //qDebug() << output;
-        graphAccessToken.clear();
+        QJsonParseError error;
+        QJsonDocument reply = QJsonDocument::fromJson(output, &error);
+        QJsonObject replyObject = reply.object();
+        qDebug() << output << reply.toJson() << reply.isObject() << reply.isArray() ;
 
-        for (int i=0; i<output.size(); i++) {
+        if (reply.isNull() || replyObject.isEmpty() ||
+                replyObject.find("token_type")->toString().contains("Bearer") ||
+                replyObject.find("expires_in")->toInt() > 0) {
+
+            graphAccessToken = replyObject.find("access_token")->toString().toUtf8();
+            /*for (int i=0; i<output.size(); i++) {
             if (i < output.size() - 1 && output.at(i).contains("access_token"))
                 graphAccessToken = output.at(i+1);
-        }
-        graphAccessToken = graphAccessToken.simplified();
-        graphAccessToken.replace('"', "");
-        graphAccessToken.replace('}', "");
-        graphAccessToken.insert(0, "Authorization: Bearer ");
+        }*/
+            graphAccessToken.insert(0, "Authorization: Bearer ");
 
-        qDebug() << "Graph authenticated";
-        sendMailWithGraph();
+            qDebug() << "Graph authenticated" << graphAccessToken;
+            //sendMailWithGraph();
+        }
+        else emit warning("No valid response from MS Graph authentication server");
     }
     else {
         qDebug() << "Mail sent successfully";
@@ -420,4 +426,5 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         graphEmailLog.removeFirst();
         graphMailInProgress = false;
     }
+
 }
