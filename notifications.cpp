@@ -323,6 +323,7 @@ void Notifications::authGraph()
       << "--data" << "scope=https://graph.microsoft.com/.default"
       << url;
 
+    //qDebug() << l;
     process->setArguments(l);
     process->start();
 }
@@ -402,7 +403,7 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         QJsonParseError error;
         QJsonDocument reply = QJsonDocument::fromJson(output, &error);
         QJsonObject replyObject = reply.object();
-        qDebug() << output << reply.toJson() << reply.isObject() << reply.isArray() ;
+        //qDebug() << output << reply.toJson() << reply.isObject() << reply.isArray() ;
 
         if (reply.isNull() || replyObject.isEmpty() ||
                 replyObject.find("token_type")->toString().contains("Bearer") ||
@@ -426,5 +427,4 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         graphEmailLog.removeFirst();
         graphMailInProgress = false;
     }
-
 }
