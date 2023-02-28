@@ -380,7 +380,7 @@ void Notifications::sendMailWithGraph()
           << url;
 
         process->setArguments(l);
-        //qDebug() << process->arguments();
+        qDebug() << process->arguments();
         process->start();
     }
 }
