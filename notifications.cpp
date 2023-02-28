@@ -417,7 +417,7 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
             graphAccessToken.insert(0, "Authorization: Bearer ");
 
             qDebug() << "Graph authenticated" << graphAccessToken;
-            //sendMailWithGraph();
+            sendMailWithGraph();
         }
         else emit warning("No valid response from MS Graph authentication server");
     }
