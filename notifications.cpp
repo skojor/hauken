@@ -388,7 +388,7 @@ void Notifications::sendMailWithGraph()
 void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
 {
     QList<QByteArray> output = process->readAllStandardOutput().split(':');
-    //qDebug() << output << process->readAllStandardError();
+    qDebug() << output << process->readAllStandardError();
 
     if (exitCode != 0) {
         qDebug() << "Graph exit code" << exitCode;
