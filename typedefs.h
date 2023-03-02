@@ -424,6 +424,8 @@ public:
     double latitude = 0;
     double longitude = 0;
     double altitude = 0;
+    double sog = 0;
+    double cog = 0;
     bool gsaValid = false;
     bool gsvValid = false;
     bool ggaValid = false;

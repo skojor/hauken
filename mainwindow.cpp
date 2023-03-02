@@ -39,6 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     //cameraOptions = new CameraOptions(config);
     arduinoOptions = new ArduinoOptions(config);
     autoRecorderOptions = new AutoRecorderOptions(config);
+    positionReportOptions = new PositionReportOptions(config);
 
     arduinoPtr = new Arduino(this);
 
@@ -138,6 +139,10 @@ void MainWindow::createActions()
     optAutoRecorder->setStatusTip("Setup of Hauken autorecorder");
     connect(optAutoRecorder, &QAction::triggered, this, [this] { this->autoRecorderOptions->start();});
 
+    optPositionReport = new QAction(tr("&Position report"), this);
+    optPositionReport->setStatusTip("Setup of periodic report posts via http(s)");
+    connect(optPositionReport, &QAction::triggered, this, [this] { this->positionReportOptions->start();});
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -180,6 +185,7 @@ void MainWindow::createMenus()
     //optionMenu->addAction(optCamera);
     optionMenu->addAction(optArduino);
     optionMenu->addAction(optAutoRecorder);
+    optionMenu->addAction(optPositionReport);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);

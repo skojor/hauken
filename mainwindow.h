@@ -43,6 +43,7 @@
 #include "arduino.h"
 #include "autorecorderoptions.h"
 #include "pmrtablewdg.h"
+#include "positionreportoptions.h"
 
 class MainWindow : public QMainWindow
 {
@@ -166,6 +167,7 @@ private:
     QAction *optCamera;
     QAction *optArduino;
     QAction *optAutoRecorder;
+    QAction *optPositionReport;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -180,6 +182,7 @@ private:
     CameraOptions *cameraOptions;
     ArduinoOptions *arduinoOptions;
     AutoRecorderOptions *autoRecorderOptions;
+    PositionReportOptions *positionReportOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 

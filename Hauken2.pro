@@ -46,6 +46,8 @@ SOURCES += \
     notifications.cpp \
     optionsbaseclass.cpp \
     pmrtablewdg.cpp \
+    positionreport.cpp \
+    positionreportoptions.cpp \
     qcustomplot.cpp \
     receiveroptions.cpp \
     sdefoptions.cpp \
@@ -98,6 +100,8 @@ HEADERS += \
     notifications.h \
     optionsbaseclass.h \
     pmrtablewdg.h \
+    positionreport.h \
+    positionreportoptions.h \
     qcustomplot.h \
     receiveroptions.h \
     sdefoptions.h \

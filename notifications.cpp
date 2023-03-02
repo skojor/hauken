@@ -316,7 +316,7 @@ void Notifications::authGraph()
     simpleParametersCheck();
     QString url = "https://login.microsoftonline.com/" + getEmailGraphTenantId() + "/oauth2/v2.0/token";
     QStringList l;
-    l << "-H" << "application/x-www-form-url-encoded"
+    l << "-H" << "Content-Type: application/x-www-form-url-encoded"
       << "--data" << "grant_type=client_credentials"
       << "--data" << "client_id=" + getEmailGraphApplicationId()
       << "--data" << "client_secret=" + getEmailGraphSecret()

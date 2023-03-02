@@ -156,6 +156,8 @@ bool GnssDevice::decodeRmc(const QByteArray &val)
             gnssData.posValid = true;
         else
             gnssData.posValid = false;
+        gnssData.sog = split.at(7).toDouble();
+        gnssData.cog = split.at(8).toDouble();
     }
     return true;
 }

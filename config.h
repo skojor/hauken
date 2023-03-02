@@ -268,6 +268,22 @@ public slots:
     bool getPmrUseWhites() { return settings->value("pmr/useWhites", true).toBool();}
     void setPmrUseWhites(bool b) { settings->setValue("pmr/useWhites", b);}
 
+    // Position report
+    bool getPosReportActivated() { return settings->value("posReport/activated", false).toBool();}
+    void setPosReportActivated(bool b) { settings->setValue("posReport/activated", b); emit settingsUpdated();}
+    QString getPosReportSource() { return settings->value("posReport/source", "InstrumentGNSS").toString();}
+    void setPosReportSource(QString s) { settings->setValue("posReport/source", s); emit settingsUpdated();}
+    QString getPosReportUrl() { return settings->value("posReport/url", "").toString();}
+    void setPosReportUrl(QString s) { settings->setValue("posReport/url", s); emit settingsUpdated();}
+    int getPosReportSendInterval() { return settings->value("posReport/sendInterval", 60).toInt();}
+    void setPosReportSendInterval(int i) { settings->setValue("posReport/sendInterval", i); emit settingsUpdated();}
+    bool getPosReportAddPos() { return settings->value("posReport/addPos", true).toBool();}
+    void setPosReportAddPos(bool b) { settings->setValue("posReport/addPos", b); emit settingsUpdated();}
+    bool getPosReportAddSogCog() { return settings->value("posReport/addSogCog", true).toBool();}
+    void setPosReportAddSogCog(bool b) { settings->setValue("posReport/addSogCog", b); emit settingsUpdated();}
+    bool getPosReportAddGnssStats() { return settings->value("posReport/addGnssStats", true).toBool();}
+    void setPosreportAddGnssStats(bool b) { settings->setValue("posReport/addGnssStats", b); emit settingsUpdated();}
+
 private slots:
     QByteArray simpleEncr(QByteArray);
 
