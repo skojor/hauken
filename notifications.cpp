@@ -8,10 +8,10 @@ Notifications::Notifications(QObject *parent)
 void Notifications::start()
 {
     process = new QProcess;
+
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Notifications::curlCallback);
     process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
-    /*process->setStandardOutputFile(getWorkFolder() + "/.process.out");
-    process->setStandardErrorFile(getWorkFolder() + "/.process.err");*/
+
     if (QSysInfo::kernelType().contains("win")) {
         process->setProgram("curl.exe");
     }
@@ -316,14 +316,14 @@ void Notifications::authGraph()
     simpleParametersCheck();
     QString url = "https://login.microsoftonline.com/" + getEmailGraphTenantId() + "/oauth2/v2.0/token";
     QStringList l;
-    l << "-H" << "Content-Type: application/x-www-form-url-encoded"
+    l //<< "-H" << "\"Content-Type:" << "application/x-www-form-url-encoded\""
       << "--data" << "grant_type=client_credentials"
       << "--data" << "client_id=" + getEmailGraphApplicationId()
       << "--data" << "client_secret=" + getEmailGraphSecret()
       << "--data" << "scope=https://graph.microsoft.com/.default"
       << url;
 
-    //qDebug() << l;
+    //qDebug() << "Grant debug" << l;
     process->setArguments(l);
     process->start();
 }
@@ -364,9 +364,14 @@ void Notifications::generateGraphEmail()
     mail.insert("saveToSentItems", "false");
 
     QJsonDocument json(mail);
+    QString jsonFilename = workFolder + "/.json_" + QDateTime::currentDateTime().toString("ddhhmmss");
+    QFile jsonFile(jsonFilename);   // turns out QProcess doesn't like super long program arguments, like ... ~40 kB :) Saving to a temporary file
+    jsonFile.open(QIODevice::WriteOnly);
+    jsonFile.write(json.toJson(QJsonDocument::Compact));
+    jsonFile.close();
     picture.remove(); // picture data is now stored in the json code, close and delete file
-    graphEmailLog.append(json);
-    qDebug() << toRecipients;
+    graphEmailLog.append(jsonFilename);
+    //qDebug() << toRecipients;
 }
 
 void Notifications::sendMailWithGraph()
@@ -375,15 +380,16 @@ void Notifications::sendMailWithGraph()
         graphMailInProgress = true;
         QStringList l;
         QString url = "https://graph.microsoft.com/v1.0/users/" + getEmailFromAddress() + "/sendMail";
-        l << "-H" << "Content-Type: application/json; charset=ISO-8859-1"
+        l << "-H" << "Content-Type:application/json;charset=ISO-8859-1"
           << "-H" << graphAccessToken
-          << "--data-ascii" << graphEmailLog.first().toJson(QJsonDocument::Compact)
+          << "--data-ascii" << "@" + graphEmailLog.first()
           << url;
 
         process->setArguments(l);
-        qDebug() << process->arguments();
+        //qDebug() << process->arguments();
         process->start();
     }
+    else qDebug() << "Trying to send an empty email?";
 }
 
 void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
@@ -419,12 +425,14 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
             qDebug() << "Graph authenticated"; // << graphAccessToken;
             sendMailWithGraph();
         }
-        else emit warning("No valid response from MS Graph authentication server");
+        else {
+            qDebug() << output << process->readAllStandardError();
+            emit warning("No valid response from MS Graph authentication server");
+        }
     }
     else {
-        qDebug() << "Mail sent successfully";
-        //Graph mail sent successfully, delete from queue
-        graphEmailLog.removeFirst();
+        qDebug() << "Mail sent successfully?"; // << output << process->readAllStandardError();
+        if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
         graphMailInProgress = false;
     }
 }

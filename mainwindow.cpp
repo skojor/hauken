@@ -556,6 +556,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
     //connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
+    connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -592,6 +593,12 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer3, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(gnssAnalyzer3, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssAnalyzer3, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
+
+    connect(positionReport, &PositionReport::reqPosition, this, [this] (QString s) {
+        if (s.contains("GNSS 1")) positionReport->updPosition(this->gnssDevice1->sendGnssData());
+        else if (s.contains("GNSS 2")) positionReport->updPosition(this->gnssDevice2->sendGnssData());
+        else positionReport->updPosition(this->measurementDevice->sendGnssData());
+    });
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
     {

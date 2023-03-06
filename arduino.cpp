@@ -187,7 +187,7 @@ void Arduino::resetWatchdog()
 void Arduino::watchdogOn()
 {
     arduino->write("W");
-    setArduinoActivateWatchdog(true);
+    //setArduinoActivateWatchdog(true);
     watchdogTimer->start(5000);
     if (pingActivated) pingTimer->start(pingInterval * 1e3);
 }
@@ -195,7 +195,7 @@ void Arduino::watchdogOn()
 void Arduino::watchdogOff()
 {
     arduino->write("w");
-    setArduinoActivateWatchdog(false);
+    //setArduinoActivateWatchdog(false);
     pingTimer->stop();
     watchdogTimer->stop();
 }

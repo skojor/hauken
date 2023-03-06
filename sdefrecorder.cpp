@@ -268,7 +268,7 @@ bool SdefRecorder::curlLogin()
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but some parameters are missing in the config. Check it out");
         return false;
     }
-    if ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0) {
+    if (!getSdefAddPosition() and ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0)) {
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but the current position is set to equator. Somehow I doubt it");
         return false;
     }

@@ -44,6 +44,7 @@
 #include "autorecorderoptions.h"
 #include "pmrtablewdg.h"
 #include "positionreportoptions.h"
+#include "positionreport.h"
 
 class MainWindow : public QMainWindow
 {
@@ -213,5 +214,7 @@ private:
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
     bool dispWaterfall;
+
+    PositionReport *positionReport = new PositionReport;
 };
 #endif // MAINWINDOW_H

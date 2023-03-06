@@ -35,7 +35,7 @@ private slots:
     void checkReturnValue(int exitCode, QProcess::ExitStatus);
 
 public slots:
-    void updPosition(GnssData &data) { gnssData = data;}
+    void updPosition(GnssData data) { gnssData = data;}
 
 private:
     QTimer *reportTimer = new QTimer;

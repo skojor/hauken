@@ -96,7 +96,7 @@ private:
     QByteArray mimeData;
     bool graphMailInProgress = false;
     QString htmlData;
-    QList<QJsonDocument> graphEmailLog;
+    QList<QString> graphEmailLog;
 
     QProcess *process;
 

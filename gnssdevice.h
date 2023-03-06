@@ -34,7 +34,7 @@ public slots:
     void connectToPort();
     void updSettings();
     void reqPosition() { emit positionUpdate(gnssData.posValid, gnssData.latitude, gnssData.longitude);}
-    GnssData& sendGnssData() { return gnssData;}
+    GnssData sendGnssData() { return gnssData;}
 
 signals:
     void analyzeThisData(GnssData &);

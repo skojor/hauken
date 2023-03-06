@@ -748,3 +748,19 @@ void MeasurementDevice::updGnssDisplay()
         emit updGnssData(data);
     }
 }
+
+GnssData MeasurementDevice::sendGnssData()
+{
+    GnssData data;
+    data.id = 3; // 3 = instrumentGnss
+    data.inUse = true;
+    data.gnssType = devicePtr->id;
+    data.posValid = devicePtr->positionValid;
+    data.latitude = devicePtr->latitude;
+    data.longitude = devicePtr->longitude;
+    data.altitude = (float)devicePtr->altitude / 100.0;
+    data.hdop = devicePtr->dop;
+    data.timestamp = devicePtr->gnssTimestamp;
+    data.satsTracked = devicePtr->sats;
+    return data;
+}

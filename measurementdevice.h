@@ -94,6 +94,7 @@ public slots:
     void reqPosition() { emit positionUpdate(devicePtr->positionValid,
                                              devicePtr->latitude,
                                              devicePtr->longitude);}
+    GnssData sendGnssData();
 
 private slots:
     void scpiConnected();
