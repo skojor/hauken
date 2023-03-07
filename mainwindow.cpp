@@ -612,6 +612,14 @@ void MainWindow::setSignals()
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
     connect(notifications, &Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
     connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot); // be nice and send it then!
+    connect(notifications, &Notifications::reqPosition, this, [this] {
+        GnssData data;
+        data = gnssDevice1->sendGnssData();
+        if (!data.posValid) data = gnssDevice2->sendGnssData();
+        if (!data.posValid) data = measurementDevice->sendGnssData();
+
+        notifications->getLatitudeLongitude(data.posValid, data.latitude, data.longitude);
+    });
 
     connect(waterfall, &Waterfall::imageReady, customPlot, [&] (QPixmap *pixmap)
     {

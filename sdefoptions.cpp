@@ -46,9 +46,6 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     sbOpt3->setToolTip("Record traces this many seconds before incident was triggered. Maximum 120 seconds.");
     sbOpt3->setRange(0, 120);
 
-    mainLayout->addRow(new QLabel("Username for uploads (Station initials)"), leOpt3);
-    leOpt3->setToolTip("The initials used in the 1809 file header, your own initals or a designated initial for this station");
-
     connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
     connect(cbOpt3, &QCheckBox::toggled, this, [this] (bool b) {
@@ -68,7 +65,6 @@ void SdefOptions::start()
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
     sbOpt2->setValue(config->getSdefMaxRecordTime());
-    leOpt3->setText(config->getSdefStationInitals());
     comboOpt1->setCurrentText(config->getSdefGpsSource());
     sbOpt3->setValue(config->getSdefPreRecordTime());
     dialog->exec();
@@ -85,7 +81,6 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
-    config->setSdefStationInitials(leOpt3->text());
     config->setSdefPreRecordTime(sbOpt3->value());
     emit updSettings();
     dialog->close();

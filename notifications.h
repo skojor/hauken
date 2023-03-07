@@ -61,6 +61,7 @@ public slots:
     void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
     void recTracePlot(const QPixmap *pic);
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
+    void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
 
 private slots:
     void appendIncidentLog(QDateTime dt, const QString string);
@@ -82,6 +83,7 @@ signals:
     void warning(QString);
     void reqTracePlot();
     void reqWaterfall();
+    void reqPosition();
 
 private:
     QFile *incidentLogfile;
@@ -97,6 +99,8 @@ private:
     bool graphMailInProgress = false;
     QString htmlData;
     QList<QString> graphEmailLog;
+    bool positionValid = false;
+    double latitude = 0, longitude = 0;
 
     QProcess *process;
 

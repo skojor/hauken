@@ -11,6 +11,9 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("Station name"), leOpt1);
     leOpt1->setToolTip("Station name is used in mail warnings");
 
+    mainLayout->addRow(new QLabel("Station initials"), leOpt7);
+    leOpt7->setToolTip("The initials used in the 1809 file header, your own initals or a designated initial for this station. Also used in http reports.");
+
     mainLayout->addRow(new QLabel("Latitude"), leOpt2);
     leOpt2->setToolTip("Own station location, used in posisiton offset and SDeF files. Format DD.ddddd");
     QDoubleValidator doubleVal1;
@@ -67,6 +70,8 @@ void GeneralOptions::start()
     leOpt6->setText(config->getLogFolder());
     cbOpt1->setChecked(config->getNewLogFolder());
     cbOpt2->setChecked(config->getPmrMode());
+    leOpt7->setText(config->getSdefStationInitals());
+
     dialog->exec();
 }
 
@@ -88,7 +93,7 @@ void GeneralOptions::saveCurrentSettings()
 
     config->setNewLogFolder(cbOpt1->isChecked());
     config->setPmrMode(cbOpt2->isChecked());
-
+    config->setSdefStationInitials(leOpt7->text());
 
     dialog->close();
 }

@@ -138,6 +138,7 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
         if (delay > truncateTime * 2) delay = (truncateTime * 2) - 1; // no point in requesting an image after the mail is sent...
         QTimer::singleShot(delay * 1e3, this, [this] { emit reqTracePlot(); }); // also ask for a plot image at this time
     }
+    if (getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
 }
 
 void Notifications::sendMail()
@@ -159,13 +160,18 @@ void Notifications::sendMail()
 
             auto mimeHtml = new SimpleMail::MimeHtml;
             SimpleMail::MimeMessage message;
-            message.setSubject("Notification " + getStationName());
+            message.setSubject("Notification from " + getStationName() + " (" + getSdefStationInitals() + ")");
             message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), ""));
 
             for (auto &val : mailRecipients) {
                 message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
-            mimeHtml->setHtml("<table>" + mailtext + "</table><hr><img src='cid:image1' />   ");
+            mimeHtml->setHtml("<table>" + mailtext +
+                              (getSdefAddPosition() && positionValid?tr("<tr><td>Current position</td><td>") +
+                                                    QString::number(latitude, 'f', 5) + " " +
+                                                    QString::number(longitude, 'f', 5) +
+                                                    tr("</td></tr>"):"") +
+                              "</table><hr><img src='cid:image1' />   ");
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
 
@@ -355,7 +361,7 @@ void Notifications::generateGraphEmail()
     att.insert("isInline", "true");
     attachments.append(att);
 
-    message.insert("subject", "Notification from " + getStationName());
+    message.insert("subject", "Notification from " + getStationName() + " (" + getSdefStationInitals() + ")");
     message.insert("body", body);
     message.insert("toRecipients", toRecipients);
     message.insert("attachments", attachments);
