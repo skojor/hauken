@@ -34,6 +34,9 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     cbOpt4->setText("Include GNSS stats");
     cbOpt4->setToolTip("Include sats tracked and DOP in the report");
 
+    mainLayout->addRow(cbOpt5);
+    cbOpt5->setText("Include current job stats");
+    cbOpt5->setToolTip("Include connection and current band in the report");
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &PositionReportOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -49,6 +52,7 @@ void PositionReportOptions::start()
     cbOpt2->setChecked(config->getPosReportAddPos());
     cbOpt3->setChecked(config->getPosReportAddSogCog());
     cbOpt4->setChecked(config->getPosReportAddGnssStats());
+    cbOpt5->setChecked(config->getPosReportAddConnStats());
 
     dialog->exec();
 }
@@ -62,6 +66,7 @@ void PositionReportOptions::saveCurrentSettings()
     config->setPosReportAddPos(cbOpt2->isChecked());
     config->setPosReportAddSogCog(cbOpt3->isChecked());
     config->setPosreportAddGnssStats(cbOpt4->isChecked());
+    config->setPosreportAddConnStats(cbOpt5->isChecked());
 
     dialog->close();
 }

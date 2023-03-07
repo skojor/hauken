@@ -82,6 +82,7 @@ public slots:
     void forwardTracesPerSec(double d) { tracesPerSecValue = d; emit tracesPerSec(d);}
     void fftDataHandler(QVector<qint16> &);
     double getTracesPerSec() { return tracesPerSecValue;}
+    QSharedPointer<Device> getMeasurementDeviceData() { return devicePtr;}
 
     QStringList getDevicePscanResolutions() { return devicePtr->pscanResolutions;}
     QStringList getDeviceAntPorts() { return devicePtr->antPorts;}

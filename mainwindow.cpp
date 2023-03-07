@@ -599,6 +599,10 @@ void MainWindow::setSignals()
         else if (s.contains("GNSS 2")) positionReport->updPosition(this->gnssDevice2->sendGnssData());
         else positionReport->updPosition(this->measurementDevice->sendGnssData());
     });
+    connect(positionReport, &PositionReport::reqMeasurementDevicePtr, this, [this] {
+        if (measurementDevice) positionReport->setMeasurementDevicePtr(measurementDevice->getMeasurementDeviceData());
+    });
+    connect (measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
     {
@@ -814,6 +818,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.23</td><td>Periodic http report (x-www-form-urlencoded) added</td></tr>"
        << "<tr><td>2.22</td><td>Microsoft Graph email notification</td></tr>"
        << "<tr><td>2.21</td><td>EM200 GNSS suppported, added instrumentGNSS monitoring/recording</td></tr>"
        << "<tr><td>2.20</td><td>Added Arduino watchdog</td></tr>"

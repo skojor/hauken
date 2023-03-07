@@ -283,6 +283,8 @@ public slots:
     void setPosReportAddSogCog(bool b) { settings->setValue("posReport/addSogCog", b); emit settingsUpdated();}
     bool getPosReportAddGnssStats() { return settings->value("posReport/addGnssStats", true).toBool();}
     void setPosreportAddGnssStats(bool b) { settings->setValue("posReport/addGnssStats", b); emit settingsUpdated();}
+    bool getPosReportAddConnStats() { return settings->value("posReport/addConnStats", true).toBool();}
+    void setPosreportAddConnStats(bool b) { settings->setValue("posReport/addConnStats", b); emit settingsUpdated();}
 
 private slots:
     QByteArray simpleEncr(QByteArray);

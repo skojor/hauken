@@ -18,6 +18,9 @@
 #include "config.h"
 #include "typedefs.h"
 #include <QProcess>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
 
 
 class PositionReport : public Config
@@ -36,20 +39,26 @@ private slots:
 
 public slots:
     void updPosition(GnssData data) { gnssData = data;}
+    void setMeasurementDevicePtr(QSharedPointer<Device> dev) { devicePtr = dev;}
+    void setMeasurementDeviceConnectionStatus(bool b) { measurementDeviceConnected = b;}
 
 private:
     QTimer *reportTimer = new QTimer;
+    QTimer *gnssReqTimer = new QTimer;
     QProcess *curlProcess = new QProcess;
+    bool measurementDeviceConnected = false;
+    QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
 
     // config cache
-    bool posReportActive, addPosition, addCogSog, addGnssStats;
+    bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats;
     QString posSource, url;
-    int reportInterval;
+    int reportInterval = 0;
     GnssData gnssData;
     QStringList reportArgs;
 
 signals:
     void reqPosition(QString);
+    void reqMeasurementDevicePtr();
 };
 
 #endif // POSITIONREPORT_H
