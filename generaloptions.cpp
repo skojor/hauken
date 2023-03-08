@@ -9,7 +9,7 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("Own station data"));
 
     mainLayout->addRow(new QLabel("Station name"), leOpt1);
-    leOpt1->setToolTip("Station name is used in mail warnings");
+    leOpt1->setToolTip("Station name is used in email notifications");
 
     mainLayout->addRow(new QLabel("Station initials"), leOpt7);
     leOpt7->setToolTip("The initials used in the 1809 file header, your own initals or a designated initial for this station. Also used in http reports.");

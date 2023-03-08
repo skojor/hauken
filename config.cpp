@@ -22,3 +22,14 @@ QByteArray Config::simpleEncr(QByteArray toEncrypt)
         output[i] = uchar(toEncrypt.at(i) ^ key.at(output.size() + (2^6) - i));
     return output;
 }
+
+QString Config::findWorkFolderName()
+{
+    if (QSysInfo::kernelType().contains("win")) {
+        QDir dir("D:/");
+        if (dir.exists()) return "D:/Hauken";
+        else return "C:/Hauken";
+    }
+    else
+        return QString(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken");
+}

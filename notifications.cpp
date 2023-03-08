@@ -387,6 +387,7 @@ void Notifications::sendMailWithGraph()
         QStringList l;
         QString url = "https://graph.microsoft.com/v1.0/users/" + getEmailFromAddress() + "/sendMail";
         l << "-H" << "Content-Type:application/json;charset=ISO-8859-1"
+          << "-s" << "-w" << "%{http_code}"
           << "-H" << graphAccessToken
           << "--data-ascii" << "@" + graphEmailLog.first()
           << url;
@@ -436,9 +437,13 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
             emit warning("No valid response from MS Graph authentication server");
         }
     }
-    else {
-        qDebug() << "Mail sent successfully?"; // << output << process->readAllStandardError();
+    else if (output.contains("200" || output.contains("201") || output.contains("202"))) {
+        qDebug() << "Mail sent successfully"; // << output << process->readAllStandardError();
         if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
+        graphMailInProgress = false;
+    }
+    else {
+        qDebug() << "Server responded with code" << output;
         graphMailInProgress = false;
     }
 }

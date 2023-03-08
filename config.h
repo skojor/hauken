@@ -6,6 +6,10 @@
 #include <QStandardPaths>
 #include <QString>
 #include <QDebug>
+#include <QSysInfo>
+#include <QDir>
+#include <QFile>
+
 
 class Config : public QObject
 {
@@ -80,11 +84,13 @@ public slots:
     void setStnLongitude(QString s) { settings->setValue("station/Longitude", s); emit settingsUpdated(); }
     QString getStnAltitude() { return settings->value("station/Altitude", 0).toString(); }
     void setStnAltitude(QString s) { settings->setValue("station/Altitude", s); emit settingsUpdated(); }
+
+    QString findWorkFolderName();
     QString getWorkFolder() { return settings->value("workFolder",
-                                                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken").toString(); }
+                                                     findWorkFolderName()).toString(); }
     void setWorkFolder(QString s) { settings->setValue("workFolder", s); emit settingsUpdated(); }
     QString getLogFolder() { return settings->value("logFolder",
-                                                    QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken/logs").toString(); }
+                                                    findWorkFolderName() + "/logs").toString(); }
     void setLogFolder(QString s) { settings->setValue("logFolder", s); emit settingsUpdated(); }
     bool getNewLogFolder() { return settings->value("newLogFolder", false).toBool(); }
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); emit settingsUpdated(); }
@@ -290,7 +296,7 @@ private slots:
     QByteArray simpleEncr(QByteArray);
 
 private:
-    QString basicFile = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/hauken.conf";
+    QString basicFile = findWorkFolderName() + "/hauken.conf";
     QSettings *basicSettings = new QSettings(basicFile, QSettings::IniFormat);
     QString curFile = basicSettings->value("lastFile", "default.ini").toString();
     QSettings *settings = new QSettings(curFile, QSettings::IniFormat);
