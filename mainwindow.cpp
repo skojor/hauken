@@ -502,6 +502,9 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, waterfall, &Waterfall::stopPlot); // own thread, needs own signal
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
+    connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, this, [this] {
+        waterfall->stopPlot(false);
+    });
 
     connect(measurementDevice, &MeasurementDevice::popup, this, &MainWindow::generatePopup);
     connect(measurementDevice, &MeasurementDevice::status, this, &MainWindow::updateStatusLine);
@@ -595,8 +598,8 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer3, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
 
     connect(positionReport, &PositionReport::reqPosition, this, [this] (QString s) {
-        if (s.contains("GNSS 1")) positionReport->updPosition(this->gnssDevice1->sendGnssData());
-        else if (s.contains("GNSS 2")) positionReport->updPosition(this->gnssDevice2->sendGnssData());
+        if (s.contains("1")) positionReport->updPosition(this->gnssDevice1->sendGnssData());
+        else if (s.contains("2")) positionReport->updPosition(this->gnssDevice2->sendGnssData());
         else positionReport->updPosition(this->measurementDevice->sendGnssData());
     });
     connect(positionReport, &PositionReport::reqMeasurementDevicePtr, this, [this] {

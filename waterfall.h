@@ -34,7 +34,7 @@ public slots:
     void updSize(QRect s);
     void updSettings();
     void restartPlot();
-    void stopPlot(bool b) { if (!b) updIntervalTimer->stop();}
+    void stopPlot(bool b) { if (!b) updIntervalTimer->stop(); else updIntervalTimer->start(100);}
 
 signals:
     void imageReady(QPixmap *);

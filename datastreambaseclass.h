@@ -46,7 +46,7 @@ public:
     QElapsedTimer *traceTimer = new QElapsedTimer;
     int errorCtr = 0;
     bool errorHandleSent = false;
-    const int timeoutInMs = 20000;
+    const int timeoutInMs = 8000;
 
 public slots:
     virtual void openListener() = 0;

@@ -44,7 +44,7 @@ void MeasurementDevice::instrConnect()
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
-    if (!scpiReconnect) tcpTimeoutTimer->start(20000);
+    if (!scpiReconnect) tcpTimeoutTimer->start(8000);
 }
 
 void MeasurementDevice::scpiConnected()
@@ -66,7 +66,7 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
         if (autoReconnect)
             scpiReconnect = true;
         instrDisconnect();
-        autoReconnectTimer->start(15000);
+        autoReconnectTimer->start(5000);
     }
 }
 
