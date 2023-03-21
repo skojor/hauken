@@ -41,7 +41,7 @@ void PositionReport::generateReport()
     reportArgs.clear();
     reportArgs << "-H" << "Content-Type:application/x-www-form-urlencoded"
                << "-s" << "-w" << "%{http_code}";
-    reportArgs << "--data" << "id=" + getSdefStationInitals()
+    reportArgs << "--data" << "id=" + (id.isEmpty() ? getSdefStationInitals() : id)
          << "--data" << "timestamp=" + QString::number(gnssData.timestamp.toMSecsSinceEpoch() / 1000);
     if (gnssData.posValid) {
         reportArgs << "--data" << "posValid=true";
@@ -91,6 +91,7 @@ void PositionReport::updSettings()
     posSource = getPosReportSource();
     url = getPosReportUrl();
     reportInterval = getPosReportSendInterval();
+    id = getPosReportId();
 
     configReportTimer();
     if (!devicePtr) emit reqMeasurementDevicePtr();

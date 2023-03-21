@@ -18,6 +18,9 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("Receiver http(s) address"), leOpt1);
     leOpt1->setToolTip("The receiving address for the json report");
 
+    mainLayout->addRow(new QLabel("Station ID"), leOpt2);
+    leOpt2->setToolTip("The name used as identity in the position report");
+
     mainLayout->addRow(new QLabel("Send interval (in seconds)"), sbOpt1);
     sbOpt1->setToolTip("How often to send position reports");
     sbOpt1->setRange(1, 9999);
@@ -48,6 +51,7 @@ void PositionReportOptions::start()
     cbOpt1->setChecked(config->getPosReportActivated());
     comboOpt1->setCurrentIndex(comboOpt1->findText(config->getPosReportSource()));
     leOpt1->setText(config->getPosReportUrl());
+    leOpt2->setText(config->getPosReportId());
     sbOpt1->setValue(config->getPosReportSendInterval());
     cbOpt2->setChecked(config->getPosReportAddPos());
     cbOpt3->setChecked(config->getPosReportAddSogCog());
@@ -62,6 +66,7 @@ void PositionReportOptions::saveCurrentSettings()
     config->setPosReportActivated(cbOpt1->isChecked());
     config->setPosReportSource(comboOpt1->currentText());
     config->setPosReportUrl(leOpt1->text());
+    config->setPosReportId(leOpt2->text());
     config->setPosReportSendInterval(sbOpt1->value());
     config->setPosReportAddPos(cbOpt2->isChecked());
     config->setPosReportAddSogCog(cbOpt3->isChecked());

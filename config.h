@@ -291,6 +291,8 @@ public slots:
     void setPosreportAddGnssStats(bool b) { settings->setValue("posReport/addGnssStats", b); emit settingsUpdated();}
     bool getPosReportAddConnStats() { return settings->value("posReport/addConnStats", true).toBool();}
     void setPosreportAddConnStats(bool b) { settings->setValue("posReport/addConnStats", b); emit settingsUpdated();}
+    QString getPosReportId() { return settings->value("posReport/id", "InstrumentGNSS").toString();}
+    void setPosReportId(QString s) { settings->setValue("posReport/id", s); emit settingsUpdated();}
 
 private slots:
     QByteArray simpleEncr(QByteArray);

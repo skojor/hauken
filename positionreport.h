@@ -51,7 +51,7 @@ private:
 
     // config cache
     bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats;
-    QString posSource, url;
+    QString posSource, url, id;
     int reportInterval = 0;
     GnssData gnssData;
     QStringList reportArgs;
