@@ -144,7 +144,7 @@ void MainWindow::createActions()
     optPositionReport->setStatusTip("Setup of periodic report posts via http(s)");
     connect(optPositionReport, &QAction::triggered, this, [this] { this->positionReportOptions->start();});
 
-    optGeoLimit = new QAction(tr("&Geographic limit options"), this);
+    optGeoLimit = new QAction(tr("&Geographic blocking options"), this);
     optGeoLimit->setStatusTip(tr("Setup of geographic area where usage is allowed"));
     connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start();});
 
@@ -506,12 +506,20 @@ void MainWindow::setSignals()
     connect(gnssTimeOffset, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setGnssTimeOffset);
 
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, &MainWindow::instrConnected);
+
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, waterfall, &Waterfall::stopPlot); // own thread, needs own signal
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
     connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, this, [this] {
-        waterfall->stopPlot(false);
+        emit stopPlot(false);
     });
+    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, [this](bool state) {
+        if (state && config->getGeoLimitActive() && !geoLimit->areWeInsidePolygon()) { // don't reconnect all if outside borders
+            emit stopPlot(false);
+        }
+    });
+
+    connect(this, &MainWindow::stopPlot, waterfall, &Waterfall::stopPlot);
 
     connect(measurementDevice, &MeasurementDevice::popup, this, &MainWindow::generatePopup);
     connect(measurementDevice, &MeasurementDevice::status, this, &MainWindow::updateStatusLine);
@@ -542,7 +550,10 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::setAnalyzerNotReady);
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, traceAnalyzer, &TraceAnalyzer::setAnalyzerReady);
 
-    connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+    if (!config->getGeoLimitActive()) {
+        connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+    }
+
     connect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::resetAverageLevel);
@@ -671,6 +682,17 @@ void MainWindow::setSignals()
         if (!data.posValid) data = gnssDevice2->sendGnssData();
         if (!data.posValid) data = measurementDevice->sendGnssData();
         geoLimit->receivePosition(data);
+    });
+    connect(geoLimit, &GeoLimit::currentPositionOk, this, [this](bool weAreInsidePolygon) {
+        if (weAreInsidePolygon) {
+            connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+            waterfall->restartPlot();
+        }
+        else {
+            disconnect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+            emit stopPlot(false);
+            traceBuffer->emptyBuffer();
+        }
     });
 }
 
@@ -964,6 +986,7 @@ void MainWindow::saveConfigValues()
 
 void MainWindow::showBytesPerSec(int val)
 {
+    if (!config->getGeoLimitActive() || geoLimit->areWeInsidePolygon()) {
     QString msg = "Traffic " + QString::number(val / 1000) + " kB/sec";
     if (measurementDevice->getTracesPerSec() > 0)
         msg += ", " + QString::number(measurementDevice->getTracesPerSec(), 'f', 1) + " traces/sec";
@@ -973,6 +996,7 @@ void MainWindow::showBytesPerSec(int val)
         msg += ", single/total signal above limit: " + QString::number(khzAboveLimit) + " / " + QString::number(khzAboveLimitTotal) + " kHz";
 
     statusBar->showMessage(msg, 2000);
+    }
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)

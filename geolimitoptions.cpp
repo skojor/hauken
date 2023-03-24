@@ -7,16 +7,16 @@ GeoLimitOptions::GeoLimitOptions(QSharedPointer<Config> c)
     setWindowTitle(tr("Geographic limiting options"));
 
     mainLayout->addRow(cbOpt1);
-    cbOpt1->setText("Enable geographic limiting");
+    cbOpt1->setText("Enable geographic blocking");
     cbOpt1->setToolTip("Enabling this option will pause the monitoring and stop all recording if the " \
                        "station is moving outside a given polygon. Monitoring will resume when the" \
                        "station goes back inside the polygon");
 
-    if (!config->getGeoLimitFilename().isEmpty()) file->setText(config->getGeoLimitFilename());
-    else file->setText("(No file selected)");
-    mainLayout->addRow(new QLabel("KML file containing a polygon of the area where usage is allowed"), file);
+    filename = config->getGeoLimitFilename();
+
     mainLayout->addRow(selectFileBtn);
-    selectFileBtn->setText("Select KML file...");
+    selectFileBtn->setText("Select KML file...( " + filename + " )");
+    selectFileBtn->setToolTip("A KML file containing a polygon of the area where usage is allowed");
 
     connect(selectFileBtn, &QPushButton::clicked, this, [this] {
         filename = QFileDialog::getOpenFileName(this, "Select file", config->getWorkFolder(), "KML files (*.kml)");

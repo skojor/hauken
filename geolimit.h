@@ -16,6 +16,7 @@
 #include <QGeoPolygon>
 #include <QGeoCoordinate>
 #include <QTimer>
+#include <QRandomGenerator64>
 #include "config.h"
 #include "typedefs.h"
 
@@ -27,11 +28,15 @@ public:
     void updSettings();
     void receivePosition(GnssData data) { if (data.posValid) gnssData = data; } // only update if valid position
     bool waitingForPosition() { return awaitingPosition;}
+    bool areWeInsidePolygon() { return weAreInsidePolygon;}
+    void restart();
 
 private:
     QGeoPolygon polygon;
     QTimer *timer = new QTimer;
-    bool stateOutsidePolygon = false, awaitingPosition = true;
+    bool weAreInsidePolygon = false, triedReadingFileNoSuccess = false, awaitingPosition = true, notifyWeAreWaiting = false;
+    bool testMode = true;
+    QGeoCoordinate testCoordinates;
 
     QString filename;
     bool activated = false;

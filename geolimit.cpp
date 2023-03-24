@@ -22,30 +22,44 @@ void GeoLimit::checkCurrentPosition()
 {
     if (gnssData.posValid && !graceTime) { // no point in checking if not valid
         awaitingPosition = false;
-        QGeoCoordinate coord(gnssData.longitude, gnssData.latitude);
+        QGeoCoordinate coord(gnssData.latitude, gnssData.longitude);
+        if (testMode) {
+            if (!testCoordinates.isValid()) testCoordinates = coord;
+            else {
+                testCoordinates.setLatitude(testCoordinates.latitude() - QRandomGenerator64::global()->generateDouble());
+                testCoordinates.setLongitude(testCoordinates.longitude() + QRandomGenerator64::global()->generateDouble() / 10);
+            }
+            qDebug() << "Test random coord" << testCoordinates.latitude() << testCoordinates.longitude();
+            coord = testCoordinates;
+        }
+
         if (polygon.contains(coord)) {
-            if (!stateOutsidePolygon) {
-                emit toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Geographic limiting enabled, current position within allowed area. Enabling radio");
+            if (!weAreInsidePolygon) {
+                emit toIncidentLog(NOTIFY::TYPE::GEOLIMITER, "", "Current position within allowed area, enabling radio");
                 emit currentPositionOk(true);
-                stateOutsidePolygon = true;
+                weAreInsidePolygon = true;
                 graceTime = 60;
             }
         }
         else {
-            if (stateOutsidePolygon) {
-                emit toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Current position is outside allowed area. Pausing radio");
+            if (weAreInsidePolygon) {
+                emit toIncidentLog(NOTIFY::TYPE::GEOLIMITER, "", "Current position is outside allowed area, pausing radio");
                 emit currentPositionOk(false);
-                stateOutsidePolygon = false;
+                weAreInsidePolygon = false;
                 graceTime = 60;
             }
         }
     }
-
-    else if (graceTime) graceTime--;
-
-    else {
-        qDebug() << "No valid position found";
+    if (awaitingPosition && !notifyWeAreWaiting) {
+        notifyWeAreWaiting = true;
+        emit toIncidentLog(NOTIFY::TYPE::GEOLIMITER, "", "Radio is paused until a valid position inside the given polygon is received");
     }
+
+    else if (graceTime) {
+        graceTime--;
+        if (testMode && !weAreInsidePolygon && graceTime == 1) testMode = false;
+    }
+
     emit requestPosition(); // update pos. every second
 }
 
@@ -54,8 +68,9 @@ void GeoLimit::readKmlFile()
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
         qDebug() << "Cannot open KML" << filename;
-        emit toIncidentLog(NOTIFY::TYPE::GENERAL, QString(), "Geographic limit KML file " + filename + " could not be opened, disabling geographic limit");
-
+        emit toIncidentLog(NOTIFY::TYPE::GEOLIMITER, QString(), "Geographic limit KML file " + filename + " could not be opened, disabling geographic limit");
+        activated = false;
+        triedReadingFileNoSuccess = true;
     }
     else {
         QByteArray data;
@@ -69,12 +84,12 @@ void GeoLimit::readKmlFile()
                         QGeoCoordinate coord;
                         QList<QByteArray> latLng = val.split(',');
                         if (latLng.size() > 1) {
-                            coord.setLatitude(latLng[0].toDouble());
-                            coord.setLongitude(latLng[1].toDouble());
+                            coord.setLatitude(latLng[1].toDouble());
+                            coord.setLongitude(latLng[0].toDouble());
 
                             if (coord.isValid()) {
                                 polygon.addCoordinate(coord);
-                                qDebug() << "Added to polygon" << coord.latitude() << coord.longitude();
+                                //qDebug() << "Added to polygon" << coord.latitude() << coord.longitude();
                             }
                         }
                     }
@@ -89,11 +104,20 @@ void GeoLimit::readKmlFile()
     file.close();
 }
 
+void GeoLimit::restart()
+{
+    weAreInsidePolygon = false;
+    triedReadingFileNoSuccess = false;
+    awaitingPosition = true;
+    notifyWeAreWaiting = false;
+    activate();
+}
+
 void GeoLimit::updSettings()
 {
     if (!activated && getGeoLimitActive()) {
         activated = true;
-        filename = getGeoLimitFilename();
+        if (!triedReadingFileNoSuccess) filename = getGeoLimitFilename();
         readKmlFile();
         activate();
     }

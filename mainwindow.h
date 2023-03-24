@@ -222,5 +222,7 @@ private:
     PositionReport *positionReport = new PositionReport;
     GeoLimit *geoLimit = new GeoLimit;
 
+signals:
+    void stopPlot(bool);
 };
 #endif // MAINWINDOW_H

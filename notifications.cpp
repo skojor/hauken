@@ -76,6 +76,8 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     QString msg = string;
     if (type == NOTIFY::TYPE::MEASUREMENTDEVICE) msg.prepend(name + ": ");
     else if (type == NOTIFY::TYPE::GNSSDEVICE || type == NOTIFY::TYPE::GNSSANALYZER) msg.prepend("GNSS" + name + ": ");
+    else if (type == NOTIFY::TYPE::GEOLIMITER) msg.prepend("Geoblocking: ");
+
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
