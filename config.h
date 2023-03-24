@@ -294,6 +294,12 @@ public slots:
     QString getPosReportId() { return settings->value("posReport/id", "").toString();}
     void setPosReportId(QString s) { settings->setValue("posReport/id", s); emit settingsUpdated();}
 
+    // Geo limiting
+    bool getGeoLimitActive() { return settings->value("geoLimit/activated", false).toBool();}
+    void setGeoLimitActive(bool b) { settings->setValue("geoLimit/activated", b); emit settingsUpdated();}
+    QString getGeoLimitFilename() { return settings->value("geoLimit/filename").toString();}
+    void setGeoLimitFilename(QString s) { settings->setValue("geoLimit/filename", s); emit settingsUpdated();}
+
 private slots:
     QByteArray simpleEncr(QByteArray);
 

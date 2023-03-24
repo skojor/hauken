@@ -45,6 +45,8 @@
 #include "pmrtablewdg.h"
 #include "positionreportoptions.h"
 #include "positionreport.h"
+#include "geolimitoptions.h"
+#include "geolimit.h"
 
 class MainWindow : public QMainWindow
 {
@@ -169,6 +171,7 @@ private:
     QAction *optArduino;
     QAction *optAutoRecorder;
     QAction *optPositionReport;
+    QAction *optGeoLimit;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -184,6 +187,7 @@ private:
     ArduinoOptions *arduinoOptions;
     AutoRecorderOptions *autoRecorderOptions;
     PositionReportOptions *positionReportOptions;
+    GeoLimitOptions *geoLimitOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 
@@ -216,5 +220,7 @@ private:
     bool dispWaterfall;
 
     PositionReport *positionReport = new PositionReport;
+    GeoLimit *geoLimit = new GeoLimit;
+
 };
 #endif // MAINWINDOW_H

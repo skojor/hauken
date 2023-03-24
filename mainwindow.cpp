@@ -40,6 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
     arduinoOptions = new ArduinoOptions(config);
     autoRecorderOptions = new AutoRecorderOptions(config);
     positionReportOptions = new PositionReportOptions(config);
+    geoLimitOptions = new GeoLimitOptions(config);
 
     arduinoPtr = new Arduino(this);
 
@@ -143,6 +144,11 @@ void MainWindow::createActions()
     optPositionReport->setStatusTip("Setup of periodic report posts via http(s)");
     connect(optPositionReport, &QAction::triggered, this, [this] { this->positionReportOptions->start();});
 
+    optGeoLimit = new QAction(tr("&Geographic limit options"), this);
+    optGeoLimit->setStatusTip(tr("Setup of geographic area where usage is allowed"));
+    connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start();});
+
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -186,6 +192,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optArduino);
     optionMenu->addAction(optAutoRecorder);
     optionMenu->addAction(optPositionReport);
+    optionMenu->addAction(optGeoLimit);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
@@ -560,6 +567,7 @@ void MainWindow::setSignals()
     //connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
+    connect(config.data(), &Config::settingsUpdated, geoLimit, &GeoLimit::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -654,6 +662,10 @@ void MainWindow::setSignals()
     notificationsThread->start();
     waterfallThread->start();
     //cameraThread->start();
+
+    connect(geoLimit, &GeoLimit::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(geoLimit, &GeoLimit::warning, this, &MainWindow::generatePopup);
+
 }
 
 void MainWindow::instrStartFreqChanged()

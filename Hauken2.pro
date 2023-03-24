@@ -37,6 +37,8 @@ SOURCES += \
     datastreambaseclass.cpp \
     emailoptions.cpp \
     generaloptions.cpp \
+    geolimit.cpp \
+    geolimitoptions.cpp \
     gnssanalyzer.cpp \
     gnssdevice.cpp \
     gnssoptions.cpp \
@@ -92,6 +94,8 @@ HEADERS += \
     datastreambaseclass.h \
     emailoptions.h \
     generaloptions.h \
+    geolimit.h \
+    geolimitoptions.h \
     gnssanalyzer.h \
     gnssdevice.h \
     gnssoptions.h \
