@@ -1,6 +1,6 @@
 QT       += core gui serialport network
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
 CONFIG += c++11
 QMAKE_CXXFLAGS += -pthread

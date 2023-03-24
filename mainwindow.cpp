@@ -665,7 +665,13 @@ void MainWindow::setSignals()
 
     connect(geoLimit, &GeoLimit::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(geoLimit, &GeoLimit::warning, this, &MainWindow::generatePopup);
-
+    connect(geoLimit, &GeoLimit::requestPosition, this, [this] {
+        GnssData data;
+        data = gnssDevice1->sendGnssData();
+        if (!data.posValid) data = gnssDevice2->sendGnssData();
+        if (!data.posValid) data = measurementDevice->sendGnssData();
+        geoLimit->receivePosition(data);
+    });
 }
 
 void MainWindow::instrStartFreqChanged()
