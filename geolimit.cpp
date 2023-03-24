@@ -21,6 +21,7 @@ void GeoLimit::activate()
 void GeoLimit::checkCurrentPosition()
 {
     if (gnssData.posValid && !graceTime) { // no point in checking if not valid
+        awaitingPosition = false;
         QGeoCoordinate coord(gnssData.longitude, gnssData.latitude);
         if (polygon.contains(coord)) {
             if (!stateOutsidePolygon) {

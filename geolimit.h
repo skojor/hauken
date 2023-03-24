@@ -26,11 +26,12 @@ public:
     explicit GeoLimit(QObject *parent = nullptr);
     void updSettings();
     void receivePosition(GnssData data) { if (data.posValid) gnssData = data; } // only update if valid position
+    bool waitingForPosition() { return awaitingPosition;}
 
 private:
     QGeoPolygon polygon;
     QTimer *timer = new QTimer;
-    bool stateOutsidePolygon = false;
+    bool stateOutsidePolygon = false, awaitingPosition = true;
 
     QString filename;
     bool activated = false;
