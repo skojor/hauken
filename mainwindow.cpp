@@ -625,6 +625,7 @@ void MainWindow::setSignals()
         if (measurementDevice) positionReport->setMeasurementDevicePtr(measurementDevice->getMeasurementDeviceData());
     });
     connect (measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
+    connect (positionReport, &PositionReport::reqSensorData, arduinoPtr, &Arduino::returnSensorData);
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
     {

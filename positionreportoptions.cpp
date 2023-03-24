@@ -39,7 +39,11 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(cbOpt5);
     cbOpt5->setText("Include current job stats");
-    cbOpt5->setToolTip("Include connection and current band in the report");
+    cbOpt5->setToolTip("Include uptime, connection and current band in the report");
+
+    mainLayout->addRow(cbOpt6);
+    cbOpt6->setText("Include temperature and humidity");
+    cbOpt6->setToolTip("Include sensor temperature and humidity data if available");
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &PositionReportOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -57,6 +61,7 @@ void PositionReportOptions::start()
     cbOpt3->setChecked(config->getPosReportAddSogCog());
     cbOpt4->setChecked(config->getPosReportAddGnssStats());
     cbOpt5->setChecked(config->getPosReportAddConnStats());
+    cbOpt6->setChecked(config->getPosReportAddSensorData());
 
     dialog->exec();
 }
@@ -72,6 +77,7 @@ void PositionReportOptions::saveCurrentSettings()
     config->setPosReportAddSogCog(cbOpt3->isChecked());
     config->setPosreportAddGnssStats(cbOpt4->isChecked());
     config->setPosreportAddConnStats(cbOpt5->isChecked());
+    config->setPosreportAddSensorData(cbOpt6->isChecked());
 
     dialog->close();
 }

@@ -293,6 +293,8 @@ public slots:
     void setPosreportAddConnStats(bool b) { settings->setValue("posReport/addConnStats", b); emit settingsUpdated();}
     QString getPosReportId() { return settings->value("posReport/id", "").toString();}
     void setPosReportId(QString s) { settings->setValue("posReport/id", s); emit settingsUpdated();}
+    bool getPosReportAddSensorData() { return settings->value("posReport/addSensorData", true).toBool();}
+    void setPosreportAddSensorData(bool b) { settings->setValue("posReport/addSensorData", b); emit settingsUpdated();}
 
     // Geo limiting
     bool getGeoLimitActive() { return settings->value("geoLimit/activated", false).toBool();}

@@ -45,6 +45,7 @@ public:
     void watchdogOn();
     void watchdogOff();
     bool isWatchdogActive() { return stateWatchdog; }
+    void returnSensorData(double &t, double &h) { t = temperature; h = humidity;}
 
 private slots:
     void handleBuffer();

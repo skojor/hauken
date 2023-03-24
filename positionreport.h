@@ -21,6 +21,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QElapsedTimer>
 
 
 class PositionReport : public Config
@@ -41,24 +42,31 @@ public slots:
     void updPosition(GnssData data) { gnssData = data;}
     void setMeasurementDevicePtr(QSharedPointer<Device> dev) { devicePtr = dev;}
     void setMeasurementDeviceConnectionStatus(bool b) { measurementDeviceConnected = b;}
+    void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
 
 private:
     QTimer *reportTimer = new QTimer;
     QTimer *gnssReqTimer = new QTimer;
+    QTimer *sensorDataTimer = new QTimer;
+
     QProcess *curlProcess = new QProcess;
     bool measurementDeviceConnected = false;
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
+    double sensorTemp, sensorHumidity;
 
     // config cache
-    bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats;
+    bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats, addSensorData;
     QString posSource, url, id;
     int reportInterval = 0;
     GnssData gnssData;
     QStringList reportArgs;
+    bool sensorDataValid = false;
+    QElapsedTimer uptime;
 
 signals:
     void reqPosition(QString);
     void reqMeasurementDevicePtr();
+    void reqSensorData(double &t, double &h);
 };
 
 #endif // POSITIONREPORT_H

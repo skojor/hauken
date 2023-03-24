@@ -22,8 +22,14 @@ PositionReport::PositionReport(QObject *parent)
     connect(gnssReqTimer, &QTimer::timeout, this, [this] {
         emit reqPosition(posSource);
     });
+    connect(sensorDataTimer, &QTimer::timeout, this, [this] {
+        emit reqSensorData(sensorTemp, sensorHumidity);
+    });
 
     if (!posSource.isEmpty()) gnssReqTimer->start(1000);
+    if (addSensorData && getArduinoReadDHT20()) sensorDataTimer->start(60 * 1e3);
+
+    uptime.start();
 }
 
 void PositionReport::configReportTimer()
@@ -65,7 +71,13 @@ void PositionReport::generateReport()
         reportArgs << "--data" << "state=" + QString((measurementDeviceConnected?"connected":"disconnected"))
                    << "--data" << "startFreq=" + QString::number(devicePtr->pscanStartFrequency)
                    << "--data" << "stopFreq=" + QString::number(devicePtr->pscanStopFrequency)
-                   << "--data" << "res=" + QString::number(devicePtr->pscanResolution);
+                   << "--data" << "res=" + QString::number(devicePtr->pscanResolution)
+                   << "--data" << "uptime=" + QString::number((int)(uptime.elapsed() / 1e3));
+    }
+
+    if (addSensorData && sensorDataValid) {
+        reportArgs << "--data" << "temp=" + QString::number(sensorTemp, 'f', 1)
+                   << "--data" << "humidity=" + QString::number((int)sensorHumidity);
     }
 
     reportArgs << url;
@@ -88,6 +100,7 @@ void PositionReport::updSettings()
     addCogSog = getPosReportAddSogCog();
     addGnssStats = getPosReportAddGnssStats();
     addConnStats = getPosReportAddConnStats();
+    addSensorData = getPosReportAddSensorData();
     posSource = getPosReportSource();
     url = getPosReportUrl();
     reportInterval = getPosReportSendInterval();

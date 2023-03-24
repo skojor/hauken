@@ -35,7 +35,7 @@ private:
     QGeoPolygon polygon;
     QTimer *timer = new QTimer;
     bool weAreInsidePolygon = false, triedReadingFileNoSuccess = false, awaitingPosition = true, notifyWeAreWaiting = false;
-    bool testMode = true;
+    bool testMode = false;
     QGeoCoordinate testCoordinates;
 
     QString filename;
