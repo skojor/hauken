@@ -36,7 +36,7 @@ public:
     void connectToPort();
     void start();
     void close() {
-        qDebug() << "Closing...";
+        //qDebug() << "Closing...";
         setArduinoWindowState(wdg->saveGeometry());
         wdg->close();
     }

@@ -24,6 +24,8 @@ PositionReport::PositionReport(QObject *parent)
     });
     connect(sensorDataTimer, &QTimer::timeout, this, [this] {
         emit reqSensorData(sensorTemp, sensorHumidity);
+        //qDebug() << "Data received" << sensorTemp << sensorHumidity << "";
+        if (sensorTemp > -30 && sensorHumidity > 0) sensorDataValid = true;
     });
 
     if (!posSource.isEmpty()) gnssReqTimer->start(1000);

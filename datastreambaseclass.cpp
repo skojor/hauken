@@ -269,8 +269,8 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
             devicePtr->longitude = lng;
             devicePtr->altitude = altitude;
             devicePtr->dop = dilution;
-            devicePtr->sog = (float)sog / 10.0;
-            devicePtr->cog = (float)cog / 10.0;
+            devicePtr->sog = (float)((sog) / 10.0) * 1.94384449;
+            devicePtr->cog = (float)cog;
             devicePtr->gnssTimestamp = QDateTime::fromMSecsSinceEpoch(gnssTimestamp / 1e6);
             devicePtr->sats = sats;
         }

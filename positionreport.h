@@ -52,7 +52,7 @@ private:
     QProcess *curlProcess = new QProcess;
     bool measurementDeviceConnected = false;
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
-    double sensorTemp, sensorHumidity;
+    double sensorTemp = -99, sensorHumidity = 0;
 
     // config cache
     bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats, addSensorData;

@@ -60,7 +60,6 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
     if (state == QAbstractSocket::ConnectedState) {
         askId();
         emit status("Measurement device connected, asking for ID");
-        firstConnection = false; // now we know network is up, keep calm and drink tea
     }
     else if (state == QAbstractSocket::UnconnectedState && connected && !discPressed) { // happens if instrument restarts or SCPI conn. goes away otherwise
         if (autoReconnect)
@@ -422,7 +421,7 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
         msg += tr(" by ") + QString(buffer).simplified();
     }
     msg += tr(". Press connect once more to override");
-    if (!buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
+    if (!firstConnection && !buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
         tcpTimeoutTimer->stop();
         instrDisconnect();
         deviceInUseWarningIssued = true;
@@ -433,6 +432,7 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
         deviceInUseWarningIssued = true;
         askUdp();
     }
+    firstConnection = false; // now we know network is up
 }
 
 void MeasurementDevice::stateConnected()
@@ -758,6 +758,8 @@ GnssData MeasurementDevice::sendGnssData()
     data.posValid = devicePtr->positionValid;
     data.latitude = devicePtr->latitude;
     data.longitude = devicePtr->longitude;
+    data.cog = devicePtr->cog;
+    data.sog = devicePtr->sog;
     data.altitude = (float)devicePtr->altitude / 100.0;
     data.hdop = devicePtr->dop;
     data.timestamp = devicePtr->gnssTimestamp;
