@@ -439,7 +439,7 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
             emit warning("No valid response from MS Graph authentication server");
         }
     }
-    else if (output.contains("200" || output.contains("201") || output.contains("202"))) {
+    else if (output.contains("200") || output.contains("201") || output.contains("202")) {
         qDebug() << "Mail sent successfully"; // << output << process->readAllStandardError();
         if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
         graphMailInProgress = false;
