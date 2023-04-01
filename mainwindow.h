@@ -47,6 +47,8 @@
 #include "positionreport.h"
 #include "geolimitoptions.h"
 #include "geolimit.h"
+#include "mqtt.h"
+#include "mqttoptions.h"
 
 class MainWindow : public QMainWindow
 {
@@ -57,8 +59,8 @@ public:
     ~MainWindow();
 
 public slots:
-    void resizeEvent(QResizeEvent *event); // override to save changes to win size
-    void moveEvent(QMoveEvent *event); // override to save position
+    void resizeEvent(QResizeEvent *event) override; // override to save changes to win size
+    void moveEvent(QMoveEvent *event) override; // override to save position
 protected:
 
 private slots:
@@ -172,6 +174,7 @@ private:
     QAction *optAutoRecorder;
     QAction *optPositionReport;
     QAction *optGeoLimit;
+    QAction *optMqtt;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -188,6 +191,7 @@ private:
     AutoRecorderOptions *autoRecorderOptions;
     PositionReportOptions *positionReportOptions;
     GeoLimitOptions *geoLimitOptions;
+    MqttOptions *mqttOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 
@@ -221,6 +225,7 @@ private:
 
     PositionReport *positionReport = new PositionReport;
     GeoLimit *geoLimit = new GeoLimit;
+    Mqtt *mqtt = new Mqtt;
 
 signals:
     void stopPlot(bool);

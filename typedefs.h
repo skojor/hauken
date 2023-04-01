@@ -213,6 +213,7 @@ public:
         hasAvgType = false;
         hasAutoAtt = false;
         hasAttOnOff = false;
+        hasAntNames;
     }
     void setType(Instrument::InstrumentType t)
     {
@@ -394,6 +395,7 @@ public:
     bool hasAvgType = false;
     bool hasAutoAtt = false;
     bool hasAttOnOff = false;
+    bool hasAntNames = false;
 
     Instrument::Mode mode = Instrument::Mode::PSCAN;
     quint64 pscanStartFrequency = 0, pscanStopFrequency = 0;

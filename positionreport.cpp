@@ -70,6 +70,10 @@ void PositionReport::generateReport()
              << "--data" << "sats=" + QString::number(gnssData.satsTracked);
     }
     if (addConnStats) {
+        QString state = "disconnected";
+        if (measurementDeviceConnected && !inUse) state = "connected";
+        else if (inUse) state = "busy";
+        if (!inUseBy.isEmpty()) state += " (" + inUseBy + ")";
         reportArgs << "--data" << "state=" + QString((measurementDeviceConnected?"connected":"disconnected"))
                    << "--data" << "startFreq=" + QString::number(devicePtr->pscanStartFrequency)
                    << "--data" << "stopFreq=" + QString::number(devicePtr->pscanStopFrequency)
@@ -88,7 +92,7 @@ void PositionReport::generateReport()
 void PositionReport::sendReport()
 {
     curlProcess->setArguments(reportArgs);
-    //qDebug() << "req to send" << reportArgs;
+    qDebug() << "req to send" << reportArgs;
     curlProcess->start();
 }
 

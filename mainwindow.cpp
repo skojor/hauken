@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     autoRecorderOptions = new AutoRecorderOptions(config);
     positionReportOptions = new PositionReportOptions(config);
     geoLimitOptions = new GeoLimitOptions(config);
+    mqttOptions = new MqttOptions(config);
 
     arduinoPtr = new Arduino(this);
 
@@ -149,6 +150,9 @@ void MainWindow::createActions()
     optGeoLimit->setStatusTip(tr("Setup of geographic area where usage is allowed"));
     connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start();});
 
+    optMqtt = new QAction(tr("&MQTT sensor options"), this);
+    optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT. For now only usable for Victron GX systems voltage and charger data"));
+    connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start();});
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -194,6 +198,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optAutoRecorder);
     optionMenu->addAction(optPositionReport);
     optionMenu->addAction(optGeoLimit);
+    optionMenu->addAction(optMqtt);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);

@@ -45,6 +45,8 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     measurementdevice.cpp \
+    mqtt.cpp \
+    mqttoptions.cpp \
     notifications.cpp \
     optionsbaseclass.cpp \
     pmrtablewdg.cpp \
@@ -101,6 +103,8 @@ HEADERS += \
     gnssoptions.h \
     mainwindow.h \
     measurementdevice.h \
+    mqtt.h \
+    mqttoptions.h \
     notifications.h \
     optionsbaseclass.h \
     pmrtablewdg.h \
@@ -125,15 +129,18 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 RESOURCES += \
     icons.qrc
 #
-INCLUDEPATH += $$PWD/quazip
+INCLUDEPATH += \
+    $$PWD/quazip #\
+    #$$PWD/qtmqtt
+
 #win32: LIBS += -L$$PWD/quazip -lquazip1-qt5
 
 unix: {
-  LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil
+  LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -lqtmqtt
 }
 
 win32 {
-  LIBS += -lOpenGL32 -L$$PWD/quazip -lquazip1-qt5
+  LIBS += -lOpenGL32 -L$$PWD/quazip -lquazip1-qt5 -L$$PWD/qtmqtt -lqt5mqtt
 }
 
 
