@@ -213,7 +213,7 @@ public:
         hasAvgType = false;
         hasAutoAtt = false;
         hasAttOnOff = false;
-        hasAntNames;
+        hasAntNames = false;
     }
     void setType(Instrument::InstrumentType t)
     {
@@ -293,6 +293,7 @@ public:
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
             minFrequency = 8e3;
             maxFrequency = 6e9;
+            hasAntNames = true;
         }
         else if (type == Instrument::InstrumentType::ESMB) {
             udpStream = true;
@@ -350,6 +351,7 @@ public:
             advProtocol = true;
             id = "PR200";
             hasPscan = true;
+            hasAntNames = true;
         }
         else if (type == Instrument::InstrumentType::USRP) {
             udpStream = true;
@@ -372,6 +374,7 @@ public:
             antPorts << "RX2_A" << "TRX_A";
             minFrequency = 70e6;
             maxFrequency = 6e9;
+            hasAntNames = true;
         }
     }
 

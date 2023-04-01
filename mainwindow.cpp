@@ -585,6 +585,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
     connect(config.data(), &Config::settingsUpdated, geoLimit, &GeoLimit::updSettings);
+    connect(config.data(), &Config::settingsUpdated, mqttOptions, &MqttOptions::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -630,7 +631,10 @@ void MainWindow::setSignals()
     connect(positionReport, &PositionReport::reqMeasurementDevicePtr, this, [this] {
         if (measurementDevice) positionReport->setMeasurementDevicePtr(measurementDevice->getMeasurementDeviceData());
     });
-    connect (measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
+    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
+    connect(measurementDevice, &MeasurementDevice::deviceBusy, positionReport, &PositionReport::setInUse);
+    connect(measurementDevice, &MeasurementDevice::reconnected, positionReport, &PositionReport::setMeasurementDeviceReconnected);
+
     connect (positionReport, &PositionReport::reqSensorData, arduinoPtr, &Arduino::returnSensorData);
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)

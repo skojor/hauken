@@ -41,16 +41,18 @@ private slots:
 public slots:
     void updPosition(GnssData data) { gnssData = data;}
     void setMeasurementDevicePtr(QSharedPointer<Device> dev) { devicePtr = dev;}
-    void setMeasurementDeviceConnectionStatus(bool b) { measurementDeviceConnected = b;}
+    void setMeasurementDeviceConnectionStatus(bool b) { qDebug() << "Pos.report signal: device status" << b; measurementDeviceConnected = b; if (b) inUse = false;}
+    void setMeasurementDeviceReconnected() { qDebug() << "Pos.report signal: reconn."; measurementDeviceConnected = true; inUse = false;}
     void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
-
+    void setInUse(QString s) { inUse = true; inUseBy = s;}
 private:
     QTimer *reportTimer = new QTimer;
     QTimer *gnssReqTimer = new QTimer;
     QTimer *sensorDataTimer = new QTimer;
 
     QProcess *curlProcess = new QProcess;
-    bool measurementDeviceConnected = false;
+    bool measurementDeviceConnected = false, inUse = false;
+    QString inUseBy;
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
     double sensorTemp = -99, sensorHumidity = 0;
 

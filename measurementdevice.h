@@ -46,6 +46,8 @@ signals:
     void deviceStreamTimeout(); // signal to stop eventual recording
     void displayGnssData(QString, int, bool);
     void updGnssData(GnssData &);
+    void deviceBusy(QString); // For HTTP status updates
+    void reconnected();
 
 public slots:
     void start();
@@ -166,6 +168,7 @@ private:
     bool scpiReconnect = false, discPressed = false;
     QTimer *updGnssDisplayTimer = new QTimer;
     bool firstConnection = true;
+    QString inUseBy;
 };
 
 #endif // MEASUREMENTDEVICE_H

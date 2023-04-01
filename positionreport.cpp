@@ -74,7 +74,7 @@ void PositionReport::generateReport()
         if (measurementDeviceConnected && !inUse) state = "connected";
         else if (inUse) state = "busy";
         if (!inUseBy.isEmpty()) state += " (" + inUseBy + ")";
-        reportArgs << "--data" << "state=" + QString((measurementDeviceConnected?"connected":"disconnected"))
+        reportArgs << "--data" << "state=" + state
                    << "--data" << "startFreq=" + QString::number(devicePtr->pscanStartFrequency)
                    << "--data" << "stopFreq=" + QString::number(devicePtr->pscanStopFrequency)
                    << "--data" << "res=" + QString::number(devicePtr->pscanResolution)

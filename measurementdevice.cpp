@@ -419,6 +419,10 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
     QString msg = devicePtr->id + tr(" may be in use");
     if (!buffer.isEmpty()) {
         msg += tr(" by ") + QString(buffer).simplified();
+        inUseBy = QString(buffer).simplified();
+    }
+    else {
+        inUseBy.clear();
     }
     msg += tr(". Press connect once more to override");
     if (!firstConnection && !buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
@@ -444,6 +448,7 @@ void MeasurementDevice::stateConnected()
     }
     else {
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Reconnected");
+        emit reconnected();
     }
 
     scpiConnected();
@@ -615,6 +620,7 @@ void MeasurementDevice::handleStreamTimeout()
             if (!autoReconnectInProgress) {
                 emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Lost datastream. Auto reconnect enabled, waiting for device to be available again");
                 emit deviceStreamTimeout();
+                emit deviceBusy(inUseBy);
             }
         }
         else {
