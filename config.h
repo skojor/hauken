@@ -302,6 +302,35 @@ public slots:
     QString getGeoLimitFilename() { return settings->value("geoLimit/filename").toString();}
     void setGeoLimitFilename(QString s) { settings->setValue("geoLimit/filename", s); emit settingsUpdated();}
 
+    // MQTT options
+    bool getMqttActivate() { return settings->value("mqtt/activated", false).toBool();}
+    void setMqttActivate(bool b) { settings->setValue("mqtt/activated", b); emit settingsUpdated();}
+    QString getMqttServer() { return settings->value("mqtt/server", "").toString();}
+    void setMqttServer(QString s) { settings->setValue("mqtt/server", s); emit settingsUpdated();}
+    QString getMqttSub1Name() { return settings->value("mqtt/sub1Name", "").toString();}
+    void setMqttSub1Name(QString s) { settings->setValue("mqtt/sub1Name", s); emit settingsUpdated();}
+    QString getMqttSub1Topic() { return settings->value("mqtt/sub1Topic", "").toString();}
+    void setMqttSub1Topic(QString s) { settings->setValue("mqtt/sub1Topic", s); emit settingsUpdated();}
+    QString getMqttSub2Name() { return settings->value("mqtt/sub2Name", "").toString();}
+    void setMqttSub2Name(QString s) { settings->setValue("mqtt/sub2Name", s); emit settingsUpdated();}
+    QString getMqttSub2Topic() { return settings->value("mqtt/sub2Topic", "").toString();}
+    void setMqttSub2Topic(QString s) { settings->setValue("mqtt/sub2Topic", s); emit settingsUpdated();}
+    QString getMqttSub3Name() { return settings->value("mqtt/sub3Name", "").toString();}
+    void setMqttSub3Name(QString s) { settings->setValue("mqtt/sub3Name", s); emit settingsUpdated();}
+    QString getMqttSub3Topic() { return settings->value("mqtt/sub3Topic", "").toString();}
+    void setMqttSub3Topic(QString s) { settings->setValue("mqtt/sub3Topic", s); emit settingsUpdated();}
+    QString getMqttSub4Name() { return settings->value("mqtt/sub4Name", "").toString();}
+    void setMqttSub4Name(QString s) { settings->setValue("mqtt/sub4Name", s); emit settingsUpdated();}
+    QString getMqttSub4Topic() { return settings->value("mqtt/sub4Topic", "").toString();}
+    void setMqttSub4Topic(QString s) { settings->setValue("mqtt/sub4Topic", s); emit settingsUpdated();}
+    QString getMqttSub5Name() { return settings->value("mqtt/sub5Name", "").toString();}
+    void setMqttSub5Name(QString s) { settings->setValue("mqtt/sub5Name", s); emit settingsUpdated();}
+    QString getMqttSub5Topic() { return settings->value("mqtt/sub5Topic", "").toString();}
+    void setMqttSub5Topic(QString s) { settings->setValue("mqtt/sub5Topic", s); emit settingsUpdated();}
+
+    QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString();}
+    void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s); emit settingsUpdated();}
+
 private slots:
     QByteArray simpleEncr(QByteArray);
 

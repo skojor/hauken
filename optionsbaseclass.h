@@ -39,6 +39,9 @@ public:
     QLineEdit *leOpt8 = new QLineEdit;
     QLineEdit *leOpt9 = new QLineEdit;
     QLineEdit *leOpt10 = new QLineEdit;
+    QLineEdit *leOpt11 = new QLineEdit;
+    QLineEdit *leOpt12 = new QLineEdit;
+    QLineEdit *leOpt13 = new QLineEdit;
     QCheckBox *cbOpt1 = new QCheckBox;
     QCheckBox *cbOpt2 = new QCheckBox;
     QCheckBox *cbOpt3 = new QCheckBox;

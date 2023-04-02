@@ -151,7 +151,7 @@ void MainWindow::createActions()
     connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start();});
 
     optMqtt = new QAction(tr("&MQTT sensor options"), this);
-    optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT. For now only usable for Victron GX systems voltage and charger data"));
+    optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT"));
     connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start();});
 
     aboutAct = new QAction(tr("&About"), this);
