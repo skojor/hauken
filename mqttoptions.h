@@ -3,6 +3,8 @@
 
 #include "config.h"
 #include "optionsbaseclass.h"
+#include <QScrollArea>
+#include <QRect>
 
 class MqttOptions : public OptionsBaseClass
 {
@@ -13,8 +15,15 @@ public slots:
     void start();
     void saveCurrentSettings();
 
-private:
+private slots:
+    void updSubs();
+    void addSub();
+    void setupWindow();
 
+private:
+    QList<QLineEdit *> subNames, subTopics;
+    QList<QGroupBox *> subGroupBoxes;
+    QList<QFormLayout *> subLayouts;
 };
 
 #endif // MQTTOPTIONS_H

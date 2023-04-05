@@ -22,18 +22,17 @@ private slots:
     void subscribe();
     void msgReceived(const QByteArray &msg, const QMqttTopicName &topic);
     void reconnect();
+    void startKeepaliveTimer();
+    void stopKeepaliveTimer();
 
 private:
     QMqttClient mqttClient;
+    QTimer *keepaliveTimer = new QTimer;
+    QList<QByteArray> subValues;
 
     // config cache
     bool enabled = false;
-    QString server;
-    QString sub1Name, sub1Topic;
-    QString sub2Name, sub2Topic;
-    QString sub3Name, sub3Topic;
-    QString sub4Name, sub4Topic;
-    QString sub5Name, sub5Topic;
+    QList< QPair<QMqttSubscription *, QString >> subs;
     QString keepaliveTopic;
 };
 

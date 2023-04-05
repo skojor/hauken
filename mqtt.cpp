@@ -5,10 +5,12 @@ Mqtt::Mqtt(QObject *parent)
     this->setParent(parent);
 
     connect(&mqttClient, &QMqttClient::stateChanged, this, &Mqtt::stateChanged);
-    /*connect(&mqttClient, &QMqttClient::errorChanged, this, &MQTT::error);
-    connect(&mqttClient, &QMqttClient::messageSent, this, &MQTT::msgSent);
-    connect(&mqttClient, &QMqttClient::messageReceived, this, &MQTT::msgReceived);*/
-
+    connect(&mqttClient, &QMqttClient::errorChanged, this, &Mqtt::error);
+    connect(&mqttClient, &QMqttClient::messageSent, this, &Mqtt::msgSent);
+    connect(&mqttClient, &QMqttClient::messageReceived, this, &Mqtt::msgReceived);
+    connect(keepaliveTimer, &QTimer::timeout, this, [this] {
+        mqttClient.publish(keepaliveTopic, QByteArray());
+    });
 }
 
 void Mqtt::stateChanged(QMqttClient::ClientState state)
@@ -48,19 +50,21 @@ void Mqtt::msgSent(qint32 id)
 
 void Mqtt::subscribe()
 {
-    for (int i=0; i<5; i++) {
-
+    for (auto &val : subs) {
+        val.first = mqttClient.subscribe(val.second);
     }
 }
 
 void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
 {
-    //emit mqttMessage(msg, topic);
+    for (int i=0; i<subs.size(); i++) {
+        if (subs[i].second == topic) subValues[i] = msg;
+    }
 }
 
 void Mqtt::reconnect()
 {
-    if (enabled && !server.isEmpty() && mqttClient.state() == QMqttClient::ClientState::Disconnected) {
+    if (enabled && !mqttClient.hostname().isEmpty() && mqttClient.state() == QMqttClient::ClientState::Disconnected) {
         mqttClient.connectToHost();
     }
 }
@@ -73,35 +77,43 @@ void Mqtt::updSettings()
             reconnect();
         }
     }
-    if (getMqttServer() != server) {
-        server = getMqttServer();
+    if (getMqttServer() != mqttClient.hostname()) {
+        mqttClient.setHostname(getMqttServer());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
         reconnect();
     }
-    if (getMqttSub1Name() != sub1Name) {
-        sub1Name = getMqttSub1Name();
+    if (getMqttUsername() != mqttClient.username()) {
+        mqttClient.setUsername(getMqttUsername());
+        if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
+        reconnect();
     }
-    if (getMqttSub1Topic() != sub1Topic) {
-        mqttClient.unsubscribe(sub1Topic);
-        sub1Topic = getMqttSub1Topic();
-        subscribe();
+    if (getMqttPassword() != mqttClient.password()) {
+        mqttClient.setPassword(getMqttPassword());
+        if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
+        reconnect();
     }
-    if (getMqttSub2Name() != sub2Name) {
-        sub2Name = getMqttSub2Name();
+    if (getMqttPort() != mqttClient.port()) {
+        mqttClient.setPort(getMqttPort());
+        if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
+        reconnect();
     }
-    if (getMqttSub2Topic() != sub2Topic) {
-        sub2Topic = getMqttSub2Topic();
-    }
-    if (getMqttSub3Name() != sub3Name) {
-        sub3Name = getMqttSub3Name();
-    }
-    if (getMqttSub4Topic() != sub4Topic) {
-        sub4Topic = getMqttSub4Topic();
-    }
-    if (getMqttSub5Name() != sub5Name) {
-        sub5Name = getMqttSub5Name();
-    }
+
     if (getMqttKeepaliveTopic() != keepaliveTopic) {
         keepaliveTopic = getMqttKeepaliveTopic();
+        if (!keepaliveTopic.isEmpty()) startKeepaliveTimer();
+        else stopKeepaliveTimer();
     }
+    for (auto &val : getMqttSubNames()) {
+
+    }
+}
+
+void Mqtt::startKeepaliveTimer()
+{
+    keepaliveTimer->start(60 * 1e3);
+}
+
+void Mqtt::stopKeepaliveTimer()
+{
+    keepaliveTimer->stop();
 }
