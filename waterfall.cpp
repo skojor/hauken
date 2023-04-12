@@ -36,7 +36,7 @@ void Waterfall::updTimerCallback()
 
     for (int x=0; x<pixmapSize; x++) {
         double percent = 0;
-        percent = (traceCopy.at((int)(ratio * x)) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
+        if (!traceCopy.isEmpty()) percent = (traceCopy.at((int)(ratio * x)) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
 
         if (percent < 0) percent = 0;
         else if (percent > 1) percent = 1;

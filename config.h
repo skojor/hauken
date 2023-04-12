@@ -25,33 +25,33 @@ public slots:
     double getInstrStartFreq() { return settings->value("instr/StartFreq", 1560).toDouble();}
     void setInstrStartFreq(double val) { settings->setValue("instr/StartFreq", val); emit settingsUpdated();}
     double getInstrStopFreq() { return settings->value("instr/StopFreq", 1610).toDouble();}
-    void setInstrStopFreq(double val) { settings->setValue("instr/StopFreq", val); }
+    void setInstrStopFreq(double val) { settings->setValue("instr/StopFreq", val); emit settingsUpdated();}
     QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
-    void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); }
+    void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
     double getInstrFfmCenterFreq() { return settings->value("instr/FftCenterFreq", 1560).toDouble();}
-    void setInstrFfmCenterFreq(double f) { settings->setValue("instr/FftCenterFreq", f);}
+    void setInstrFfmCenterFreq(double f) { settings->setValue("instr/FftCenterFreq", f); emit settingsUpdated();}
     int getInstrFfmSpan() { return settings->value("instr/FftSpan", 2000).toInt();}
-    void setInstrFfmSpan(int f) { settings->setValue("instr/FftSpan", f);}
-    int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt(); }
-    void setInstrMeasurementTime(int val) { settings->setValue("instr/MeasurementTime", val); }
+    void setInstrFfmSpan(int f) { settings->setValue("instr/FftSpan", f); emit settingsUpdated(); emit settingsUpdated();}
+    int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt();}
+    void setInstrMeasurementTime(int val) { settings->setValue("instr/MeasurementTime", val); emit settingsUpdated();}
     int getInstrManAtt() { return settings->value("instr/ManAtt", 0).toInt(); }
-    void setInstrManAtt(int val) { settings->setValue("instr/ManAtt", val); }
+    void setInstrManAtt(int val) { settings->setValue("instr/ManAtt", val); emit settingsUpdated();}
     bool getInstrAutoAtt() { return settings->value("instr/AutoAtt", true).toBool(); }
-    void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); }
+    void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); emit settingsUpdated();}
     QString getInstrAntPort() { return settings->value("instr/AntPort", "Default").toString(); }
-    void setInstrAntPort(QString str) { if (!str.isEmpty()) settings->setValue("instr/AntPort", str); }
+    void setInstrAntPort(QString str) { if (!str.isEmpty()) settings->setValue("instr/AntPort", str); emit settingsUpdated();}
     int getInstrMode() { return settings->value("instr/Mode", 0).toInt(); }
-    void setInstrMode(int val) { settings->setValue("instr/Mode", val); }
+    void setInstrMode(int val) { settings->setValue("instr/Mode", val); emit settingsUpdated();}
     QString getInstrFftMode() { return settings->value("instr/FftMode", 0).toString(); }
-    void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instr/FftMode", val); }
+    void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instr/FftMode", val); emit settingsUpdated();}
     QString getInstrIpAddr() { return settings->value("instr/IpAddr", "").toString(); }
-    void setInstrIpAddr(QString str) { settings->setValue("instr/IpAddr", str); }
+    void setInstrIpAddr(QString str) { settings->setValue("instr/IpAddr", str); emit settingsUpdated();}
     int getInstrPort() { return settings->value("instr/Port", 5555).toInt(); }
-    void setInstrPort(int val) { settings->setValue("instr/Port", val); }
+    void setInstrPort(int val) { settings->setValue("instr/Port", val); emit settingsUpdated();}
     QString getInstrId() { return settings->value("instr/Id").toString();}
-    void setInstrId(QString s) { settings->setValue("instr/Id", s);}
+    void setInstrId(QString s) { settings->setValue("instr/Id", s); emit settingsUpdated();}
     QString getMeasurementDeviceName() { return measurementDeviceName;}
-    void setMeasurementDeviceName(QString s) { measurementDeviceName = s;}
+    void setMeasurementDeviceName(QString s) { measurementDeviceName = s; emit settingsUpdated();}
 
     // spectrum criterias
     int getInstrTrigLevel() { return settings->value("instr/TrigLevel", 15.0).toInt(); }
@@ -241,19 +241,19 @@ public slots:
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}
     int getPlotYMin() { return settings->value("plot/YMin", -30).toInt();}
-    void setPlotYMin(int val) { settings->setValue("plot/YMin", val);}
+    void setPlotYMin(int val) { settings->setValue("plot/YMin", val); emit settingsUpdated();}
     QByteArray getWindowGeometry() { return settings->value("windowGeometry", "").toByteArray();}
-    void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr);}
+    void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr); emit settingsUpdated();}
     QByteArray getWindowState() { return settings->value("windowState", "").toByteArray();}
-    void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr);}
+    void setWindowState(QByteArray arr)  { settings->setValue("windowState", arr); emit settingsUpdated();}
     QByteArray getArduinoWindowState() { return settings->value("arduino/windowState", "").toByteArray();}
-    void setArduinoWindowState(QByteArray arr)  { settings->setValue("arduino/windowState", arr);}
+    void setArduinoWindowState(QByteArray arr)  { settings->setValue("arduino/windowState", arr); emit settingsUpdated();}
     int getPlotMaxholdTime() { return settings->value("plot/MaxholdTime", 30).toUInt();}
-    void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val);}
+    void setPlotMaxholdTime(int val) { settings->setValue("plot/MaxholdTime", val); emit settingsUpdated();}
     QString getShowWaterfall() { return settings->value("plot/ShowWaterfall", "Off").toString();}
-    void setShowWaterfall(QString b) { settings->setValue("plot/ShowWaterfall", b);}
+    void setShowWaterfall(QString b) { settings->setValue("plot/ShowWaterfall", b); emit settingsUpdated();}
     int getWaterfallTime() { return settings->value("plot/WaterfallTime", 120).toInt();}
-    void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val);}
+    void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val); emit settingsUpdated();}
     int getPlotResolution() { return plotResolution;}
 
     // trig line
@@ -295,6 +295,8 @@ public slots:
     void setPosReportId(QString s) { settings->setValue("posReport/id", s);}
     bool getPosReportAddSensorData() { return settings->value("posReport/addSensorData", true).toBool();}
     void setPosreportAddSensorData(bool b) { settings->setValue("posReport/addSensorData", b);}
+    bool getPosReportAddMqttData() { return settings->value("posReport/addMqttData", true).toBool();}
+    void setPosreportAddMqttData(bool b) { settings->setValue("posReport/addMqttData", b);}
 
     // Geo limiting
     bool getGeoLimitActive() { return settings->value("geoLimit/activated", false).toBool();}

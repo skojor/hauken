@@ -86,13 +86,21 @@ void PositionReport::generateReport()
                    << "--data" << "humidity=" + QString::number((int)sensorHumidity);
     }
 
+    if (addMqttData) {
+        for (int i=0; i<mqttNames.size(); i++) {
+            if (mqttLastUpdated[i].secsTo(QDateTime::currentDateTime()) < 600) {
+                reportArgs << "--data" << mqttNames[i] + "=" + QString::number(mqttValues[i]);
+            }
+        }
+    }
+
     reportArgs << url;
 }
 
 void PositionReport::sendReport()
 {
     curlProcess->setArguments(reportArgs);
-    qDebug() << "req to send" << reportArgs;
+    //qDebug() << "req to send" << reportArgs;
     curlProcess->start();
 }
 
@@ -107,6 +115,7 @@ void PositionReport::updSettings()
     addGnssStats = getPosReportAddGnssStats();
     addConnStats = getPosReportAddConnStats();
     addSensorData = getPosReportAddSensorData();
+    addMqttData = getPosReportAddMqttData();
     posSource = getPosReportSource();
     url = getPosReportUrl();
     reportInterval = getPosReportSendInterval();
@@ -131,19 +140,22 @@ void PositionReport::updMqttData(QString& name, double& val)
     if (mqttNames.isEmpty()) {
         mqttNames.append(name);
         mqttValues.append(val);
+        mqttLastUpdated.append(QDateTime::currentDateTime());
     }
     else {
         int i;
         for (i=0; i<mqttNames.size(); i++) {
             if (mqttNames[i] == name) {
                 mqttValues[i] = val;
+                mqttLastUpdated[i] = QDateTime::currentDateTime();
                 break;
             }
         }
         if (i == mqttNames.size()) { // not found, add it
             mqttNames.append(name);
             mqttValues.append(val);
+            mqttLastUpdated.append(QDateTime::currentDateTime());
         }
     }
-    qDebug() << "sig" << name << val << mqttNames.size() << mqttValues.size();
+    //qDebug() << "sig" << name << val << mqttNames.size() << mqttValues.size();
 }

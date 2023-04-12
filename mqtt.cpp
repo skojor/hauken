@@ -10,7 +10,7 @@ Mqtt::Mqtt(QObject *parent)
     connect(&mqttClient, &QMqttClient::messageReceived, this, &Mqtt::msgReceived);
     connect(keepaliveTimer, &QTimer::timeout, this, [this] {
         mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
-        qDebug() << "Sending MQTT keepalive";
+        //qDebug() << "Sending MQTT keepalive";
     });
 }
 
@@ -118,4 +118,9 @@ void Mqtt::startKeepaliveTimer()
 void Mqtt::stopKeepaliveTimer()
 {
     keepaliveTimer->stop();
+}
+
+void Mqtt::checkConnection()
+{
+
 }

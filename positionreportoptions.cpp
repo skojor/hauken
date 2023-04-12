@@ -45,6 +45,11 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     cbOpt6->setText("Include temperature and humidity");
     cbOpt6->setToolTip("Include sensor temperature and humidity data if available");
 
+    mainLayout->addRow(cbOpt7);
+    cbOpt7->setText("Include MQTT data");
+    cbOpt7->setToolTip("Include MQTT sensor data (configured in own options menu). " \
+                       "\nOnly sent if data is valid.");
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &PositionReportOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
     mainLayout->addWidget(btnBox);
@@ -62,6 +67,7 @@ void PositionReportOptions::start()
     cbOpt4->setChecked(config->getPosReportAddGnssStats());
     cbOpt5->setChecked(config->getPosReportAddConnStats());
     cbOpt6->setChecked(config->getPosReportAddSensorData());
+    cbOpt7->setChecked(config->getPosReportAddMqttData());
 
     dialog->exec();
 }
@@ -78,6 +84,7 @@ void PositionReportOptions::saveCurrentSettings()
     config->setPosreportAddGnssStats(cbOpt4->isChecked());
     config->setPosreportAddConnStats(cbOpt5->isChecked());
     config->setPosreportAddSensorData(cbOpt6->isChecked());
+    config->setPosreportAddMqttData(cbOpt7->isChecked());
 
     dialog->close();
 }

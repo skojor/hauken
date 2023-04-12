@@ -79,7 +79,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
     }
     scpiThrottleTimer->start();
     scpiSocket->write(data + '\n');
-    qDebug() << data;
+    qDebug() << ">>" << data;
 }
 
 void MeasurementDevice::instrDisconnect()
@@ -292,6 +292,7 @@ void MeasurementDevice::checkId(const QByteArray buffer)
 void MeasurementDevice::scpiRead()
 {
     QByteArray buffer = scpiSocket->readAll();
+    qDebug() << "<<" << buffer;
     if (instrumentState == InstrumentState::CHECK_INSTR_ID)
         checkId(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP)
@@ -300,7 +301,6 @@ void MeasurementDevice::scpiRead()
         checkTcp(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_USERNAME)
         checkUser(buffer);
-    qDebug() << "<<" << buffer;
 }
 
 void MeasurementDevice::askUdp()

@@ -59,7 +59,7 @@ private:
     double sensorTemp = -99, sensorHumidity = 0;
 
     // config cache
-    bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats, addSensorData;
+    bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats, addSensorData, addMqttData;
     QString posSource, url, id;
     int reportInterval = 0;
     GnssData gnssData;
@@ -68,6 +68,7 @@ private:
     QElapsedTimer uptime;
     QStringList mqttNames;
     QList<double> mqttValues;
+    QList<QDateTime> mqttLastUpdated;
 
 signals:
     void reqPosition(QString);
