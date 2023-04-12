@@ -585,7 +585,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
     connect(config.data(), &Config::settingsUpdated, geoLimit, &GeoLimit::updSettings);
-    connect(config.data(), &Config::settingsUpdated, mqttOptions, &MqttOptions::updSettings);
+    connect(config.data(), &Config::settingsUpdated, mqtt, &Mqtt::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -705,6 +705,8 @@ void MainWindow::setSignals()
             traceBuffer->emptyBuffer();
         }
     });
+
+    connect(mqtt, &Mqtt::newData, positionReport, &PositionReport::updMqttData);
 }
 
 void MainWindow::instrStartFreqChanged()

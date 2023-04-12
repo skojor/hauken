@@ -130,8 +130,9 @@ RESOURCES += \
     icons.qrc
 #
 INCLUDEPATH += \
-    $$PWD/quazip #\
-    #$$PWD/qtmqtt
+    $$PWD/quazip \
+    $$PWD/qtmqtt\include\QtMqtt \
+    $$PWD/qtmqtt\include
 
 #win32: LIBS += -L$$PWD/quazip -lquazip1-qt5
 
@@ -152,7 +153,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.24.3.0
+VERSION = 2.25.3.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

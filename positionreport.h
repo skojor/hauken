@@ -45,6 +45,8 @@ public slots:
     void setMeasurementDeviceReconnected() { qDebug() << "Pos.report signal: reconn."; measurementDeviceConnected = true; inUse = false;}
     void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
     void setInUse(QString s) { inUse = true; inUseBy = s;}
+    void updMqttData(QString& name, double& val);
+
 private:
     QTimer *reportTimer = new QTimer;
     QTimer *gnssReqTimer = new QTimer;
@@ -64,6 +66,8 @@ private:
     QStringList reportArgs;
     bool sensorDataValid = false;
     QElapsedTimer uptime;
+    QStringList mqttNames;
+    QList<double> mqttValues;
 
 signals:
     void reqPosition(QString);

@@ -2,16 +2,23 @@
 #define MQTT_H
 
 #include <QWidget>
-#include <QtMqtt/QtMqtt>
+#include <QtMqtt>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include "config.h"
 
 class Mqtt : public Config
 {
+    Q_OBJECT
 public:
     explicit Mqtt(QObject *parent = nullptr);
 
 public slots:
     void updSettings();
+
+signals:
+    void newData(QString& name, double& value);
 
 private slots:
     void stateChanged(QMqttClient::ClientState state);
@@ -28,11 +35,10 @@ private slots:
 private:
     QMqttClient mqttClient;
     QTimer *keepaliveTimer = new QTimer;
-    QList<QByteArray> subValues;
+    QList<double> subValues;
 
     // config cache
     bool enabled = false;
-    QList< QPair<QMqttSubscription *, QString >> subs;
     QString keepaliveTopic;
 };
 

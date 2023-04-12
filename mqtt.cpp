@@ -9,7 +9,8 @@ Mqtt::Mqtt(QObject *parent)
     connect(&mqttClient, &QMqttClient::messageSent, this, &Mqtt::msgSent);
     connect(&mqttClient, &QMqttClient::messageReceived, this, &Mqtt::msgReceived);
     connect(keepaliveTimer, &QTimer::timeout, this, [this] {
-        mqttClient.publish(keepaliveTopic, QByteArray());
+        mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
+        qDebug() << "Sending MQTT keepalive";
     });
 }
 
@@ -23,7 +24,9 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
     }
     else if (state == QMqttClient::ClientState::Connected) {
         qDebug() << "MQTT connected to broker, requesting subscriptions";
-        //for (int i=0; i<subTopics.size(); i++) client.subscribe(subTopics.at(i));
+        subscribe();
+        if (!getMqttKeepaliveTopic().isEmpty()) mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
+
     }
 }
 
@@ -37,28 +40,30 @@ void Mqtt::msgSent(qint32 id)
     qDebug() << "MQTT message sent, id" << id;
 }
 
-/*void Mqtt::sendMessage(const QVector<Sensor> &sensorList)
-{
-    QMqttTopicName topic;
-    for (int i=0; i<sensorList.size(); i++) {
-        if (sensorList[i].mqtt) {
-            topic.setName("iShipWeather/" + sensorList[i].name);
-            client.publish(topic, QByteArray::number(sensorList[i].value, 'f', 1));
-        }
-    }
-}*/
-
 void Mqtt::subscribe()
 {
-    for (auto &val : subs) {
-        val.first = mqttClient.subscribe(val.second);
+    for (auto &val : getMqttSubTopics()) {
+        mqttClient.subscribe(val);
     }
 }
 
 void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
 {
+    QStringList subs = getMqttSubTopics();
+    QStringList subNames = getMqttSubNames();
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
+    QJsonObject jsonObject = jsonDoc.object();
+    QJsonValue value = jsonObject.value("value");
+    //qDebug() << "MQTT received" << topic << msg;
+    if (subValues.size() != subs.size()) {
+        subValues.clear();
+        for (int i=0; i<subs.size();i++) subValues.append(0);
+    }
     for (int i=0; i<subs.size(); i++) {
-        if (subs[i].second == topic) subValues[i] = msg;
+        if (subs[i] == topic) {
+            subValues[i] = value.toDouble();
+            emit newData(subNames[i], subValues[i]);
+        }
     }
 }
 
@@ -102,9 +107,6 @@ void Mqtt::updSettings()
         keepaliveTopic = getMqttKeepaliveTopic();
         if (!keepaliveTopic.isEmpty()) startKeepaliveTimer();
         else stopKeepaliveTimer();
-    }
-    for (auto &val : getMqttSubNames()) {
-
     }
 }
 

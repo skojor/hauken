@@ -125,3 +125,25 @@ void PositionReport::checkReturnValue(int exitCode, QProcess::ExitStatus)
         //qDebug() << "Report sent";
     }
 }
+
+void PositionReport::updMqttData(QString& name, double& val)
+{
+    if (mqttNames.isEmpty()) {
+        mqttNames.append(name);
+        mqttValues.append(val);
+    }
+    else {
+        int i;
+        for (i=0; i<mqttNames.size(); i++) {
+            if (mqttNames[i] == name) {
+                mqttValues[i] = val;
+                break;
+            }
+        }
+        if (i == mqttNames.size()) { // not found, add it
+            mqttNames.append(name);
+            mqttValues.append(val);
+        }
+    }
+    qDebug() << "sig" << name << val << mqttNames.size() << mqttValues.size();
+}
