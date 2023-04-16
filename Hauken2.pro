@@ -119,7 +119,8 @@ HEADERS += \
     tracebuffer.h \
     typedefs.h \
     udpdatastream.h \
-    waterfall.h
+    waterfall.h \
+    qtmqtt/
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -131,8 +132,8 @@ RESOURCES += \
 #
 INCLUDEPATH += \
     $$PWD/quazip \
-    $$PWD/qtmqtt\include\QtMqtt \
-    $$PWD/qtmqtt\include
+    $$PWD/qtmqtt/include/QtMqtt \
+    $$PWD/qtmqtt/include
 
 #win32: LIBS += -L$$PWD/quazip -lquazip1-qt5
 
