@@ -88,7 +88,7 @@ void PositionReport::generateReport()
 
     if (addMqttData) {
         for (int i=0; i<mqttNames.size(); i++) {
-            qDebug() << mqttLastUpdated[i].secsTo(QDateTime::currentDateTime()) << mqttNames[i];
+            //qDebug() << mqttLastUpdated[i].secsTo(QDateTime::currentDateTime()) << mqttNames[i];
             if (mqttLastUpdated[i].secsTo(QDateTime::currentDateTime()) < 600) {
                 reportArgs << "--data" << mqttNames[i] + "=" + QString::number(mqttValues[i]);
             }
