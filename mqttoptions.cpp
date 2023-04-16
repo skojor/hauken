@@ -4,7 +4,7 @@ MqttOptions::MqttOptions(QSharedPointer<Config> c)
 {
     config = c;
 
-    setWindowTitle("MQTT configuration");
+    setWindowTitle("MQTT/webswitch configuration");
     connect(btnBox, &QDialogButtonBox::accepted, this, &MqttOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
     setupWindow();
@@ -17,6 +17,8 @@ void MqttOptions::start()
     leOpt13->setText(config->getMqttUsername());
     leOpt14->setText(config->getMqttPassword());
     sbOpt1->setValue(config->getMqttPort());
+    leOpt12->setText(config->getMqttKeepaliveTopic());
+    leOpt15->setText(config->getMqttWebswitchAddress());
 
     dialog->exec();
 }
@@ -36,6 +38,7 @@ void MqttOptions::saveCurrentSettings()
     config->setMqttUsername(leOpt13->text());
     config->setMqttPassword(leOpt14->text());
     config->setMqttPort(sbOpt1->value());
+    config->setMqttWebswitchAddress(leOpt15->text());
 
     dialog->close();
 }
@@ -46,7 +49,7 @@ void MqttOptions::updSubs()
     QStringList topics = config->getMqttSubTopics();
 
     if (subGroupBoxes.isEmpty()) {
-        qDebug() << names;
+        //qDebug() << names;
         for (int i=0; i < names.size() + 1; i++) {
             addSub();
         }
@@ -76,7 +79,7 @@ void MqttOptions::addSub()
 
 void MqttOptions::setupWindow()
 {
-    QGroupBox *subServerGroupBox = new QGroupBox("MQTT options");
+    QGroupBox *subServerGroupBox = new QGroupBox("MQTT server options");
     QFormLayout *subServerLayout = new QFormLayout;
     subServerGroupBox->setLayout(subServerLayout);
 
@@ -104,6 +107,13 @@ void MqttOptions::setupWindow()
                            "to keep the connection alive (needed for some MQTT servers). " \
                            "Only topic will be sent, no data"));
 
+    QGroupBox *webswitchGroupBox = new QGroupBox("HTTP webswitch options");
+    QFormLayout *webswitchLayout = new QFormLayout;
+    webswitchGroupBox->setLayout(webswitchLayout);
+    webswitchLayout->addRow(new QLabel(tr("Temperature HTTP(s) address")), leOpt15);
+    leOpt15->setToolTip(tr("If a valid address is provided, and a value is returned, " \
+                           "the temperature will be read in 60 second intervals and reported via position report."));
+
     updSubs();
 
     dialog->setGeometry(100, 100, 450, 800);
@@ -115,6 +125,7 @@ void MqttOptions::setupWindow()
     widget->setLayout(mainLayout);
 
     scrollArea->setWidget(widget);
+    mainLayout->addWidget(webswitchGroupBox);
     mainLayout->addWidget(subServerGroupBox);
     mainLayout->addWidget(keepAliveGroupBox);
     for (auto &val : subGroupBoxes) mainLayout->addWidget(val);

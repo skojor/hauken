@@ -12,6 +12,19 @@ Mqtt::Mqtt(QObject *parent)
         mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
         //qDebug() << "Sending MQTT keepalive";
     });
+    connect(webswitchTimer, &QTimer::timeout, this, &Mqtt::webswitchRequestData);
+
+    connect(webswitchProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Mqtt::webswitchParseData);
+    webswitchProcess->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
+
+    if (QSysInfo::kernelType().contains("win")) {
+        webswitchProcess->setProgram("curl.exe");
+    }
+
+    else if (QSysInfo::kernelType().contains("linux")) {
+        webswitchProcess->setProgram("curl");
+    }
+    QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy);
 }
 
 void Mqtt::stateChanged(QMqttClient::ClientState state)
@@ -108,6 +121,15 @@ void Mqtt::updSettings()
         if (!keepaliveTopic.isEmpty()) startKeepaliveTimer();
         else stopKeepaliveTimer();
     }
+
+    if (getMqttWebswitchAddress() != webswitchAddress) {
+        webswitchAddress = getMqttWebswitchAddress();
+        if (webswitchAddress.isEmpty()) webswitchTimer->stop();
+        else {
+            webswitchRequestData();
+            webswitchTimer->start(60 * 1e3);
+        }
+    }
 }
 
 void Mqtt::startKeepaliveTimer()
@@ -123,4 +145,35 @@ void Mqtt::stopKeepaliveTimer()
 void Mqtt::checkConnection()
 {
 
+}
+
+void Mqtt::webswitchRequestData()
+{
+    QStringList args;
+    args << "-s" << "-w" << "%{http_code}" << getMqttWebswitchAddress();
+    webswitchProcess->setArguments(args);
+    webswitchProcess->start();
+    //qDebug() << "req ws data" << args;
+}
+
+void Mqtt::webswitchParseData(int exitCode, QProcess::ExitStatus)
+{
+    QString returnText = webswitchProcess->readAllStandardOutput();
+    //qDebug() << "Returned:" << returnText;
+
+    if (exitCode != 0 || !returnText.contains("200")) {
+        qDebug() << "Report failed" << webswitchProcess->readAllStandardError() << webswitchProcess->readAllStandardOutput() << exitCode;
+    }
+    else {
+        QStringList split = returnText.split('|');
+        if (split.size() > 3 && returnText.contains("OK")) {
+            bool ok = false;
+            double val = split[3].toDouble(&ok);
+            if (ok) {
+                QString name("temp");
+                emit newData(name, val);
+            }
+        }
+        //qDebug() << split << split[2];
+    }
 }

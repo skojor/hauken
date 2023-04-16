@@ -150,8 +150,8 @@ void MainWindow::createActions()
     optGeoLimit->setStatusTip(tr("Setup of geographic area where usage is allowed"));
     connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start();});
 
-    optMqtt = new QAction(tr("&MQTT sensor options"), this);
-    optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT"));
+    optMqtt = new QAction(tr("&MQTT and webswitch sensor options"), this);
+    optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT and webswitch"));
     connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start();});
 
     aboutAct = new QAction(tr("&About"), this);

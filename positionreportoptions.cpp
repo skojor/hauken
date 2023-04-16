@@ -43,11 +43,11 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(cbOpt6);
     cbOpt6->setText("Include temperature and humidity");
-    cbOpt6->setToolTip("Include sensor temperature and humidity data if available");
+    cbOpt6->setToolTip("Include sensor temperature and humidity data from Arduino if available.");
 
     mainLayout->addRow(cbOpt7);
-    cbOpt7->setText("Include MQTT data");
-    cbOpt7->setToolTip("Include MQTT sensor data (configured in own options menu). " \
+    cbOpt7->setText("Include webswitch and MQTT data");
+    cbOpt7->setToolTip("Include Webswitch and MQTT sensor data (configured in own options menu). " \
                        "\nOnly sent if data is valid.");
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &PositionReportOptions::saveCurrentSettings);

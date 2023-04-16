@@ -320,26 +320,8 @@ public slots:
     QStringList getMqttSubTopics() { return settings->value("mqtt/subTopics").toStringList();}
     void setMqttSubTopics(QStringList l) { settings->setValue("mqtt/subTopics", l);}
 
-    QString getMqttSub1Name() { return settings->value("mqtt/sub1Name", "").toString();}
-    void setMqttSub1Name(QString s) { settings->setValue("mqtt/sub1Name", s);}
-    QString getMqttSub1Topic() { return settings->value("mqtt/sub1Topic", "").toString();}
-    void setMqttSub1Topic(QString s) { settings->setValue("mqtt/sub1Topic", s);}
-    QString getMqttSub2Name() { return settings->value("mqtt/sub2Name", "").toString();}
-    void setMqttSub2Name(QString s) { settings->setValue("mqtt/sub2Name", s);}
-    QString getMqttSub2Topic() { return settings->value("mqtt/sub2Topic", "").toString();}
-    void setMqttSub2Topic(QString s) { settings->setValue("mqtt/sub2Topic", s);}
-    QString getMqttSub3Name() { return settings->value("mqtt/sub3Name", "").toString();}
-    void setMqttSub3Name(QString s) { settings->setValue("mqtt/sub3Name", s);}
-    QString getMqttSub3Topic() { return settings->value("mqtt/sub3Topic", "").toString();}
-    void setMqttSub3Topic(QString s) { settings->setValue("mqtt/sub3Topic", s);}
-    QString getMqttSub4Name() { return settings->value("mqtt/sub4Name", "").toString();}
-    void setMqttSub4Name(QString s) { settings->setValue("mqtt/sub4Name", s);}
-    QString getMqttSub4Topic() { return settings->value("mqtt/sub4Topic", "").toString();}
-    void setMqttSub4Topic(QString s) { settings->setValue("mqtt/sub4Topic", s);}
-    QString getMqttSub5Name() { return settings->value("mqtt/sub5Name", "").toString();}
-    void setMqttSub5Name(QString s) { settings->setValue("mqtt/sub5Name", s);}
-    QString getMqttSub5Topic() { return settings->value("mqtt/sub5Topic", "").toString();}
-    void setMqttSub5Topic(QString s) { settings->setValue("mqtt/sub5Topic", s);}
+    QString getMqttWebswitchAddress() { return settings->value("mqtt/webswitchAddress", "").toString();}
+    void setMqttWebswitchAddress(QString s) { settings->setValue("mqtt/webswitchAddress", s);}
 
     QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString();}
     void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);}

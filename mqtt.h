@@ -6,6 +6,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QProcess>
 #include "config.h"
 
 class Mqtt : public Config
@@ -31,15 +32,20 @@ private slots:
     void reconnect();
     void startKeepaliveTimer();
     void stopKeepaliveTimer();
+    void webswitchRequestData();
+    void webswitchParseData(int exitCode, QProcess::ExitStatus);
 
 private:
     QMqttClient mqttClient;
     QTimer *keepaliveTimer = new QTimer;
+    QTimer *webswitchTimer = new QTimer;
     QList<double> subValues;
+    QProcess *webswitchProcess = new QProcess;
 
     // config cache
     bool enabled = false;
     QString keepaliveTopic;
+    QString webswitchAddress;
 };
 
 #endif // MQTT_H
