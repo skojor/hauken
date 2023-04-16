@@ -10,6 +10,10 @@ Mqtt::Mqtt(QObject *parent)
     connect(&mqttClient, &QMqttClient::messageReceived, this, &Mqtt::msgReceived);
     connect(keepaliveTimer, &QTimer::timeout, this, [this] {
         mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
+        for (auto &val : getMqttSubTopics()) {
+            QString request = val.replace("N/", "R/");
+            mqttClient.publish(request, QByteArray());
+        }
         //qDebug() << "Sending MQTT keepalive";
     });
     connect(webswitchTimer, &QTimer::timeout, this, &Mqtt::webswitchRequestData);
