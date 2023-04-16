@@ -137,7 +137,7 @@ INCLUDEPATH += \
 #win32: LIBS += -L$$PWD/quazip -lquazip1-qt5
 
 unix: {
-  LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt
+  LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
 }
 
 win32 {
