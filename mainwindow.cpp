@@ -882,6 +882,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.25</td><td>Added MQTT and webswitch data report options</td></tr>"
        << "<tr><td>2.24</td><td>Added geographic blocking from KML polygon file</td></tr>"
        << "<tr><td>2.23</td><td>Periodic http report (x-www-form-urlencoded) added</td></tr>"
        << "<tr><td>2.22</td><td>Microsoft Graph email notification</td></tr>"
