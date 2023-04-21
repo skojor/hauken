@@ -89,6 +89,7 @@ private slots:
     void instrConnected(bool state);
     void instrAutoConnect();
     bool instrCheckSettings();
+    void changeAntennaPortName();
 
     void generatePopup(const QString msg);
     void updateStatusLine(const QString msg);
@@ -226,8 +227,10 @@ private:
     PositionReport *positionReport = new PositionReport;
     GeoLimit *geoLimit = new GeoLimit;
     Mqtt *mqtt = new Mqtt;
+    QLineEdit *antPortLineEdit = new QLineEdit;
 
 signals:
     void stopPlot(bool);
+    void antennaNameEdited(const QString name);
 };
 #endif // MAINWINDOW_H

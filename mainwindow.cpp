@@ -389,6 +389,9 @@ void MainWindow::getConfigValues()
     instrIpChanged();
     instrPortChanged();
 
+    instrAntPort->setEditable(true);
+    instrAntPort->setLineEdit(antPortLineEdit);
+
     /*if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
         instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));*/
 
@@ -634,6 +637,11 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
     connect(measurementDevice, &MeasurementDevice::deviceBusy, positionReport, &PositionReport::setInUse);
     connect(measurementDevice, &MeasurementDevice::reconnected, positionReport, &PositionReport::setMeasurementDeviceReconnected);
+    connect(measurementDevice, &MeasurementDevice::newAntennaNames, this, &MainWindow::setDeviceAntPorts);
+    //connect(instrAntPort, &QComboBox::editTextChanged, this, &MainWindow::changeAntennaPortName);
+    connect(antPortLineEdit, &QLineEdit::returnPressed, this, &MainWindow::changeAntennaPortName);
+
+    connect(this, &MainWindow::antennaNameEdited, measurementDevice, &MeasurementDevice::updateAntennaName);
 
     connect (positionReport, &PositionReport::reqSensorData, arduinoPtr, &Arduino::returnSensorData);
 
@@ -1082,4 +1090,17 @@ void MainWindow::setWaterfallOption(QString s)
 
 
     config->setShowWaterfall(s);
+}
+
+void MainWindow::changeAntennaPortName()
+{
+    QString name = instrAntPort->currentText();
+    if (instrAntPort->currentIndex() == '0') {
+        if (name[0] != '1') name = "1 " + name; // add index if somebody removed it, it is used when changing antenna port AND name index
+    }
+    else {
+        if (name[0] != '2') name = "2 " + name;
+    }
+    //emit antennaNameEdited(name);
+    qDebug() << "name change req" << name;
 }

@@ -34,7 +34,7 @@ bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the ini
     ds >> header.magicNumber >> header.versionMinor >> header.versionMajor >> header.seqNumber
             >> header.reserved >> header.dataSize;
     if (header.magicNumber != 0x000eb200) {
-        qDebug() << "Packet magic number != 0x000eb200, not Rohde & Schwarz?" << header.magicNumber << header.seqNumber << header.dataSize;
+        //qDebug() << "Packet magic number != 0x000eb200, not Rohde & Schwarz?" << header.magicNumber << header.seqNumber << header.dataSize;
         return false;
     }
 

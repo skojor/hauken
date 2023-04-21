@@ -301,6 +301,8 @@ void MeasurementDevice::scpiRead()
         checkTcp(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_USERNAME)
         checkUser(buffer);
+    else if (instrumentState == InstrumentState::CHECK_ANT_NAME1 || instrumentState == InstrumentState::CHECK_ANT_NAME2)
+        antennaNamesReply(buffer);
 }
 
 void MeasurementDevice::askUdp()
@@ -455,6 +457,8 @@ void MeasurementDevice::stateConnected()
     autoReconnectInProgress = false;
     runAfterConnected();
     instrumentState = InstrumentState::CONNECTED;
+
+    if (devicePtr->hasAntNames) askForAntennaNames();
 
     emit initiateDatastream();
 }
@@ -771,4 +775,41 @@ GnssData MeasurementDevice::sendGnssData()
     data.timestamp = devicePtr->gnssTimestamp;
     data.satsTracked = devicePtr->sats;
     return data;
+}
+
+void MeasurementDevice::askForAntennaNames()
+{
+    if (instrumentState == InstrumentState::CHECK_ANT_NAME1) {
+        scpiWrite("syst:ant:rx:name2?");
+        instrumentState = InstrumentState::CHECK_ANT_NAME2;
+    }
+    else {
+        scpiWrite("syst:ant:rx:name1?");
+        instrumentState = InstrumentState::CHECK_ANT_NAME1;
+    }
+}
+
+void MeasurementDevice::antennaNamesReply(QByteArray buffer)
+{
+    if (instrumentState == InstrumentState::CHECK_ANT_NAME1) {
+        devicePtr->antPorts[0] = buffer.simplified();
+        devicePtr->antPorts[0].remove('\"');
+        devicePtr->antPorts[0].remove('\'');
+        askForAntennaNames();   // 1st name received, now ask for 2nd
+    }
+    else {
+        devicePtr->antPorts[1] = buffer.simplified();
+        instrumentState = InstrumentState::CONNECTED;   // all done, keep going
+        devicePtr->antPorts[1].remove('\"');
+        devicePtr->antPorts[1].remove('\'');
+        emit newAntennaNames();
+    }
+}
+
+void MeasurementDevice::updateAntennaName(const QString name)
+{
+    if (name.contains("1")) scpiWrite("syst:ant:rx:name1 '" + name.toLatin1() + '\'');
+    else scpiWrite("syst:ant:rx:name2 '" + name.toLatin1() + '\'');
+
+    //askForAntennaNames(); // update register
 }

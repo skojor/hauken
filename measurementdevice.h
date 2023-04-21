@@ -48,6 +48,7 @@ signals:
     void updGnssData(GnssData &);
     void deviceBusy(QString); // For HTTP status updates
     void reconnected();
+    void newAntennaNames();
 
 public slots:
     void start();
@@ -98,6 +99,7 @@ public slots:
                                              devicePtr->latitude,
                                              devicePtr->longitude);}
     GnssData sendGnssData();
+    void updateAntennaName(const QString name);
 
 private slots:
     void scpiConnected();
@@ -126,6 +128,8 @@ private slots:
     void abor() { scpiWrite("abor");}
     void initImm() { scpiWrite("init:imm");}
     void updGnssDisplay();
+    void askForAntennaNames();
+    void antennaNamesReply(QByteArray buffer);
 
 private:
     bool connected = false;
