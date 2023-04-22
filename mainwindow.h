@@ -231,6 +231,7 @@ private:
 
 signals:
     void stopPlot(bool);
-    void antennaNameEdited(const QString name);
+    void antennaNameEdited(const int index, const QString name);
+    void antennaPortChanged();
 };
 #endif // MAINWINDOW_H

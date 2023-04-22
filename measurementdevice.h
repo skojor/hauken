@@ -99,7 +99,7 @@ public slots:
                                              devicePtr->latitude,
                                              devicePtr->longitude);}
     GnssData sendGnssData();
-    void updateAntennaName(const QString name);
+    void updateAntennaName(const int index, const QString name);
 
 private slots:
     void scpiConnected();

@@ -38,8 +38,8 @@ public slots:
     void setInstrManAtt(int val) { settings->setValue("instr/ManAtt", val); emit settingsUpdated();}
     bool getInstrAutoAtt() { return settings->value("instr/AutoAtt", true).toBool(); }
     void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); emit settingsUpdated();}
-    QString getInstrAntPort() { return settings->value("instr/AntPort", "Default").toString(); }
-    void setInstrAntPort(QString str) { if (!str.isEmpty()) settings->setValue("instr/AntPort", str); emit settingsUpdated();}
+    int getInstrAntPort() { return settings->value("instr/AntPort", "Default").toUInt(); }
+    void setInstrAntPort(int index) { settings->setValue("instr/AntPort", QString::number(index)); emit settingsUpdated();}
     int getInstrMode() { return settings->value("instr/Mode", 0).toInt(); }
     void setInstrMode(int val) { settings->setValue("instr/Mode", val); emit settingsUpdated();}
     QString getInstrFftMode() { return settings->value("instr/FftMode", 0).toString(); }

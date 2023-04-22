@@ -376,7 +376,7 @@ void MainWindow::getConfigValues()
     instrMeasurementTime->setValue(config->getInstrMeasurementTime());
     instrAtt->setValue(config->getInstrManAtt());
     instrAutoAtt->setChecked(config->getInstrAutoAtt());
-    instrAntPort->setCurrentText(config->getInstrAntPort());
+    instrAntPort->setCurrentIndex(config->getInstrAntPort());
     instrMode->setCurrentIndex(config->getInstrMode());
     //instrFftMode->setCurrentIndex(config->getInstrFftMode());
     instrIpAddr->setText(config->getInstrIpAddr());
@@ -391,6 +391,7 @@ void MainWindow::getConfigValues()
 
     instrAntPort->setEditable(true);
     instrAntPort->setLineEdit(antPortLineEdit);
+    instrAntPort->setInsertPolicy(QComboBox::NoInsert);
 
     /*if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
         instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));*/
@@ -493,11 +494,19 @@ void MainWindow::setSignals()
     connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMeasurementTime);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrManAtt);
     connect(instrAutoAtt, &QCheckBox::toggled, this, &MainWindow::instrAutoAttChanged);
-    connect(instrAntPort, &QComboBox::currentTextChanged, config.data(), &Config::setInstrAntPort);
+    connect(instrAntPort, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (instrAntPort->currentIndex() != -1) config->setInstrAntPort(index);
+    }); // to ignore signals when combo data is inserted
+    connect(this, &MainWindow::antennaPortChanged, measurementDevice, &MeasurementDevice::setAntPort);
     connect(instrMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrModeChanged);
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
     connect(instrIpAddr, &QLineEdit::textChanged, this, &MainWindow::updInstrButtonsStatus);
     connect(instrIpAddr, &QLineEdit::editingFinished, this, &MainWindow::instrIpChanged);
+    connect(instrIpAddr, &QLineEdit::returnPressed, this, [this] {
+        instrIpChanged();
+        measurementDevice->instrConnect();
+    });
+
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
     connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect);
@@ -824,12 +833,13 @@ void MainWindow::setResolutionFunction()
 void MainWindow::setDeviceAntPorts()
 {
     instrAntPort->clear();
-    QString val = config->getInstrAntPort();
+    int index = config->getInstrAntPort();
     instrAntPort->addItems(measurementDevice->getDeviceAntPorts());
     instrAntPort->setEnabled(instrAntPort->count() > 1);
 
-    if (instrAntPort->findText(val) >= 0)
-        instrAntPort->setCurrentIndex(instrAntPort->findText(val));
+    qDebug() << "ant index change:" << index;
+    instrAntPort->setCurrentIndex(index);
+    emit antennaPortChanged();
 }
 
 void MainWindow::setDeviceFftModes()
@@ -985,7 +995,7 @@ void MainWindow::saveConfigValues()
     config->setInstrMeasurementTime(instrMeasurementTime->value());
     config->setInstrManAtt(instrAtt->text().toUInt());
     config->setInstrAutoAtt(instrAutoAtt->isChecked());
-    config->setInstrAntPort(instrAntPort->currentText());
+    config->setInstrAntPort(instrAntPort->currentIndex());
     config->setInstrMode(instrMode->currentIndex());
     config->setInstrFftMode(instrFftMode->currentText());
     config->setInstrIpAddr(instrIpAddr->text());
@@ -1095,12 +1105,5 @@ void MainWindow::setWaterfallOption(QString s)
 void MainWindow::changeAntennaPortName()
 {
     QString name = instrAntPort->currentText();
-    if (instrAntPort->currentIndex() == '0') {
-        if (name[0] != '1') name = "1 " + name; // add index if somebody removed it, it is used when changing antenna port AND name index
-    }
-    else {
-        if (name[0] != '2') name = "2 " + name;
-    }
-    //emit antennaNameEdited(name);
-    qDebug() << "name change req" << name;
+    emit antennaNameEdited(instrAntPort->currentIndex(), instrAntPort->currentText());
 }

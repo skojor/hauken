@@ -684,8 +684,8 @@ void MeasurementDevice::updSettings()
         autoAttenuator = config->getInstrAutoAtt();
         setAutoAttenuator();
     }
-    if (antPort != config->getInstrAntPort().toLocal8Bit()) {
-        antPort = config->getInstrAntPort().toLocal8Bit();
+    if (antPort != QByteArray::number(config->getInstrAntPort() + 1)) {
+        antPort = QByteArray::number(config->getInstrAntPort() + 1);
         setAntPort();
     }
 
@@ -806,10 +806,10 @@ void MeasurementDevice::antennaNamesReply(QByteArray buffer)
     }
 }
 
-void MeasurementDevice::updateAntennaName(const QString name)
+void MeasurementDevice::updateAntennaName(const int index, const QString name)
 {
-    if (name.contains("1")) scpiWrite("syst:ant:rx:name1 '" + name.toLatin1() + '\'');
-    else scpiWrite("syst:ant:rx:name2 '" + name.toLatin1() + '\'');
+    if (index == 0) scpiWrite("syst:ant:rx:name1 '" + name.toLatin1() + '\'');
+    else if (index == 1) scpiWrite("syst:ant:rx:name2 '" + name.toLatin1() + '\'');
 
-    //askForAntennaNames(); // update register
+    askForAntennaNames(); // update register
 }
