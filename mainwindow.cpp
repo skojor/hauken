@@ -324,7 +324,9 @@ void MainWindow::setToolTips()
     instrAtt->setToolTip("Manual attenuation setting, deactivate auto attenuator to use");
     instrAutoAtt->setToolTip("Receiver controls attenuation based on input level. "\
                              "Only working on newer models.");
-    instrAntPort->setToolTip("For receivers with multiple antenna inputs");
+    instrAntPort->setToolTip("For receivers with multiple antenna inputs.\n" \
+                             "To change name: Click and edit text, and press return when finished.\n" \
+                             "The new name will be stored on the device (EM200 / USRP only)");
     instrMode->setToolTip("Use PScan to cover a wide frequency range. "\
                           "FFM gives much better time resolution.");
     instrFftMode->setToolTip("FFT calculation method. Clear/write is the fastest method. "\
@@ -900,6 +902,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.26</td><td>Antenna names readout and editing added (EM200 and USRP specific)</td></tr>"
        << "<tr><td>2.25</td><td>Added MQTT and webswitch data report options</td></tr>"
        << "<tr><td>2.24</td><td>Added geographic blocking from KML polygon file</td></tr>"
        << "<tr><td>2.23</td><td>Periodic http report (x-www-form-urlencoded) added</td></tr>"
@@ -1104,6 +1107,5 @@ void MainWindow::setWaterfallOption(QString s)
 
 void MainWindow::changeAntennaPortName()
 {
-    QString name = instrAntPort->currentText();
     emit antennaNameEdited(instrAntPort->currentIndex(), instrAntPort->currentText());
 }

@@ -208,8 +208,9 @@ void Notifications::sendMail()
                     }
                     reply->deleteLater();
                 });
-                timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
             }
+
+            timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
         }
         else {
             emit warning("Email notifications is enabled, but one or more of the parameters are missing. Check your configuration!");
