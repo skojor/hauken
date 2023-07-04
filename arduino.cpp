@@ -60,11 +60,11 @@ void Arduino::start()
         }
         mainLayout->addWidget(new QLabel("Watchdog state"), 2, 0);
         mainLayout->addWidget(watchdogText, 2, 1);
-        mainLayout->addWidget(btnWatchdogOn, 3, 0);
-        mainLayout->addWidget(btnWatchdogOff, 3, 1);
+        /*mainLayout->addWidget(btnWatchdogOn, 3, 0);
+        mainLayout->addWidget(btnWatchdogOff, 3, 1);*/
         if (pingActivated) {
-            mainLayout->addWidget(new QLabel("Ping state"), 4, 0);
-            mainLayout->addWidget(pingStateText, 4, 1);
+            mainLayout->addWidget(new QLabel("Ping state"), 3, 0);
+            mainLayout->addWidget(pingStateText, 3, 1);
             pingStateText->setText("Waiting for first ping");
         }
     }
@@ -102,9 +102,9 @@ void Arduino::connectToPort()
         if (arduino->open(QIODevice::ReadWrite)) {
             qDebug() << "Arduino: connected to" << arduino->portName();
             // This is needed to make Arduino start sending data
-            qDebug() << "DTR state" << arduino->isDataTerminalReady();
+            //qDebug() << "DTR state" << arduino->isDataTerminalReady();
             arduino->setDataTerminalReady(true);
-            qDebug() << "DTR state" << arduino->isDataTerminalReady();
+            //qDebug() << "DTR state" << arduino->isDataTerminalReady();
         }
         else
             qDebug() << "Arduino: cannot open" << arduino->portName();
@@ -181,7 +181,7 @@ void Arduino::relayBtnOffPressed()
 
 void Arduino::resetWatchdog()
 {
-    if (pingTimer->isActive() && lastPingValid && arduino->isOpen()) arduino->write("1");
+    if ((pingTimer->isActive() && lastPingValid && arduino->isOpen()) || (!pingTimer->isActive() && arduino->isOpen())) arduino->write("1");
 }
 
 void Arduino::watchdogOn()

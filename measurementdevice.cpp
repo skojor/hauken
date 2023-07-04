@@ -197,7 +197,7 @@ void MeasurementDevice::setAutoAttenuator()
 void MeasurementDevice::setAntPort()
 {
     if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default")) {
-        if (!devicePtr->advProtocol) scpiWrite("syst:ant:rx " + antPort);
+        if (!devicePtr->advProtocol && devicePtr->type != InstrumentType::USRP) scpiWrite("syst:ant:rx " + antPort);
         else if (antPort.contains("1")) scpiWrite("route:vuhf:input (@0)");  // em200 specific
         else if (antPort.contains("2")) scpiWrite("route:vuhf:input (@1)");  // em200 specific
     }
@@ -427,18 +427,18 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
         inUseBy.clear();
     }
     msg += tr(". Press connect once more to override");
-    if (!firstConnection && !buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
+    if (!firstConnection || buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
+        qDebug() << "In use by myself, how silly! Continuing..." << buffer << config->getStationName();
+        deviceInUseWarningIssued = true;
+        askUdp();
+    }
+    else {
+        firstConnection = false; // now we know network is up
         tcpTimeoutTimer->stop();
         instrDisconnect();
         deviceInUseWarningIssued = true;
         emit popup(msg);
     }
-    else {
-        qDebug() << "In use by myself, how silly! Continuing...";
-        deviceInUseWarningIssued = true;
-        askUdp();
-    }
-    firstConnection = false; // now we know network is up
 }
 
 void MeasurementDevice::stateConnected()
@@ -798,18 +798,36 @@ void MeasurementDevice::antennaNamesReply(QByteArray buffer)
         askForAntennaNames();   // 1st name received, now ask for 2nd
     }
     else {
-        devicePtr->antPorts[1] = buffer.simplified();
         instrumentState = InstrumentState::CONNECTED;   // all done, keep going
+
+        devicePtr->antPorts[1] = buffer.simplified();
         devicePtr->antPorts[1].remove('\"');
         devicePtr->antPorts[1].remove('\'');
+        //if (devicePtr->antPorts[0].isEmpty()) devicePtr->antPorts[0] = "Ant. 1";
+        //if (devicePtr->antPorts[1].isEmpty()) devicePtr->antPorts[1] = "Ant. 2";
+        if (devicePtr->type == InstrumentType::USRP) {
+            devicePtr->antPorts[0].prepend("RX2_A:");
+            devicePtr->antPorts[1].prepend("TRX_A:");
+        }
+        else {
+            devicePtr->antPorts[0].prepend("Ant. 1:");
+            devicePtr->antPorts[1].prepend("Ant. 2:");
+        }
         emit newAntennaNames();
     }
 }
 
 void MeasurementDevice::updateAntennaName(const int index, const QString name)
 {
-    if (index == 0) scpiWrite("syst:ant:rx:name1 '" + name.toLatin1() + '\'');
-    else if (index == 1) scpiWrite("syst:ant:rx:name2 '" + name.toLatin1() + '\'');
+    QString newName = name;
+    newName.remove("Ant. 1:");
+    newName.remove("Ant. 2:");
+    newName.remove("RX2_A:");
+    newName.remove("TRX_A:");
+    newName = newName.simplified();
+
+    if (index == 0) scpiWrite("syst:ant:rx:name1 '" + newName.toLatin1() + '\'');
+    else if (index == 1) scpiWrite("syst:ant:rx:name2 '" + newName.toLatin1() + '\'');
 
     askForAntennaNames(); // update register
 }

@@ -95,147 +95,147 @@ public slots:
     bool getNewLogFolder() { return settings->value("newLogFolder", false).toBool(); }
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); }
     bool getPmrMode() { return settings->value("pmr/mode", false).toBool();}
-    void setPmrMode(bool b) { settings->setValue("pmr/mode", b);}
+    void setPmrMode(bool b) { settings->setValue("pmr/mode", b); emit settingsUpdated(); }
 
     // Receiver options
     bool getInstrConnectOnStartup() { return settings->value("instr/ConnectOnStartup", false).toBool(); }
     void setInstrConnectOnStartup(bool b) { settings->setValue("instr/ConnectOnStartup", b); emit settingsUpdated(); }
     bool getInstrUseTcpDatastream() { return settings->value("instr/UseTcpDatastream", true).toBool(); }
-    void setInstrUseTcpDatastream(bool b) { settings->setValue("instr/UseTcpDatastream", b); }
+    void setInstrUseTcpDatastream(bool b) { settings->setValue("instr/UseTcpDatastream", b); emit settingsUpdated(); }
     bool getInstrAutoReconnect() { return settings->value("instr/AutoReconnect", true).toBool(); }
-    void setInstrAutoReconnect(bool b) { settings->setValue("instr/AutoReconnect", b); }
+    void setInstrAutoReconnect(bool b) { settings->setValue("instr/AutoReconnect", b); emit settingsUpdated(); }
     bool getInstrNormalizeSpectrum() { return settings->value("instr/NormalizeSpectrum", false).toBool(); }
-    void setInstrNormalizeSpectrum(bool b) { settings->setValue("instr/NormalizeSpectrum", b); }
+    void setInstrNormalizeSpectrum(bool b) { settings->setValue("instr/NormalizeSpectrum", b); emit settingsUpdated(); }
     int getInstrTracesNeededForAverage() { return settings->value("instr/tracesNeededForAverage", 250).toInt();}
-    void setInstrTracesNeededForAverage(int i) { settings->setValue("instr/tracesNeededForAverage", i);}
+    void setInstrTracesNeededForAverage(int i) { settings->setValue("instr/tracesNeededForAverage", i); emit settingsUpdated(); }
 
     // SDeF options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
     void setSdefSaveToFile(bool b) { settings->setValue("sdef/SaveToFile", b); emit settingsUpdated();}
     bool getSdefUploadFile() { return settings->value("sdef/UploadFile", false).toBool();}
-    void setSdefUploadFile(bool b) { settings->setValue("sdef/UploadFile", b);}
+    void setSdefUploadFile(bool b) { settings->setValue("sdef/UploadFile", b); emit settingsUpdated();}
     QString getSdefUsername() { return settings->value("sdef/Username", "").toString();}
-    void setSdefUsername(QString s) { settings->setValue("sdef/Username", s);}
+    void setSdefUsername(QString s) { settings->setValue("sdef/Username", s);emit settingsUpdated(); }
     QString getSdefPassword() { return simpleEncr(settings->value("sdef/Password", "").toByteArray());}
-    void setSdefPassword(QString s) { settings->setValue("sdef/Password", simpleEncr(s.toLocal8Bit()));}
+    void setSdefPassword(QString s) { settings->setValue("sdef/Password", simpleEncr(s.toLocal8Bit()));emit settingsUpdated(); }
     bool getSdefAddPosition() { return settings->value("sdef/AddPosition", false).toBool();}
-    void setSdefAddPosition(bool b) { settings->setValue("sdef/AddPosition", b);}
+    void setSdefAddPosition(bool b) { settings->setValue("sdef/AddPosition", b);emit settingsUpdated(); }
     QString getSdefGpsSource() { return settings->value("sdef/GpsSource").toString();}
-    void setSdefGpsSource(QString s) { settings->setValue("sdef/GpsSource", s);}
+    void setSdefGpsSource(QString s) { settings->setValue("sdef/GpsSource", s);emit settingsUpdated(); }
     int getSdefRecordTime() { return settings->value("sdef/RecordTime", 2).toUInt();}
-    void setSdefRecordTime(int val) { settings->setValue("sdef/RecordTime", val);}
+    void setSdefRecordTime(int val) { settings->setValue("sdef/RecordTime", val);emit settingsUpdated(); }
     int getSdefMaxRecordTime() { return settings->value("sdef/MaxRecordTime", 60).toUInt();}
-    void setSdefMaxRecordTime(int val) { settings->setValue("sdef/MaxRecordTime", val);}
+    void setSdefMaxRecordTime(int val) { settings->setValue("sdef/MaxRecordTime", val);emit settingsUpdated(); }
     QString getSdefStationInitals() { return settings->value("sdef/StationInitials", "").toString();}
-    void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s);}
+    void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s);emit settingsUpdated(); }
     int getSdefPreRecordTime() { return settings->value("sdef/PreRecordTime", 30).toUInt();}
-    void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val);}
+    void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val);emit settingsUpdated(); }
     bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
-    void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b);}
+    void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b);emit settingsUpdated(); }
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
     void setGnssSerialPort1Name(QString s) { settings->setValue("gnss/SerialPort1Name", s); emit settingsUpdated();}
     QString getGnssSerialPort1Baudrate() { return settings->value("gnss/SerialPort1Baudrate", "4800").toString();}
-    void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1Baudrate", s);}
+    void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1Baudrate", s);emit settingsUpdated(); }
     bool getGnssSerialPort1Activate() { return settings->value("gnss/SerialPort1activate", false).toBool();}
-    void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1activate", b);}
+    void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1activate", b);emit settingsUpdated(); }
     bool getGnssSerialPort1LogToFile() { return settings->value("gnss/SerialPort1LogToFile", false).toBool();}
-    void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1LogToFile", b);}
+    void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1LogToFile", b);emit settingsUpdated(); }
     bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1MonitorAgc", false).toBool();}
-    void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1MonitorAgc", b);}
+    void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1MonitorAgc", b);emit settingsUpdated(); }
     bool getGnssSerialPort1TriggerRecording() { return settings->value("gnss/SerialPort1TriggerRecording", false).toBool();}
-    void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1TriggerRecording", b);}
+    void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1TriggerRecording", b);emit settingsUpdated(); }
 
     QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2Name").toString();}
     void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2Name", s); emit settingsUpdated();}
     QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2Baudrate", "4800").toString();}
-    void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2Baudrate", s);}
+    void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2Baudrate", s);emit settingsUpdated(); }
     bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2activate", false).toBool();}
-    void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2activate", b);}
+    void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2activate", b);emit settingsUpdated(); }
     bool getGnssSerialPort2LogToFile() { return settings->value("gnss/SerialPort2LogToFile", false).toBool();}
-    void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2LogToFile", b);}
+    void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2LogToFile", b);emit settingsUpdated(); }
     bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2MonitorAgc", false).toBool();}
-    void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2MonitorAgc", b);}
+    void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2MonitorAgc", b);emit settingsUpdated(); }
     bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
-    void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b);}
+    void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b);emit settingsUpdated(); }
 
     bool getGnssUseInstrumentGnss() { return settings->value("gnss/UseInstrumentGnss", false).toBool();}
     void setGnssUseInstrumentGnss(bool b) { settings->setValue("gnss/UseInstrumentGnss", b); emit settingsUpdated();}
     bool getGnssInstrumentGnssTriggerRecording() { return settings->value("gnss/InstrumentGnssTriggerRecording", false).toBool();}
-    void setGnssInstrumentGnssTriggerRecording(bool b) { settings->setValue("gnss/InstrumentGnssTriggerRecording", b);}
+    void setGnssInstrumentGnssTriggerRecording(bool b) { settings->setValue("gnss/InstrumentGnssTriggerRecording", b);emit settingsUpdated(); }
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
     void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s.simplified()); emit settingsUpdated();}
     QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString();}
-    void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s);}
+    void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s);emit settingsUpdated(); }
     QString getEmailRecipients() { return settings->value("email/Recipients").toString();}
-    void setEmailRecipients(QString s) { settings->setValue("email/Recipients", s);}
+    void setEmailRecipients(QString s) { settings->setValue("email/Recipients", s);emit settingsUpdated(); }
     bool getEmailNotifyMeasurementDeviceHighLevel() { return settings->value("email/NotifyMeasurementDeviceHighLevel", false).toBool();}
-    void setEmailNotifyMeasurementDeviceHighLevel(bool b) { settings->setValue("email/NotifyMeasurementDeviceHighLevel", b);}
+    void setEmailNotifyMeasurementDeviceHighLevel(bool b) { settings->setValue("email/NotifyMeasurementDeviceHighLevel", b);emit settingsUpdated(); }
     bool getEmailNotifyMeasurementDeviceDisconnected() { return settings->value("email/NotifyMeasurementDeviceDisconnected", false).toBool();}
-    void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b);}
+    void setEmailNotifyMeasurementDeviceDisconnected(bool b) { settings->setValue("email/NotifyMeasurementDeviceDisconnected", b);emit settingsUpdated(); }
     bool getEmailNotifyGnssIncidents() { return settings->value("email/NotifyGnssIncidents", false).toBool();}
-    void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b);}
+    void setEmailNotifyGnssIncidents(bool b) { settings->setValue("email/NotifyGnssIncidents", b);emit settingsUpdated(); }
     int getEmailMinTimeBetweenEmails() { return settings->value("email/MinTimeBetweenEmails", 3600).toInt();}
-    void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);}
+    void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);emit settingsUpdated(); }
     int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
-    void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);}
+    void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);emit settingsUpdated(); }
     QString getEmailFromAddress() { return settings->value("email/FromAddress").toString();}
-    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s.simplified());}
+    void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s.simplified());emit settingsUpdated(); }
     QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString();}
-    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s.simplified());}
+    void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s.simplified());emit settingsUpdated(); }
     QString getEmailSmtpPassword() { return simpleEncr(settings->value("email/smtpPassword").toByteArray());}
-    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.simplified().toLocal8Bit()));}
+    void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
     bool getEmailAddImages() { return settings->value("email/AddImages", true).toBool();}
-    void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b);}
+    void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b);emit settingsUpdated(); }
     int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
-    void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val);}
+    void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val);emit settingsUpdated(); }
     QString getEmailGraphApplicationId() { return settings->value("email/graphApplicationId", "").toString(); }
-    void setEmailGraphApplicationId(QString s) { settings->setValue("email/graphApplicationId", s.simplified());}
+    void setEmailGraphApplicationId(QString s) { settings->setValue("email/graphApplicationId", s.simplified());emit settingsUpdated(); }
     QString getEmailGraphTenantId() { return settings->value("email/graphTenantId", "").toString(); }
-    void setEmailGraphTenantId(QString s) { settings->setValue("email/graphTenantId", s.simplified());}
+    void setEmailGraphTenantId(QString s) { settings->setValue("email/graphTenantId", s.simplified());emit settingsUpdated(); }
     QString getEmailGraphSecret() { return simpleEncr(settings->value("email/graphSecret", "").toByteArray());}
-    void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.simplified().toLocal8Bit()));}
+    void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
-    void setCameraName(QString s) { settings->setValue("camera/Name", s);}
+    void setCameraName(QString s) { settings->setValue("camera/Name", s);emit settingsUpdated(); }
     QString getCameraStreamAddress() { return settings->value("camera/StreamAddress").toString();}
-    void setCameraStreamAddress(QString s) { settings->setValue("camera/StreamAddress", s);}
+    void setCameraStreamAddress(QString s) { settings->setValue("camera/StreamAddress", s);emit settingsUpdated(); }
     bool getCameraDeviceTrigger() { return settings->value("camera/DeviceTrigger").toBool();}
-    void setCameraDeviceTrigger(bool b) { settings->setValue("camera/DeviceTrigger", b);}
+    void setCameraDeviceTrigger(bool b) { settings->setValue("camera/DeviceTrigger", b);emit settingsUpdated(); }
     int getCameraRecordTime() { return settings->value("camera/RecordTime", 60).toInt();}
-    void setCameraRecordTime(int s) { settings->setValue("camera/RecordTime", s);}
+    void setCameraRecordTime(int s) { settings->setValue("camera/RecordTime", s);emit settingsUpdated(); }
 
     // Relay control (and temp) via serial (Arduino custom)
     QString getArduinoSerialName() { return settings->value("arduino/serialName", "").toString();}
     void setArduinoSerialName(QString s) { settings->setValue("arduino/serialName", s); emit settingsUpdated();}
     QString getArduinoBaudrate() { return settings->value("arduino/baudrate").toString();}
-    void setArduinoBaudrate(QString s) { settings->setValue("arduino/baudrate", s);}
+    void setArduinoBaudrate(QString s) { settings->setValue("arduino/baudrate", s);emit settingsUpdated(); }
     bool getArduinoReadTemperatureAndRelay() { return settings->value("arduino/temperature", false).toBool();}
-    void setArduinoReadTemperatureAndRelay(bool b) { settings->setValue("arduino/temperature", b);}
+    void setArduinoReadTemperatureAndRelay(bool b) { settings->setValue("arduino/temperature", b);emit settingsUpdated(); }
     bool getArduinoReadDHT20() { return settings->value("arduino/dht20", false).toBool();}
-    void setArduinoReadDHT20(bool b) { settings->setValue("arduino/dht20", b);}
+    void setArduinoReadDHT20(bool b) { settings->setValue("arduino/dht20", b);emit settingsUpdated(); }
     bool getArduinoEnable() { return settings->value("arduino/enable", false).toBool();}
-    void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b);}
+    void setArduinoEnable(bool b) { settings->setValue("arduino/enable", b);emit settingsUpdated(); }
     QString getArduinoRelayOnText() { return settings->value("arduino/relayOnText", "on").toString(); }
-    void setArduinoRelayOnText(QString s) { settings->setValue("arduino/relayOnText", s);}
+    void setArduinoRelayOnText(QString s) { settings->setValue("arduino/relayOnText", s);emit settingsUpdated(); }
     QString getArduinoRelayOffText() { return settings->value("arduino/relayOffText", "off").toString(); }
-    void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s);}
+    void setArduinoRelayOffText(QString s) { settings->setValue("arduino/relayOffText", s);emit settingsUpdated(); }
     bool getArduinoWatchdogRelay() { return settings->value("arduino/watchdogRelay", false).toBool();}
-    void setArduinoWatchdogRelay(bool b) { settings->setValue("arduino/watchdogRelay", b);}
+    void setArduinoWatchdogRelay(bool b) { settings->setValue("arduino/watchdogRelay", b);emit settingsUpdated(); }
     bool getArduinoActivateWatchdog() { return settings->value("arduino/activateWatchdog", false).toBool();}
-    void setArduinoActivateWatchdog(bool b) { settings->setValue("arduino/activateWatchdog", b);}
+    void setArduinoActivateWatchdog(bool b) { settings->setValue("arduino/activateWatchdog", b);emit settingsUpdated(); }
     QString getArduinoPingAddress() { return settings->value("arduino/pingAddress", "").toString();}
-    void setArduinoPingAddress(QString s) { settings->setValue("arduino/pingAddress", s);}
+    void setArduinoPingAddress(QString s) { settings->setValue("arduino/pingAddress", s);emit settingsUpdated(); }
     int getArduinoPingInterval() { return settings->value("arduino/pingInterval", 60).toInt();}
-    void setArduinoPingInterval(int i) { settings->setValue("arduino/pingInterval", i);}
+    void setArduinoPingInterval(int i) { settings->setValue("arduino/pingInterval", i);emit settingsUpdated(); }
 
     // AutoRecorder options
     bool getAutoRecorderActivate() { return settings->value("autorecorder/activate", false).toBool();}
-    void setAutoRecorderActivate(bool b) { settings->setValue("autorecorder/activate", b);}
+    void setAutoRecorderActivate(bool b) { settings->setValue("autorecorder/activate", b);emit settingsUpdated(); }
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}
@@ -278,53 +278,53 @@ public slots:
     bool getPosReportActivated() { return settings->value("posReport/activated", false).toBool();}
     void setPosReportActivated(bool b) { settings->setValue("posReport/activated", b); emit settingsUpdated();}
     QString getPosReportSource() { return settings->value("posReport/source", "InstrumentGNSS").toString();}
-    void setPosReportSource(QString s) { settings->setValue("posReport/source", s);}
+    void setPosReportSource(QString s) { settings->setValue("posReport/source", s);emit settingsUpdated(); }
     QString getPosReportUrl() { return settings->value("posReport/url", "").toString();}
-    void setPosReportUrl(QString s) { settings->setValue("posReport/url", s);}
+    void setPosReportUrl(QString s) { settings->setValue("posReport/url", s);emit settingsUpdated(); }
     int getPosReportSendInterval() { return settings->value("posReport/sendInterval", 60).toInt();}
-    void setPosReportSendInterval(int i) { settings->setValue("posReport/sendInterval", i);}
+    void setPosReportSendInterval(int i) { settings->setValue("posReport/sendInterval", i);emit settingsUpdated(); }
     bool getPosReportAddPos() { return settings->value("posReport/addPos", true).toBool();}
-    void setPosReportAddPos(bool b) { settings->setValue("posReport/addPos", b);}
+    void setPosReportAddPos(bool b) { settings->setValue("posReport/addPos", b);emit settingsUpdated(); }
     bool getPosReportAddSogCog() { return settings->value("posReport/addSogCog", true).toBool();}
-    void setPosReportAddSogCog(bool b) { settings->setValue("posReport/addSogCog", b);}
+    void setPosReportAddSogCog(bool b) { settings->setValue("posReport/addSogCog", b);emit settingsUpdated(); }
     bool getPosReportAddGnssStats() { return settings->value("posReport/addGnssStats", true).toBool();}
-    void setPosreportAddGnssStats(bool b) { settings->setValue("posReport/addGnssStats", b);}
+    void setPosreportAddGnssStats(bool b) { settings->setValue("posReport/addGnssStats", b);emit settingsUpdated(); }
     bool getPosReportAddConnStats() { return settings->value("posReport/addConnStats", true).toBool();}
-    void setPosreportAddConnStats(bool b) { settings->setValue("posReport/addConnStats", b);}
+    void setPosreportAddConnStats(bool b) { settings->setValue("posReport/addConnStats", b);emit settingsUpdated(); }
     QString getPosReportId() { return settings->value("posReport/id", "").toString();}
-    void setPosReportId(QString s) { settings->setValue("posReport/id", s);}
+    void setPosReportId(QString s) { settings->setValue("posReport/id", s);emit settingsUpdated(); }
     bool getPosReportAddSensorData() { return settings->value("posReport/addSensorData", true).toBool();}
-    void setPosreportAddSensorData(bool b) { settings->setValue("posReport/addSensorData", b);}
+    void setPosreportAddSensorData(bool b) { settings->setValue("posReport/addSensorData", b);emit settingsUpdated(); }
     bool getPosReportAddMqttData() { return settings->value("posReport/addMqttData", true).toBool();}
-    void setPosreportAddMqttData(bool b) { settings->setValue("posReport/addMqttData", b);}
+    void setPosreportAddMqttData(bool b) { settings->setValue("posReport/addMqttData", b);emit settingsUpdated(); }
 
     // Geo limiting
     bool getGeoLimitActive() { return settings->value("geoLimit/activated", false).toBool();}
     void setGeoLimitActive(bool b) { settings->setValue("geoLimit/activated", b); emit settingsUpdated();}
     QString getGeoLimitFilename() { return settings->value("geoLimit/filename").toString();}
-    void setGeoLimitFilename(QString s) { settings->setValue("geoLimit/filename", s);}
+    void setGeoLimitFilename(QString s) { settings->setValue("geoLimit/filename", s);emit settingsUpdated(); }
 
     // MQTT options
     bool getMqttActivate() { return settings->value("mqtt/activated", false).toBool();}
     void setMqttActivate(bool b) { settings->setValue("mqtt/activated", b); emit settingsUpdated();}
     QString getMqttServer() { return settings->value("mqtt/server", "").toString();}
-    void setMqttServer(QString s) { settings->setValue("mqtt/server", s);}
+    void setMqttServer(QString s) { settings->setValue("mqtt/server", s);emit settingsUpdated(); }
     QString getMqttUsername() { return settings->value("mqtt/username", "").toString();}
-    void setMqttUsername(QString s) { settings->setValue("mqtt/username", s);}
+    void setMqttUsername(QString s) { settings->setValue("mqtt/username", s);emit settingsUpdated(); }
     QString getMqttPassword() { return simpleEncr(settings->value("mqtt/password", "").toByteArray());}
-    void setMqttPassword(QString s) { settings->setValue("mqtt/password", simpleEncr(s.simplified().toLocal8Bit()));}
+    void setMqttPassword(QString s) { settings->setValue("mqtt/password", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
     int getMqttPort() { return settings->value("mqtt/port", 1883).toInt();}
-    void setMqttPort(int i) { settings->setValue("mqtt/port", i);}
+    void setMqttPort(int i) { settings->setValue("mqtt/port", i);emit settingsUpdated(); }
     QStringList getMqttSubNames() { return settings->value("mqtt/subNames").toStringList();}
-    void setMqttSubNames(QStringList l) { settings->setValue("mqtt/subNames", l);}
+    void setMqttSubNames(QStringList l) { settings->setValue("mqtt/subNames", l);emit settingsUpdated(); }
     QStringList getMqttSubTopics() { return settings->value("mqtt/subTopics").toStringList();}
-    void setMqttSubTopics(QStringList l) { settings->setValue("mqtt/subTopics", l);}
+    void setMqttSubTopics(QStringList l) { settings->setValue("mqtt/subTopics", l);emit settingsUpdated(); }
 
     QString getMqttWebswitchAddress() { return settings->value("mqtt/webswitchAddress", "").toString();}
-    void setMqttWebswitchAddress(QString s) { settings->setValue("mqtt/webswitchAddress", s);}
+    void setMqttWebswitchAddress(QString s) { settings->setValue("mqtt/webswitchAddress", s);emit settingsUpdated(); }
 
     QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString();}
-    void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);}
+    void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);emit settingsUpdated(); }
 
 private slots:
     QByteArray simpleEncr(QByteArray);
