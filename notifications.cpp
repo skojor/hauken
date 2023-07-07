@@ -39,11 +39,15 @@ void Notifications::start()
     timeBetweenEmailsTimer->setSingleShot(true);
     retryEmailsTimer->setSingleShot(true);
 
+    // Housekeeping
     QDirIterator it(workFolder, {".traceplot*"});
     while (it.hasNext()){
         QFile(it.next()).remove();
     }
-    //if (msGraphConfigured) authGraph();
+    QDirIterator it2(workFolder, {".json*"});
+    while (it2.hasNext()){
+        QFile(it2.next()).remove();
+    }
 }
 
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
@@ -170,9 +174,9 @@ void Notifications::sendMail()
             }
             mimeHtml->setHtml("<table>" + mailtext +
                               (getSdefAddPosition() && positionValid?tr("<tr><td>Current position</td><td>") +
-                                                    QString::number(latitude, 'f', 5) + " " +
-                                                    QString::number(longitude, 'f', 5) +
-                                                    tr("</td></tr>"):"") +
+                                                                           QString::number(latitude, 'f', 5) + " " +
+                                                                           QString::number(longitude, 'f', 5) +
+                                                                           tr("</td></tr>"):"") +
                               "</table><hr><img src='cid:image1' />   ");
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
@@ -196,18 +200,18 @@ void Notifications::sendMail()
             else {
                 SimpleMail::ServerReply *reply = server->sendMail(message);
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
-                {
-                    qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
-                    if (reply->error()) {
-                        toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Email notification failed, trying again later");
-                        this->retryEmailsTimer->start(90 * 1e3); // check again in 15 min
-                    }
-                    else {
-                        this->emailBacklog.removeLast();
-                        this->emailPictures.removeLast();
-                    }
-                    reply->deleteLater();
-                });
+                        {
+                            qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
+                            if (reply->error()) {
+                                toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Email notification failed, trying again later");
+                                this->retryEmailsTimer->start(90 * 1e3); // check again in 15 min
+                            }
+                            else {
+                                this->emailBacklog.removeLast();
+                                this->emailPictures.removeLast();
+                            }
+                            reply->deleteLater();
+                        });
             }
 
             timeBetweenEmailsTimer->start(delayBetweenEmails * 1e3); // start this timer to ensure emails are not spamming like crazy
@@ -250,11 +254,11 @@ void Notifications::setupIncidentTable()
 
 void Notifications::recTracePlot(const QPixmap *pic)
 {
-    pic->save(workFolder +
-              "/.traceplot" +
-              QDateTime::currentDateTime().toString("ddhhmmss") +
-              ".png", "png");
     lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".png";
+    if (!pic->save(lastPicFilename, "png"))
+        qDebug() << "Cannot save traceplot to" << lastPicFilename;
+    else
+        qDebug() << "Traceplot saved as" << lastPicFilename;
 }
 
 void Notifications::updSettings()
@@ -302,17 +306,17 @@ void Notifications::retryEmails()
             for (int i=0; i<emailBacklog.size(); i++) {
                 SimpleMail::ServerReply *reply = server->sendMail(emailBacklog.at(i));
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply, i]
-                {
-                    qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
-                    if (reply->error()) {
-                        this->retryEmailsTimer->start(900 * 1e3); // check again in 15 min
-                    }
-                    else {
-                        this->emailBacklog.removeAt(i);
-                        this->emailPictures.removeAt(i);
-                    }
-                    reply->deleteLater();
-                });
+                        {
+                            qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
+                            if (reply->error()) {
+                                this->retryEmailsTimer->start(900 * 1e3); // check again in 15 min
+                            }
+                            else {
+                                this->emailBacklog.removeAt(i);
+                                this->emailPictures.removeAt(i);
+                            }
+                            reply->deleteLater();
+                        });
             }
         }
         if (!emailBacklog.isEmpty()) // still emails left in the queue, retry later
@@ -326,11 +330,11 @@ void Notifications::authGraph()
     QString url = "https://login.microsoftonline.com/" + getEmailGraphTenantId() + "/oauth2/v2.0/token";
     QStringList l;
     l //<< "-H" << "\"Content-Type:" << "application/x-www-form-url-encoded\""
-      << "--data" << "grant_type=client_credentials"
-      << "--data" << "client_id=" + getEmailGraphApplicationId()
-      << "--data" << "client_secret=" + getEmailGraphSecret()
-      << "--data" << "scope=https://graph.microsoft.com/.default"
-      << url;
+        << "--data" << "grant_type=client_credentials"
+        << "--data" << "client_id=" + getEmailGraphApplicationId()
+        << "--data" << "client_secret=" + getEmailGraphSecret()
+        << "--data" << "scope=https://graph.microsoft.com/.default"
+        << url;
 
     //qDebug() << "Grant debug" << l;
     process->setArguments(l);
@@ -354,20 +358,26 @@ void Notifications::generateGraphEmail()
     body.insert("contentType", "html");
     body.insert("content", htmlData);
     QFile picture(lastPicFilename);
-    picture.open(QIODevice::ReadOnly);
-
-    att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-    att.insert("name", "image1.png");
-    att.insert("contentType", "image/png");
-    att.insert("contentId", "image1");
-    att.insert("contentBytes", QString(picture.readAll().toBase64()));
-    att.insert("isInline", "true");
-    attachments.append(att);
+    bool fileOk;
+    if (!picture.open(QIODevice::ReadOnly)) {
+        qDebug() << "Cannot open traceplot file" << lastPicFilename << picture.errorString();
+        fileOk = false;
+    }
+    else {
+        fileOk = true;
+        att.insert("@odata.type", "#microsoft.graph.fileAttachment");
+        att.insert("name", "image1.png");
+        att.insert("contentType", "image/png");
+        att.insert("contentId", "image1");
+        att.insert("contentBytes", QString(picture.readAll().toBase64()));
+        att.insert("isInline", "true");
+        attachments.append(att);
+    }
 
     message.insert("subject", "Notification from " + getStationName() + " (" + getSdefStationInitals() + ")");
     message.insert("body", body);
     message.insert("toRecipients", toRecipients);
-    message.insert("attachments", attachments);
+    if (fileOk) message.insert("attachments", attachments);
 
     mail.insert("message", message);
     mail.insert("saveToSentItems", "false");
@@ -378,7 +388,9 @@ void Notifications::generateGraphEmail()
     jsonFile.open(QIODevice::WriteOnly);
     jsonFile.write(json.toJson(QJsonDocument::Compact));
     jsonFile.close();
-    picture.remove(); // picture data is now stored in the json code, close and delete file
+    if (!picture.remove()) // picture data is now stored in the json code, close and delete file
+        qDebug() << "Couldn't remove traceplot file" << picture.fileName();
+
     graphEmailLog.append(jsonFilename);
     //qDebug() << toRecipients;
 }
@@ -422,8 +434,8 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         //qDebug() << output << reply.toJson() << reply.isObject() << reply.isArray() ;
 
         if (reply.isNull() || replyObject.isEmpty() ||
-                replyObject.find("token_type")->toString().contains("Bearer") ||
-                replyObject.find("expires_in")->toInt() > 0) {
+            replyObject.find("token_type")->toString().contains("Bearer") ||
+            replyObject.find("expires_in")->toInt() > 0) {
 
             graphAccessToken = replyObject.find("access_token")->toString().toUtf8();
             /*for (int i=0; i<output.size(); i++) {
