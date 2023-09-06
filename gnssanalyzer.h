@@ -16,6 +16,7 @@ public:
 public slots:
     void getData(GnssData &data);
     void updSettings();
+    void updStateInstrumentGnss(bool b) { stateInstrumentGnss = b; }
 
 signals:
     void alarm();
@@ -54,6 +55,7 @@ private:
     const double EARTH_RADIUS_IN_METERS = 6372797.560856;
     const double DEG_TO_RAD = 0.017453292519943295769236907684886;
 
+    bool stateInstrumentGnss = true; // goes false if instrumentGnss is used and stream disappears
 };
 
 #endif // GNSSANALYZER_H

@@ -47,8 +47,12 @@ signals:
     void displayGnssData(QString, int, bool);
     void updGnssData(GnssData &);
     void deviceBusy(QString); // For HTTP status updates
+    void ipOfUser(QString);
     void reconnected();
     void newAntennaNames();
+    void modeUsed(QString);
+    void freqRangeUsed(int, int);
+    void resUsed(int);
 
 public slots:
     void start();
@@ -112,8 +116,9 @@ private slots:
     void checkUdp(const QByteArray buffer);
     void askTcp();
     void checkTcp(const QByteArray buffer);
-    void askUser();
+    void askUser(bool checkUserOnly = false);
     void checkUser(const QByteArray buffer);
+    void checkUserOnly(const QByteArray buffer);
     void stateConnected();
     void delUdpStreams();
     void delTcpStreams();
@@ -130,6 +135,18 @@ private slots:
     void updGnssDisplay();
     void askForAntennaNames();
     void antennaNamesReply(QByteArray buffer);
+
+    void askFrequencies();
+    void askPscanStartFreq();
+    void askPscanStopFreq();
+    void askPscanResolution();
+    void askFfmFreq();
+    void askFfmSpan();
+    void checkPscanStartFreq(const QByteArray buffer);
+    void checkPscanStopFreq(const QByteArray buffer);
+    void checkPscanResolution(const QByteArray buffer);
+    void checkFfmFreq(const QByteArray buffer);
+    void checkFfmSpan(const QByteArray buffer);
 
 private:
     bool connected = false;
@@ -170,9 +187,10 @@ private:
     const int scpiThrottleTime = 5; // ms
 
     bool scpiReconnect = false, discPressed = false;
-    QTimer *updGnssDisplayTimer = new QTimer;
+    QTimer *updGnssDisplayTimer = new QTimer, *updFrequencyData = new QTimer, *updStreamsTimer = new QTimer;
     bool firstConnection = true;
-    QString inUseBy;
+    QString inUseBy, inUseByIp, inUseMode;
+    unsigned long inUseStart = 0, inUseStop = 0, inUseRes = 0;
 };
 
 #endif // MEASUREMENTDEVICE_H

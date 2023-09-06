@@ -50,7 +50,7 @@ void PositionReport::generateReport()
     reportArgs << "-H" << "Content-Type:application/x-www-form-urlencoded"
                << "-s" << "-w" << "%{http_code}";
     reportArgs << "--data" << "id=" + (id.isEmpty() ? getSdefStationInitals() : id)
-         << "--data" << "timestamp=" + QString::number(gnssData.timestamp.toMSecsSinceEpoch() / 1000);
+               << "--data" << "timestamp=" + QString::number(QDateTime::currentSecsSinceEpoch()); //QString::number(gnssData.timestamp.toMSecsSinceEpoch() / 1000);
     if (gnssData.posValid) {
         reportArgs << "--data" << "posValid=true";
         if (addPosition) {
@@ -70,14 +70,33 @@ void PositionReport::generateReport()
              << "--data" << "sats=" + QString::number(gnssData.satsTracked);
     }
     if (addConnStats) {
-        QString state = "disconnected";
-        if (measurementDeviceConnected && !inUse) state = "connected";
-        else if (inUse) state = "busy";
-        if (!inUseBy.isEmpty()) state += " (" + inUseBy + ")";
+        QString state = "Disconnected";
+        if (measurementDeviceConnected && !inUse) {
+            state = "Hauken";
+            inUseBy.clear();
+            reportArgs  << "--data" << "startFreq=" + QString::number(devicePtr->pscanStartFrequency)
+            << "--data" << "stopFreq=" + QString::number(devicePtr->pscanStopFrequency)
+            << "--data" << "res=" + QString::number(devicePtr->pscanResolution);
+        }
+        else if (inUse) {
+            state = "Other user";
+            if (!inUseBy.isEmpty()) state += " (" + inUseBy.simplified();
+            if (!inUseByIp.isEmpty()) state += " " + inUseByIp.simplified();
+            state += ")";
+            if (startFreqUsed > 0 && stopFreqUsed > startFreqUsed && resUsed > 0) {
+                reportArgs  << "--data" << "startFreq=" + QString::number(startFreqUsed)
+                            << "--data" << "stopFreq=" + QString::number(stopFreqUsed)
+                            << "--data" << "res=" + QString::number(resUsed);
+            }
+            else {
+                reportArgs  << "--data" << "startFreq=0"
+                           << "--data" << "stopFreq=0"
+                           << "--data" << "res=0";
+
+            }
+        }
+
         reportArgs << "--data" << "state=" + state
-                   << "--data" << "startFreq=" + QString::number(devicePtr->pscanStartFrequency)
-                   << "--data" << "stopFreq=" + QString::number(devicePtr->pscanStopFrequency)
-                   << "--data" << "res=" + QString::number(devicePtr->pscanResolution)
                    << "--data" << "uptime=" + QString::number((int)(uptime.elapsed() / 1e3));
     }
 
@@ -96,6 +115,7 @@ void PositionReport::generateReport()
     }
 
     reportArgs << url;
+    //qDebug() << reportArgs;
 }
 
 void PositionReport::sendReport()

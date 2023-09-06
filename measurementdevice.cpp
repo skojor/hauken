@@ -36,6 +36,8 @@ void MeasurementDevice::start()
 
     connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
     updGnssDisplayTimer->start(1000);
+
+    connect(updFrequencyData, &QTimer::timeout, this, &MeasurementDevice::askFrequencies);
 }
 
 void MeasurementDevice::instrConnect()
@@ -51,6 +53,7 @@ void MeasurementDevice::scpiConnected()
 {
     connected = true;
     emit connectedStateChanged(true); // if connected!!
+    updFrequencyData->start(60000);
 }
 
 void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
@@ -98,8 +101,8 @@ void MeasurementDevice::instrDisconnect()
         else delTcpStreams();
         scpiSocket->waitForBytesWritten(1000);
     }
+    updFrequencyData->stop();
     scpiSocket->close();
-
 }
 
 void MeasurementDevice::scpiDisconnected()
@@ -218,9 +221,11 @@ void MeasurementDevice::setMode()
             else if (devicePtr->hasDscan) {
                 scpiWrite("freq:mode dsc");
             }
+            emit modeUsed("pscan");
         }
         else {
             scpiWrite("freq:mode ffm");
+            emit modeUsed("ffm");
         }
     }
     //if (connected) restartStream(); // rerun stream setup if mode changes (obviously)
@@ -301,8 +306,20 @@ void MeasurementDevice::scpiRead()
         checkTcp(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_USERNAME)
         checkUser(buffer);
+    else if (instrumentState == InstrumentState::CHECK_USER_ONLY)
+        checkUserOnly(buffer);
     else if (instrumentState == InstrumentState::CHECK_ANT_NAME1 || instrumentState == InstrumentState::CHECK_ANT_NAME2)
         antennaNamesReply(buffer);
+    else if (instrumentState == InstrumentState::CHECK_PSCAN_START_FREQ)
+        checkPscanStartFreq(buffer);
+    else if (instrumentState == InstrumentState::CHECK_PSCAN_STOP_FREQ)
+        checkPscanStopFreq(buffer);
+    else if (instrumentState == InstrumentState::CHECK_PSCAN_RESOLUTION)
+        checkPscanResolution(buffer);
+    else if (instrumentState == InstrumentState::CHECK_FFM_CENTERFREQ)
+        checkFfmFreq(buffer);
+    else if (instrumentState == InstrumentState::CHECK_FFM_SPAN)
+        checkFfmSpan(buffer);
 }
 
 void MeasurementDevice::askUdp()
@@ -375,6 +392,22 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
     bool inUse = false;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
+        //qDebug() << brokenList;
+        if (brokenList.size() > 2) {
+            inUseByIp = brokenList[0].split(' ')[1].simplified();
+            inUseByIp.remove('\"');
+            QString text = "remote";
+            if (inUseByIp.size() > 6) {
+                for (auto && ownIp : myOwnAddresses) {
+                    if (list.contains(ownIp.toString().toLocal8Bit()))
+                        text = "local";
+                }
+                emit ipOfUser(text);
+                if (list.toLower().contains("psc")) emit modeUsed("pscan");
+                else if (list.toLower().contains("cw")) emit modeUsed("cw");
+                else if (list.toLower().contains("ifp")) emit modeUsed("ifpan");
+            }
+        }
         if (list.contains(tcpOwnAdress) && list.contains(tcpOwnPort))
             break; // we are the users, continue
         if (brokenList.size() > 2 && !list.contains("DEF")) {
@@ -405,11 +438,12 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
 }
 
 
-void MeasurementDevice::askUser()
+void MeasurementDevice::askUser(bool checkUserOnly)
 {
     if (devicePtr->systManLocName) {
         scpiWrite("syst:man:loc:name?");
-        instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
+        if (!checkUserOnly) instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
+        else instrumentState = InstrumentState::CHECK_USER_ONLY;
         tcpTimeoutTimer->start(20000);
     }
     else
@@ -439,6 +473,19 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
         deviceInUseWarningIssued = true;
         emit popup(msg);
     }
+    emit deviceBusy(inUseBy);
+}
+
+void MeasurementDevice::checkUserOnly(const QByteArray buffer)
+{
+    if (!buffer.isEmpty()) {
+        inUseBy = QString(buffer).simplified();
+    }
+    else {
+        inUseBy.clear();
+    }
+    emit deviceBusy(inUseBy);
+    instrumentState = InstrumentState::CONNECTED;
 }
 
 void MeasurementDevice::stateConnected()
@@ -576,6 +623,8 @@ void MeasurementDevice::setupTcpStream()
               //scpiSocket->localAddress().toString().toLocal8Bit() +
               //"', " +
               tcpOwnPort + ", 'volt:ac', 'opt'" + em200Specific);
+    if (instrumentState == InstrumentState::CONNECTED) askTcp(); // To update the current user ip address 230908
+    //askUser(true);
 }
 
 void MeasurementDevice::setupUdpStream()
@@ -601,6 +650,8 @@ void MeasurementDevice::setupUdpStream()
               scpiSocket->localAddress().toString().toLocal8Bit() +
               "', " +
               QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
+    if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
+    //askUser(true);
 }
 
 void MeasurementDevice::forwardBytesPerSec(int val)
@@ -615,7 +666,7 @@ void MeasurementDevice::fftDataHandler(QVector<qint16> &data)
 
 void MeasurementDevice::handleStreamTimeout()
 {
-    qDebug() << "Stream timeout triggered" << connected;
+    //qDebug() << "Stream timeout triggered" << connected;
 
     if (connected) {
         tcpTimeoutTimer->stop();
@@ -624,7 +675,7 @@ void MeasurementDevice::handleStreamTimeout()
             if (!autoReconnectInProgress) {
                 emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Lost datastream. Auto reconnect enabled, waiting for device to be available again");
                 emit deviceStreamTimeout();
-                emit deviceBusy(inUseBy);
+                askUser(true);
             }
         }
         else {
@@ -831,3 +882,86 @@ void MeasurementDevice::updateAntennaName(const int index, const QString name)
 
     askForAntennaNames(); // update register
 }
+
+void MeasurementDevice::askFrequencies()
+{
+    if (inUseMode.contains("pscan") || devicePtr->mode == Instrument::Mode::PSCAN) {
+        askPscanStartFreq();
+    }
+    else {
+        askFfmFreq();
+    }
+}
+
+void MeasurementDevice::checkPscanStartFreq(const QByteArray buffer)
+{
+    unsigned long s = buffer.simplified().toULong();
+    if (s > 0 && s < 9e9) inUseStart = s;
+    askPscanStopFreq();
+}
+
+void MeasurementDevice::checkPscanStopFreq(const QByteArray buffer)
+{
+    unsigned long s = buffer.simplified().toULong();
+    if (s > 0 && s < 9e9) inUseStop = s;
+    askPscanResolution();
+}
+
+void MeasurementDevice::checkPscanResolution(const QByteArray buffer)
+{
+    unsigned long s = buffer.simplified().toULong();
+    if (s > 0 && s < 9e9) inUseRes = s;
+    instrumentState = InstrumentState::CONNECTED; // Done
+    emit freqRangeUsed(inUseStart, inUseStop);
+    emit resUsed(inUseRes);
+}
+
+void MeasurementDevice::askPscanStartFreq()
+{
+    scpiWrite("freq:psc:start?");
+    instrumentState = InstrumentState::CHECK_PSCAN_START_FREQ;
+}
+
+void MeasurementDevice::askPscanStopFreq()
+{
+    scpiWrite("freq:psc:stop?");
+    instrumentState = InstrumentState::CHECK_PSCAN_STOP_FREQ;
+}
+
+void MeasurementDevice::askPscanResolution()
+{
+    scpiWrite("sens:psc:step?");
+    instrumentState = InstrumentState::CHECK_PSCAN_RESOLUTION;
+}
+
+void MeasurementDevice::askFfmFreq()
+{
+    scpiWrite("sens:freq?");
+    instrumentState = InstrumentState::CHECK_FFM_CENTERFREQ;
+}
+
+void MeasurementDevice::askFfmSpan()
+{
+    scpiWrite("sens:span?");
+    instrumentState = InstrumentState::CHECK_FFM_SPAN;
+}
+
+void MeasurementDevice::checkFfmFreq(const QByteArray buffer)
+{
+    unsigned long s = buffer.simplified().toULong();
+    if (s > 0 && s < 9e9) inUseStart = s;
+    askFfmSpan();
+}
+
+void MeasurementDevice::checkFfmSpan(const QByteArray buffer)
+{
+    unsigned long s = buffer.simplified().toULong();
+    if (s > 0 && s < 400e6) {
+        inUseStart -= s / 2;
+        inUseStop = inUseStart + s;
+        emit freqRangeUsed(inUseStart, inUseStop);
+        instrumentState = InstrumentState::CONNECTED;
+    }
+
+}
+

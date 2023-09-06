@@ -44,8 +44,12 @@ public slots:
     void setMeasurementDeviceConnectionStatus(bool b) { qDebug() << "Pos.report signal: device status" << b; measurementDeviceConnected = b; if (b) inUse = false;}
     void setMeasurementDeviceReconnected() { qDebug() << "Pos.report signal: reconn."; measurementDeviceConnected = true; inUse = false;}
     void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
-    void setInUse(QString s) { inUse = true; inUseBy = s;}
+    void setInUse(QString s) { inUse = true; inUseBy = s; }
+    void setInUseByIp(QString s) { inUseByIp = s.simplified(); qDebug() << "rec" << inUseByIp; }
     void updMqttData(QString& name, double& val);
+    void setModeUsed(QString s) { modeUsed = s; qDebug() << "mode" << s; }
+    void setFreqUsed(int a, int b) { startFreqUsed = a, stopFreqUsed = b; qDebug() << "sta/sto" << a << b; }
+    void setResUsed(int a) { resUsed = a; qDebug() << "res::" << a; }
 
 private:
     QTimer *reportTimer = new QTimer;
@@ -54,7 +58,9 @@ private:
 
     QProcess *curlProcess = new QProcess;
     bool measurementDeviceConnected = false, inUse = false;
-    QString inUseBy;
+    QString inUseBy, inUseByIp, modeUsed;
+    unsigned long startFreqUsed, stopFreqUsed, resUsed;
+
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
     double sensorTemp = -99, sensorHumidity = 0;
 

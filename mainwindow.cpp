@@ -636,7 +636,6 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer3, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(gnssAnalyzer3, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssAnalyzer3, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
-
     connect(positionReport, &PositionReport::reqPosition, this, [this] (QString s) {
         if (s.contains("1")) positionReport->updPosition(this->gnssDevice1->sendGnssData());
         else if (s.contains("2")) positionReport->updPosition(this->gnssDevice2->sendGnssData());
@@ -647,6 +646,10 @@ void MainWindow::setSignals()
     });
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
     connect(measurementDevice, &MeasurementDevice::deviceBusy, positionReport, &PositionReport::setInUse);
+    connect(measurementDevice, &MeasurementDevice::ipOfUser, positionReport, &PositionReport::setInUseByIp);
+    connect(measurementDevice, &MeasurementDevice::modeUsed, positionReport, &PositionReport::setModeUsed);
+    connect(measurementDevice, &MeasurementDevice::freqRangeUsed, positionReport, &PositionReport::setFreqUsed);
+    connect(measurementDevice, &MeasurementDevice::resUsed, positionReport, &PositionReport::setResUsed);
     connect(measurementDevice, &MeasurementDevice::reconnected, positionReport, &PositionReport::setMeasurementDeviceReconnected);
     connect(measurementDevice, &MeasurementDevice::newAntennaNames, this, &MainWindow::setDeviceAntPorts);
     //connect(instrAntPort, &QComboBox::editTextChanged, this, &MainWindow::changeAntennaPortName);
