@@ -2,7 +2,7 @@ QT       += core gui serialport network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
-CONFIG += c++11
+CONFIG += c++17
 QMAKE_CXXFLAGS += -pthread
 QMAKE_CXXFLAGS += -std=c++11
 TARGET = Hauken
@@ -36,6 +36,7 @@ SOURCES += \
     customplotcontroller.cpp \
     datastreambaseclass.cpp \
     emailoptions.cpp \
+    espenai.cpp \
     generaloptions.cpp \
     geolimit.cpp \
     geolimitoptions.cpp \
@@ -95,6 +96,7 @@ HEADERS += \
     customplotcontroller.h \
     datastreambaseclass.h \
     emailoptions.h \
+    espenai.h \
     generaloptions.h \
     geolimit.h \
     geolimitoptions.h \
@@ -153,7 +155,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.26.4.0
+VERSION = 2.27.1.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

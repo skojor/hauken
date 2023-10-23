@@ -173,11 +173,17 @@ void Notifications::sendMail()
                 message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
             mimeHtml->setHtml("<table>" + mailtext +
-                              (getSdefAddPosition() && positionValid?tr("<tr><td>Current position</td><td>") +
+                              (getSdefAddPosition() && positionValid?
+                                                      tr("<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/") +
+                                                                                                  QString::number(latitude, 'f', 5) + "+" +
+                                                                                                  QString::number(longitude, 'f', 5) + "/@" +
+                                                                                                  QString::number(latitude, 'f', 5) + "," +
+                                                                                                  QString::number(longitude, 'f', 5) + ",10z\">" +
                                                                            QString::number(latitude, 'f', 5) + " " +
                                                                            QString::number(longitude, 'f', 5) +
-                                                                           tr("</td></tr>"):"") +
+                                                                           tr("</a></td></tr>"):"") +
                               "</table><hr><img src='cid:image1' />   ");
+            qDebug() << "mail debug:" << mimeHtml->data();
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
 
