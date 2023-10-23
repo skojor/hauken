@@ -912,8 +912,10 @@ void MeasurementDevice::checkPscanResolution(const QByteArray buffer)
     unsigned long s = buffer.simplified().toULong();
     if (s > 0 && s < 9e9) inUseRes = s;
     instrumentState = InstrumentState::CONNECTED; // Done
-    emit freqRangeUsed(inUseStart, inUseStop);
-    emit resUsed(inUseRes);
+    if (inUseStart > 0 && inUseStop > 0 && inUseStop > inUseStart) {
+        emit freqRangeUsed(inUseStart, inUseStop);
+        emit resUsed(inUseRes);
+    }
 }
 
 void MeasurementDevice::askPscanStartFreq()

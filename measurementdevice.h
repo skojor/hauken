@@ -51,7 +51,7 @@ signals:
     void reconnected();
     void newAntennaNames();
     void modeUsed(QString);
-    void freqRangeUsed(int, int);
+    void freqRangeUsed(unsigned long, unsigned lon);
     void resUsed(int);
 
 public slots:
