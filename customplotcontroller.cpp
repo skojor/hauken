@@ -84,8 +84,8 @@ void CustomPlotController::reCalc()
 {
     if ((int)(resolution * 1e6) > 0 && customPlotPtr->xAxis->range().upper > 0 && customPlotPtr->xAxis->range().lower > 0) {
         nrOfValues = 1 + ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
-        if (nrOfValues > 1) {
-            double rate = (customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / plotResolution;
+            if (nrOfValues > 1) {
+            double rate = ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) + resolution) / (double)plotResolution;
             keyValues.clear();
             double freq = customPlotPtr->xAxis->range().lower;
 
@@ -132,6 +132,9 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
             selMin = selMax;
             selMax = tmp;
         }
+        if (selMax >= stopFreq) selMax = stopFreq - resolution / 1000;
+        qDebug() << selMin << selMax;
+
         QMenu *menu = new QMenu;
         menu->addAction("Include " + QString::number(selMin, 'f', 3) +
                         "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
@@ -224,6 +227,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
     if (tmp.isEmpty() && (int)sel1 != 0) tmp << QString::number(sel1, 'f', 3)
                                              << QString::number(keyValues.last(), 'f', 3); // all included
 
+    qDebug() << "trig debug:" << tmp;
     emit reqTrigline(); // to update trig line drawing with new values
     if (!tmp.isEmpty())
         config->setTrigFrequencies(tmp);

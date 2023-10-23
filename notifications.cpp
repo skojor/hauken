@@ -183,7 +183,7 @@ void Notifications::sendMail()
                                                                            QString::number(longitude, 'f', 5) +
                                                                            tr("</a></td></tr>"):"") +
                               "</table><hr><img src='cid:image1' />   ");
-            qDebug() << "mail debug:" << mimeHtml->data();
+            //qDebug() << "mail debug:" << mimeHtml->data();
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
 

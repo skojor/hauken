@@ -905,6 +905,8 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.28</td><td>Position link to google maps added to notifications email</td></tr>"
+       << "<tr><td>2.27</td><td>Minor bugfixes</td></tr>"
        << "<tr><td>2.26</td><td>Antenna names readout and editing added (EM200 and USRP specific)</td></tr>"
        << "<tr><td>2.25</td><td>Added MQTT and webswitch data report options</td></tr>"
        << "<tr><td>2.24</td><td>Added geographic blocking from KML polygon file</td></tr>"
