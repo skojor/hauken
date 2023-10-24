@@ -2,22 +2,21 @@
 #define QUA_ZIPFILE_H
 
 /*
-Copyright (C) 2005-2014 Sergey A. Tachenov
+Copyright (C) 2005-2011 Sergey A. Tachenov
 
-This file is part of QuaZip.
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version.
 
-QuaZip is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 2.1 of the License, or
-(at your option) any later version.
-
-QuaZip is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser
+General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with QuaZip.  If not, see <http://www.gnu.org/licenses/>.
+along with this program; if not, write to the Free Software Foundation,
+Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 See COPYING file for the full LGPL text.
 
@@ -25,7 +24,7 @@ Original ZIP package is copyrighted by Gilles Vollant, see
 quazip/(un)zip.h files for details, basically it's zlib license.
  **/
 
-#include <QtCore/QIODevice>
+#include <QIODevice>
 
 #include "quazip_global.h"
 #include "quazip.h"
@@ -39,7 +38,7 @@ class QuaZipFilePrivate;
  * interface to the ZIP/UNZIP package, but also integrates it with Qt by
  * subclassing QIODevice. This makes possible to access files inside ZIP
  * archive using QTextStream or QDataStream, for example. Actually, this
- * is the main purpose of the whole QuaZip library.
+ * is the main purpose of the whole QuaZIP library.
  *
  * You can either use existing QuaZip instance to create instance of
  * this class or pass ZIP archive file name to this class, in which case
@@ -107,7 +106,7 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      * QuaZipFile constructed by this constructor can be used for read
      * only access. Use QuaZipFile(QuaZip*,QObject*) for writing.
      **/
-    QuaZipFile(const QString& zipName, QObject *parent =nullptr);
+    QuaZipFile(const QString& zipName, QObject *parent =NULL);
     /// Constructs a QuaZipFile instance.
     /** \a parent argument specifies this object's parent object, \a
      * zipName specifies ZIP archive file name and \a fileName and \a cs
@@ -119,7 +118,7 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      * \sa QuaZip::setCurrentFile()
      **/
     QuaZipFile(const QString& zipName, const QString& fileName,
-        QuaZip::CaseSensitivity cs =QuaZip::csDefault, QObject *parent =nullptr);
+        QuaZip::CaseSensitivity cs =QuaZip::csDefault, QObject *parent =NULL);
     /// Constructs a QuaZipFile instance.
     /** \a parent argument specifies this object's parent object.
      *
@@ -169,7 +168,7 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      * zip.close();
      * \endcode
      **/
-    QuaZipFile(QuaZip *zip, QObject *parent =nullptr);
+    QuaZipFile(QuaZip *zip, QObject *parent =NULL);
     /// Destroys a QuaZipFile instance.
     /** Closes file if open, destructs internal QuaZip object (if it
      * exists and \em is internal, of course).
@@ -296,7 +295,7 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      * it is NULL then this function behaves just like open(OpenMode).
      **/
     inline bool open(OpenMode mode, const char *password)
-    {return open(mode, nullptr, nullptr, false, password);}
+    {return open(mode, NULL, NULL, false, password);}
     /// Opens a file for reading.
     /** \overload
      * Argument \a password specifies a password to decrypt the file.
@@ -309,7 +308,7 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      * \a method should not be \c NULL. \a level can be \c NULL if you
      * don't want to know the compression level.
      **/
-    bool open(OpenMode mode, int *method, int *level, bool raw, const char *password =nullptr);
+    bool open(OpenMode mode, int *method, int *level, bool raw, const char *password =NULL);
     /// Opens a file for writing.
     /** \a info argument specifies information about file. It should at
      * least specify a correct file name. Also, it is a good idea to
@@ -339,7 +338,7 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      * algorithms tuning. See deflateInit2() in zlib.
      **/
     bool open(OpenMode mode, const QuaZipNewInfo& info,
-        const char *password =nullptr, quint32 crc =0,
+        const char *password =NULL, quint32 crc =0,
         int method =Z_DEFLATED, int level =Z_DEFAULT_COMPRESSION, bool raw =false,
         int windowBits =-MAX_WBITS, int memLevel =DEF_MEM_LEVEL, int strategy =Z_DEFAULT_STRATEGY);
     /// Returns \c true, but \ref quazipfile-sequential "beware"!
@@ -427,22 +426,9 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
      *
      * File must be open for reading before calling this function.
      *
-     * \return \c false in the case of an error.
-     *
-     * This function doesn't support zip64, but will still work fine on zip64
-     * archives if file sizes are below 4 GB, otherwise the values will be set
-     * as if converted using QuaZipFileInfo64::toQuaZipFileInfo().
-     *
-     * \sa getFileInfo(QuaZipFileInfo64*)
+     * Returns \c false in the case of an error.
      **/
     bool getFileInfo(QuaZipFileInfo *info);
-    /// Gets information about current file with zip64 support.
-    /**
-     * @overload
-     *
-     * \sa getFileInfo(QuaZipFileInfo*)
-     */
-    bool getFileInfo(QuaZipFileInfo64 *info);
     /// Closes the file.
     /** Call getZipError() to determine if the close was successful.
      **/
@@ -451,58 +437,6 @@ class QUAZIP_EXPORT QuaZipFile: public QIODevice {
     int getZipError() const;
     /// Returns the number of bytes available for reading.
     virtual qint64 bytesAvailable() const;
-    /// Returns the local extra field
-    /**
-      There are two (optional) local extra fields associated with a file.
-      One is located in the central header and is available along
-      with the rest of the file information in @ref QuaZipFileInfo64::extra.
-      Another is located before the file itself,
-      and is returned by this function. The file must be open first.
-
-      @return the local extra field, or an empty array if there is none
-        (or file is not open)
-      */
-    QByteArray getLocalExtraField();
-    /// Returns the extended modification timestamp
-    /**
-    * The getExt*Time() functions only work if there is an extended timestamp
-    * extra field (ID 0x5455) present. Otherwise, they all return invalid null
-    * timestamps.
-    *
-    * Modification time, but not other times, can also be accessed through
-    * @ref QuaZipFileInfo64 without the need to open the file first.
-    *
-    * @sa dateTime
-    * @sa QuaZipFileInfo64::getExtModTime()
-    * @sa getExtAcTime()
-    * @sa getExtCrTime()
-    * @return The extended modification time, UTC
-    */
-    QDateTime getExtModTime();
-    /// Returns the extended access timestamp
-    /**
-    * The getExt*Time() functions only work if there is an extended timestamp
-    * extra field (ID 0x5455) present. Otherwise, they all return invalid null
-    * timestamps.
-    * @sa dateTime
-    * @sa QuaZipFileInfo64::getExtModTime()
-    * @sa getExtModTime()
-    * @sa getExtCrTime()
-    * @return The extended access time, UTC
-    */
-    QDateTime getExtAcTime();
-    /// Returns the extended creation timestamp
-    /**
-    * The getExt*Time() functions only work if there is an extended timestamp
-    * extra field (ID 0x5455) present. Otherwise, they all return invalid null
-    * timestamps.
-    * @sa dateTime
-    * @sa QuaZipFileInfo64::getExtModTime()
-    * @sa getExtModTime()
-    * @sa getExtAcTime()
-    * @return The extended creation time, UTC
-    */
-    QDateTime getExtCrTime();
 };
 
 #endif

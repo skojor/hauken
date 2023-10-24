@@ -21,9 +21,11 @@
 #include <QDoubleSpinBox>
 #include <QSharedPointer>
 #include <QFile>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
-#include "typedefs.h"
+//#include "typedefs.h"
 #include "generaloptions.h"
 #include "gnssoptions.h"
 #include "receiveroptions.h"

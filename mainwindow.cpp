@@ -465,11 +465,11 @@ void MainWindow::setValidators()
     instrAtt->setRange(-40, 40);
 
     QString ipRange = "(([ 0]+)|([ 0]*[0-9] *)|([0-9][0-9] )|([ 0][0-9][0-9])|(1[0-9][0-9])|([2][0-4][0-9])|(25[0-5]))";
-    QRegExp ipRegex ("^" + ipRange
+    QRegularExpression ipRegex ("^" + ipRange
                      + "\\." + ipRange
                      + "\\." + ipRange
                      + "\\." + ipRange + "$");
-    QRegExpValidator *ipValidator = new QRegExpValidator(ipRegex, this);
+    QRegularExpressionValidator *ipValidator = new QRegularExpressionValidator(ipRegex, this);
     instrIpAddr->setValidator(ipValidator);
     instrIpAddr->setInputMask("000.000.000.000");
     instrIpAddr->setCursorPosition(0);
@@ -905,7 +905,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
-       << "<tr><td>2.28</td><td>Position link to google maps added to notifications email</td></tr>"
+       << "<tr><td>2.28</td><td>Position link to google maps added to notifications email. Minor bugfixes</td></tr>"
        << "<tr><td>2.27</td><td>Minor bugfixes</td></tr>"
        << "<tr><td>2.26</td><td>Antenna names readout and editing added (EM200 and USRP specific)</td></tr>"
        << "<tr><td>2.25</td><td>Added MQTT and webswitch data report options</td></tr>"

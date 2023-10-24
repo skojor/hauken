@@ -1,0 +1,16 @@
+debug/qmqttauthenticationproperties.o
+debug/qmqttclient.o
+debug/qmqttconnection.o
+debug/qmqttconnectionproperties.o
+debug/qmqttcontrolpacket.o
+debug/qmqttmessage.o
+debug/qmqttpublishproperties.o
+debug/qmqttsubscription.o
+debug/qmqttsubscriptionproperties.o
+debug/qmqtttopicfilter.o
+debug/qmqtttopicname.o
+debug/qmqtttype.o
+debug/moc_qmqttclient.o
+debug/moc_qmqttmessage.o
+debug/moc_qmqttsubscription.o
+debug/moc_qmqttconnection_p.o

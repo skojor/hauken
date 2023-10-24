@@ -1,1 +1,1 @@
-#include "../../src/mqtt/qmqttsubscriptionproperties.h"
+#include "../../../qtmqtt/src/mqtt/qmqttsubscriptionproperties.h"

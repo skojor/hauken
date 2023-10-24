@@ -54,7 +54,7 @@ void CameraOptions::fillCameraCombo()
 {
     comboOpt1->clear();
     comboOpt1->addItem("None");
-    cameras = QCameraInfo::availableCameras();
+/*    cameras = QCameraInfo::availableCameras();
     for (auto &val : cameras)
-        comboOpt1->addItem(val.description());
+        comboOpt1->addItem(val.description());*/
 }

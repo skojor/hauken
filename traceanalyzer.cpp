@@ -123,6 +123,8 @@ void TraceAnalyzer::updSettings()
 
 void TraceAnalyzer::pmrCheckUptime(const unsigned long frequency, const bool active)
 {
+    (void)frequency;
+    (void)active;
  /*   bool foundIt = false;
     if (!pmrTable.isEmpty()) {                  // check if this one was up before
         for (auto &row : pmrTable) {

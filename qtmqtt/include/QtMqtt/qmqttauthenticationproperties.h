@@ -1,1 +1,1 @@
-#include "../../src/mqtt/qmqttauthenticationproperties.h"
+#include "../../../qtmqtt/src/mqtt/qmqttauthenticationproperties.h"

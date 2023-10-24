@@ -3,7 +3,7 @@
 
 #include "optionsbaseclass.h"
 #include <qcamera.h>
-#include <qcamerainfo.h>
+//#include <qcamerainfo.h>
 
 class CameraOptions : public OptionsBaseClass
 {
@@ -18,7 +18,7 @@ private slots:
     void fillCameraCombo();
 
 private:
-    QList<QCameraInfo> cameras;
+//   QList<QCameraInfo> cameras;
 
 };
 

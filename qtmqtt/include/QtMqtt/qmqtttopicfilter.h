@@ -1,1 +1,1 @@
-#include "../../src/mqtt/qmqtttopicfilter.h"
+#include "../../../qtmqtt/src/mqtt/qmqtttopicfilter.h"

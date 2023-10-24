@@ -476,7 +476,7 @@ class Pmr
 {
 public:
     Pmr(unsigned long freq = 0, unsigned int spacing = 0) { centerFrequency = freq; channelSpacing = spacing; }
-    QChar           type = 0;
+    QChar           type = static_cast<QChar>(0);
     unsigned long   centerFrequency;
     unsigned int    channelSpacing = 0;
     unsigned int    ifBandwidth = 0;

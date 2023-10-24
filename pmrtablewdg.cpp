@@ -125,19 +125,19 @@ void PmrTableWdg::loadFile(QString filename)
     QFile xmlfile(filename);
     if (xmlfile.open(QIODevice::ReadOnly | QFile::Text)) {
         QXmlStreamReader xml(&xmlfile);
-        if (xml.readNextStartElement() && xml.name() == "FrequencyStoreList") {
+        if (xml.readNextStartElement() && xml.name() == QString("FrequencyStoreList")) {
             while (xml.readNextStartElement()) {
                 ctr++;
-                if (xml.name() == "FrequencyStoreEntry") { // iterate every frequencystore entry
+                if (xml.name() == QString("FrequencyStoreEntry")) { // iterate every frequencystore entry
                     Pmr pmr;
                     while (xml.readNextStartElement()) {
-                        if (xml.name() == "Type") {
+                        if (xml.name() == QString("Type")) {
                             QString type = xml.readElementText();
                             pmr.type = type.at(0);
                         }
-                        else if (xml.name() == "Comment") {
+                        else if (xml.name() == QString("Comment")) {
                             pmr.casperComment = xml.readElementText();
-                            pmr.casperComment.append(xml.text().string());
+                            pmr.casperComment.append(xml.text().toString());
                             pmr.casperComment.replace("aring;", "å");
                             pmr.casperComment.replace("quest;", "?");
                             pmr.casperComment.replace("period;", ".");
@@ -145,34 +145,34 @@ void PmrTableWdg::loadFile(QString filename)
                             pmr.casperComment.replace("aelig;", "æ");
                             pmr.casperComment.replace("comma;", ",");
                         }
-                        else if (xml.name() == "FFM_Settings") { // iterate this group
+                        else if (xml.name() == QString("FFM_Settings")) { // iterate this group
                             while (xml.readNextStartElement()) {
-                                if (xml.name() == "Frequency") {
+                                if (xml.name() == QString("Frequency")) {
                                     pmr.centerFrequency = xml.readElementText().toULong(&ok);
-                                    if (!ok) qDebug() << "Error reading frequency from xml file" << xml.readElementText();
+                                    if (!ok) qDebug() << QString("Error reading frequency from xml file") << xml.readElementText();
                                 }
-                                else if (xml.name() == "IFBandwidth") {
+                                else if (xml.name() == QString("IFBandwidth")) {
                                     pmr.ifBandwidth = xml.readElementText().toUInt(&ok);
                                     if (!ok) qDebug() << "Error reading IF BW" << xml.readElementText();
                                 }
-                                else if (xml.name() == "AnalogDemod") {
+                                else if (xml.name() == QString("AnalogDemod")) {
                                     pmr.demod = xml.readElementText();
                                 }
-                                else if (xml.name() == "Detail") { // yet another iteration
+                                else if (xml.name() == QString("Detail")) { // yet another iteration
                                     while (xml.readNextStartElement()) {
-                                        if (xml.name() == "Attenuation") {
+                                        if (xml.name() == QString("Attenuation")) {
                                             if (xml.readElementText() == "ON") pmr.attenuation = true;
                                             else pmr.attenuation = false;
                                         }
-                                        else if (xml.name() == "Active") {
+                                        else if (xml.name() == QString("Active")) {
                                             if (xml.readElementText() == "true") pmr.active = true;
                                             else pmr.active = false;
                                         }
-                                        else if (xml.name() == "SquelchState") {
+                                        else if (xml.name() == QString("SquelchState")) {
                                             if (xml.readElementText() == "ON") pmr.squelchState = true;
                                             else pmr.squelchState = false;
                                         }
-                                        else if (xml.name() == "SquelchValue") {
+                                        else if (xml.name() == QString("SquelchValue")) {
                                             pmr.squelchLevel = xml.readElementText().toUInt(&ok);
                                             if (!ok) qDebug() << "Error reading squelch level" << xml.readElementText();
                                         }
@@ -211,17 +211,17 @@ bool PmrTableWdg::readXmlEntry(QXmlStreamReader &xml, Pmr &pmr) // next in line 
     bool ok = true;
 
     qDebug() << xml.columnNumber();
-    while (!xml.atEnd() && !xml.name().contains("Type")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("Type"))) xml.readNext();
 
-    if (xml.name().contains("Type")) {
+    if (xml.name().contains(QString("Type"))) {
         xml.readNext();
         if (xml.text().size() > 0) pmr.type = xml.text().at(0).unicode();
     }
     else qDebug() << xml.columnNumber();
 
-    while (!xml.atEnd() && !xml.name().contains("Comment")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("Comment"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
-    pmr.casperComment.append(xml.text().string());
+    pmr.casperComment.append(xml.text().toString());
     pmr.casperComment.replace("aring;", "å");
     pmr.casperComment.replace("quest;", "?");
     pmr.casperComment.replace("period;", ".");
@@ -229,31 +229,31 @@ bool PmrTableWdg::readXmlEntry(QXmlStreamReader &xml, Pmr &pmr) // next in line 
     pmr.casperComment.replace("aelig;", "æ");
     pmr.casperComment.replace("comma;", ",");
 
-    while (!xml.atEnd() && !xml.name().contains("Frequency")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("Frequency"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
     pmr.centerFrequency = xml.text().toULong(&ok);
     if (!ok) return ok;
 
-    while (!xml.atEnd() && !xml.name().contains("IFBandwidth")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("IFBandwidth"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
     pmr.ifBandwidth = xml.text().toInt(&ok);
     if (!ok) return ok;
 
-    while (!xml.atEnd() && !xml.name().contains("AnalogDemod")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("AnalogDemod"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
-    pmr.demod.append(xml.text().string());
+    pmr.demod.append(xml.text().toString());
 
-    while (!xml.atEnd() && !xml.name().contains("Active")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("Active"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
-    if (xml.text().contains("true")) pmr.active = true;
+    if (xml.text().contains(QString("true"))) pmr.active = true;
     else pmr.active = false;
 
-    while (!xml.atEnd() && !xml.name().contains("SquelchState")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("SquelchState"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
-    if (xml.text().contains("true")) pmr.squelchState = true;
+    if (xml.text().contains(QString("true"))) pmr.squelchState = true;
     else pmr.squelchState = false;
 
-    while (!xml.atEnd() && !xml.name().contains("SquelchValue")) xml.readNext();
+    while (!xml.atEnd() && !xml.name().contains(QString("SquelchValue"))) xml.readNext();
     if (!xml.atEnd()) xml.readNext();
     pmr.squelchLevel = xml.text().toInt(&ok);
 
@@ -263,7 +263,7 @@ bool PmrTableWdg::readXmlEntry(QXmlStreamReader &xml, Pmr &pmr) // next in line 
 
 void PmrTableWdg::openXmlFile()
 {
-    QString filename = QFileDialog::getOpenFileName(wdg, tr("Open XML frequency file"), config->getWorkFolder(), tr("XML file (*.xml)"));
+    QString filename = QFileDialog::getOpenFileName(wdg, tr("Open XML frequency file"), config->getWorkFolder(), QString("XML file (*.xml)"));
     loadFile(filename);
     updTableWdg();
 }
@@ -281,7 +281,7 @@ void PmrTableWdg::saveTable() // QStringList({"Active", "Frequency", "IF BW", "T
             ts << row.active << ";" << row.centerFrequency << ";" << row.ifBandwidth << ";" \
                << row.comment << ";" << row.demod << ";" << row.squelchLevel << ";" \
                << row.squelchState << ";" << row.totalDurationInMilliseconds << ";" \
-               << row.maxLevel << ";" << row.casperComment << ";" << row.type << endl;
+               << row.maxLevel << ";" << row.casperComment << ";" << row.type << Qt::endl;
         }
     }
 

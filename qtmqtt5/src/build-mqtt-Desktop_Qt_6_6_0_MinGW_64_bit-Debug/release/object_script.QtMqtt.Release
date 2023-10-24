@@ -1,0 +1,16 @@
+release/qmqttauthenticationproperties.o
+release/qmqttclient.o
+release/qmqttconnection.o
+release/qmqttconnectionproperties.o
+release/qmqttcontrolpacket.o
+release/qmqttmessage.o
+release/qmqttpublishproperties.o
+release/qmqttsubscription.o
+release/qmqttsubscriptionproperties.o
+release/qmqtttopicfilter.o
+release/qmqtttopicname.o
+release/qmqtttype.o
+release/moc_qmqttclient.o
+release/moc_qmqttmessage.o
+release/moc_qmqttsubscription.o
+release/moc_qmqttconnection_p.o

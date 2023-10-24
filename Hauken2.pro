@@ -1,10 +1,11 @@
 QT       += core gui serialport network
+greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
 CONFIG += c++17
-QMAKE_CXXFLAGS += -pthread
-QMAKE_CXXFLAGS += -std=c++11
+QMAKE_CXXFLAGS += -pthread -std=c++17 -Wa,-mbig-obj #-fto #-Wl,-allow-multiple-definition
+# QMAKE_CXXFLAGS += -std=c++17
 TARGET = Hauken
 RC_ICONS = icons/hawk.ico #icon.ico
 
@@ -136,14 +137,12 @@ INCLUDEPATH += \
     $$PWD/qtmqtt/include/QtMqtt \
     $$PWD/qtmqtt/include
 
-#win32: LIBS += -L$$PWD/quazip -lquazip1-qt5
-
 unix: {
   LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
 }
 
 win32 {
-  LIBS += -lOpenGL32 -L$$PWD/quazip -lquazip1-qt5 -L$$PWD/qtmqtt -lqt5mqtt
+  LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lz
 }
 
 
@@ -155,7 +154,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.28.1.0
+VERSION = 2.29.1.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

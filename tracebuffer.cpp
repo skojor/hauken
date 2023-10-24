@@ -249,10 +249,10 @@ void TraceBuffer::updSettings()
     }
     maxholdTime = config->getPlotMaxholdTime();
     emit showMaxhold((bool)maxholdTime);
-    if (fftMode != config->getInstrFftMode() || antPort != config->getInstrAntPort() || // any of these changes should invalidate average level
+    if (fftMode != config->getInstrFftMode() || antPort != QString::number(config->getInstrAntPort()) || // any of these changes should invalidate average level
             autoAtt != config->getInstrAutoAtt() || att != config->getInstrManAtt()) {
         fftMode = config->getInstrFftMode();
-        antPort = config->getInstrAntPort();
+        antPort = QString::number(config->getInstrAntPort());
         autoAtt = config->getInstrAutoAtt();
         att = config->getInstrManAtt();
         restartCalcAvgLevel();
