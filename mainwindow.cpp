@@ -905,6 +905,8 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.30</td><td>Bugfix: Trig frequency selection failing on selection outside window. Debugging info removed</td></tr>"
+       << "<tr><td>2.29</td><td>Qt library version upgrade to 6.6.0. Rebuilt code and connected libraries</td></tr>"
        << "<tr><td>2.28</td><td>Position link to google maps added to notifications email. Minor bugfixes</td></tr>"
        << "<tr><td>2.27</td><td>Minor bugfixes</td></tr>"
        << "<tr><td>2.26</td><td>Antenna names readout and editing added (EM200 and USRP specific)</td></tr>"

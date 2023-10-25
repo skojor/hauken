@@ -83,14 +83,14 @@ void CustomPlotController::doReplot()
 void CustomPlotController::reCalc()
 {
     if ((int)(resolution * 1e6) > 0 && customPlotPtr->xAxis->range().upper > 0 && customPlotPtr->xAxis->range().lower > 0) {
-        nrOfValues = 1 + ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
+        nrOfValues = 1 + ( 1e3 * (customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
             if (nrOfValues > 1) {
-            double rate = ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) + resolution) / (double)plotResolution;
+            double rate = ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) * 1e6) / (plotResolution - 1);
             keyValues.clear();
-            double freq = customPlotPtr->xAxis->range().lower;
+            double freq = customPlotPtr->xAxis->range().lower * 1e6;
 
             for (int i = 0; i < plotResolution; i++) {
-                keyValues.append(freq);
+                keyValues.append(freq / 1e6);
                 freq += rate;
             }
             readTrigSelectionFromConfig();
@@ -132,8 +132,8 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
             selMin = selMax;
             selMax = tmp;
         }
-        if (selMax >= stopFreq) selMax = stopFreq - resolution / 1000;
-        qDebug() << selMin << selMax;
+        if (selMax >= stopFreq) selMax = keyValues.last(); //stopFreq - resolution / 1000;
+        //qDebug() << selMin << selMax;
 
         QMenu *menu = new QMenu;
         menu->addAction("Include " + QString::number(selMin, 'f', 3) +
@@ -151,7 +151,7 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
 void CustomPlotController::trigInclude()
 {
     for (int i=0; i<plotResolution; i++) {
-        if (keyValues.at(i) > selMin && keyValues.at(i) < selMax) {
+        if (keyValues.at(i) > selMin && keyValues.at(i) <= selMax) {
             freqSelection[i] = 1;
         }
     }
@@ -161,7 +161,7 @@ void CustomPlotController::trigInclude()
 void CustomPlotController::trigExclude()
 {
     for (int i=0; i<plotResolution; i++) {
-        if (keyValues.at(i) > selMin && keyValues.at(i) < selMax) {
+        if (keyValues.at(i) > selMin && keyValues.at(i) <= selMax) {
             freqSelection[i] = 0;
         }
     }
@@ -218,7 +218,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
         if (freqSelection.at(i) == 1 && (int)sel1 == 0) { // first include value
             sel1 = keyValues.at(i);
         }
-        else if (freqSelection.at(i) == 0 && (int)sel1 != 0) { // first exclude detected
+        else if ((freqSelection.at(i) == 0 || i == plotResolution - 1) && (int)sel1 != 0) { // first exclude detected
             sel2 = keyValues.at(i);
             tmp << QString::number(sel1, 'f', 3) << QString::number(sel2, 'f', 3);
             sel1 = 0;
@@ -227,7 +227,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
     if (tmp.isEmpty() && (int)sel1 != 0) tmp << QString::number(sel1, 'f', 3)
                                              << QString::number(keyValues.last(), 'f', 3); // all included
 
-    qDebug() << "trig debug:" << tmp;
+    //qDebug() << "trig debug:" << tmp;
     emit reqTrigline(); // to update trig line drawing with new values
     if (!tmp.isEmpty())
         config->setTrigFrequencies(tmp);
