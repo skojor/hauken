@@ -4,7 +4,9 @@ greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
 CONFIG += c++17
-QMAKE_CXXFLAGS += -pthread -std=c++17 -Wa,-mbig-obj #-fto #-Wl,-allow-multiple-definition
+#QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0
+
+QMAKE_CXXFLAGS += -pthread -Wa,-mbig-obj #-fto #-Wl,-allow-multiple-definition -std=c++17
 # QMAKE_CXXFLAGS += -std=c++17
 TARGET = Hauken
 RC_ICONS = icons/hawk.ico #icon.ico
@@ -28,6 +30,7 @@ SOURCES += \
     SimpleMail/sender.cpp \
     SimpleMail/server.cpp \
     SimpleMail/serverreply.cpp \
+    ai.cpp \
     arduino.cpp \
     arduinooptions.cpp \
     autorecorderoptions.cpp \
@@ -88,6 +91,7 @@ HEADERS += \
     SimpleMail/serverreply.h \
     SimpleMail/serverreply_p.h \
     SimpleMail/smtpexports.h \
+    ai.h \
     arduino.h \
     arduinooptions.h \
     autorecorderoptions.h \
@@ -135,7 +139,9 @@ RESOURCES += \
 INCLUDEPATH += \
     $$PWD/quazip \
     $$PWD/qtmqtt/include/QtMqtt \
-    $$PWD/qtmqtt/include
+    $$PWD/qtmqtt/include \
+    $$PWD/torch/include \
+    $$PWD/csrc/api/include
 
 unix: {
   LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
@@ -145,6 +151,16 @@ win32 {
   LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lz
 }
 
+win32 {
+#LIBS += -Ltorch/lib
+#LIBS +=  -ltorch -lc10 -ltorch_cpu
+}
+unix {
+LIBS += -Ltorch/lib  -ltorch_cpu -ltorch  -lc10   \ # -ltorch_cuda  -lc10_cuda -lcaffe2_observers
+-lcaffe2_nvrtc -lcaffe2_detectron_ops_gpu  \
+-lnvrtc-builtins -lprocess_group_agent -lshm  \
+-ltensorpipe_agent -ltorch -ltorch_global_deps #-ltorch_cuda_cpp -ltorch_cuda_cu
+}
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"

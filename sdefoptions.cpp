@@ -4,15 +4,15 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     : OptionsBaseClass {}
 {
     config = c;
-    setWindowTitle(tr("SDeF 2.0 (1809 format) options"));
-    mainLayout->addRow(new QLabel(tr("SDeF 2.0 (1809 format) options")));
+    setWindowTitle(tr("1809 options"));
+    mainLayout->addRow(new QLabel(tr("1809 options")));
     mainLayout->addRow(cbOpt1);
-    cbOpt1->setText("Save trace data to SDeF 2.0 format on incidents");
+    cbOpt1->setText("Save trace data to 1809 (SDeF 2.0) format on incidents");
     cbOpt1->setToolTip("If checked all trace data will be saved to a log file for a given period of time");
 
     mainLayout->addRow(cbOpt2);
-    cbOpt2->setText("Upload SDeF data to Casper when finished");
-    cbOpt2->setToolTip("If checked the file will be uploaded to Støygolvet server. Remember to set username/password below");
+    cbOpt2->setText("Upload 1809 data when finished");
+    cbOpt2->setToolTip("If checked the file will be uploaded to the given server. Remember to set username/password below");
 
     mainLayout->addRow(cbOpt3);
     cbOpt3->setText("Add position data from GNSS (mobile setting)");
@@ -25,6 +25,14 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("Position source"), comboOpt1);
     comboOpt1->setToolTip("Select which device should be used for SDEF file position updates.\nGNSS device 1 and 2 are the ones selected in the GNSS options dialog");
     comboOpt1->addItems(QStringList() << "InstrumentGnss" << "GNSS device 1" << "GNSS device 2");
+
+    mainLayout->addRow(new QLabel("Server http(s) address"), leOpt3);
+    leOpt3->setToolTip("Server address to send 1809 measurement data");
+    leOpt3->setText(config->getSdefServer());
+
+    mainLayout->addRow(new QLabel("Server authentication address"), leOpt4);
+    leOpt4->setToolTip("Authentication server address (if needed)");
+    leOpt4->setText(config->getSdefAuthAddress());
 
     mainLayout->addRow(new QLabel("Username (Støygolvet login)"), leOpt1);
     leOpt1->setToolTip("Username required to enable Casper uploads");
@@ -60,6 +68,8 @@ void SdefOptions::start()
     cbOpt1->setChecked(config->getSdefSaveToFile());
     cbOpt2->setChecked(config->getSdefUploadFile());
     leOpt2->setText(config->getSdefPassword());
+    leOpt3->setText(config->getSdefServer());
+    leOpt4->setText(config->getSdefAuthAddress());
     cbOpt3->setChecked(config->getSdefAddPosition());
     cbOpt4->setChecked(config->getSdefZipFiles());
     comboOpt1->setEnabled(cbOpt3->isChecked());
@@ -77,6 +87,8 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefGpsSource(comboOpt1->currentText());
     config->setSdefUsername(leOpt1->text());
     config->setSdefPassword(leOpt2->text());
+    config->setSdefServer(leOpt3->text());
+    config->setSdefAuthAddress(leOpt4->text());
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefRecordTime(sbOpt1->value());

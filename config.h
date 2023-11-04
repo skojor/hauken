@@ -109,7 +109,7 @@ public slots:
     int getInstrTracesNeededForAverage() { return settings->value("instr/tracesNeededForAverage", 250).toInt();}
     void setInstrTracesNeededForAverage(int i) { settings->setValue("instr/tracesNeededForAverage", i); emit settingsUpdated(); }
 
-    // SDeF options
+    // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
     void setSdefSaveToFile(bool b) { settings->setValue("sdef/SaveToFile", b); emit settingsUpdated();}
     bool getSdefUploadFile() { return settings->value("sdef/UploadFile", false).toBool();}
@@ -132,6 +132,10 @@ public slots:
     void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val);emit settingsUpdated(); }
     bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
     void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b);emit settingsUpdated(); }
+    QString getSdefServer() { return settings->value("sdef/Server").toString();}
+    void setSdefServer(QString s) { settings->setValue("sdef/Server", s); emit settingsUpdated();}
+    QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString();}
+    void setSdefAuthAddress(QString s) { settings->setValue("sdef/AuthAddress", s); emit settingsUpdated();}
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
