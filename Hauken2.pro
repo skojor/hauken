@@ -47,6 +47,7 @@ SOURCES += \
     gnssanalyzer.cpp \
     gnssdevice.cpp \
     gnssoptions.cpp \
+    led/ledindicator.cpp \
     main.cpp \
     mainwindow.cpp \
     measurementdevice.cpp \
@@ -108,6 +109,7 @@ HEADERS += \
     gnssanalyzer.h \
     gnssdevice.h \
     gnssoptions.h \
+    led/ledindicator.h \
     mainwindow.h \
     measurementdevice.h \
     mqtt.h \

@@ -51,6 +51,7 @@
 #include "geolimit.h"
 #include "mqtt.h"
 #include "mqttoptions.h"
+#include "led/ledindicator.h"
 
 class MainWindow : public QMainWindow
 {
@@ -155,6 +156,13 @@ private:
     QSpinBox *gnssTimeOffset = new QSpinBox;
     QTextEdit *incidentLog = new QTextEdit;
     QTextEdit *gnssStatus = new QTextEdit;
+    LedIndicator *ledTraceStatus = new LedIndicator;
+    QLabel *labelTraceLedText = new QLabel("Awaiting trace data");
+    LedIndicator *ledRecordStatus = new LedIndicator;
+    QLabel *labelRecordLedText = new QLabel("Not recording");
+    LedIndicator *ledGnssStatus = new LedIndicator;
+    QLabel *labelGnssLedText = new QLabel("No GNSS data");
+
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
     GnssDevice *gnssDevice1 = new GnssDevice(this, 1);

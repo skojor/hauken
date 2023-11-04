@@ -265,6 +265,24 @@ void MainWindow::createLayout()
     incBox->setMaximumHeight(180);
 
     QHBoxLayout *bottomBox = new QHBoxLayout;
+
+    QGridLayout *bottomIndicatorLayout = new QGridLayout;
+    QGroupBox *grpIndicator = new QGroupBox("Status indicators");
+
+    bottomIndicatorLayout->addWidget(ledTraceStatus, 0, 0, Qt::AlignBottom);
+    bottomIndicatorLayout->addWidget(labelTraceLedText, 0, 1);
+    bottomIndicatorLayout->addWidget(ledRecordStatus, 1, 0, Qt::AlignBottom);
+    bottomIndicatorLayout->addWidget(labelRecordLedText, 1, 1);
+    bottomIndicatorLayout->addWidget(ledGnssStatus, 2, 0, Qt::AlignBottom);
+    bottomIndicatorLayout->addWidget(labelGnssLedText, 2, 1);
+    ledTraceStatus->setLedSize(30);
+    ledRecordStatus->setLedSize(30);
+    ledGnssStatus->setLedSize(30);
+
+    grpIndicator->setMaximumHeight(180);
+
+    grpIndicator->setLayout(bottomIndicatorLayout);
+    bottomBox->addWidget(grpIndicator);
     bottomBox->addWidget(incBox);
 
     QHBoxLayout *rightLayout = new QHBoxLayout;
@@ -294,6 +312,7 @@ void MainWindow::createLayout()
     if (config->getPmrMode()) bottomPlotLayout->addWidget(btnPmrTable);
 
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
+
     //plotMaxScroll->setFixedSize(40, 30);
     plotMaxScroll->setRange(-30,200);
     plotMinScroll->setFixedSize(40, 30);
@@ -565,6 +584,7 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::reqReplot, customPlotController, &CustomPlotController::doReplot);
     connect(customPlotController, &CustomPlotController::reqTrigline, traceBuffer, &TraceBuffer::sendDispTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, customPlotController, &CustomPlotController::flashTrigline);
+
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, sdefRecorder, &SdefRecorder::endRecording); // stop ev. recording in case avg level for any reason should start recalc.
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, customPlotController, &CustomPlotController::stopFlashTrigline);
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::setAnalyzerNotReady);
@@ -612,6 +632,36 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
     connect(sdefRecorder, &SdefRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
+
+    connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this] (){
+        ledTraceStatus->setState(false);
+        labelTraceLedText->setText("Calc. avg. noise floor");
+    });
+
+    connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, this, [this] () {
+        ledTraceStatus->setState(true);
+        labelTraceLedText->setText("Detector ready");
+    });
+
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this] () {
+        ledTraceStatus->setState(false);
+        labelTraceLedText->setText("Detector triggered");
+    });
+
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, this, [this] () {
+        ledTraceStatus->setState(true);
+        labelTraceLedText->setText("Detector ready");
+    });
+
+    connect(sdefRecorder, &SdefRecorder::recordingStarted, this, [this] () {
+        ledRecordStatus->setState(false);
+        labelRecordLedText->setText("Recording");
+    });
+
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this] () {
+        ledRecordStatus->setState(true);
+        labelRecordLedText->setText("Ready to record");
+    });
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);

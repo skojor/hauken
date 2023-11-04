@@ -31,6 +31,7 @@ public slots:
 
 signals:
     void alarm();
+    void alarmEnded();
     void toIncidentLog(const NOTIFY::TYPE, const QString,const QString);
 
 private slots:

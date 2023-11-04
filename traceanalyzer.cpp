@@ -51,6 +51,7 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
             if (alarmEmitted) {
                 if (!pmrMode) emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Normal signal levels");
                 alarmEmitted = false;
+                emit alarmEnded();
             }
         }
     }
