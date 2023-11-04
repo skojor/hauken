@@ -281,7 +281,7 @@ bool SdefRecorder::curlLogin()
       << "-F" << "brukernavn=" + getSdefUsername()
       << "-F" << "passord=" + getSdefPassword()
       << "--cookie-jar" << getWorkFolder() + "/.kake"
-      << "http://stoygolvet.npta.no/logon.php";
+      << getSdefAuthAddress();
 
     process->setArguments(l);
     process->start();
@@ -324,7 +324,7 @@ void SdefRecorder::curlUpload()
           << "-X" << "POST"
           << "-F" << "file=@" + filename // + ".zip"
           << "-f"
-          << "http://stoygolvet.npta.no/Casper/lastopp_fil.php";
+          << getSdefServer();
 
         process->setArguments(l);
         process->start();
