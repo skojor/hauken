@@ -62,6 +62,10 @@ MainWindow::MainWindow(QWidget *parent)
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
 
+    player->setSource(QUrl::fromLocalFile(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
+    player->setAudioOutput(audioOutput);
+    audioOutput->setVolume(50);
+
     createActions();
     createMenus();
     createLayout();
@@ -643,10 +647,13 @@ void MainWindow::setSignals()
         labelTraceLedText->setText("Detector ready");
     });
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this] () {
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, &MainWindow::raiseAlarm);
+
+/*[=] () {
         ledTraceStatus->setState(false);
         labelTraceLedText->setText("Detector triggered");
-    });
+        qApp->alert(this);
+    });*/
 
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, this, [this] () {
         ledTraceStatus->setState(true);
@@ -661,6 +668,37 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this] () {
         ledRecordStatus->setState(true);
         labelRecordLedText->setText("Ready to record");
+    });
+
+    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, this, [this] () {
+        ledGnssStatus->setState(false);
+        labelGnssLedText->setText("GNSS incident detected");
+        qApp->alert(this);
+    });
+
+    connect(gnssAnalyzer1, &GnssAnalyzer::alarmEnded, this, [this] {
+        ledGnssStatus->setState(true);
+        labelGnssLedText->setText("GNSS state normal");
+    });
+
+    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, this, [this] () {
+        ledGnssStatus->setState(false);
+        labelGnssLedText->setText("GNSS incident detected");
+    });
+
+    connect(gnssAnalyzer2, &GnssAnalyzer::alarmEnded, this, [this] {
+        ledGnssStatus->setState(true);
+        labelGnssLedText->setText("GNSS state normal");
+    });
+
+    connect(gnssAnalyzer3, &GnssAnalyzer::alarm, this, [this] () {
+        ledGnssStatus->setState(false);
+        labelGnssLedText->setText("GNSS incident detected");
+    });
+
+    connect(gnssAnalyzer3, &GnssAnalyzer::alarmEnded, this, [this] {
+        ledGnssStatus->setState(true);
+        labelGnssLedText->setText("GNSS state normal");
     });
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
@@ -1165,4 +1203,16 @@ void MainWindow::setWaterfallOption(QString s)
 void MainWindow::changeAntennaPortName()
 {
     emit antennaNameEdited(instrAntPort->currentIndex(), instrAntPort->currentText());
+}
+
+void MainWindow::raiseAlarm() {
+    if (!traceAlarmRaised) {
+        ledTraceStatus->setState(false);
+        labelTraceLedText->setText("Detector triggered");
+        //qApp->alert(this);
+        qApp->beep();
+        qDebug() << "HEEEEI" << qApp->applicationVersion() << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        if (config->getSoundNotification()) player->play();
+        traceAlarmRaised = true;
+    }
 }

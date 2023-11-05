@@ -147,6 +147,7 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
     else {
         if (data.posValid && posOffsetTriggered) ts << "Position offset normal";
         posOffsetTriggered = false;
+        emit alarmEnded();
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
@@ -169,6 +170,7 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
     else {
         if (data.posValid && altOffsetTriggered) ts << "Altitude offset normal";
         altOffsetTriggered = false;
+        emit alarmEnded();
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
@@ -192,6 +194,7 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     else {
         if (data.posValid && timeOffsetTriggered) ts << "Time offset normal";
         timeOffsetTriggered = false;
+        emit alarmEnded();
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
@@ -214,6 +217,7 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
     else {
         if (data.posValid && cnoLimitTriggered) ts << "C/No offset normal";
         cnoLimitTriggered = false;
+        emit alarmEnded();
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
@@ -236,6 +240,7 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
     else {
         if (data.posValid && agcLimitTriggered) ts << "AGC offset normal";
         agcLimitTriggered = false;
+        emit alarmEnded();
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }

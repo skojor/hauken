@@ -74,6 +74,10 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     sbOpt2->setToolTip("This function awaits eventual further incidents triggered from the same device, and considers an incident ended only after the time set here.\nIf for instance a GNSS is triggered on/off several times, only one incident will be reported during the time set here.");
     sbOpt2->setRange(0, 86400);
 
+    layout3->addRow(cbOpt5);
+    cbOpt5->setText("Play notification sound on incidents");
+    cbOpt5->setToolTip("If checked a short message will play through default speakers when incident is triggered");
+
     mainLayout->addWidget(groupBox1);
     mainLayout->addWidget(groupBox2);
     mainLayout->addWidget(groupBox3);
@@ -101,6 +105,7 @@ void EmailOptions::start()
     cbOpt2->setChecked(config->getEmailNotifyMeasurementDeviceDisconnected());
     cbOpt3->setChecked(config->getEmailNotifyGnssIncidents());
     cbOpt4->setChecked(config->getEmailAddImages());
+    cbOpt5->setChecked(config->getSoundNotification());
     sbOpt3->setValue(config->getEmailDelayBeforeAddingImages());
     sbOpt2->setValue(config->getNotifyTruncateTime());
     dialog->exec();
@@ -119,6 +124,7 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailNotifyMeasurementDeviceDisconnected(cbOpt2->isChecked());
     config->setEmailNotifyGnssIncidents(cbOpt3->isChecked());
     config->setEmailAddImages(cbOpt4->isChecked());
+    config->setSoundNotification(cbOpt5->isChecked());
     config->setEmailDelayBeforeAddingImages(sbOpt3->value());
     config->setNotifyTruncateTime(sbOpt2->value());
     config->setEmailGraphTenantId(leOpt8->text());

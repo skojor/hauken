@@ -2,7 +2,7 @@
 
 SdefRecorder::SdefRecorder()
 {
-    qDebug() << "Working folder" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
+    //qDebug() << "Working folder" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
 }
 
 void SdefRecorder::start()

@@ -23,6 +23,8 @@
 #include <QFile>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QtMultimedia/QMediaPlayer>
+#include <QtMultimedia/QAudioOutput>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 //#include "typedefs.h"
@@ -116,6 +118,8 @@ private slots:
     void updGnssBox(const QString txt, const int id, bool valid);
     void setWaterfallOption(QString s);
     void closeEvent(QCloseEvent *event) override;
+
+    void raiseAlarm();
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -238,6 +242,10 @@ private:
     GeoLimit *geoLimit = new GeoLimit;
     Mqtt *mqtt = new Mqtt;
     QLineEdit *antPortLineEdit = new QLineEdit;
+
+    bool traceAlarmRaised = false, gnssAlarmRaised = false;
+    QMediaPlayer *player = new QMediaPlayer;
+    QAudioOutput *audioOutput = new QAudioOutput;
 
 signals:
     void stopPlot(bool);
