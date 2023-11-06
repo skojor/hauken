@@ -665,7 +665,7 @@ void MainWindow::setSignals()
         recordIncidentAlarm(false);
     });
 
-    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, this, [this] () {
+    connect(gnssAnalyzer1, &GnssAnalyzer::visualAlarm, this, [this] {
         gnssIncidentAlarm(true);
     });
 
@@ -673,7 +673,7 @@ void MainWindow::setSignals()
         gnssIncidentAlarm(false);
     });
 
-    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, this, [this] () {
+    connect(gnssAnalyzer2, &GnssAnalyzer::visualAlarm, this, [this] {
         gnssIncidentAlarm(true);
     });
 
@@ -681,7 +681,7 @@ void MainWindow::setSignals()
         gnssIncidentAlarm(false);
     });
 
-    connect(gnssAnalyzer3, &GnssAnalyzer::alarm, this, [this] () {
+    connect(gnssAnalyzer3, &GnssAnalyzer::visualAlarm, this, [this]{
         gnssIncidentAlarm(true);
     });
 
@@ -1204,8 +1204,6 @@ void MainWindow::changeAntennaPortName()
 void MainWindow::traceIncidentAlarm(bool state) {
     if (state != traceAlarmRaised) {
         if (state) {
-            qDebug() << "trace alert";
-
             ledTraceStatus->setState(false);
             labelTraceLedText->setText("Detector triggered");
             qApp->alert(this);
@@ -1213,7 +1211,6 @@ void MainWindow::traceIncidentAlarm(bool state) {
             traceAlarmRaised = true;
         }
         else {
-            qDebug() << "trace normal";
             ledTraceStatus->setState(true);
             labelTraceLedText->setText("Normal");
             traceAlarmRaised = false;
@@ -1224,14 +1221,11 @@ void MainWindow::traceIncidentAlarm(bool state) {
 void MainWindow::recordIncidentAlarm(bool state) {
     if (state != recordAlarmRaised) {
         if (state) {
-            qDebug() << "rec start";
-
             ledRecordStatus->setState(false);
             labelRecordLedText->setText("Recording");
             recordAlarmRaised = true;
         }
         else {
-            qDebug() << "rec stop";
 
             ledRecordStatus->setState(true);
             labelRecordLedText->setText("Ready to record");
@@ -1243,15 +1237,11 @@ void MainWindow::recordIncidentAlarm(bool state) {
 void MainWindow::gnssIncidentAlarm(bool state) {
     if (state != gnssAlarmRaised) {
         if (state) {
-            qDebug() << "gnss al";
-
             ledGnssStatus->setState(false);
             labelGnssLedText->setText("GNSS alarm");
             gnssAlarmRaised = true;
         }
         else {
-            qDebug() << "gnss ok";
-
             ledGnssStatus->setState(true);
             labelGnssLedText->setText("GNSS normal");
             gnssAlarmRaised = false;
@@ -1260,20 +1250,18 @@ void MainWindow::gnssIncidentAlarm(bool state) {
 }
 
 void MainWindow::recordEnabled(bool state) {
-    if (state != recordAlarmRaised) {
+    if (state != !recordDisabledRaised) {
         if (!state) {
-            qDebug() << "rec disabled";
             ledRecordStatus->setOffColor(Qt::gray);
             ledRecordStatus->setState(false);
             labelRecordLedText->setText("Recording disabled");
-            recordAlarmRaised = false;
+            recordDisabledRaised = true;
         }
         else {
-            qDebug() << "rec ready";
             ledRecordStatus->setState(true);
             ledRecordStatus->setOffColor(Qt::red);
             labelRecordLedText->setText("Ready to record");
-            recordAlarmRaised = true;
+            recordDisabledRaised = false;
         }
     }
 }

@@ -20,6 +20,7 @@ public slots:
 
 signals:
     void alarm();
+    void visualAlarm();
     void alarmEnded();
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void displayGnssData(QString, int, bool);

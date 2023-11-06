@@ -248,7 +248,7 @@ void SdefRecorder::finishRecording()
     if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
         QTimer::singleShot(10000, this, &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
     else
-        if (getSdefZipFiles()) zipit(); // Zip the file anyways, we don't shit storage space here
+        if (getSdefZipFiles() && recording) zipit(); // Zip the file anyways, we don't shit storage space here
 
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();

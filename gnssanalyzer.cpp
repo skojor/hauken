@@ -42,10 +42,10 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
 
 void GnssAnalyzer::analyze(GnssData &data)
 {
-        data.posOffset = distanceInMeters(data);
-        data.altOffset = abs(ownAltitude - data.altitude);
-        data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
-        if (data.id < 3) {
+    data.posOffset = distanceInMeters(data);
+    data.altOffset = abs(ownAltitude - data.altitude);
+    data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
+    if (data.id < 3) {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);
         checkCnoOffset(data);
@@ -97,7 +97,7 @@ void GnssAnalyzer::updSettings()
         logToFile = getGnssInstrumentGnssTriggerRecording();
     }
     emit alarmEnded(); // To update led indicator/text
-    qDebug() << "gnss updsettings";
+    //qDebug() << "gnss updsettings";
 }
 
 void GnssAnalyzer::updDisplay()
@@ -116,7 +116,7 @@ void GnssAnalyzer::updDisplay()
            << "<tr><td>Alt. offset</td><td align=right>" << gnssData.altOffset << "</td><td>m</td></tr>"
            << "<tr><td>Time offset</td><td align=right>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << "</td><td>ms</td></tr>";
         if (gnssData.id != 3)
-           ts << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
+            ts << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
         if (gnssData.agc > 0)
             ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>m</td></tr>";
 
@@ -138,16 +138,19 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && posOffsetLimit > 0 && data.posOffset > posOffsetLimit) {
-        if (!posOffsetTriggered) ts << "Position offset triggered, current offset: "
-                                    << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m"
-                                    << (logToFile ? ". Recording":"");
-        posOffsetTriggered = true;
+        if (!posOffsetTriggered) {
+            ts << "Position offset triggered, current offset: "
+               << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m"
+               << (logToFile ? ". Recording":"");
+            posOffsetTriggered = true;
+            emit visualAlarm();
+        }
         if (logToFile) {
             emit alarm();
         }
     }
-    else {
-        if (data.posValid && posOffsetTriggered) ts << "Position offset normal";
+    else if (data.posValid && posOffsetTriggered) {
+        ts << "Position offset normal";
         posOffsetTriggered = false;
         emit alarmEnded();
     }
@@ -162,15 +165,18 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && altOffsetLimit > 0 && data.altOffset > altOffsetLimit) {
-        if (!altOffsetTriggered) ts << "Altitude offset triggered, current offset: "
-                                    << data.altOffset << " m" << (logToFile ? ". Recording":"");
-        altOffsetTriggered = true;
+        if (!altOffsetTriggered) {
+            ts << "Altitude offset triggered, current offset: "
+               << data.altOffset << " m" << (logToFile ? ". Recording":"");
+            altOffsetTriggered = true;
+            emit visualAlarm();
+        }
         if (logToFile) {
             emit alarm();
         }
     }
-    else {
-        if (data.posValid && altOffsetTriggered) ts << "Altitude offset normal";
+    else if (data.posValid && altOffsetTriggered) {
+        ts << "Altitude offset normal";
         altOffsetTriggered = false;
         emit alarmEnded();
     }
@@ -185,16 +191,19 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && timeOffsetLimit > 0 && data.timeOffset > timeOffsetLimit) {
-        if (!timeOffsetTriggered) ts << "Time offset triggered, current offset: "
-                                     << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms"
-                                     << (logToFile ? ". Recording":"");
-        timeOffsetTriggered = true;
+        if (!timeOffsetTriggered) {
+            ts << "Time offset triggered, current offset: "
+               << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms"
+               << (logToFile ? ". Recording":"");
+            timeOffsetTriggered = true;
+            emit visualAlarm();
+        }
         if (logToFile) {
             emit alarm();
         }
     }
-    else {
-        if (data.posValid && timeOffsetTriggered) ts << "Time offset normal";
+    else if (data.posValid && timeOffsetTriggered) {
+        ts << "Time offset normal";
         timeOffsetTriggered = false;
         emit alarmEnded();
     }
@@ -209,15 +218,18 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && cnoLimit > 0 && data.cnoOffset > cnoLimit) {
-        if (!cnoLimitTriggered) ts << "C/No offset triggered, current offset: " << data.cnoOffset << " dB"
-                                   << (logToFile ? ". Recording":"");
-        cnoLimitTriggered = true;
+        if (!cnoLimitTriggered) {
+            ts << "C/No offset triggered, current offset: " << data.cnoOffset << " dB"
+               << (logToFile ? ". Recording":"");
+            cnoLimitTriggered = true;
+            emit visualAlarm();
+        }
         if (logToFile) {
             emit alarm();
         }
     }
-    else {
-        if (data.posValid && cnoLimitTriggered) ts << "C/No offset normal";
+    else if (data.posValid && cnoLimitTriggered) {
+        ts << "C/No offset normal";
         cnoLimitTriggered = false;
         emit alarmEnded();
     }
@@ -232,15 +244,18 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && agcLimit > 0 && data.agcOffset > agcLimit) {
-        if (!agcLimitTriggered) ts << "AGC offset triggered, current offset: "
-                                   << data.agcOffset << (logToFile ? ". Recording":"");
-        agcLimitTriggered = true;
+        if (!agcLimitTriggered) {
+            ts << "AGC offset triggered, current offset: "
+               << data.agcOffset << (logToFile ? ". Recording":"");
+            agcLimitTriggered = true;
+            emit visualAlarm();
+        }
         if (logToFile) {
             emit alarm();
         }
     }
-    else {
-        if (data.posValid && agcLimitTriggered) ts << "AGC offset normal";
+    else if (data.posValid && agcLimitTriggered) {
+        ts << "AGC offset normal";
         agcLimitTriggered = false;
         emit alarmEnded();
     }

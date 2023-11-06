@@ -246,7 +246,7 @@ private:
     Mqtt *mqtt = new Mqtt;
     QLineEdit *antPortLineEdit = new QLineEdit;
 
-    bool traceAlarmRaised = false, recordAlarmRaised = false, gnssAlarmRaised = true, recordDisabledRaised = true;
+    bool traceAlarmRaised = false, recordAlarmRaised = true, gnssAlarmRaised = true, recordDisabledRaised = false;
     QMediaPlayer *player = new QMediaPlayer;
     QAudioOutput *audioOutput = new QAudioOutput;
 
