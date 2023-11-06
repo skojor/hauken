@@ -119,7 +119,10 @@ private slots:
     void setWaterfallOption(QString s);
     void closeEvent(QCloseEvent *event) override;
 
-    void raiseAlarm();
+    void traceIncidentAlarm(bool state);
+    void recordIncidentAlarm(bool state);
+    void gnssIncidentAlarm(bool state);
+    void recordEnabled(bool state);
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -243,7 +246,7 @@ private:
     Mqtt *mqtt = new Mqtt;
     QLineEdit *antPortLineEdit = new QLineEdit;
 
-    bool traceAlarmRaised = false, gnssAlarmRaised = false;
+    bool traceAlarmRaised = false, recordAlarmRaised = false, gnssAlarmRaised = true, recordDisabledRaised = true;
     QMediaPlayer *player = new QMediaPlayer;
     QAudioOutput *audioOutput = new QAudioOutput;
 

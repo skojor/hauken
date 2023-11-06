@@ -96,6 +96,8 @@ void GnssAnalyzer::updSettings()
     else if (gnssData.id == 3) {
         logToFile = getGnssInstrumentGnssTriggerRecording();
     }
+    emit alarmEnded(); // To update led indicator/text
+    qDebug() << "gnss updsettings";
 }
 
 void GnssAnalyzer::updDisplay()

@@ -61,6 +61,8 @@ signals:
     void reqTraceHistory(int);
     void warning(QString);
     void reqPositionFrom(POSITIONSOURCE);
+    void recordingEnabled();
+    void recordingDisabled();
 
 private:
     //QSharedPointer<Config> config;

@@ -67,13 +67,13 @@ public slots:
     int getGnssCnoDeviation() { return settings->value("gnss/CnoDeviation", 15).toInt(); }
     void setGnssCnoDeviation(double val) { settings->setValue("gnss/CnoDeviation", val); emit settingsUpdated(); }
     int getGnssAgcDeviation() { return settings->value("gnss/AgcDeviation", 0).toInt(); }
-    void setGnssAgcDeviation(int val) { settings->setValue("gnss/AgcDeviation", val); }
+    void setGnssAgcDeviation(int val) { settings->setValue("gnss/AgcDeviation", val); emit settingsUpdated();}
     int getGnssPosOffset() { return settings->value("gnss/PosOffset", 0).toInt(); }
-    void setGnssPosOffset(int val) { settings->setValue("gnss/PosOffset", val); }
+    void setGnssPosOffset(int val) { settings->setValue("gnss/PosOffset", val); emit settingsUpdated();}
     int getGnssAltOffset() { return settings->value("gnss/AltOffset", 0).toInt(); }
-    void setGnssAltOffset(int val) { settings->setValue("gnss/AltOffset", val); }
+    void setGnssAltOffset(int val) { settings->setValue("gnss/AltOffset", val); emit settingsUpdated();}
     int getGnssTimeOffset() { return settings->value("gnss/TimeOffset", 0).toInt(); }
-    void setGnssTimeOffset(int val) { settings->setValue("gnss/TimeOffset", val); }
+    void setGnssTimeOffset(int val) { settings->setValue("gnss/TimeOffset", val); emit settingsUpdated();}
 
     // General options
     QString getStationName() { return settings->value("station/Name", "").toString(); }

@@ -56,10 +56,14 @@ void SdefRecorder::updSettings()
 
     if (addPosition && !reqPositionTimer->isActive()) reqPositionTimer->start(1000); // ask for position once per sec.
 
+    if (saveToSdef) emit recordingEnabled();
+    else emit recordingDisabled();
+
     if (getAutoRecorderActivate()) {
         if (!autorecorderTimer->isActive()) {
             autorecorderTimer->start(10000);
-            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Auto recording is activated, starting recording of currently chosen frequency spectrum and resolution in 10 seconds");
+            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "",
+                "Auto recording is activated, starting recording of currently chosen frequency spectrum and resolution in 10 seconds");
         }
     }
     else {

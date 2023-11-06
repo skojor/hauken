@@ -489,9 +489,9 @@ void MainWindow::setValidators()
 
     QString ipRange = "(([ 0]+)|([ 0]*[0-9] *)|([0-9][0-9] )|([ 0][0-9][0-9])|(1[0-9][0-9])|([2][0-4][0-9])|(25[0-5]))";
     QRegularExpression ipRegex ("^" + ipRange
-                     + "\\." + ipRange
-                     + "\\." + ipRange
-                     + "\\." + ipRange + "$");
+                               + "\\." + ipRange
+                               + "\\." + ipRange
+                               + "\\." + ipRange + "$");
     QRegularExpressionValidator *ipValidator = new QRegularExpressionValidator(ipRegex, this);
     instrIpAddr->setValidator(ipValidator);
     instrIpAddr->setInputMask("000.000.000.000");
@@ -638,8 +638,10 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this] (){
-        ledTraceStatus->setState(false);
-        labelTraceLedText->setText("Calc. avg. noise floor");
+        if (measurementDevice->isConnected()) {
+            ledTraceStatus->setState(false);
+            labelTraceLedText->setText("Calc. avg. noise floor");
+        }
     });
 
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, this, [this] () {
@@ -647,58 +649,52 @@ void MainWindow::setSignals()
         labelTraceLedText->setText("Detector ready");
     });
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, &MainWindow::raiseAlarm);
-
-/*[=] () {
-        ledTraceStatus->setState(false);
-        labelTraceLedText->setText("Detector triggered");
-        qApp->alert(this);
-    });*/
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this] () {
+        traceIncidentAlarm(true);
+    });
 
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, this, [this] () {
-        ledTraceStatus->setState(true);
-        labelTraceLedText->setText("Detector ready");
+        traceIncidentAlarm(false);
     });
 
     connect(sdefRecorder, &SdefRecorder::recordingStarted, this, [this] () {
-        ledRecordStatus->setState(false);
-        labelRecordLedText->setText("Recording");
+        recordIncidentAlarm(true);
     });
 
     connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this] () {
-        ledRecordStatus->setState(true);
-        labelRecordLedText->setText("Ready to record");
+        recordIncidentAlarm(false);
     });
 
     connect(gnssAnalyzer1, &GnssAnalyzer::alarm, this, [this] () {
-        ledGnssStatus->setState(false);
-        labelGnssLedText->setText("GNSS incident detected");
-        qApp->alert(this);
+        gnssIncidentAlarm(true);
     });
 
     connect(gnssAnalyzer1, &GnssAnalyzer::alarmEnded, this, [this] {
-        ledGnssStatus->setState(true);
-        labelGnssLedText->setText("GNSS state normal");
+        gnssIncidentAlarm(false);
     });
 
     connect(gnssAnalyzer2, &GnssAnalyzer::alarm, this, [this] () {
-        ledGnssStatus->setState(false);
-        labelGnssLedText->setText("GNSS incident detected");
+        gnssIncidentAlarm(true);
     });
 
     connect(gnssAnalyzer2, &GnssAnalyzer::alarmEnded, this, [this] {
-        ledGnssStatus->setState(true);
-        labelGnssLedText->setText("GNSS state normal");
+        gnssIncidentAlarm(false);
     });
 
     connect(gnssAnalyzer3, &GnssAnalyzer::alarm, this, [this] () {
-        ledGnssStatus->setState(false);
-        labelGnssLedText->setText("GNSS incident detected");
+        gnssIncidentAlarm(true);
     });
 
     connect(gnssAnalyzer3, &GnssAnalyzer::alarmEnded, this, [this] {
-        ledGnssStatus->setState(true);
-        labelGnssLedText->setText("GNSS state normal");
+        gnssIncidentAlarm(false);
+    });
+
+    connect(sdefRecorder, &SdefRecorder::recordingDisabled, this, [this] {
+        recordEnabled(false);
+    });
+
+    connect(sdefRecorder, &SdefRecorder::recordingEnabled, this, [this] {
+        recordEnabled(true);
     });
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
@@ -748,10 +744,10 @@ void MainWindow::setSignals()
     connect (positionReport, &PositionReport::reqSensorData, arduinoPtr, &Arduino::returnSensorData);
 
     connect(notifications, &Notifications::showIncident, this, [this] (QString s)
-    {
-        this->incidentLog->insertHtml(s);
-        this->incidentLog->verticalScrollBar()->setValue(this->incidentLog->verticalScrollBar()->maximum());
-    });
+            {
+                this->incidentLog->insertHtml(s);
+                this->incidentLog->verticalScrollBar()->setValue(this->incidentLog->verticalScrollBar()->maximum());
+            });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
     connect(notifications, &Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
     connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot); // be nice and send it then!
@@ -765,16 +761,16 @@ void MainWindow::setSignals()
     });
 
     connect(waterfall, &Waterfall::imageReady, customPlot, [&] (QPixmap *pixmap)
-    {
-        if (dispWaterfall) {
-            customPlot->axisRect()->setBackground(*pixmap, false);
-            //customPlot->replot();
-            //qcpImage->setPixmap(*pixmap);
-            //customPlot->layer("image")->replot();
-            //qDebug() << qcpImage->clipAxisRect()->rect() << qcpImage->pixmap().size();
-            customPlot->replot();
-        }
-    });
+            {
+                if (dispWaterfall) {
+                    customPlot->axisRect()->setBackground(*pixmap, false);
+                    //customPlot->replot();
+                    //qcpImage->setPixmap(*pixmap);
+                    //customPlot->layer("image")->replot();
+                    //qDebug() << qcpImage->clipAxisRect()->rect() << qcpImage->pixmap().size();
+                    customPlot->replot();
+                }
+            });
 
     connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
     connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
@@ -785,7 +781,7 @@ void MainWindow::setSignals()
         else if (p == POSITIONSOURCE::GNSSDEVICE2)
             gnssDevice2->reqPosition();
         else
-         measurementDevice->reqPosition();
+            measurementDevice->reqPosition();
     });
 
     connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, &SdefRecorder::manualTriggeredRecording);
@@ -1118,15 +1114,15 @@ void MainWindow::saveConfigValues()
 void MainWindow::showBytesPerSec(int val)
 {
     if (!config->getGeoLimitActive() || geoLimit->areWeInsidePolygon()) {
-    QString msg = "Traffic " + QString::number(val / 1000) + " kB/sec";
-    if (measurementDevice->getTracesPerSec() > 0)
-        msg += ", " + QString::number(measurementDevice->getTracesPerSec(), 'f', 1) + " traces/sec";
-    int khzAboveLimit = traceAnalyzer->getKhzAboveLimit();
-    int khzAboveLimitTotal = traceAnalyzer->getKhzAboveLimitTotal();
-    if (khzAboveLimit || khzAboveLimitTotal)
-        msg += ", single/total signal above limit: " + QString::number(khzAboveLimit) + " / " + QString::number(khzAboveLimitTotal) + " kHz";
+        QString msg = "Traffic " + QString::number(val / 1000) + " kB/sec";
+        if (measurementDevice->getTracesPerSec() > 0)
+            msg += ", " + QString::number(measurementDevice->getTracesPerSec(), 'f', 1) + " traces/sec";
+        int khzAboveLimit = traceAnalyzer->getKhzAboveLimit();
+        int khzAboveLimitTotal = traceAnalyzer->getKhzAboveLimitTotal();
+        if (khzAboveLimit || khzAboveLimitTotal)
+            msg += ", single/total signal above limit: " + QString::number(khzAboveLimit) + " / " + QString::number(khzAboveLimitTotal) + " kHz";
 
-    statusBar->showMessage(msg, 2000);
+        statusBar->showMessage(msg, 2000);
     }
 }
 
@@ -1205,14 +1201,79 @@ void MainWindow::changeAntennaPortName()
     emit antennaNameEdited(instrAntPort->currentIndex(), instrAntPort->currentText());
 }
 
-void MainWindow::raiseAlarm() {
-    if (!traceAlarmRaised) {
-        ledTraceStatus->setState(false);
-        labelTraceLedText->setText("Detector triggered");
-        //qApp->alert(this);
-        qApp->beep();
-        qDebug() << "HEEEEI" << qApp->applicationVersion() << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        if (config->getSoundNotification()) player->play();
-        traceAlarmRaised = true;
+void MainWindow::traceIncidentAlarm(bool state) {
+    if (state != traceAlarmRaised) {
+        if (state) {
+            qDebug() << "trace alert";
+
+            ledTraceStatus->setState(false);
+            labelTraceLedText->setText("Detector triggered");
+            qApp->alert(this);
+            if (config->getSoundNotification()) player->play();
+            traceAlarmRaised = true;
+        }
+        else {
+            qDebug() << "trace normal";
+            ledTraceStatus->setState(true);
+            labelTraceLedText->setText("Normal");
+            traceAlarmRaised = false;
+        }
+    }
+}
+
+void MainWindow::recordIncidentAlarm(bool state) {
+    if (state != recordAlarmRaised) {
+        if (state) {
+            qDebug() << "rec start";
+
+            ledRecordStatus->setState(false);
+            labelRecordLedText->setText("Recording");
+            recordAlarmRaised = true;
+        }
+        else {
+            qDebug() << "rec stop";
+
+            ledRecordStatus->setState(true);
+            labelRecordLedText->setText("Ready to record");
+            recordAlarmRaised = false;
+        }
+    }
+}
+
+void MainWindow::gnssIncidentAlarm(bool state) {
+    if (state != gnssAlarmRaised) {
+        if (state) {
+            qDebug() << "gnss al";
+
+            ledGnssStatus->setState(false);
+            labelGnssLedText->setText("GNSS alarm");
+            gnssAlarmRaised = true;
+        }
+        else {
+            qDebug() << "gnss ok";
+
+            ledGnssStatus->setState(true);
+            labelGnssLedText->setText("GNSS normal");
+            gnssAlarmRaised = false;
+        }
+    }
+}
+
+void MainWindow::recordEnabled(bool state) {
+    if (state != recordAlarmRaised) {
+        if (!state) {
+            qDebug() << "rec disabled";
+            ledRecordStatus->setOffColor(Qt::gray);
+            ledRecordStatus->setState(false);
+            labelRecordLedText->setText("Recording disabled");
+            recordAlarmRaised = false;
+        }
+        else {
+            qDebug() << "rec ready";
+            ledRecordStatus->setState(true);
+            ledRecordStatus->setOffColor(Qt::red);
+            labelRecordLedText->setText("Ready to record");
+            recordAlarmRaised = true;
+        }
     }
 }
