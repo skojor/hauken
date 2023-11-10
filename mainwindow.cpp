@@ -560,6 +560,20 @@ void MainWindow::setSignals()
             emit stopPlot(false);
         }
     });
+    connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, [this] (bool b) {
+    if (b) {
+            QTimer::singleShot(1500, this, [this] {
+                //this->gnssAnalyzer1->updStateInstrumentGnss(true);
+                //this->gnssAnalyzer2->updStateInstrumentGnss(true);
+                this->gnssAnalyzer3->updStateInstrumentGnss(true);
+            });
+        }
+    else {
+            //gnssAnalyzer1->updStateInstrumentGnss(false);
+            //gnssAnalyzer2->updStateInstrumentGnss(false);
+            gnssAnalyzer3->updStateInstrumentGnss(false);
+        }
+    });
 
     connect(this, &MainWindow::stopPlot, waterfall, &Waterfall::stopPlot);
 

@@ -9,6 +9,7 @@
 #include <QSysInfo>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 
 
 class Config : public QObject

@@ -26,8 +26,8 @@ QByteArray Config::simpleEncr(QByteArray toEncrypt)
 QString Config::findWorkFolderName()
 {
     if (QSysInfo::kernelType().contains("win")) {
-        QDir dir("D:/");
-        if (dir.exists()) return "D:/Hauken";
+        QFileInfo checkDir("D:/");
+        if (checkDir.exists() && checkDir.isWritable()) return "D:/Hauken";
         else return "C:/Hauken";
     }
     else
