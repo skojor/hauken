@@ -79,7 +79,6 @@ MainWindow::MainWindow(QWidget *parent)
         //customPlotController->updSettings();
         waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
-
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -1207,7 +1206,7 @@ void MainWindow::traceIncidentAlarm(bool state) {
         if (state) {
             ledTraceStatus->setState(false);
             labelTraceLedText->setText("Detector triggered");
-            qApp->alert(this);
+            qApp->alert(this->parentWidget());
             if (config->getSoundNotification()) player->play();
             traceAlarmRaised = true;
         }

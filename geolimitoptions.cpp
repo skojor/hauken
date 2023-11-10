@@ -19,7 +19,7 @@ GeoLimitOptions::GeoLimitOptions(QSharedPointer<Config> c)
     selectFileBtn->setToolTip("A KML file containing a polygon of the area where usage is allowed");
 
     connect(selectFileBtn, &QPushButton::clicked, this, [this] {
-        filename = QFileDialog::getOpenFileName(this, "Select file", config->getWorkFolder(), "KML files (*.kml)");
+        filename = QFileDialog::getOpenFileName(this, "Select file", QDir(QCoreApplication::applicationDirPath()).absolutePath(), "KML (*.kml)");
         file->setText(filename);
     });
 

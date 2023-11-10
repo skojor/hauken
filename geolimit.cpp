@@ -115,18 +115,20 @@ void GeoLimit::restart()
 
 void GeoLimit::updSettings()
 {
+    if (filename != getGeoLimitFilename()) {
+        filename = getGeoLimitFilename();
+        if (activated && !filename.isEmpty()) readKmlFile();
+    }
     if (!activated && getGeoLimitActive()) {
         activated = true;
         if (!triedReadingFileNoSuccess) filename = getGeoLimitFilename();
-        readKmlFile();
+        if (!filename.isEmpty()) readKmlFile();
         activate();
     }
     else if (activated && !getGeoLimitActive()) {
         activated = false;
+        weAreInsidePolygon = true; // allow any pos.
+        awaitingPosition = false;
         activate();
-    }
-    if (filename != getGeoLimitFilename()) {
-        filename = getGeoLimitFilename();
-        readKmlFile();
     }
 }

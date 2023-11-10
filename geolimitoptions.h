@@ -4,6 +4,8 @@
 #include "optionsbaseclass.h"
 #include <QPushButton>
 #include <QFileDialog>
+#include <QCoreApplication>
+#include <QDir>
 
 class GeoLimitOptions : public OptionsBaseClass
 {
