@@ -6,6 +6,11 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     config = c;
     setWindowTitle("GNSS receiver configuration");
 
+    comboOpt1->setEditable(true);
+    comboOpt2->setEditable(true);
+    comboOpt3->setEditable(true);
+    comboOpt4->setEditable(true);
+
     QGroupBox *gnss1GroupBox = new QGroupBox("First GNSS receiver");
     QFormLayout *gnss1Layout = new QFormLayout;
 
@@ -13,13 +18,14 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt1->setText("Use this GNSS device");
     cbOpt1->setToolTip("Check this box to activate the GNSS surveillance for this port");
 
-    gnss1Layout->addRow(new QLabel("Serial port name"), comboOpt1);
+    gnss1Layout->addRow(new QLabel("Serial port name or IP address"), comboOpt1);
     comboOpt1->addItems(getAvailablePorts());
-    comboOpt1->setToolTip("GNSS device serial port");
+    if (!config->getGnssSerialPort1Name().isEmpty()) comboOpt1->addItem(config->getGnssSerialPort1Name());
+    comboOpt1->setToolTip("GNSS device serial port, or TCP/IP server sending raw NMEA and/or uBlox binary data");
 
-    gnss1Layout->addRow(new QLabel("Baudrate"), comboOpt2);
-    comboOpt2->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200");
-    comboOpt2->setToolTip("GNSS device baudrate");
+    gnss1Layout->addRow(new QLabel("Baudrate or port number"), comboOpt2);
+    comboOpt2->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200" << config->getGnssSerialPort1Baudrate());
+    comboOpt2->setToolTip("GNSS device baudrate, or TCP port number if IP address is used above");
 
     gnss1Layout->addRow(cbOpt3);
     cbOpt3->setText("Log NMEA to file");
@@ -44,13 +50,14 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt5->setText("Use this GNSS device");
     cbOpt5->setToolTip("Check this box to activate the GNSS surveillance for this port");
 
-    gnss2Layout->addRow(new QLabel("Serial port name"), comboOpt3);
+    gnss2Layout->addRow(new QLabel("Serial port name or IP address"), comboOpt3);
     comboOpt3->addItems(getAvailablePorts());
-    comboOpt3->setToolTip("GNSS device serial port");
+    if (!config->getGnssSerialPort2Name().isEmpty()) comboOpt3->addItem(config->getGnssSerialPort2Name());
+    comboOpt3->setToolTip("GNSS device serial port, or TCP/IP server sending raw NMEA and/or uBlox binary data");
 
-    gnss2Layout->addRow(new QLabel("Baudrate"), comboOpt4);
-    comboOpt4->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200");
-    comboOpt4->setToolTip("GNSS device baudrate");
+    gnss2Layout->addRow(new QLabel("Baudrate or port number"), comboOpt4);
+    comboOpt4->addItems(QStringList() << "1200" << "2400" << "4800" << "9600" << "19200" << "38400" << "57600" << "115200" << config->getGnssSerialPort2Baudrate());
+    comboOpt4->setToolTip("GNSS device baudrate, or TCP port number if IP address is used above");
 
     gnss2Layout->addRow(cbOpt7);
     cbOpt7->setText("Log NMEA to file");

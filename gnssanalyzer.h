@@ -36,6 +36,7 @@ private slots:
     void checkTimeOffset(GnssData &data);
     void checkCnoOffset(GnssData &data);
     void checkAgcOffset(GnssData &data);
+    void checkJammingIndicator(GnssData &data);
 
 private:
     QMutex mutex;

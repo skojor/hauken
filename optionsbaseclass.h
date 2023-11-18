@@ -56,6 +56,10 @@ public:
     QCheckBox *cbOpt10 = new QCheckBox;
     QCheckBox *cbOpt11 = new QCheckBox;
     QCheckBox *cbOpt12 = new QCheckBox;
+    QCheckBox *cbOpt13 = new QCheckBox;
+    QCheckBox *cbOpt14 = new QCheckBox;
+    QCheckBox *cbOpt15 = new QCheckBox;
+    QCheckBox *cbOpt16 = new QCheckBox;
     QSpinBox *sbOpt1 = new QSpinBox;
     QSpinBox *sbOpt2 = new QSpinBox;
     QSpinBox *sbOpt3 = new QSpinBox;

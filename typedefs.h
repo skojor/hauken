@@ -80,7 +80,16 @@ enum class InstrumentType
     UNKNOWN
 };
 
+
 } // namespace Instrument
+
+enum class JAMMINGSTATE
+{
+    UNKNOWN,
+    NOJAMMING,
+    WARNINGFIXOK,
+    CRITICALNOFIX
+};
 
 class Eb200Header
 {
@@ -451,17 +460,22 @@ public:
     int fixQuality = 0;
     int cno = 0;
     int agc = 0;
+    int jammingIndicator = 0;
     QDateTime timestamp = QDateTime();
     int id = 0;
     QList<int> avgCnoArray;
     int avgCno = 0;
     QList<int> avgAgcArray;
+    QList<int> avgJammingIndicatorArray;
     int avgAgc = 0;
+    int  avgJammingIndicator = 0;
     double posOffset;
     double altOffset;
     unsigned long timeOffset = 0;
     int cnoOffset = 0;
     int agcOffset = 0;
+    int jammingIndicatorOffset = -1;
+    JAMMINGSTATE jammingState = JAMMINGSTATE::NOJAMMING;
 };
 
 class ConnectionStatus
@@ -492,6 +506,7 @@ public:
     bool            attenuation = false;
     int             maxLevel = -999;
 };
+
 
 #endif // TYPEDEFS_H
 

@@ -12,6 +12,9 @@
 #include <QTextStream>
 #include <QFile>
 #include <QDir>
+#include <QHostAddress>
+#include <QTcpSocket>
+//#include <QHostInfo>
 #include "config.h"
 #include "typedefs.h"
 
@@ -53,6 +56,8 @@ private slots:
     bool checkBinaryChecksum(const QByteArray &val);
     void appendToLogfile(const QByteArray &data);
     void checkPosValid();
+    void connectTcpSocket();
+    void handleTcpStateChange(QAbstractSocket::SocketState state);
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -66,6 +71,15 @@ private:
     bool logToFile = false;
     QDate logfileStartedDate;
     bool posInvalidTriggered = true; // don't trigger any recording on inital startup
+    //bool isTcpIpConnection = false, tcpSocketWasConnected = false;
+    //QHostInfo *hostInfo = new QHostInfo;
+    QHostAddress *hostAddress = new QHostAddress;
+    QTcpSocket *tcpSocket = new QTcpSocket;
+    int portnumber = 0;
+
+    // Config cache
+    bool activate = false;
+    QString portName, baudrate;
 };
 
 #endif // GNSSDEVICE_H

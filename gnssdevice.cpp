@@ -6,48 +6,41 @@ GnssDevice::GnssDevice(QObject *parent, int val)
     gnssData.id = val;
 
     connect(gnss, &QSerialPort::readyRead, this, [this]
-    {
-        this->gnssBuffer.append(gnss->readAll());
-        this->handleBuffer();
-    });
+            {
+                this->gnssBuffer.append(gnss->readAll());
+                this->handleBuffer();
+            });
 
     connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
-    {
-        if (this->gnss->isOpen()) emit analyzeThisData(gnssData);
-        checkPosValid(); // run once per sec
+            {
+                if (this->gnss->isOpen() || tcpSocket->isOpen()) emit analyzeThisData(gnssData);
+                checkPosValid(); // run once per sec
+            });
+
+    connect(tcpSocket, &QTcpSocket::readyRead, this, [this] {
+        gnssBuffer.append(tcpSocket->readAll());
+        handleBuffer();
     });
 
-    start();
+    connect(tcpSocket, &QTcpSocket::stateChanged, this, &GnssDevice::handleTcpStateChange);
+    //start();
 }
 
 void GnssDevice::start()
 {
-    if (gnssData.id == 1 && getGnssSerialPort1Activate() && !gnss->isOpen()) connectToPort();
-    else if (gnssData.id == 2 && getGnssSerialPort2Activate() && !gnss->isOpen()) connectToPort();
+    if (((gnssData.id == 1 && getGnssSerialPort1Activate()) || (gnssData.id == 2 && getGnssSerialPort2Activate())) &&
+        (!gnss->isOpen() || tcpSocket->state() == QAbstractSocket::UnconnectedState)) connectToPort();
     sendToAnalyzerTimer->stop();
 
-    if (gnss->isOpen()) {
+    if (gnss->isOpen() || tcpSocket->state() != QAbstractSocket::UnconnectedState) {
         sendToAnalyzerTimer->start(1000);
     }
 }
 
 void GnssDevice::connectToPort()
 {
+    qDebug() << "connectToPort called";
     QSerialPortInfo portInfo;
-    bool activate;
-    QString portName;
-    QString baudrate;
-
-    if (gnssData.id == 1) {
-        activate = getGnssSerialPort1Activate();
-        portName = getGnssSerialPort1Name();
-        baudrate = getGnssSerialPort1Baudrate();
-    }
-    else {
-        activate = getGnssSerialPort2Activate();
-        portName = getGnssSerialPort2Name();
-        baudrate = getGnssSerialPort2Baudrate();
-    }
 
     if (activate && !portName.isEmpty() && !baudrate.isEmpty()) {
         for (auto &val : QSerialPortInfo::availablePorts()) {
@@ -56,49 +49,66 @@ void GnssDevice::connectToPort()
         }
         if (!portInfo.isNull())
             gnss->setPort(portInfo);
-        else {
-            qDebug() << "Couldn't find serial port" << portInfo.portName() << ", check settings";
+        else { // probably hostname/ip address, try it. Baud rate should then contain a port number
+            connectTcpSocket();
         }
-        gnss->setBaudRate(baudrate.toUInt());
-        if (gnss->open(QIODevice::ReadWrite))
-            qDebug() << "Connected to" << gnss->portName();
-        else
-            qDebug() << "Cannot open" << gnss->portName();
-        if (gnss->isOpen()) gnssData.inUse = true;
-        else gnssData.inUse = false;
+        if (tcpSocket->state() == QAbstractSocket::UnconnectedState) {
+            gnss->setBaudRate(baudrate.toUInt());
+            if (gnss->open(QIODevice::ReadWrite))
+                qDebug() << "Connected to" << gnss->portName();
+            else
+                qDebug() << "Cannot open" << gnss->portName();
+            if (gnss->isOpen()) gnssData.inUse = true;
+            else gnssData.inUse = false;
+        }
     }
 }
 
 void GnssDevice::handleBuffer()
 {
-    while (gnssBuffer.contains('\n')) {
-        QByteArray sentence = gnssBuffer.split('\n').at(0);
-        if (gnssBuffer.at(0) == (char)0xb5 && gnssBuffer.at(1) == (char)0x62) { //binary header
-            quint16 size = 8 + (quint16)gnssBuffer.at(4) + (quint16)(gnssBuffer.at(5) << 8);
-            if (gnssBuffer.size() >= size) {
-                QByteArray tmp = gnssBuffer.left(size);
-                gnssBuffer.remove(0, size);
-                if (checkBinaryChecksum(tmp)) decodeBinary(tmp);
+    QByteArray binaryHeader = QByteArray::fromHex("b562");
+    QByteArray nmeaSentence, binarySentence;
+    int binaryIndex, nmeaIndex;
+    int binarySize = 0, nmeaSize = 0;
+    do {
+        nmeaSentence.clear();
+        binarySentence.clear();
+
+        binaryIndex = gnssBuffer.indexOf(binaryHeader);
+        nmeaIndex = gnssBuffer.indexOf("$G");
+        if (binaryIndex != -1) binarySize = 8 + (quint16)gnssBuffer.at(binaryIndex + 4) + (quint16)(gnssBuffer.at(binaryIndex + 5) << 8);
+        if (nmeaIndex != -1 && gnssBuffer.contains('\n')) {
+            int i = 0;
+            do {
+                nmeaSentence.append(gnssBuffer[nmeaIndex + i++]);
+            } while (gnssBuffer[nmeaIndex + i] != '\n' && nmeaIndex < gnssBuffer.size());
+
+            nmeaSize = nmeaSentence.size();
+            nmeaSentence = nmeaSentence.simplified();
+            //qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
+            if (checkChecksum(nmeaSentence)) {
+                if (nmeaSentence.contains("GGA"))
+                    decodeGga(nmeaSentence);
+                else if (nmeaSentence.contains("GSA"))
+                    decodeGsa(nmeaSentence);
+                else if (nmeaSentence.contains("RMC"))
+                    decodeRmc(nmeaSentence);
+                else if (nmeaSentence.contains("GSV"))
+                    decodeGsv(nmeaSentence);
+            }
+            gnssBuffer.remove(nmeaIndex, nmeaSize+1);
+        }
+        if (binaryIndex != -1) {
+            binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
+            //qDebug() << "BIN:" << binarySentence.size() << (quint8)binarySentence[2] << (uchar)binarySentence[3];
+            if (binarySentence.size() == binarySize && checkBinaryChecksum(binarySentence) && binarySentence[2] == 0x0a && binarySentence[3] == 0x09) {
+                decodeBinary(binarySentence);
+                gnssBuffer.remove(binaryIndex, binarySize);
             }
         }
 
-        gnssBuffer.remove(0, gnssBuffer.indexOf('\n') + 1); // deletes one sentence from the buffer
-        if (logToFile) appendToLogfile(sentence);
-
-        if (sentence.at(0) == '$' && sentence.contains('\r')) { // looks like nmea
-            if (checkChecksum(sentence)) {
-                if (sentence.contains("GGA"))
-                    decodeGga(sentence);
-                else if (sentence.contains("GSA"))
-                    decodeGsa(sentence);
-                else if (sentence.contains("RMC"))
-                    decodeRmc(sentence);
-                else if (sentence.contains("GSV"))
-                    decodeGsv(sentence);
-            }
-            else qDebug() << "checksum error" << sentence;
-        }
-    }
+    } while (binaryIndex != -1 && nmeaIndex != -1);
+    if (gnssBuffer.size() > 256) gnssBuffer.clear();
 }
 
 bool GnssDevice::decodeGsa(const QByteArray &val)
@@ -134,11 +144,11 @@ bool GnssDevice::decodeGga(const QByteArray &val)
         gnssData.altitude = split.at(9).toDouble();
         //gnssData.hdop = split.at(8).toDouble();
         gnssData.latitude =
-                int(split.at(2).toDouble() / 100) +
-                ((split.at(2).toDouble() / 100) - int(split.at(2).toDouble() / 100)) * 1.6667;
+            int(split.at(2).toDouble() / 100) +
+            ((split.at(2).toDouble() / 100) - int(split.at(2).toDouble() / 100)) * 1.6667;
         gnssData.longitude =
-                int(split.at(4).toDouble() / 100) +
-                ((split.at(4).toDouble() / 100) - int(split.at(4).toDouble() / 100)) * 1.6667;
+            int(split.at(4).toDouble() / 100) +
+            ((split.at(4).toDouble() / 100) - int(split.at(4).toDouble() / 100)) * 1.6667;
 
         if (split[3][0] == 'S') gnssData.latitude *= -1;
         if (split[5][0] == 'W') gnssData.longitude *= -1;
@@ -210,8 +220,16 @@ QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const Q
 void GnssDevice::decodeBinary(const QByteArray &val)
 {
     if (checkBinaryChecksum(val)) {
-        gnssData.agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
-        //jamInd = (quint8)buffer.at(51);
+
+        int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
+        if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192; // Changed 181123 JSK: Percentage value, 8192 = 100% gain
+        qDebug() << "0a09 rec." << val.size() << agc;
+
+        int jamInd = (quint8)val.at(51);
+        if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
+    }
+    else {
+        qDebug() << "CRC fail";
     }
 }
 
@@ -226,8 +244,12 @@ bool GnssDevice::checkBinaryChecksum(const QByteArray &val)
         calcChkA += (quint8)val.at(i);
         calcChkB += calcChkA;
     }
-    if (calcChkA == chkA && calcChkB == chkB) return true;
-    else return false;
+    if (calcChkA == chkA && calcChkB == chkB) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 
@@ -264,7 +286,18 @@ void GnssDevice::updSettings() // caching these settings in memory since they ar
     else {
         logToFile = getGnssSerialPort2LogToFile();
     }
-    start(); // reconnect if needed
+    if (gnssData.id == 1) {
+        activate = getGnssSerialPort1Activate();
+        portName = getGnssSerialPort1Name();
+        baudrate = getGnssSerialPort1Baudrate();
+    }
+    else {
+        activate = getGnssSerialPort2Activate();
+        portName = getGnssSerialPort2Name();
+        baudrate = getGnssSerialPort2Baudrate();
+    }
+
+    if (!gnss->isOpen() && !tcpSocket->isOpen() && activate) start(); // reconnect if needed
 }
 
 void GnssDevice::appendToLogfile(const QByteArray &data)
@@ -292,7 +325,7 @@ void GnssDevice::checkPosValid()
     ts.setRealNumberPrecision(1);
 
     if (!gnssData.posValid && !posInvalidTriggered) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
-                                                  // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
+        // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
         ts << "Position invalid";
         posInvalidTriggered = true;
     }
@@ -303,3 +336,24 @@ void GnssDevice::checkPosValid()
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
 }
 
+void GnssDevice::connectTcpSocket()
+{
+    if (!portName.isEmpty() && !baudrate.isEmpty() && tcpSocket->state() == QAbstractSocket::UnconnectedState && baudrate.toInt() > 0) {
+        hostAddress->setAddress(portName);
+        tcpSocket->connectToHost(*hostAddress, baudrate.toInt());
+    }
+}
+
+void GnssDevice::handleTcpStateChange(QAbstractSocket::SocketState state)
+{
+    qDebug() << "GNSS TCP debug" << state;
+    if (state == QAbstractSocket::ConnectedState) {
+        qDebug() << "Connected to" << portName << baudrate;
+        if (!sendToAnalyzerTimer->isActive()) sendToAnalyzerTimer->start(1000);
+        gnssData.inUse = true;
+    }
+    else {
+        gnssData.inUse = false;
+        sendToAnalyzerTimer->stop();
+    }
+}

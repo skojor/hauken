@@ -40,7 +40,6 @@ SOURCES += \
     customplotcontroller.cpp \
     datastreambaseclass.cpp \
     emailoptions.cpp \
-    espenai.cpp \
     generaloptions.cpp \
     geolimit.cpp \
     geolimitoptions.cpp \
@@ -102,7 +101,6 @@ HEADERS += \
     customplotcontroller.h \
     datastreambaseclass.h \
     emailoptions.h \
-    espenai.h \
     generaloptions.h \
     geolimit.h \
     geolimitoptions.h \

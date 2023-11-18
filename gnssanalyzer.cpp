@@ -20,7 +20,7 @@ void GnssAnalyzer::getData(GnssData &data)
 
 void GnssAnalyzer::calcAvgs(GnssData &data)
 {
-    if (data.cno > 0) {
+    if (data.cno >= 0) {
         data.avgCnoArray.append(data.cno);
         data.avgCno = 0;
         for (auto &val : data.avgCnoArray)
@@ -29,7 +29,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgCnoArray.size() > 300)
             data.avgCnoArray.pop_front();
     }
-    if (data.agc > 0) {
+    if (data.agc >= 0) {
         data.avgAgcArray.append(data.agc);
         data.avgAgc = 0;
         for (auto &val : data.avgAgcArray)
@@ -38,6 +38,16 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgAgcArray.size() > 300)
             data.avgAgcArray.pop_front();
     }
+    if (data.jammingIndicator >= 0) {
+        data.avgJammingIndicatorArray.append(data.jammingIndicator);
+        data.avgJammingIndicator = 0;
+        for (auto &val : data.avgJammingIndicatorArray)
+            data.avgJammingIndicator += val;
+        data.avgJammingIndicator /= data.avgJammingIndicatorArray.size();
+        while (data.avgJammingIndicatorArray.size() > 300)
+            data.avgJammingIndicatorArray.pop_front();
+    }
+
 }
 
 void GnssAnalyzer::analyze(GnssData &data)
@@ -48,13 +58,13 @@ void GnssAnalyzer::analyze(GnssData &data)
     if (data.id < 3) {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);
+        data.jammingIndicatorOffset = abs(data.jammingIndicator - data.jammingIndicatorOffset);
         checkCnoOffset(data);
         if (checkAgc) checkAgcOffset(data);
     }
     checkPosOffset(data);
     checkAltOffset(data);
     checkTimeOffset(data);
-
 }
 
 double GnssAnalyzer::arcInRadians(GnssData &data)
@@ -118,8 +128,9 @@ void GnssAnalyzer::updDisplay()
         if (gnssData.id != 3)
             ts << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
         if (gnssData.agc > 0)
-            ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>m</td></tr>";
-
+            ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>%</td></tr>";
+        if (gnssData.jammingIndicator >= 0)
+            ts << "<tr><td>Jam.ind.</td><td align=right>" << gnssData.jammingIndicator  << "<td></td><td>%</td></tr>";
         ts << "<tr><td>Sats tracked</td><td align=right>" << gnssData.satsTracked;
         if (gnssData.satsTracked == -1) ts << " (man.pos!)";
         ts << "</td><td></td></tr>";
@@ -260,4 +271,9 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
         emit alarmEnded();
     }
     if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+}
+
+void GnssAnalyzer::checkJammingIndicator(GnssData &data)
+{
+
 }

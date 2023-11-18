@@ -291,7 +291,7 @@ bool SdefRecorder::curlLogin()
     process->start();
     stateCurlAwaitingLogin = true;
 
-    qDebug() << "Calling curl login";// << process->program() << process->arguments();
+    qDebug() << "Calling curl login"; // << process->program() << process->arguments();
 
     return true;
 }
