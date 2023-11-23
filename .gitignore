@@ -7,3 +7,7 @@ moc_*
 Makefile
 qrc*
 .qmake.stash
+Makefile*
+object_script*
+torch
+Hauken_resource.rc
