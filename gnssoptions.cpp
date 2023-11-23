@@ -32,8 +32,10 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt3->setToolTip("When checked all NMEA sentences will be logged to a logfile.\nA new logfile is started every day");
 
     gnss1Layout->addRow(cbOpt4);
-    cbOpt4->setText("Monitor AGC level");
-    cbOpt4->setToolTip("When checked the AGC receiver level will be monitored for sudden changes.\nOnly usable together with uBlox M7/M8 receivers.");
+    cbOpt4->setText("Set up as uBlox M8/M9");
+    cbOpt4->setToolTip("If checked the GPS will be configured as a uBlox receiver with enhanced binary protocol. \n"\
+                       "Will enable several cool features, for now AGC and jamming indicator levels.\n"\
+                       "Of course this will only work if the connected GNSS device is a uBlox. Use at your own risk!");
 
     gnss1Layout->addRow((cbOpt9));
     cbOpt9->setText("Detected incidents triggers spectrum recording");
@@ -64,8 +66,10 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt7->setToolTip("When checked all NMEA sentences will be logged to a logfile.\nA new logfile is started every day");
 
     gnss2Layout->addRow(cbOpt8);
-    cbOpt8->setText("Monitor AGC level");
-    cbOpt8->setToolTip("When checked the AGC receiver level will be monitored for sudden changes.\nOnly usable together with uBlox M7/M8 receivers.");
+    cbOpt8->setText("Set up as uBlox M8/M9");
+    cbOpt8->setToolTip("If checked the GPS will be configured as a uBlox receiver with enhanced binary protocol. \n"\
+                       "Will enable several cool features, for now AGC and jamming indicator levels.\n"\
+                       "Of course this will only work if the connected GNSS device is a uBlox. Use at your own risk!");
 
     gnss2Layout->addRow((cbOpt10));
     cbOpt10->setText("Detected incidents triggers spectrum recording");

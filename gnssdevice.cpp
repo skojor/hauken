@@ -60,6 +60,8 @@ void GnssDevice::connectToPort()
                 qDebug() << "Cannot open" << gnss->portName();
             if (gnss->isOpen()) gnssData.inUse = true;
             else gnssData.inUse = false;
+            gnss->setDataTerminalReady(true);
+            if (uBloxDevice) askUbloxVersion();
         }
     }
 }
@@ -69,14 +71,17 @@ void GnssDevice::handleBuffer()
     QByteArray binaryHeader = QByteArray::fromHex("b562");
     QByteArray nmeaSentence, binarySentence;
     int binaryIndex, nmeaIndex;
-    int binarySize = 0, nmeaSize = 0;
+    int binarySize, nmeaSize;
     do {
         nmeaSentence.clear();
         binarySentence.clear();
+        binarySize = 0;
 
         binaryIndex = gnssBuffer.indexOf(binaryHeader);
+        if (binaryIndex != -1 && gnssBuffer.size() > binaryIndex + 6)
+            binarySize = 8 + (quint8)gnssBuffer.at(binaryIndex + 4) + (gnssBuffer.at(binaryIndex + 5) << 8);
+
         nmeaIndex = gnssBuffer.indexOf("$G");
-        if (binaryIndex != -1) binarySize = 8 + (quint16)gnssBuffer.at(binaryIndex + 4) + (quint16)(gnssBuffer.at(binaryIndex + 5) << 8);
         if (nmeaIndex != -1 && gnssBuffer.contains('\n')) {
             int i = 0;
             do {
@@ -95,20 +100,36 @@ void GnssDevice::handleBuffer()
                     decodeRmc(nmeaSentence);
                 else if (nmeaSentence.contains("GSV"))
                     decodeGsv(nmeaSentence);
+                else if (nmeaSentence.contains("GNS"))
+                    decodeGns(nmeaSentence);
             }
             gnssBuffer.remove(nmeaIndex, nmeaSize+1);
         }
         if (binaryIndex != -1) {
-            binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
-            //qDebug() << "BIN:" << binarySentence.size() << (quint8)binarySentence[2] << (uchar)binarySentence[3];
-            if (binarySentence.size() == binarySize && checkBinaryChecksum(binarySentence) && binarySentence[2] == 0x0a && binarySentence[3] == 0x09) {
+            if (gnssBuffer.size() >= binaryIndex + binarySize) binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
+            /*else {
+                qDebug() << "del all" << gnssBuffer.size() << binaryIndex << binarySize;
+                gnssBuffer.clear(); // failsafe, out of sync here
+            }*/
+
+           // qDebug() << "BIN:" << binarySentence.size() << binarySize
+            //         << gnssBuffer.size() << binaryIndex << (quint8)binarySentence[2] << (quint8)binarySentence[3];
+            if (binarySentence.size() == binarySize
+                && checkBinaryChecksum(binarySentence)
+                && binarySentence[2] == 0x0a && binarySentence[3] == 0x04) {
+                decodeBinary0a04(binarySentence);
+                gnssBuffer.remove(binaryIndex, binarySize);
+            }
+            else if (binarySentence.size() == binarySize) {
                 decodeBinary(binarySentence);
                 gnssBuffer.remove(binaryIndex, binarySize);
             }
+
         }
 
-    } while (binaryIndex != -1 && nmeaIndex != -1);
-    if (gnssBuffer.size() > 256) gnssBuffer.clear();
+    } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0));
+    //if (gnssBuffer.size() > 2560)
+    gnssBuffer.clear();
 }
 
 bool GnssDevice::decodeGsa(const QByteArray &val)
@@ -118,10 +139,10 @@ bool GnssDevice::decodeGsa(const QByteArray &val)
         gnssData.gsaValid = true;
         gnssData.hdop = split.at(16).toDouble();
 
-        if (val.contains("$GN")) gnssData.gnssType = "GPS+GLONASS";
+        /*if (val.contains("$GN")) gnssData.gnssType = "GPS+GLONASS";
         else if (val.contains("$GP")) gnssData.gnssType = "GPS";
         else if (val.contains("$GL")) gnssData.gnssType = "GLONASS";
-        else gnssData.gnssType = "Other";
+        else gnssData.gnssType = "Other";*/
 
         if (split.at(2).toInt() == 3) gnssData.fixType = "3D";
         else if (split.at(2).toInt() == 2) gnssData.fixType = "2D";
@@ -139,7 +160,7 @@ bool GnssDevice::decodeGga(const QByteArray &val)
     if (split.size() > 7) {
         gnssData.ggaValid = true;
 
-        gnssData.satsTracked = split.at(7).toInt();
+        if (!gnssData.gnsValid) gnssData.satsTracked = split.at(7).toInt();
         gnssData.fixQuality = split.at(6).toInt();
         gnssData.altitude = split.at(9).toDouble();
         //gnssData.hdop = split.at(8).toDouble();
@@ -174,6 +195,15 @@ bool GnssDevice::decodeRmc(const QByteArray &val)
 
 bool GnssDevice::decodeGsv(const QByteArray &val)
 {
+    if (!checkedAllSatSystems) {
+        if (val.contains("$GP") && !gnssData.gnssType.contains("GPS")) gnssData.gnssType += "GPS ";
+        else if (val.contains("$GL") && !gnssData.gnssType.contains("GLONASS")) gnssData.gnssType += "GLONASS ";
+        else if (val.contains("$GA") && !gnssData.gnssType.contains("Galileo")) gnssData.gnssType += "Galileo ";
+        else if (val.contains("$GA") && !gnssData.gnssType.contains("BeiDou")) gnssData.gnssType += "BeiDou ";
+        QTimer::singleShot(20000, this, [this] { // Assume after 20 secs all valid systems are active
+            checkedAllSatSystems = true;
+        });
+    }
     QList<QByteArray> split = val.split(',');
     if (split.size() > 4) {
         if (split.at(2).toInt() == gsvSentences.size() + 1)
@@ -208,6 +238,17 @@ bool GnssDevice::decodeGsv(const QByteArray &val)
     return true;
 }
 
+bool GnssDevice::decodeGns(const QByteArray &val)
+{
+
+    gnssData.gnsValid = true;
+    QList<QByteArray> split = val.split(',');
+    if (split.size() > 7) {
+        gnssData.satsTracked = split[7].toInt();
+    }
+    return true;
+}
+
 QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const QByteArray time)
 {
     QDateTime dt;
@@ -219,17 +260,31 @@ QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const Q
 
 void GnssDevice::decodeBinary(const QByteArray &val)
 {
+    QByteArray MONHW(QByteArray::fromHex("0x09"));
+    QByteArray MONRF(QByteArray::fromHex("0a38"));
+
     if (checkBinaryChecksum(val)) {
+        if (val.indexOf(MONHW) == 2) {
+            int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
+            if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192; // Changed 181123 JSK: Percentage value, 8192 = 100% gain
 
-        int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
-        if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192; // Changed 181123 JSK: Percentage value, 8192 = 100% gain
-        qDebug() << "0a09 rec." << val.size() << agc;
+            int jamInd = (quint8)val.at(51);
+            if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
+        }
 
-        int jamInd = (quint8)val.at(51);
-        if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
-    }
-    else {
-        qDebug() << "CRC fail";
+        else if (val.indexOf(MONRF) == 2) {
+            int agc = (quint8)val[24] + ((quint8)val[25] << 8);
+            if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192;
+
+            int jamInd = (quint8)val.at(26);
+            if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
+
+            int jamState = (int)val[11];
+            if (jamState == 0) gnssData.jammingState = JAMMINGSTATE::UNKNOWN;
+            else if (jamState == 1) gnssData.jammingState = JAMMINGSTATE::NOJAMMING;
+            else if (jamState == 2) gnssData.jammingState = JAMMINGSTATE::WARNINGFIXOK;
+            else if (jamState == 3) gnssData.jammingState = JAMMINGSTATE::CRITICALNOFIX;
+        }
     }
 }
 
@@ -281,23 +336,22 @@ void GnssDevice::updSettings() // caching these settings in memory since they ar
     if (gnssData.id == 1 && !getGnssSerialPort1Activate()) gnss->close();
     else if (gnssData.id == 2 && !getGnssSerialPort2Activate()) gnss->close();
     if (gnssData.id == 1) {
-        logToFile = getGnssSerialPort1LogToFile();
-    }
-    else {
-        logToFile = getGnssSerialPort2LogToFile();
-    }
-    if (gnssData.id == 1) {
         activate = getGnssSerialPort1Activate();
         portName = getGnssSerialPort1Name();
         baudrate = getGnssSerialPort1Baudrate();
+        logToFile = getGnssSerialPort1LogToFile();
+        uBloxDevice = getGnssSerialPort1MonitorAgc();
     }
     else {
         activate = getGnssSerialPort2Activate();
         portName = getGnssSerialPort2Name();
         baudrate = getGnssSerialPort2Baudrate();
+        logToFile = getGnssSerialPort2LogToFile();
+        uBloxDevice = getGnssSerialPort2MonitorAgc();
     }
 
     if (!gnss->isOpen() && !tcpSocket->isOpen() && activate) start(); // reconnect if needed
+    if (!activate && tcpSocket->isOpen()) tcpSocket->close();
 }
 
 void GnssDevice::appendToLogfile(const QByteArray &data)
@@ -356,4 +410,82 @@ void GnssDevice::handleTcpStateChange(QAbstractSocket::SocketState state)
         gnssData.inUse = false;
         sendToAnalyzerTimer->stop();
     }
+    if (state == QAbstractSocket::UnconnectedState) { // retry conn. every 5 sec if valid settings
+        QTimer::singleShot(5000, this, [this] {
+            if (activate) connectTcpSocket();
+        });
+    }
+}
+
+void GnssDevice::askUbloxVersion()
+{
+    qDebug() << "asking for version info from USB device";
+    //gnss->write(QByteArray::fromHex("b56206040400000000000e64")); // restart hot
+
+    if (gnss->write(QByteArray::fromHex("b5620a0400000e34")) == -1) { // Ask version!
+        qDebug() << "GNSS write failed";
+    }
+    uBloxState = UBLOX::ASKEDVERSION;
+}
+
+void GnssDevice::decodeBinary0a04(const QByteArray &val)
+{
+    if (val.contains("M91")) { // Cool, this is a very fancy GPS chip!
+        qDebug() << "uBlox: M9 chip identified";
+        uBloxID = "M91";
+    }
+    else if (val.contains("M8") || val.contains("M7")) { // Ok, this will have to do for now
+        qDebug() << "uBlox: M8 chip identified";
+        uBloxID = "M7M8";
+    }
+    if (uBloxID.isEmpty()) {
+        qDebug() << "Unknown GPS chip, trying to proceed anyway";
+        uBloxState = UBLOX::READY; // skip programming, we have no idea what to do
+    }
+    else {
+        qDebug() << "Trying to set up uBlox chip according to version...";
+        setupUbloxDevice();
+    }
+}
+
+void GnssDevice::setupUbloxDevice()
+{
+    if (uBloxID.contains("M9")) {
+        qDebug() << "uBlox M9 configuration called";
+        //QTimer::singleShot(120, this, [this] {
+        gnss->write(QByteArray::fromHex("b56206090c000000000000000000ffffffff1785")); // load defaults
+        //});
+        //QTimer::singleShot(140, this, [this] {
+        //gnss->write(QByteArray::fromHex("b562068b0800000000002091035ca926")); // ubx-mon-rf ask!
+
+        gnss->write(QByteArray::fromHex("b562068a0900000100005c03912001abfd")); // ubx-mon-rf on
+        //gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
+        //});
+        //QTimer::singleShot(160, this, [this] {
+        gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
+        gnss->write(QByteArray::fromHex("b562068a090000010000cc009120001720")); // gll off
+        gnss->write(QByteArray::fromHex("b562068a090000010000b80091200104bd")); // gns on
+        gnss->write(QByteArray::fromHex("b562068a0900000100000d00411001f956")); // itfm on (interference/jamming
+        gnss->write(QByteArray::fromHex("b562068a09000001000010004120020d86")); // itfm active ant.
+
+        //QTimer::singleShot(180, this, [this] {
+        gnss->write(QByteArray::fromHex("b562068a0900000100008e03912001ddf7")); // mon-span on (spectrum)
+        //});
+    }
+
+    else if (uBloxID.contains("M8")) {
+        QTimer::singleShot(100, this, [this] {
+            gnss->write(QByteArray::fromHex("b56206010300f00100fb11")); // GLL OFF
+        });
+        QTimer::singleShot(120, this, [this] {
+            gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
+        });
+        QTimer::singleShot(140, this, [this] {
+            gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
+        });
+        /*QTimer::singleShot(500, this, [this] {
+            gnss->write(QByteArray::fromHex("b5620604040001000200116c")); // restart warm
+        });*/
+    }
+    uBloxState = UBLOX::READY;
 }

@@ -42,4 +42,5 @@ QString AI::gnssAI(float data[90][1200])
 
     return classes[prediction];
 */
+    return QString("Nope");
 }

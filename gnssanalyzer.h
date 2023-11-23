@@ -47,6 +47,7 @@ private:
     bool timeOffsetTriggered = false;
     bool cnoLimitTriggered = false;
     bool agcLimitTriggered = false;
+    bool jamIndTriggered = false;
 
     // config cache below here
     double cnoLimit, agcLimit;
@@ -59,6 +60,8 @@ private:
     const double DEG_TO_RAD = 0.017453292519943295769236907684886;
 
     bool stateInstrumentGnss = true; // goes false if instrumentGnss is used and stream disappears
+
+    const int jammingIndicatorTriggerValue = 50;
 };
 
 #endif // GNSSANALYZER_H

@@ -6,7 +6,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia position
 CONFIG += c++17
 #QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0
 
-QMAKE_CXXFLAGS += -pthread -Wa,-mbig-obj #-fto #-Wl,-allow-multiple-definition -std=c++17
+# QMAKE_CXXFLAGS += -pthread #-Wa,-mbig-obj #-fto #-Wl,-allow-multiple-definition -std=c++17
 # QMAKE_CXXFLAGS += -std=c++17
 TARGET = Hauken
 RC_ICONS = icons/hawk.ico #icon.ico
@@ -148,7 +148,7 @@ unix: {
 }
 
 win32 {
-  LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lz
+  LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lzlib1
 }
 
 win32 {
@@ -170,7 +170,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.31.10.0
+VERSION = 2.32.01.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

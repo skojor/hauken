@@ -247,7 +247,7 @@ void MainWindow::createLayout()
     trigForm->addRow(separator);
 
     trigForm->addRow(new QLabel("C/NO deviation (dB)"), gnssCNo);
-    trigForm->addRow(new QLabel("AGC deviation"), gnssAgc);
+    trigForm->addRow(new QLabel("AGC deviation (%)"), gnssAgc);
     trigForm->addRow(new QLabel("Position offset (m)"), gnssPosOffset);
 
     trigForm->addRow(new QLabel("Altitude offset (m)"), gnssAltOffset);
@@ -265,7 +265,7 @@ void MainWindow::createLayout()
     QGroupBox *incBox = new QGroupBox("Incident log");
     incLayout->addWidget(incidentLog);
     incBox->setLayout(incLayout);
-    incBox->setMaximumHeight(180);
+    incBox->setMaximumHeight(220);
 
     QHBoxLayout *bottomBox = new QHBoxLayout;
 
@@ -282,7 +282,7 @@ void MainWindow::createLayout()
     ledRecordStatus->setLedSize(30);
     ledGnssStatus->setLedSize(30);
 
-    grpIndicator->setMaximumHeight(180);
+    grpIndicator->setMaximumHeight(220);
 
     grpIndicator->setLayout(bottomIndicatorLayout);
     bottomBox->addWidget(grpIndicator);
@@ -292,8 +292,8 @@ void MainWindow::createLayout()
 
     rightLayout->addWidget(gnssStatus);
     rightBox->setLayout(rightLayout);
-    rightBox->setMaximumWidth(200);
-    rightBox->setMaximumHeight(180);
+    rightBox->setMaximumWidth(240);
+    rightBox->setMaximumHeight(220);
     rightLayout->addWidget(gnssStatus);
 
     QHBoxLayout *statusBox = new QHBoxLayout;
@@ -1002,6 +1002,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.32</td><td>Support for GNSS NMEA and binary (uBlox) data over TCP/IP</td></tr>"
        << "<tr><td>2.31</td><td>Audio and visual indicators of incidents added. Various minor bugfixes</td></tr>"
        << "<tr><td>2.30</td><td>Bugfix: Trig frequency selection failing on selection outside window. Debugging info removed</td></tr>"
        << "<tr><td>2.29</td><td>Qt library version upgrade to 6.6.0. Rebuilt code and connected libraries</td></tr>"

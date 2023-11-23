@@ -20,7 +20,7 @@ void GnssAnalyzer::getData(GnssData &data)
 
 void GnssAnalyzer::calcAvgs(GnssData &data)
 {
-    if (data.cno >= 0) {
+    if (data.cno > 0) {
         data.avgCnoArray.append(data.cno);
         data.avgCno = 0;
         for (auto &val : data.avgCnoArray)
@@ -29,7 +29,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgCnoArray.size() > 300)
             data.avgCnoArray.pop_front();
     }
-    if (data.agc >= 0) {
+    if (data.agc > 0) {
         data.avgAgcArray.append(data.agc);
         data.avgAgc = 0;
         for (auto &val : data.avgAgcArray)
@@ -60,7 +60,10 @@ void GnssAnalyzer::analyze(GnssData &data)
         data.agcOffset = abs(data.agc - data.avgAgc);
         data.jammingIndicatorOffset = abs(data.jammingIndicator - data.jammingIndicatorOffset);
         checkCnoOffset(data);
-        if (checkAgc) checkAgcOffset(data);
+        if (checkAgc) {
+            checkAgcOffset(data);
+            checkJammingIndicator(data);
+        }
     }
     checkPosOffset(data);
     checkAltOffset(data);
@@ -117,20 +120,27 @@ void GnssAnalyzer::updDisplay()
         QString out;
         QTextStream ts(&out);
         if (gnssData.posValid)
-            ts << "<table style='color:black'>";
+            ts << "<table style='color:black;width:100%'>";
         else
             ts << "<table style='color:grey'>";
         ts.setRealNumberNotation(QTextStream::FixedNotation);
         ts.setRealNumberPrecision(1);
-        ts << "<tr><td>Pos. offset</td><td align=right>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << "</td><td>m</td></tr>"
+        ts << "<tr><td style='width:50%'>Pos. offset</td><td align=right style='width:50%'>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << "</td><td>m</td></tr>"
            << "<tr><td>Alt. offset</td><td align=right>" << gnssData.altOffset << "</td><td>m</td></tr>"
            << "<tr><td>Time offset</td><td align=right>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << "</td><td>ms</td></tr>";
         if (gnssData.id != 3)
             ts << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
-        if (gnssData.agc > 0)
+        if (gnssData.agc >= 0)
             ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>%</td></tr>";
         if (gnssData.jammingIndicator >= 0)
-            ts << "<tr><td>Jam.ind.</td><td align=right>" << gnssData.jammingIndicator  << "<td></td><td>%</td></tr>";
+            ts << "<tr><td>Jam.ind.</td><td align=right>" << gnssData.jammingIndicator  << "<td>%</td><td></td></tr>";
+        if (gnssData.jammingState != JAMMINGSTATE::UNKNOWN) {
+            ts << "<tr><td>Jamming state</td><td align=right>";
+            if (gnssData.jammingState == JAMMINGSTATE::NOJAMMING) ts << "No jamming";
+            else if (gnssData.jammingState == JAMMINGSTATE::WARNINGFIXOK) ts << "Warning, fix ok";
+            else if (gnssData.jammingState == JAMMINGSTATE::CRITICALNOFIX) ts << "Critical, fix lost";
+            ts << "</td><td></td></tr>";
+        }
         ts << "<tr><td>Sats tracked</td><td align=right>" << gnssData.satsTracked;
         if (gnssData.satsTracked == -1) ts << " (man.pos!)";
         ts << "</td><td></td></tr>";
@@ -275,5 +285,25 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
 
 void GnssAnalyzer::checkJammingIndicator(GnssData &data)
 {
+    QString msg;
+    QTextStream ts(&msg);
+    ts.setRealNumberNotation(QTextStream::FixedNotation);
+    ts.setRealNumberPrecision(1);
 
+    if (data.posValid && data.jammingIndicator > jammingIndicatorTriggerValue) {
+        if (!jamIndTriggered) {
+            ts << "Jamming indicator high: " << data.avgJammingIndicator << (logToFile ? ". Recording":"");
+            jamIndTriggered = true;
+            emit visualAlarm();
+        }
+        if (logToFile) {
+            emit alarm();
+        }
+    }
+    else if (data.posValid && jamIndTriggered) {
+        ts << "Jamming indicator normal";
+        jamIndTriggered = false;
+        emit alarmEnded();
+    }
+    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }

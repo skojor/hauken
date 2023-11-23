@@ -453,29 +453,30 @@ public:
     bool gsvValid = false;
     bool ggaValid = false;
     bool posValid = false;
+    bool gnsValid = false;
     QString fixType = "No fix";
-    QString gnssType = "Unknown";
+    QString gnssType;
     int satsTracked = 0;
     int satsVisible = 0;
     int fixQuality = 0;
     int cno = 0;
-    int agc = 0;
-    int jammingIndicator = 0;
+    int agc = -1;
+    int jammingIndicator = -1;
     QDateTime timestamp = QDateTime();
     int id = 0;
     QList<int> avgCnoArray;
     int avgCno = 0;
     QList<int> avgAgcArray;
     QList<int> avgJammingIndicatorArray;
-    int avgAgc = 0;
+    int avgAgc = -1;
     int  avgJammingIndicator = 0;
     double posOffset;
     double altOffset;
     unsigned long timeOffset = 0;
     int cnoOffset = 0;
     int agcOffset = 0;
-    int jammingIndicatorOffset = -1;
-    JAMMINGSTATE jammingState = JAMMINGSTATE::NOJAMMING;
+    int jammingIndicatorOffset = 0;
+    JAMMINGSTATE jammingState = JAMMINGSTATE::UNKNOWN;
 };
 
 class ConnectionStatus

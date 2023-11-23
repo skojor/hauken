@@ -25,6 +25,12 @@
  *  to trigger recording of spectrum.
  */
 
+enum class UBLOX {
+    NODEVICE,
+    ASKEDVERSION,
+    WAITFORACK,
+    READY
+};
 
 class GnssDevice : public Config
 {
@@ -51,6 +57,7 @@ private slots:
     bool decodeGsa(const QByteArray &val);
     bool decodeRmc(const QByteArray &val);
     bool decodeGsv(const QByteArray &val);
+    bool decodeGns(const QByteArray & val);
     QDateTime convFromGnssTimeToQDateTime(const QByteArray date, const QByteArray time);
     void decodeBinary(const QByteArray &val);
     bool checkBinaryChecksum(const QByteArray &val);
@@ -58,6 +65,9 @@ private slots:
     void checkPosValid();
     void connectTcpSocket();
     void handleTcpStateChange(QAbstractSocket::SocketState state);
+    void setupUbloxDevice();
+    void askUbloxVersion();
+    void decodeBinary0a04(const QByteArray &val);
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -80,6 +90,11 @@ private:
     // Config cache
     bool activate = false;
     QString portName, baudrate;
+    bool uBloxDevice;
+    QString uBloxID, uBloxFirmware;
+    UBLOX uBloxState = UBLOX::NODEVICE;
+    bool checkedAllSatSystems = false;
 };
+
 
 #endif // GNSSDEVICE_H
