@@ -482,7 +482,7 @@ void GnssDevice::setupUbloxDevice()
         gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
         gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
         gnss->write(QByteArray::fromHex("b56206390800f3ac62ad231e000036ea")); // itfm on (interference/jamming
-        gnss->write(QByteArray::fromHex("b562060108000df001010101010112b0")); // gns on
+        gnss->write(QByteArray::fromHex("b56206010800f00d0101010101011293")); // gns on
     }
     uBloxState = UBLOX::READY;
 }
