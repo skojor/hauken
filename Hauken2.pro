@@ -141,7 +141,7 @@ INCLUDEPATH += \
     $$PWD/../libtorch/include
 
 unix: {
-  LIBS += -lquazip -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
+  LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
   #LIBS += -L$$PWD/../libtorch/lib  -ltorch_cpu -ltorch  -lc10
   QMAKE_CXXFLAGS += -std=c++17
   INCLUDEPATH += $$PWD/../qtmqtt/include/QtMqtt
