@@ -33,6 +33,6 @@ public:
 
 private:
     QStringList classes;
-};
+}
 
 #endif // AI_H

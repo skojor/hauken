@@ -6,8 +6,8 @@ AI::AI()
         torch::jit::script::Module model = torch::jit::load("c:\\hauken\\18.pt", torch::kCPU);
     }
     catch(...) {
-        qDebug() << "Nope";*/
-    }
+        qDebug() << "Nope";
+    }*/
 
     classes << "Jammer" << "Bredbånda pulsgreie" << "Diverse" << "Fraunhofer" << "Tenningsstøy" << "Selvsving";
 }

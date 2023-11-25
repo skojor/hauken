@@ -4,7 +4,7 @@ greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
 CONFIG += c++17
-QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0
+QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0 -std=c++17
 
 #QMAKE_CXXFLAGS += -pthread -mbig-obj -fto -allow-multiple-definition -std=c++17
 
