@@ -155,8 +155,8 @@ win32 {
 LIBS += -L$$PWD/../libtorch/lib
 LIBS +=  -ltorch -lc10 -ltorch_cpu
 }
-#unix {
-#LIBS += -Ltorch/lib  -ltorch_cpu -ltorch  -lc10   \ # -ltorch_cuda  -lc10_cuda -lcaffe2_observers
+unix {
+LIBS += -L$$PWD/../libtorch/lib  -ltorch_cpu -ltorch  -lc10   \ # -ltorch_cuda  -lc10_cuda -lcaffe2_observers
 #-lcaffe2_nvrtc -lcaffe2_detectron_ops_gpu  \
 #-lnvrtc-builtins -lprocess_group_agent -lshm  \
 #-ltensorpipe_agent -ltorch -ltorch_global_deps #-ltorch_cuda_cpp -ltorch_cuda_cu
