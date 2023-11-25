@@ -438,9 +438,9 @@ void GnssDevice::decodeBinary0a04(const QByteArray &val)
         qDebug() << "uBlox: M9 chip identified";
         uBloxID = "M91";
     }
-    else if (val.contains("M8") || val.contains("M7") || val.contains("00080000")) { // Ok then
+    else if (val.contains("M8") || val.contains("00080000")) { // Ok then
         qDebug() << "uBlox: M8 chip identified";
-        uBloxID = "M7M8";
+        uBloxID = "M8";
     }
     if (uBloxID.isEmpty()) {
         qDebug() << "Unknown GPS chip, trying to proceed anyway" << val;
@@ -481,8 +481,7 @@ void GnssDevice::setupUbloxDevice()
         gnss->write(QByteArray::fromHex("b56206010300f00100fb11")); // GLL OFF
         gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
         gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
-        gnss->write(QByteArray::fromHex("b562068a0900000100000d00411001f956")); // itfm on (interference/jamming
-        gnss->write(QByteArray::fromHex("b562068a09000001000010004120020d86")); // itfm active ant.
+        gnss->write(QByteArray::fromHex("b56206390800f3ac62ad231e000036ea")); // itfm on (interference/jamming
     }
     uBloxState = UBLOX::READY;
 }
