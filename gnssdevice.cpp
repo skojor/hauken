@@ -443,7 +443,7 @@ void GnssDevice::decodeBinary0a04(const QByteArray &val)
         uBloxID = "M7M8";
     }
     if (uBloxID.isEmpty()) {
-        qDebug() << "Unknown GPS chip, trying to proceed anyway";
+        qDebug() << "Unknown GPS chip, trying to proceed anyway" << val;
         uBloxState = UBLOX::READY; // skip programming, we have no idea what to do
     }
     else {
