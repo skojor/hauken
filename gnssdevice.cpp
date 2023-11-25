@@ -112,7 +112,7 @@ void GnssDevice::handleBuffer()
 
             if (binarySentence.size() == binarySize
                 && checkBinaryChecksum(binarySentence)
-                && binarySentence[2] == 0x0a && binarySentence[3] == 0x04) {
+                && (quint8)binarySentence[2] == 0x0a && (quint8)binarySentence[3] == 0x04) {
                 decodeBinary0a04(binarySentence);
                 gnssBuffer.remove(binaryIndex, binarySize);
             }
