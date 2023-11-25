@@ -259,7 +259,7 @@ void GnssDevice::decodeBinary(const QByteArray &val)
 {
     QByteArray MONHW(QByteArray::fromHex("0a09"));
     QByteArray MONRF(QByteArray::fromHex("0a38"));
-    //qDebug() << "BIN:" << (int)val.at(2) << (int)val.at(3);
+    qDebug() << "BIN:" << (int)val.at(2) << (int)val.at(3);
     if (checkBinaryChecksum(val)) {
         if (val.indexOf(MONHW) == 2) {
             int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
