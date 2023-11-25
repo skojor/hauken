@@ -63,9 +63,11 @@ MainWindow::MainWindow(QWidget *parent)
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
 
+#ifdef _WIN32
     player->setSource(QUrl::fromLocalFile(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
     player->setAudioOutput(audioOutput);
     audioOutput->setVolume(50);
+#endif
 
     createActions();
     createMenus();
