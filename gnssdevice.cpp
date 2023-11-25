@@ -259,7 +259,7 @@ void GnssDevice::decodeBinary(const QByteArray &val)
 {
     QByteArray MONHW(QByteArray::fromHex("0a09"));
     QByteArray MONRF(QByteArray::fromHex("0a38"));
-    //qDebug() << "BIN:" << (int)val.at(2) << (int)val.at(3);
+    qDebug() << "BIN:" << (int)val.at(2) << (int)val.at(3);
     if (checkBinaryChecksum(val)) {
         if (val.indexOf(MONHW) == 2) {
             int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
@@ -438,7 +438,7 @@ void GnssDevice::decodeBinary0a04(const QByteArray &val)
         qDebug() << "uBlox: M9 chip identified";
         uBloxID = "M91";
     }
-    else if (val.contains("M8") || val.contains("M7")) { // Ok, this will have to do for now
+    else if (val.contains("M8") || val.contains("M7") || val.contains("00080000")) { // Ok then
         qDebug() << "uBlox: M8 chip identified";
         uBloxID = "M7M8";
     }
@@ -478,18 +478,11 @@ void GnssDevice::setupUbloxDevice()
     }
 
     else if (uBloxID.contains("M8")) {
-        QTimer::singleShot(100, this, [this] {
-            gnss->write(QByteArray::fromHex("b56206010300f00100fb11")); // GLL OFF
-        });
-        QTimer::singleShot(120, this, [this] {
-            gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
-        });
-        QTimer::singleShot(140, this, [this] {
-            gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
-        });
-        /*QTimer::singleShot(500, this, [this] {
-            gnss->write(QByteArray::fromHex("b5620604040001000200116c")); // restart warm
-        });*/
+        gnss->write(QByteArray::fromHex("b56206010300f00100fb11")); // GLL OFF
+        gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
+        gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
+        gnss->write(QByteArray::fromHex("b562068a0900000100000d00411001f956")); // itfm on (interference/jamming
+        gnss->write(QByteArray::fromHex("b562068a09000001000010004120020d86")); // itfm active ant.
     }
     uBloxState = UBLOX::READY;
 }
