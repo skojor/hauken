@@ -141,7 +141,7 @@ INCLUDEPATH += \
     $$PWD/../libtorch/include
 
 unix: {
-  LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
+  LIBS += -lquazip -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
   #LIBS += -L$$PWD/../libtorch/lib  -ltorch_cpu -ltorch  -lc10
   QMAKE_CXXFLAGS += -std=c++17
   INCLUDEPATH += $$PWD/../qtmqtt/include/QtMqtt
@@ -162,7 +162,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.32.2.0
+VERSION = 2.32.17.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken
