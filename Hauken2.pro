@@ -138,8 +138,6 @@ RESOURCES += \
 
 INCLUDEPATH += \
     $$PWD/quazip \
-    #$$PWD/qtmqtt/include/QtMqtt \
-    #$$PWD/qtmqtt/include \
     $$PWD/../libtorch/include
 
 unix: {
@@ -153,7 +151,7 @@ win32 {
   LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lzlib1
   LIBS += -L$$PWD/../libtorch/lib
   LIBS +=  -ltorch -lc10 -ltorch_cpu
-  INCLUDEPATH += $$PWD/qtmqtt/include/QtMqtt
+  INCLUDEPATH += $$PWD/qtmqtt/include/QtMqtt $$PWD/qtmqtt/include
 }
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL

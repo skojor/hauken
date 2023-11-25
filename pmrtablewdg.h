@@ -24,6 +24,11 @@
 #include "config.h"
 #include "typedefs.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
+#define ENDL Qt::endl
+#else
+#define ENDL endl
+#endif
 
 class PmrTableWdg : public Config
 {
