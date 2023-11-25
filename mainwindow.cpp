@@ -44,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     mqttOptions = new MqttOptions(config);
 
     arduinoPtr = new Arduino(this);
+    aiPtr = new AI;
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
@@ -826,6 +827,8 @@ void MainWindow::setSignals()
     });
 
     connect(mqtt, &Mqtt::newData, positionReport, &PositionReport::updMqttData);
+
+    //connect(sdefRecorder, &SdefRecorder::aiBufferReady, aiPtr, &AI::receiveBuffer);
 }
 
 void MainWindow::instrStartFreqChanged()

@@ -72,7 +72,9 @@ void GnssDevice::handleBuffer()
     QByteArray nmeaSentence, binarySentence;
     int binaryIndex, nmeaIndex;
     int binarySize, nmeaSize;
+    int failsafe = 0;
     do {
+        failsafe++;
         nmeaSentence.clear();
         binarySentence.clear();
         binarySize = 0;
@@ -107,13 +109,7 @@ void GnssDevice::handleBuffer()
         }
         if (binaryIndex != -1) {
             if (gnssBuffer.size() >= binaryIndex + binarySize) binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
-            /*else {
-                qDebug() << "del all" << gnssBuffer.size() << binaryIndex << binarySize;
-                gnssBuffer.clear(); // failsafe, out of sync here
-            }*/
 
-           // qDebug() << "BIN:" << binarySentence.size() << binarySize
-            //         << gnssBuffer.size() << binaryIndex << (quint8)binarySentence[2] << (quint8)binarySentence[3];
             if (binarySentence.size() == binarySize
                 && checkBinaryChecksum(binarySentence)
                 && binarySentence[2] == 0x0a && binarySentence[3] == 0x04) {
@@ -124,12 +120,13 @@ void GnssDevice::handleBuffer()
                 decodeBinary(binarySentence);
                 gnssBuffer.remove(binaryIndex, binarySize);
             }
-
         }
 
-    } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0));
-    //if (gnssBuffer.size() > 2560)
-    gnssBuffer.clear();
+    } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0) && failsafe < 50);
+    if (failsafe >= 50) {
+        qDebug() << "Panic!" << gnssBuffer.size();
+        gnssBuffer.clear();
+    }
 }
 
 bool GnssDevice::decodeGsa(const QByteArray &val)
@@ -260,9 +257,9 @@ QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const Q
 
 void GnssDevice::decodeBinary(const QByteArray &val)
 {
-    QByteArray MONHW(QByteArray::fromHex("0x09"));
+    QByteArray MONHW(QByteArray::fromHex("0a09"));
     QByteArray MONRF(QByteArray::fromHex("0a38"));
-
+    //qDebug() << "BIN:" << (int)val.at(2) << (int)val.at(3);
     if (checkBinaryChecksum(val)) {
         if (val.indexOf(MONHW) == 2) {
             int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
@@ -270,6 +267,13 @@ void GnssDevice::decodeBinary(const QByteArray &val)
 
             int jamInd = (quint8)val.at(51);
             if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
+
+            uchar jamState = (val.at(28) & 0xc) >> 2;
+
+            if (jamState == 0) gnssData.jammingState = JAMMINGSTATE::UNKNOWN;
+            else if (jamState == 1) gnssData.jammingState = JAMMINGSTATE::NOJAMMING;
+            else if (jamState == 2) gnssData.jammingState = JAMMINGSTATE::WARNINGFIXOK;
+            else if (jamState == 3) gnssData.jammingState = JAMMINGSTATE::CRITICALNOFIX;
         }
 
         else if (val.indexOf(MONRF) == 2) {

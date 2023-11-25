@@ -9,5 +9,5 @@ qrc*
 .qmake.stash
 Makefile*
 object_script*
-torch
 Hauken_resource.rc
+torch/lib

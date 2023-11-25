@@ -120,31 +120,31 @@ void GnssAnalyzer::updDisplay()
         QString out;
         QTextStream ts(&out);
         if (gnssData.posValid)
-            ts << "<table style='color:black;width:100%'>";
+            ts << "<table width=100% style='color:black;width:100%'>";
         else
             ts << "<table style='color:grey'>";
         ts.setRealNumberNotation(QTextStream::FixedNotation);
         ts.setRealNumberPrecision(1);
-        ts << "<tr><td style='width:50%'>Pos. offset</td><td align=right style='width:50%'>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << "</td><td>m</td></tr>"
-           << "<tr><td>Alt. offset</td><td align=right>" << gnssData.altOffset << "</td><td>m</td></tr>"
-           << "<tr><td>Time offset</td><td align=right>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << "</td><td>ms</td></tr>";
+        ts << "<tr><td>Pos. offset</td><td align>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << " m</td></tr>"
+           << "<tr><td>Alt. offset</td><td align>" << gnssData.altOffset << " m</td></tr>"
+           << "<tr><td>Time offset</td><td>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << " ms</td></tr>";
         if (gnssData.id != 3)
-            ts << "<tr><td>C/No (offset)</td><td align=right>" << gnssData.cno << " (" << gnssData.cnoOffset << ")</td><td>dB</td></tr>";
+            ts << "<tr><td>C/No (offset)</td><td>" << gnssData.cno << " (" << gnssData.cnoOffset << ") dB</td></tr>";
         if (gnssData.agc >= 0)
-            ts << "<tr><td>AGC (offset)</td><td align=right>" << gnssData.agc << " (" << gnssData.agcOffset << ")</td><td>%</td></tr>";
+            ts << "<tr><td>AGC (offset)</td><td>" << gnssData.agc << " (" << gnssData.agcOffset << ") %</td></tr>";
         if (gnssData.jammingIndicator >= 0)
-            ts << "<tr><td>Jam.ind.</td><td align=right>" << gnssData.jammingIndicator  << "<td>%</td><td></td></tr>";
+            ts << "<tr><td>CW jammer ind.</td><td>" << gnssData.jammingIndicator  << " %</td></tr>";
         if (gnssData.jammingState != JAMMINGSTATE::UNKNOWN) {
-            ts << "<tr><td>Jamming state</td><td align=right>";
+            ts << "<tr><td>Jamming state</td><td>";
             if (gnssData.jammingState == JAMMINGSTATE::NOJAMMING) ts << "No jamming";
             else if (gnssData.jammingState == JAMMINGSTATE::WARNINGFIXOK) ts << "Warning, fix ok";
             else if (gnssData.jammingState == JAMMINGSTATE::CRITICALNOFIX) ts << "Critical, fix lost";
-            ts << "</td><td></td></tr>";
+            ts << "</td></tr>";
         }
-        ts << "<tr><td>Sats tracked</td><td align=right>" << gnssData.satsTracked;
+        ts << "<tr><td>Sats tracked</td><td>" << gnssData.satsTracked;
         if (gnssData.satsTracked == -1) ts << " (man.pos!)";
-        ts << "</td><td></td></tr>";
-        ts << "<tr><td>GNSS type</td><td align=right>" << gnssData.gnssType << "</td></tr>"
+        ts << "</td></tr>";
+        ts << "<tr><td>GNSS type</td><td>" << gnssData.gnssType << "</td></tr>"
            << "</font></table>";
         emit displayGnssData(out, gnssData.id, gnssData.posValid);
     }

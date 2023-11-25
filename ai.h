@@ -2,27 +2,37 @@
 #define AI_H
 
 #undef slots
-//#include "torch/script.h"
+#include "torch/script.h"
 #define slots Q_SLOTS
 
-#include <QObject>
-#include <iostream>
-#include <memory>
-#include <string>
+#include <QString>
+//#include <iostream>
+//#include <memory>
+//#include <string>
 #include <vector>
 #include <QDebug>
+#include <QStringList>
+#include <QList>
+#include <QElapsedTimer>
+#include <QTimer>
+#include <QObject>
 
 
-
-using namespace std;
-
-
-
-class AI
+class AI : public QObject
 {
+Q_OBJECT
+
+signals:
+    void aiResult(QString);
+
 public:
     AI();
-    QString gnssAI(float data[90][1200]);
+    void receiveBuffer(QVector<QVector<float >> buffer);
+
+    QString gnssAI(float traceBuffer[90][1200]);
+
+private:
+    QStringList classes;
 };
 
 #endif // AI_H

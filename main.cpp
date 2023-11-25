@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
 
     qRegisterMetaType<QVector<qint16> >("QVector<qint16>");
     qRegisterMetaType<QList<QVector<qint16>> >("QList<QVector<qint16>>");
+    qRegisterMetaType<QList<QList<float>> >("QList<QList<float>>");
     qRegisterMetaType<QList<QDateTime> >("QList<QDateTime>");
     qRegisterMetaType<NOTIFY::TYPE>("NOTIFY::TYPE");
     qRegisterMetaType<QVector<double> >("QVector<double>");

@@ -1,6 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#undef slots
+#include "ai.h"
+#define slots Q_SLOTS
+
 #include "config.h"
 #include <QMainWindow>
 #include <QApplication>
@@ -236,6 +240,7 @@ private:
     QThread *cameraThread;
 
     Arduino *arduinoPtr;
+    AI *aiPtr;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();

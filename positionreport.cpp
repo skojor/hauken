@@ -48,7 +48,7 @@ void PositionReport::generateReport()
 {
     reportArgs.clear();
     reportArgs << "-H" << "Content-Type:application/x-www-form-urlencoded"
-               << "-s" << "-w" << "%{http_code}";
+               << "-s" << "-w" << "%{http_code}" << "-k";
     reportArgs << "--data" << "id=" + (id.isEmpty() ? getSdefStationInitals() : id)
                << "--data" << "timestamp=" + QString::number(QDateTime::currentSecsSinceEpoch()); //QString::number(gnssData.timestamp.toMSecsSinceEpoch() / 1000);
     if (gnssData.posValid) {
