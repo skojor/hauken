@@ -135,31 +135,22 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RESOURCES += \
     icons.qrc
-#
+
 INCLUDEPATH += \
     $$PWD/quazip \
     $$PWD/qtmqtt/include/QtMqtt \
     $$PWD/qtmqtt/include \
     $$PWD/../libtorch/include \
-#    $$PWD/../csrc/api/include
 
 unix: {
   LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
+  LIBS += -L$$PWD/../libtorch/lib  -ltorch_cpu -ltorch  -lc10
 }
 
 win32 {
   LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lzlib1
-}
-
-win32 {
-LIBS += -L$$PWD/../libtorch/lib
-LIBS +=  -ltorch -lc10 -ltorch_cpu
-}
-unix {
-LIBS += -L$$PWD/../libtorch/lib  -ltorch_cpu -ltorch  -lc10   \ # -ltorch_cuda  -lc10_cuda -lcaffe2_observers
-#-lcaffe2_nvrtc -lcaffe2_detectron_ops_gpu  \
-#-lnvrtc-builtins -lprocess_group_agent -lshm  \
-#-ltensorpipe_agent -ltorch -ltorch_global_deps #-ltorch_cuda_cpp -ltorch_cuda_cu
+  LIBS += -L$$PWD/../libtorch/lib
+  LIBS +=  -ltorch -lc10 -ltorch_cpu
 }
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
