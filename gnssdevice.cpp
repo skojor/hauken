@@ -92,7 +92,7 @@ void GnssDevice::handleBuffer()
 
             nmeaSize = nmeaSentence.size();
             nmeaSentence = nmeaSentence.simplified();
-            qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
+            //qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
             if (checkChecksum(nmeaSentence)) {
                 if (nmeaSentence.contains("GGA"))
                     decodeGga(nmeaSentence);
