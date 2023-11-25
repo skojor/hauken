@@ -237,7 +237,7 @@ bool GnssDevice::decodeGsv(const QByteArray &val)
 
 bool GnssDevice::decodeGns(const QByteArray &val)
 {
-
+    qDebug() << val;
     gnssData.gnsValid = true;
     QList<QByteArray> split = val.split(',');
     if (split.size() > 7) {
