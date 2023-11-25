@@ -281,7 +281,7 @@ void PmrTableWdg::saveTable() // QStringList({"Active", "Frequency", "IF BW", "T
             ts << row.active << ";" << row.centerFrequency << ";" << row.ifBandwidth << ";" \
                << row.comment << ";" << row.demod << ";" << row.squelchLevel << ";" \
                << row.squelchState << ";" << row.totalDurationInMilliseconds << ";" \
-               << row.maxLevel << ";" << row.casperComment << ";" << row.type << Qt::endl;
+               << row.maxLevel << ";" << row.casperComment << ";" << row.type << ENDL;
         }
     }
 
