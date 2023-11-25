@@ -4,7 +4,7 @@ greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
 CONFIG += c++17
-QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0 -std=c++17
+QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0
 
 #QMAKE_CXXFLAGS += -pthread -mbig-obj -fto -allow-multiple-definition -std=c++17
 
@@ -138,19 +138,22 @@ RESOURCES += \
 
 INCLUDEPATH += \
     $$PWD/quazip \
-    $$PWD/qtmqtt/include/QtMqtt \
-    $$PWD/qtmqtt/include \
-    $$PWD/../libtorch/include \
+    #$$PWD/qtmqtt/include/QtMqtt \
+    #$$PWD/qtmqtt/include \
+    $$PWD/../libtorch/include
 
 unix: {
   LIBS += -lquazip5 -lavcodec -lavformat -lswscale -lavutil -L$$PWD/qtmqtt -lQt5Mqtt
   LIBS += -L$$PWD/../libtorch/lib  -ltorch_cpu -ltorch  -lc10
+  QMAKE_CXXFLAGS += -std=c++17
+  INCLUDEPATH += $$PWD/../qtmqtt/include/QtMqtt
 }
 
 win32 {
   LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lzlib1
   LIBS += -L$$PWD/../libtorch/lib
   LIBS +=  -ltorch -lc10 -ltorch_cpu
+  INCLUDEPATH += $$PWD/qtmqtt/include/QtMqtt
 }
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL

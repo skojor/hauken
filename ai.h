@@ -2,7 +2,7 @@
 #define AI_H
 
 #undef slots
-#include "torch/script.h"
+//#include "torch/script.h"
 #define slots Q_SLOTS
 
 #include <QString>

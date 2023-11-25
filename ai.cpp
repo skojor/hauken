@@ -15,7 +15,7 @@ AI::AI()
 QString AI::gnssAI(float traceBuffer[90][1200])
 {
 
-    qDebug() << "Running AI on GNSS data";
+    /*qDebug() << "Running AI on GNSS data";
 
     // Convert incomming data to a tensor
     at::IntArrayRef sizes = {1, 1, 90, 1200};
@@ -39,7 +39,8 @@ QString AI::gnssAI(float traceBuffer[90][1200])
     at::Tensor output = model.forward(input).toTensor();
     int prediction = output.argmax(1).item().toInt();
 
-    return classes[prediction];
+    return classes[prediction];*/
+    return "none";
 }
 
 void AI::receiveBuffer(QVector<QVector<float >> buffer)
