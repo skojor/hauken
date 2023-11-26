@@ -793,7 +793,7 @@ void MeasurementDevice::updGnssDisplay()
     ts << "<tr><td>Altitude</td><td align=right>" << devicePtr->altitude / 100 << "</td></tr>"
        << "<tr><td>DOP</td><td align=right>" << devicePtr->dop << "</td></tr>"
        << "</font></table>";
-    if (connected && config->getSdefAddPosition() && !config->getGnssUseInstrumentGnss()) emit displayGnssData(out, 3, devicePtr->positionValid);
+    if (connected && config->getSdefAddPosition() && !config->getGnssUseInstrumentGnss());// emit displayGnssData(out, 3, devicePtr->positionValid); // WHY?
     else if (connected && config->getGnssUseInstrumentGnss()) {
         GnssData data;
         data.id = 3; // 3 = instrumentGnss

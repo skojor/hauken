@@ -124,7 +124,7 @@ void GnssDevice::handleBuffer()
 
     } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0) && failsafe < 50);
     if (failsafe >= 50) {
-        qDebug() << "Panic!" << gnssBuffer.size();
+        //qDebug() << "Panic!" << gnssBuffer.size();
         gnssBuffer.clear();
     }
 }
@@ -423,8 +423,6 @@ void GnssDevice::handleTcpStateChange(QAbstractSocket::SocketState state)
 void GnssDevice::askUbloxVersion()
 {
     qDebug() << "asking for version info from USB device";
-    //gnss->write(QByteArray::fromHex("b56206040400000000000e64")); // restart hot
-
     if (gnss->write(QByteArray::fromHex("b5620a0400000e34")) == -1) { // Ask version!
         qDebug() << "GNSS write failed";
     }
@@ -455,25 +453,14 @@ void GnssDevice::setupUbloxDevice()
 {
     if (uBloxID.contains("M9")) {
         qDebug() << "uBlox M9 configuration called";
-        //QTimer::singleShot(120, this, [this] {
         gnss->write(QByteArray::fromHex("b56206090c000000000000000000ffffffff1785")); // load defaults
-        //});
-        //QTimer::singleShot(140, this, [this] {
-        //gnss->write(QByteArray::fromHex("b562068b0800000000002091035ca926")); // ubx-mon-rf ask!
-
         gnss->write(QByteArray::fromHex("b562068a0900000100005c03912001abfd")); // ubx-mon-rf on
-        //gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
-        //});
-        //QTimer::singleShot(160, this, [this] {
         gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
         gnss->write(QByteArray::fromHex("b562068a090000010000cc009120001720")); // gll off
         gnss->write(QByteArray::fromHex("b562068a090000010000b80091200104bd")); // gns on
         gnss->write(QByteArray::fromHex("b562068a0900000100000d00411001f956")); // itfm on (interference/jamming
         gnss->write(QByteArray::fromHex("b562068a09000001000010004120020d86")); // itfm active ant.
-
-        //QTimer::singleShot(180, this, [this] {
         gnss->write(QByteArray::fromHex("b562068a0900000100008e03912001ddf7")); // mon-span on (spectrum)
-        //});
     }
 
     else if (uBloxID.contains("M8")) {
