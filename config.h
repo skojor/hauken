@@ -115,7 +115,7 @@ public slots:
     void setSdefSaveToFile(bool b) { settings->setValue("sdef/SaveToFile", b); emit settingsUpdated();}
     bool getSdefUploadFile() { return settings->value("sdef/UploadFile", false).toBool();}
     void setSdefUploadFile(bool b) { settings->setValue("sdef/UploadFile", b); emit settingsUpdated();}
-    QString getSdefUsername() { return settings->value("sdef/Username", "").toString();}
+    QString getSdefUsername() { return settings->value("sdef/Username", "").toString().trimmed();}
     void setSdefUsername(QString s) { settings->setValue("sdef/Username", s);emit settingsUpdated(); }
     QString getSdefPassword() { return simpleEncr(settings->value("sdef/Password", "").toByteArray());}
     void setSdefPassword(QString s) { settings->setValue("sdef/Password", simpleEncr(s.toLocal8Bit()));emit settingsUpdated(); }
@@ -127,15 +127,15 @@ public slots:
     void setSdefRecordTime(int val) { settings->setValue("sdef/RecordTime", val);emit settingsUpdated(); }
     int getSdefMaxRecordTime() { return settings->value("sdef/MaxRecordTime", 60).toUInt();}
     void setSdefMaxRecordTime(int val) { settings->setValue("sdef/MaxRecordTime", val);emit settingsUpdated(); }
-    QString getSdefStationInitals() { return settings->value("sdef/StationInitials", "").toString();}
+    QString getSdefStationInitals() { return settings->value("sdef/StationInitials", "").toString().trimmed();}
     void setSdefStationInitials(QString s) { settings->setValue("sdef/StationInitials", s);emit settingsUpdated(); }
     int getSdefPreRecordTime() { return settings->value("sdef/PreRecordTime", 30).toUInt();}
     void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val);emit settingsUpdated(); }
     bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
     void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b);emit settingsUpdated(); }
-    QString getSdefServer() { return settings->value("sdef/Server").toString();}
+    QString getSdefServer() { return settings->value("sdef/Server").toString().trimmed();}
     void setSdefServer(QString s) { settings->setValue("sdef/Server", s); emit settingsUpdated();}
-    QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString();}
+    QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString().trimmed();}
     void setSdefAuthAddress(QString s) { settings->setValue("sdef/AuthAddress", s); emit settingsUpdated();}
 
     // GNSS options
@@ -171,11 +171,11 @@ public slots:
     void setGnssInstrumentGnssTriggerRecording(bool b) { settings->setValue("gnss/InstrumentGnssTriggerRecording", b);emit settingsUpdated(); }
 
     // Email/notification options
-    QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString();}
+    QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}
     void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s.simplified()); emit settingsUpdated();}
-    QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString();}
+    QString getEmailSmtpPort() { return settings->value("email/SmtpPort", "25").toString().trimmed();}
     void setEmailSmtpPort(QString s) { settings->setValue("email/SmtpPort", s);emit settingsUpdated(); }
-    QString getEmailRecipients() { return settings->value("email/Recipients").toString();}
+    QString getEmailRecipients() { return settings->value("email/Recipients").toString().trimmed();}
     void setEmailRecipients(QString s) { settings->setValue("email/Recipients", s);emit settingsUpdated(); }
     bool getEmailNotifyMeasurementDeviceHighLevel() { return settings->value("email/NotifyMeasurementDeviceHighLevel", false).toBool();}
     void setEmailNotifyMeasurementDeviceHighLevel(bool b) { settings->setValue("email/NotifyMeasurementDeviceHighLevel", b);emit settingsUpdated(); }
@@ -187,9 +187,9 @@ public slots:
     void setEmailMinTimeBetweenEmails(int s) { settings->setValue("email/MinTimeBetweenEmails", s);emit settingsUpdated(); }
     int getNotifyTruncateTime() { return settings->value("notify/TruncateTime", 30).toInt();}
     void setNotifyTruncateTime(int s) { settings->setValue("notify/TruncateTime", s);emit settingsUpdated(); }
-    QString getEmailFromAddress() { return settings->value("email/FromAddress").toString();}
+    QString getEmailFromAddress() { return settings->value("email/FromAddress").toString().trimmed();}
     void setEmailFromAddress(QString s) { settings->setValue("email/FromAddress", s.simplified());emit settingsUpdated(); }
-    QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString();}
+    QString getEmailSmtpUser() { return settings->value("email/SmtpUser").toString().trimmed();}
     void setEmailSmtpUser(QString s) { settings->setValue("email/SmtpUser", s.simplified());emit settingsUpdated(); }
     QString getEmailSmtpPassword() { return simpleEncr(settings->value("email/smtpPassword").toByteArray());}
     void setEmailSmtpPassword(QString s) { settings->setValue("email/smtpPassword", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
@@ -197,11 +197,11 @@ public slots:
     void setEmailAddImages(bool b) { settings->setValue("email/AddImages", b);emit settingsUpdated(); }
     int getEmailDelayBeforeAddingImages() { return settings->value("email/DelayBeforeAddingImages", 10).toInt();}
     void setEmailDelayBeforeAddingImages(int val) { settings->setValue("email/DelayBeforeAddingImages", val);emit settingsUpdated(); }
-    QString getEmailGraphApplicationId() { return settings->value("email/graphApplicationId", "").toString(); }
+    QString getEmailGraphApplicationId() { return settings->value("email/graphApplicationId", "").toString().trimmed(); }
     void setEmailGraphApplicationId(QString s) { settings->setValue("email/graphApplicationId", s.simplified());emit settingsUpdated(); }
-    QString getEmailGraphTenantId() { return settings->value("email/graphTenantId", "").toString(); }
+    QString getEmailGraphTenantId() { return settings->value("email/graphTenantId", "").toString().trimmed(); }
     void setEmailGraphTenantId(QString s) { settings->setValue("email/graphTenantId", s.simplified());emit settingsUpdated(); }
-    QString getEmailGraphSecret() { return simpleEncr(settings->value("email/graphSecret", "").toByteArray());}
+    QString getEmailGraphSecret() { return simpleEncr(settings->value("email/graphSecret", "").toByteArray()).trimmed();}
     void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
     bool getSoundNotification() { return settings->value("email/soundNotification", false).toBool();}
     void setSoundNotification(bool b) { settings->setValue("email/soundNotification", b); emit settingsUpdated();}
@@ -286,7 +286,7 @@ public slots:
     void setPosReportActivated(bool b) { settings->setValue("posReport/activated", b); emit settingsUpdated();}
     QString getPosReportSource() { return settings->value("posReport/source", "InstrumentGNSS").toString();}
     void setPosReportSource(QString s) { settings->setValue("posReport/source", s);emit settingsUpdated(); }
-    QString getPosReportUrl() { return settings->value("posReport/url", "").toString();}
+    QString getPosReportUrl() { return settings->value("posReport/url", "").toString().trimmed();}
     void setPosReportUrl(QString s) { settings->setValue("posReport/url", s);emit settingsUpdated(); }
     int getPosReportSendInterval() { return settings->value("posReport/sendInterval", 60).toInt();}
     void setPosReportSendInterval(int i) { settings->setValue("posReport/sendInterval", i);emit settingsUpdated(); }
@@ -298,7 +298,7 @@ public slots:
     void setPosreportAddGnssStats(bool b) { settings->setValue("posReport/addGnssStats", b);emit settingsUpdated(); }
     bool getPosReportAddConnStats() { return settings->value("posReport/addConnStats", true).toBool();}
     void setPosreportAddConnStats(bool b) { settings->setValue("posReport/addConnStats", b);emit settingsUpdated(); }
-    QString getPosReportId() { return settings->value("posReport/id", "").toString();}
+    QString getPosReportId() { return settings->value("posReport/id", "").toString().trimmed();}
     void setPosReportId(QString s) { settings->setValue("posReport/id", s);emit settingsUpdated(); }
     bool getPosReportAddSensorData() { return settings->value("posReport/addSensorData", true).toBool();}
     void setPosreportAddSensorData(bool b) { settings->setValue("posReport/addSensorData", b);emit settingsUpdated(); }
@@ -314,9 +314,9 @@ public slots:
     // MQTT options
     bool getMqttActivate() { return settings->value("mqtt/activated", false).toBool();}
     void setMqttActivate(bool b) { settings->setValue("mqtt/activated", b); emit settingsUpdated();}
-    QString getMqttServer() { return settings->value("mqtt/server", "").toString();}
+    QString getMqttServer() { return settings->value("mqtt/server", "").toString().trimmed();}
     void setMqttServer(QString s) { settings->setValue("mqtt/server", s);emit settingsUpdated(); }
-    QString getMqttUsername() { return settings->value("mqtt/username", "").toString();}
+    QString getMqttUsername() { return settings->value("mqtt/username", "").toString().trimmed();}
     void setMqttUsername(QString s) { settings->setValue("mqtt/username", s);emit settingsUpdated(); }
     QString getMqttPassword() { return simpleEncr(settings->value("mqtt/password", "").toByteArray());}
     void setMqttPassword(QString s) { settings->setValue("mqtt/password", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
@@ -327,10 +327,10 @@ public slots:
     QStringList getMqttSubTopics() { return settings->value("mqtt/subTopics").toStringList();}
     void setMqttSubTopics(QStringList l) { settings->setValue("mqtt/subTopics", l);emit settingsUpdated(); }
 
-    QString getMqttWebswitchAddress() { return settings->value("mqtt/webswitchAddress", "").toString();}
+    QString getMqttWebswitchAddress() { return settings->value("mqtt/webswitchAddress", "").toString().trimmed();}
     void setMqttWebswitchAddress(QString s) { settings->setValue("mqtt/webswitchAddress", s);emit settingsUpdated(); }
 
-    QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString();}
+    QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString().trimmed();}
     void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);emit settingsUpdated(); }
 
 private slots:

@@ -42,7 +42,7 @@ void SdefRecorder::start()
 
     connect(aiTimer, &QTimer::timeout, this, [this] {
         aiArrayCtr++;
-        qDebug() << aiArrayCtr;
+        //qDebug() << aiArrayCtr;
     });
 }
 
@@ -169,7 +169,8 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         else if (aiBuffer.size() >= 90 && aiTimer->isActive()) {
             aiTimer->stop();
             emit aiBufferReady(aiBuffer);
-            qDebug() << "ai buffer full, process";
+            //qDebug() << "ai buffer full, process";
+            aiArrayCtr = 0;
             // do sth
         }
     }
@@ -190,7 +191,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
         byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit() + ',';
 
         if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed, counters updated in if below here
-            qDebug() << "Backlog -> aiBuffer at" << datetime.at(i).toString() << data.at(i).size();
+            //qDebug() << "Backlog -> aiBuffer at" << datetime.at(i).toString() << data.at(i).size();
             QVector<float> tmpTrace;
             for (int arrayIterator = 0; arrayIterator < 1200; arrayIterator++)
                 tmpTrace.append(data.at(i)[arrayIterator * data.size() / 1200]);

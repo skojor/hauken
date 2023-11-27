@@ -1223,7 +1223,9 @@ void MainWindow::traceIncidentAlarm(bool state) {
             ledTraceStatus->setState(false);
             labelTraceLedText->setText("Detector triggered");
             qApp->alert(this->parentWidget());
-            if (config->getSoundNotification()) player->play();
+            if (config->getSoundNotification()) {
+                player->play();
+            }
             traceAlarmRaised = true;
         }
         else {

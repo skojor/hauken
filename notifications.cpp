@@ -181,7 +181,11 @@ void Notifications::sendMail()
                                                                                                   QString::number(longitude, 'f', 5) + ",10z\">" +
                                                                            QString::number(latitude, 'f', 5) + " " +
                                                                            QString::number(longitude, 'f', 5) +
-                                                                           tr("</a></td></tr>"):"") +
+                                                                                                  tr("</a></td><td>") +
+                                                                                                  "<a href=\"https://nais.kystverket.no/point/" +
+                                                                                                  QString::number(longitude, 'f', 5) + "_" +
+                                                                                                  QString::number(latitude, 'f', 5)  +
+                                                                                                  tr("\">Link til Kystverket</td></tr>"):"") +
                               "</table><hr><img src='cid:image1' />   ");
             //qDebug() << "mail debug:" << mimeHtml->data();
             message.addPart(mimeHtml);

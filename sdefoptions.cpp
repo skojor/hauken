@@ -85,10 +85,10 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefSaveToFile(cbOpt1->isChecked());
     config->setSdefUploadFile(cbOpt2->isChecked());
     config->setSdefGpsSource(comboOpt1->currentText());
-    config->setSdefUsername(leOpt1->text());
+    config->setSdefUsername(leOpt1->text().trimmed());
     config->setSdefPassword(leOpt2->text());
-    config->setSdefServer(leOpt3->text());
-    config->setSdefAuthAddress(leOpt4->text());
+    config->setSdefServer(leOpt3->text().trimmed());
+    config->setSdefAuthAddress(leOpt4->text().trimmed());
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefRecordTime(sbOpt1->value());

@@ -61,7 +61,7 @@ private:
 
     bool stateInstrumentGnss = true; // goes false if instrumentGnss is used and stream disappears
 
-    const int jammingIndicatorTriggerValue = 50;
+    const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
 };
 
 #endif // GNSSANALYZER_H
