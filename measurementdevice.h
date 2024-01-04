@@ -51,7 +51,7 @@ signals:
     void reconnected();
     void newAntennaNames();
     void modeUsed(QString);
-    void freqRangeUsed(unsigned long, unsigned lon);
+    void freqRangeUsed(unsigned long, unsigned long);
     void resUsed(int);
 
 public slots:
@@ -74,7 +74,7 @@ public slots:
     void startDevice();
     void updSettings();
 
-    bool isConnected() { return connected; }
+    bool isConnected();
     void instrConnect();
     void instrDisconnect();
     void runAfterConnected();

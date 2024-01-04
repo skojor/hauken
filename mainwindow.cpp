@@ -45,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     arduinoPtr = new Arduino(this);
     aiPtr = new AI;
+    read1809Data = new Read1809Data;
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);
@@ -115,6 +116,18 @@ void MainWindow::createActions()
     saveAct->setShortcuts(QKeySequence::Save);
     saveAct->setStatusTip(tr("Save the current configuration to disk"));
     connect(saveAct, &QAction::triggered, this, &MainWindow::save);
+
+    open1809Act = new QAction(tr("Open &1809 file..."), this);
+    open1809Act->setShortcuts(QKeySequence::Open);
+    open1809Act->setStatusTip(tr("Open a previously recorded 1809 file for playback"));
+    connect(open1809Act, &QAction::triggered, this, [this] {
+        if (!measurementDevice->isConnected())
+            read1809Data->readFile(QFileDialog::getOpenFileName(this, "Open 1809 file", config->getLogFolder(), "1809 files (*.cef *.zip)"));
+        else {
+            qDebug() << "Trying to read an 1809 file while connected, bad idea";
+            QMessageBox::warning(this, "Hauken", "Disconnect the device before trying to read an 1809 file");
+        }
+    });
 
     optStation = new QAction(tr("&General setup"), this);
     optStation->setStatusTip(tr("Basic station setup (position, folders, etc.)"));
@@ -191,6 +204,8 @@ void MainWindow::createMenus()
     fileMenu->addAction(newAct);
     fileMenu->addAction(openAct);
     fileMenu->addAction(saveAct);
+    fileMenu->addSeparator();
+    fileMenu->addAction(open1809Act);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 
@@ -650,7 +665,7 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this] (){
-        if (measurementDevice->isConnected()) {
+        if (measurementDevice->isConnected() || read1809Data->isRunning()) {
             ledTraceStatus->setState(false);
             labelTraceLedText->setText("Calc. avg. noise floor");
         }
@@ -826,7 +841,25 @@ void MainWindow::setSignals()
 
     connect(mqtt, &Mqtt::newData, positionReport, &PositionReport::updMqttData);
 
-    //connect(sdefRecorder, &SdefRecorder::aiBufferReady, aiPtr, &AI::receiveBuffer);
+    connect(sdefRecorder, &SdefRecorder::aiBufferReady, aiPtr, &AI::receiveBuffer);
+
+    connect(read1809Data, &Read1809Data::newTrace, traceBuffer, &TraceBuffer::addTrace);
+    connect(read1809Data, &Read1809Data::playbackRunning, this, [this] (bool b){
+        if (b) {
+            customPlotController->updDeviceConnected(true);
+            traceBuffer->restartCalcAvgLevel();
+        }
+        else {
+            customPlotController->updDeviceConnected(false);
+            traceBuffer->deviceDisconnected();
+        }
+    });
+
+    connect(read1809Data, &Read1809Data::playbackRunning, waterfall, &Waterfall::stopPlot); // own thread, needs own signal
+    //connect(read1809Data, &Read1809Data::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
+    connect(read1809Data, &Read1809Data::playbackRunning, sdefRecorder, &SdefRecorder::deviceDisconnected);
+    connect(read1809Data, &Read1809Data::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(read1809Data, &Read1809Data::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
 }
 
 void MainWindow::instrStartFreqChanged()

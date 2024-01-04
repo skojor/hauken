@@ -58,6 +58,7 @@
 #include "mqtt.h"
 #include "mqttoptions.h"
 #include "led/ledindicator.h"
+#include "read1809data.h"
 
 class MainWindow : public QMainWindow
 {
@@ -185,6 +186,7 @@ private:
     QAction *newAct;
     QAction *openAct;
     QAction *saveAct;
+    QAction *open1809Act;
 
     QAction *optStation;
     QAction *optGnss;
@@ -241,6 +243,7 @@ private:
 
     Arduino *arduinoPtr;
     AI *aiPtr;
+    Read1809Data *read1809Data;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();

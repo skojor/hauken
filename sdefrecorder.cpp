@@ -170,6 +170,7 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
             aiTimer->stop();
             emit aiBufferReady(aiBuffer);
             //qDebug() << "ai buffer full, process";
+            aiBuffer.clear();
             aiArrayCtr = 0;
             // do sth
         }
@@ -225,7 +226,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
         else qDebug() << "This backlog line failed:" << byteArray;
     }
     historicDataSaved = true;
-    aiTimer->start(1000); // continue updating aiBuffer until full
+    aiTimer->start(500); // continue updating aiBuffer until full
 }
 
 QByteArray SdefRecorder::createHeader()

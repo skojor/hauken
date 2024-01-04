@@ -2,7 +2,7 @@
 #define AI_H
 
 #undef slots
-//#include "torch/script.h"
+#include "torch/script.h"
 #define slots Q_SLOTS
 
 #include <QString>
@@ -17,7 +17,6 @@
 #include <QTimer>
 #include <QObject>
 
-
 class AI : public QObject
 {
 Q_OBJECT
@@ -28,11 +27,12 @@ signals:
 public:
     AI();
     void receiveBuffer(QVector<QVector<float >> buffer);
-
     QString gnssAI(float traceBuffer[90][1200]);
 
 private:
     QStringList classes;
+    torch::jit::script::Module model;
+    at::IntArrayRef sizes;
 };
 
 #endif // AI_H

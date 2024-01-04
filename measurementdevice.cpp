@@ -964,6 +964,13 @@ void MeasurementDevice::checkFfmSpan(const QByteArray buffer)
         emit freqRangeUsed(inUseStart, inUseStop);
         instrumentState = InstrumentState::CONNECTED;
     }
-
 }
 
+bool MeasurementDevice::isConnected()
+{
+    //return connected;
+    if (instrumentState == InstrumentState::DISCONNECTED)
+        return false;
+    else
+        return true;
+}

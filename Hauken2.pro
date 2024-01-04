@@ -58,6 +58,7 @@ SOURCES += \
     positionreport.cpp \
     positionreportoptions.cpp \
     qcustomplot.cpp \
+    read1809data.cpp \
     receiveroptions.cpp \
     sdefoptions.cpp \
     sdefrecorder.cpp \
@@ -118,6 +119,7 @@ HEADERS += \
     positionreport.h \
     positionreportoptions.h \
     qcustomplot.h \
+    read1809data.h \
     receiveroptions.h \
     sdefoptions.h \
     sdefrecorder.h \
@@ -137,7 +139,7 @@ RESOURCES += \
     icons.qrc
 
 INCLUDEPATH += \
-    $$PWD/quazip \
+    $$PWD/../quazip/quazip \
     $$PWD/../libtorch/include
 
 unix: {
@@ -148,12 +150,18 @@ unix: {
 }
 
 win32 {
-  LIBS += -lOpenGL32 -L$$PWD/qtmqtt -lqt6mqtt -lquazip -L$$PWD/quazip -lzlib1
-  LIBS += -L$$PWD/../libtorch/lib
-  LIBS +=  -ltorch -lc10 -ltorch_cpu
-  INCLUDEPATH += $$PWD/qtmqtt/include/QtMqtt $$PWD/qtmqtt/include
-  QMAKE_CXXFLAGS += -pthread -mbig-obj -fto -allow-multiple-definition
+  LIBS +=   \#-L$$PWD/../quazip/build/win64 \
+            -lOpenGL32 -L$$PWD/../qtmqtt -lqt6mqtt \
+            -L$$PWD/../quazip-1.4 -lquazip1-qt6  \
+            -L$$PWD/../libtorch/lib \
+            -ltorch -lc10 -ltorch_cpu
 
+  INCLUDEPATH +=    $$PWD/../qtmqtt/include/QtMqtt \
+                    $$PWD/../qtmqtt/include \
+                    $$PWD/../quazip-1.4 $$PWD/../quazip-1.4/quazip \
+                    $$PWD/../zlib-1.3
+
+  QMAKE_CXXFLAGS += -pthread -mbig-obj -fto -allow-multiple-definition
 }
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
@@ -164,7 +172,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.32.31.0
+VERSION = 2.33.1.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken
