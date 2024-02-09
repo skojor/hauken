@@ -10,9 +10,23 @@
 #include <QTimer>
 #include <QDebug>
 #include <QBuffer>
+#include <QWidget>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QCheckBox>
+#include <QLabel>
+#include <QDialogButtonBox>
+#include <QPushButton>
+#include <QSlider>
+#include <QList>
+#include <QVector>
 #include "config.h"
 #include "typedefs.h"
-#include "JlCompress.h"
+#include <JlCompress.h>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 class Read1809Data : public Config
 {
@@ -23,6 +37,9 @@ public:
     void readFile(QString);
     void openFile();
     bool isRunning() { if (file.isOpen()) return true; else return false; }
+
+public slots:
+    void close() { wdg->close();}
 
 signals:
     void playbackRunning(bool);
@@ -55,14 +72,35 @@ private:
     unsigned long datapoints = 0;
     float scanTime = 0;
     float maxHoldTime = 0;
+    QString note;
     bool isHeaderRead = false;
     QTime traceTime;
     QString tempfile;
     QBuffer *buffer = new QBuffer;
     QByteArray bufferArray;
+    int playbackStartPosition = 0;
+
+    QWidget *wdg = new QWidget;
+    QPushButton *btnStartPause = new QPushButton;
+    QPushButton *btnStop = new QPushButton;
+    QPushButton *btnRewind = new QPushButton;
+    QPushButton *btnClose = new QPushButton;
+    QGridLayout *layout = new QGridLayout;
+    QSlider *slider = new QSlider(Qt::Horizontal);
+
+    int filenumber;
 
 private slots:
     void readDataline();
+    void closeFile();
+    void play();
+    void pause();
+    void stop();
+    void rewind();
+    void updPlaybackPosition();
+    void seek(int pos);
+    void readAndConvert(QString folder, QString filename);
+    void findMinAvgMax(const std::vector<std::vector<qint16> > &buffer, qint16 *min, qint16 *avg, qint16 *max);
 };
 
 #endif // READ1809DATA_H

@@ -17,6 +17,8 @@
  *
  */
 
+#define overlayTransparency 25
+
 class CustomPlotController : public QObject
 {
     Q_OBJECT
@@ -49,6 +51,10 @@ private slots:
     void trigIncludeAll();
     void trigExcludeAll();
     void flashRoutine();
+    void toggleOverlay();
+    void addOverlay(const int graph, const double startfreq, const double stopfreq);
+    void updTextLabelPositions();
+    void updOverlay();
 
 signals:
     void reqTrigline();
@@ -74,6 +80,14 @@ private:
     bool deviceConnected = false;
     int plotResolution;
     QPixmap *tracePlot = new QPixmap;
+    bool markGnss = false;
+    int plotIterator = 0;
+    QStringList gnssBands;              // Hardcoded for now
+    QList<double> gnssBandfrequencies;
+    QList<QColor> gnssBandColors;
+    QList<QCPItemText *> gnssTextLabels;
+    QList<bool> gnssBandsSelectors;
+    QList<QCPItemStraightLine *> gnssCenterLine;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H

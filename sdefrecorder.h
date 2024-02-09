@@ -63,7 +63,6 @@ signals:
     void reqPositionFrom(POSITIONSOURCE);
     void recordingEnabled();
     void recordingDisabled();
-    void aiBufferReady(QVector<QVector <float >> buffer);
 
 private:
     //QSharedPointer<Config> config;
@@ -91,10 +90,6 @@ private:
     bool stateCurlAwaitingLogin = false;
     bool stateCurlAwaitingFileUpload = false;
     QStringList filesAwaitingUpload;
-    //float aiBuffer[90][1200]; // size per wish of the constructor :)
-    QVector<QVector<float >> aiBuffer;
-    QTimer *aiTimer;
-    int aiArrayCtr;
 };
 
 #endif // SDEFRECORDER_H

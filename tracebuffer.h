@@ -32,6 +32,7 @@ public slots:
     void addTrace(const QVector<qint16> &data);
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
+    void getAiData(int secs = 0);
     void restartCalcAvgLevel();
     void sendDispTrigline()
     { if (normalizeSpectrum) emit newDispTriglevel(averageDispLevelNormalized);
@@ -53,6 +54,7 @@ signals:
     void stopAvgLevelFlash();
     void averageLevelCalculating();
     void historicData(const QList<QDateTime>, const QList<QVector<qint16> >data);
+    void aiData(const QList<QVector<qint16> >data);
     void traceToAnalyzer(const QVector<qint16> &data);
     void traceToRecorder(const QVector<qint16> &data);
     void newDispMaxholdToWaterfall(const QVector<double> data);
@@ -70,6 +72,7 @@ private:
     QSharedPointer<Config> config;
     QList<QDateTime> datetimeBuffer;
     QList<QVector<qint16>> traceBuffer;
+    QList<QVector<qint16>> normTraceBuffer;
     QVector<qint16> traceCopy;
     QVector<qint16> averageLevel;
     QVector<double> averageDispLevel;

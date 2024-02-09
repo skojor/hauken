@@ -8,6 +8,24 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
     connect(customPlotPtr->selectionRect(), &QCPSelectionRect::accepted, this, &CustomPlotController::showSelectionMenu);
     connect(customPlotPtr, &QCustomPlot::mouseRelease, this, &CustomPlotController::onMouseClick);
     connect(flashTimer, &QTimer::timeout, this, &CustomPlotController::flashRoutine);
+
+    QFile file(config->getWorkFolder() + "/bandplan.csv");
+    if (file.exists()) {
+        file.open(QIODevice::ReadOnly);
+        while (!file.atEnd()) {
+            QString line = file.readLine();
+            QStringList split = line.split(',');
+            if (!line.contains("#") && split.size() == 6) {
+                gnssBands.append(split[0]);
+                gnssBandfrequencies.append(split[1].toDouble());
+                gnssBandfrequencies.append(split[2].toDouble());
+                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), overlayTransparency));
+            }
+        }
+    }
+    else
+        qDebug() << "No bandplan file found, skipping";
+    file.close();
 }
 
 void CustomPlotController::init()
@@ -23,6 +41,8 @@ void CustomPlotController::setupBasics()
     customPlotPtr->addGraph();
     customPlotPtr->addGraph();
     customPlotPtr->addGraph();
+    customPlotPtr->addGraph();
+
     customPlotPtr->yAxis->setLabel("dBμV");
     customPlotPtr->xAxis->setLabel("MHz");
     customPlotPtr->graph(0)->setPen(QPen(Qt::black));
@@ -49,6 +69,43 @@ void CustomPlotController::setupBasics()
     customPlotPtr->graph(1)->setLayer("liveGraph");
     customPlotPtr->graph(2)->setLayer("triggerLayer");
     customPlotPtr->graph(3)->setLayer("triggerLayer");
+    // Overlay
+    customPlotPtr->addLayer("overlayLayer");
+    customPlotPtr->layer("overlayLayer")->setMode(QCPLayer::lmBuffered);
+    customPlotPtr->graph(4)->setLayer("overlayLayer");
+    customPlotPtr->graph(4)->setData(QVector<double>() << 1000 << 1700, QVector<double>() << -200 << -200);
+    customPlotPtr->xAxis->grid()->setVisible(false);
+
+    plotIterator = customPlotPtr->graphCount() - 1;
+
+    for (int i=0, j=0; i < gnssBands.size(); i++, j += 2) {
+        customPlotPtr->addGraph();
+        plotIterator++;
+        customPlotPtr->graph(plotIterator)->setPen(pen);
+        customPlotPtr->graph(plotIterator)->setBrush(gnssBandColors[i]);
+        customPlotPtr->graph(plotIterator)->setLineStyle(QCPGraph::lsLine);
+        customPlotPtr->graph(plotIterator)->setLayer("overlayLayer");
+        customPlotPtr->graph(plotIterator)->setChannelFillGraph(customPlotPtr->graph(4));
+
+        addOverlay(plotIterator, gnssBandfrequencies[j], gnssBandfrequencies[j+1]);
+        QCPItemText *tmp = new QCPItemText(customPlotPtr);
+        //tmp->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), customPlotPtr->yAxis->range().upper);
+        tmp->setText(gnssBands[i]);
+        tmp->setFont(QFont(QFont().family(), 16));
+        //tmp->setPen(QPen(Qt::gray));
+        gnssTextLabels.append(tmp);
+        gnssBandsSelectors.append(true);
+
+        QCPItemStraightLine *tmpLine = new QCPItemStraightLine(customPlotPtr);
+        pen.setStyle(Qt::DotLine);
+        pen.setColor(Qt::gray);
+        tmpLine->setPen(pen);
+        tmpLine->point1->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), 200);
+        tmpLine->point2->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), -200);
+        gnssCenterLine.append(tmpLine);
+    }
+    toggleOverlay();
+    updTextLabelPositions();
 }
 
 void CustomPlotController::plotTrace(const QVector<double> &data)
@@ -84,7 +141,7 @@ void CustomPlotController::reCalc()
 {
     if ((int)(resolution * 1e6) > 0 && customPlotPtr->xAxis->range().upper > 0 && customPlotPtr->xAxis->range().lower > 0) {
         nrOfValues = 1 + ( 1e3 * (customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
-            if (nrOfValues > 1) {
+        if (nrOfValues > 1) {
             double rate = ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) * 1e6) / (plotResolution - 1);
             keyValues.clear();
             double freq = customPlotPtr->xAxis->range().lower * 1e6;
@@ -106,7 +163,7 @@ void CustomPlotController::showToolTip(QMouseEvent *event)
     double y = customPlotPtr->yAxis->pixelToCoord(event->pos().y());
 
     QString text = QString::number(x, 'f', 3) + " MHz / " +
-            QString::number(y, 'f', 1) + " dBuV";
+                   QString::number(y, 'f', 1) + " dBuV";
     customPlotPtr->setToolTip(text);
 }
 
@@ -118,6 +175,20 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
         QMenu menu;
         menu.addAction("Exclude all trigger frequencies", this, &CustomPlotController::trigExcludeAll);
         menu.addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
+
+        menu.addSeparator();
+        menu.addAction("Show/hide GNSS frequency spectrum overlay", this, &CustomPlotController::toggleOverlay);
+
+        for (int i=0; i < gnssBandsSelectors.size(); i++) {
+            menu.addAction("Show/hide " + gnssBands[i], this, [this, i] () {
+                gnssBandsSelectors[i] = !gnssBandsSelectors[i];
+                customPlotPtr->graph(customPlotPtr->graphCount() - gnssBands.size() + i)->setVisible(gnssBandsSelectors[i]);
+                gnssTextLabels[i]->setVisible(gnssBandsSelectors[i]);
+                gnssCenterLine[i]->setVisible(gnssBandsSelectors[i]);
+                customPlotPtr->replot();
+            });
+        }
+
         menu.exec(customPlotPtr->mapToGlobal(event->pos()));
     }
 }
@@ -137,10 +208,10 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
 
         QMenu *menu = new QMenu;
         menu->addAction("Include " + QString::number(selMin, 'f', 3) +
-                        "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
+                            "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
                         this, &CustomPlotController::trigInclude);
         menu->addAction("Exclude " + QString::number(selMin, 'f', 3) +
-                        "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
+                            "-" + QString::number(selMax, 'f', 3) + " MHz in the trigger area",
                         this, &CustomPlotController::trigExclude);
         menu->addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
         menu->addAction("Exclude all trigger frequencies", this, &CustomPlotController::trigExcludeAll);
@@ -225,7 +296,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
         }
     }
     if (tmp.isEmpty() && (int)sel1 != 0) tmp << QString::number(sel1, 'f', 3)
-                                             << QString::number(keyValues.last(), 'f', 3); // all included
+            << QString::number(keyValues.last(), 'f', 3); // all included
 
     //qDebug() << "trig debug:" << tmp;
     emit reqTrigline(); // to update trig line drawing with new values
@@ -242,10 +313,10 @@ void CustomPlotController::updSettings()
     fill.fill(-200, plotResolution);
 
     if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrStartFreq()
-            || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
-            || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)
-            || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
-            || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
+        || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
+        || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)
+        || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
+        || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
         startFreq = config->getInstrStartFreq();
         stopFreq = config->getInstrStopFreq();
         resolution = config->getInstrResolution().toDouble();
@@ -260,8 +331,8 @@ void CustomPlotController::updSettings()
         customPlotPtr->yAxis->setLabel("dBμV (normalized)");
     else
         customPlotPtr->yAxis->setLabel("dBμV");
-   // qDebug() << customPlotPtr->axisRect()->rect();
-
+    // qDebug() << customPlotPtr->axisRect()->rect();
+    updTextLabelPositions();
 }
 
 void CustomPlotController::flashTrigline()
@@ -280,7 +351,6 @@ void CustomPlotController::flashRoutine()
 {
     customPlotPtr->graph(2)->setVisible(flip = !flip);
     customPlotPtr->layer("triggerLayer")->replot();
-    //customPlotPtr->replot();
 }
 
 void CustomPlotController::updDeviceConnected(bool b)
@@ -289,4 +359,43 @@ void CustomPlotController::updDeviceConnected(bool b)
     if (!b) {
         flashTimer->stop();
     }
+}
+
+void CustomPlotController::toggleOverlay()
+{
+    markGnss = !markGnss;
+
+    for (int i=plotIterator, j=gnssBands.size() - 1; i > plotIterator - gnssBands.size(); i--, j--) {
+        if (gnssBandsSelectors[j] && markGnss) {
+            customPlotPtr->graph(i)->setVisible(markGnss); // only show overlay if not deactivated separately before
+            gnssTextLabels[j]->setVisible(markGnss);
+            gnssCenterLine[j]->setVisible(markGnss);
+        }
+        else if (!markGnss) {
+            customPlotPtr->graph(i)->setVisible(markGnss);
+            gnssTextLabels[j]->setVisible(markGnss);
+            gnssCenterLine[j]->setVisible(markGnss);
+        }
+    }
+
+    customPlotPtr->replot();
+}
+
+void CustomPlotController::addOverlay(const int graph, const double startfreq, const double stopfreq)
+{
+    customPlotPtr->graph(graph)->setData(QVector<double>() << startfreq << stopfreq, QVector<double>() << 200 << 200);
+}
+
+void CustomPlotController::updTextLabelPositions()
+{
+    for (int i=0, j=0; i < gnssTextLabels.size(); i++, j += 2) {
+        gnssTextLabels[i]->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2),
+                                               customPlotPtr->yAxis->range().upper - 5);
+
+    }
+
+}
+
+void CustomPlotController::updOverlay()
+{
 }

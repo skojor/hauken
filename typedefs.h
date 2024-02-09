@@ -21,7 +21,8 @@ enum class TYPE {
     SDEFRECORDER,
     CAMERARECORDER,
     GEOLIMITER,
-    PLAYBACK
+    PLAYBACK,
+    AI
 };
 }
 

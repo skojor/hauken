@@ -24,10 +24,11 @@ void TraceBuffer::start()
 void TraceBuffer::deleteOlderThan()
 {
     mutex.lock();
-    if (traceBuffer.size() > 2) { // failsafe, don't ever delete an empty buffer line!
+    if (traceBuffer.size() > 2) {
         while (!datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
+            normTraceBuffer.removeFirst();
             //displayBuffer.removeFirst();
         }
         while (maxholdBuffer.size() > 120) maxholdBuffer.removeLast();
@@ -51,7 +52,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     }
     else
         traceBuffer.append(data);
-    
+
     if (recording)
         emit traceToRecorder(traceBuffer.last());
     
@@ -85,6 +86,11 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
         databuffer.append(traceBuffer.at(iterator--));
     }
     emit historicData(dateBuffer, databuffer);
+}
+
+void TraceBuffer::getAiData(int secs) // secs ignored ftm, just send all you have (2 min)
+{
+    emit aiData(normTraceBuffer);
 }
 
 void TraceBuffer::calcMaxhold()
@@ -131,11 +137,13 @@ void TraceBuffer::calcMaxhold()
 void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points
 {
     displayBuffer.clear();
+    QVector<qint16> tmpNormTraceBuffer(plotResolution);
+
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
             //int val = data.at(rate * i);
-            int top = -500;
+            int top = -800;
             for (int j=1; j<(int)rate; j++) {
                 if (top < data.at(rate * i + j))
                     top = data.at(rate * i + j); // pick the strongest sample to show in plot
@@ -145,18 +153,25 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
             //val /= (int)rate + 1;
             //if (top > 150) val = top; // hack to boost display of small bw signals
             displayBuffer.append(((double)top / 10.0)); // / (int)rate + 1);
+            tmpNormTraceBuffer[i] = top;
         }
     }
     else {
         double rate = (double)plotResolution / data.size();
         for (int i=0; i<plotResolution; i++) {
             displayBuffer.append((double)data.at((int)((double)i / rate)) / 10.0);
+            tmpNormTraceBuffer[i] = data.at((int)((double)i / rate));
         }
     }
     if (normalizeSpectrum && !averageDispLevel.isEmpty()) {
         for (int i=0; i<plotResolution; i++)
             displayBuffer[i] -= averageDispLevel.at(i);
     }
+    for (int i=0; i<plotResolution; i++) {
+        tmpNormTraceBuffer[i] -= averageDispLevel.at(i) * 10;
+    }
+    normTraceBuffer.append(tmpNormTraceBuffer);
+    //emit aiData(normTraceBuffer); // debug, analyze live
 }
 
 void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)

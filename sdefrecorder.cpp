@@ -36,14 +36,6 @@ void SdefRecorder::start()
         process->setProgram("curl");
     }
     periodicCheckUploadsTimer->start(1800 * 1e3); // check if any files still waits for upload every half hour
-
-    aiTimer = new QTimer;
-    aiArrayCtr = 0;
-
-    connect(aiTimer, &QTimer::timeout, this, [this] {
-        aiArrayCtr++;
-        //qDebug() << aiArrayCtr;
-    });
 }
 
 void SdefRecorder::updSettings()
@@ -158,22 +150,6 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         byteArray.remove(byteArray.size() - 1, 1); // remove last comma
         byteArray += "\n";
         file.write(byteArray);
-
-        if (aiBuffer.size() < 90 && aiBuffer.size() != aiArrayCtr) {
-            QVector<float> tmpTrace;
-            for (int i=0; i<1200; i++) {
-                tmpTrace.append(data[(float)i * data.size() / 1200.0]);
-            }
-            aiBuffer.append(tmpTrace);
-        }
-        else if (aiBuffer.size() >= 90 && aiTimer->isActive()) {
-            aiTimer->stop();
-            emit aiBufferReady(aiBuffer);
-            //qDebug() << "ai buffer full, process";
-            aiBuffer.clear();
-            aiArrayCtr = 0;
-            // do sth
-        }
     }
 }
 
@@ -192,15 +168,9 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
         byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit() + ',';
 
         if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed, counters updated in if below here
-            //qDebug() << "Backlog -> aiBuffer at" << datetime.at(i).toString() << data.at(i).size();
             QVector<float> tmpTrace;
             for (int arrayIterator = 0; arrayIterator < 1200; arrayIterator++)
-                tmpTrace.append(data.at(i)[arrayIterator * data.size() / 1200]);
-
-            if (aiBuffer.size() < 90) {
-                aiBuffer.append(tmpTrace);
-                aiArrayCtr = aiBuffer.size();
-            }
+                tmpTrace.append((float)data[i][(float)arrayIterator * data[i].size() / 1200.0] / 10.0);
         }
 
         if (addPosition) {
@@ -226,7 +196,6 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
         else qDebug() << "This backlog line failed:" << byteArray;
     }
     historicDataSaved = true;
-    aiTimer->start(500); // continue updating aiBuffer until full
 }
 
 QByteArray SdefRecorder::createHeader()
@@ -293,8 +262,6 @@ void SdefRecorder::finishRecording()
 
     if (!failed)
         recording = historicDataSaved = failed = false;
-
-    aiArrayCtr = 0;
 }
 
 void SdefRecorder::restartRecording()

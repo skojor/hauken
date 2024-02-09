@@ -2,110 +2,169 @@
 
 AI::AI()
 {
-    try {
-        model = torch::jit::load("c:\\hauken\\18.pt", torch::kCPU);
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope" << e.msg();
-    }
+    net = cv::dnn::readNet(QString(getWorkFolder() +  "/model.onnx").toStdString());
+    classes << "cw" << "jammer" << "wideband";
 
-    classes << "Jammer" << "Bredbånda pulsgreie" << "Diverse" << "Fraunhofer" << "Tenningsstøy" << "Selvsving";
+    reqTraceBufferTimer->setSingleShot(true);
+    connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
+        emit reqTraceBuffer(120); //WAITBEFOREANALYZING);
+    });
 
-    // Test data
-    /*float test[90][1200];
-    for (int i=0; i<90; i++) {
-        for (int j=0; j<1200; j++)
-            test[i][j] = 0.5 + 1000 * (1.0/rand());
-        qDebug() << test[i][90];
+    /*testTimer->start(1000);
+    connect(testTimer, &QTimer::timeout, this, [this]  {
+        emit reqTraceBuffer(0);
+    });*/
+    /*cv::Mat image = cv::imread("C:/Kode/Custom_Object_Classification/test_data/1052.png");
+
+    cv::Mat blob;
+
+    cv::Mat imgFloat;
+    image.convertTo(imgFloat, CV_32F);
+    imgFloat /= 255.0f;
+    cv::Scalar mean = { 0.485, 0.456, 0.406 };
+    cv::Scalar std = { 0.229, 0.224, 0.225 };
+    imgFloat -= mean;
+    imgFloat /= std;
+
+    blob = cv::dnn::blobFromImage(imgFloat, 1, cv::Size(224, 224));
+
+    net.setInput(blob);
+    cv::Mat prob = net.forward();
+    double minVal;
+    double maxVal;
+    cv::Point minLoc;
+    cv::Point maxLoc;
+    minMaxLoc(prob, &minVal, &maxVal, &minLoc, &maxLoc );
+
+    double sum = 0;
+    for (int i = 0; i < classes.size(); i++) sum += prob.at<float>(i);
+
+    double probability = maxVal * 100 / sum;
+    for (int i = 0; i < classes.size(); i++) {
+        qDebug() << classes[i] << prob.at<float>(i) * 100 / sum;
     }
-    qDebug() << gnssAI(test);*/
+    qDebug() << classes[maxLoc.x] << probability;
+    std::cerr << prob << std::endl;*/
+
 }
 
-QString AI::gnssAI(float traceBuffer[90][1200])
-{
-
-    qDebug() << "Running AI on GNSS data";
-
-    // Convert incomming data to a tensor
-    torch::Tensor tensor;
-    try {
-        tensor = torch::from_blob(traceBuffer, {1, 1, 90, 1200}, torch::kCPU);
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope tensor" << e.msg();
-    }
-
-    // Normalize data
-    torch::Tensor min_value;
-    torch::Tensor max_value;
-    try {
-        min_value = tensor.min(); // torch::min(tensor);
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope min" << e.msg();
-    }
-
-    try {
-        max_value = torch::max(tensor);
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope max" << e.msg();
-    }
-
-    try {
-        tensor = (tensor - min_value) / (max_value - min_value);
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope tensor2" << e.msg();
-    }
-
-    torch::Tensor tensor_augemented;
-    try {
-        tensor_augemented = torch::repeat_interleave(tensor, 13, 2);
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope aug" << e.msg();
-    }
-
-    std::vector<torch::jit::IValue> input;
-    try {
-        input = {tensor_augemented};
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope input" << e.msg();
-    }
-
-    // Make a prediction
-    at::Tensor output;
-    try {
-        output = model.forward(input).toTensor();
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope input" << e.msg();
-    }
-
-    int prediction;
-    try {
-        prediction = output.argmax(1).item().toInt();
-    }
-    catch(const c10::Error& e) {
-        qDebug() << "Nope input" << e.msg();
-    }
-
-    return classes[prediction];
-}
 
 void AI::receiveBuffer(QVector<QVector<float >> buffer)
 {
-    if (buffer.size() != 90 || buffer.at(89).size() != 1200) {
-        qDebug() << "AI data failed sanity checks, aborting";
+    float min = 90, max = -90, avg = 0;
+    findMinAvgMax(buffer, &min, &avg, &max);
+    if (max < 30) max = 30;
+    min = avg / 2;
+    cv::Mat frame((int)buffer.size(), (int)buffer.front().size(), CV_8UC3, cv::Scalar());
+
+    for (int i = 0; i < buffer.size(); i++) {
+        for (int j = 0, k = 0; j < buffer[0].size(); j++, k++) {
+            if (max - min == 0) max += 1;
+            int val = (1.5 * 255 * (buffer[i][j] - min)) / (max - min); // / (max - min));
+            if (val < 0) val = 0;
+            if (val > 255) val = 255;
+            frame.at<uchar>(i, k++) = 255 - val;
+            frame.at<uchar>(i, k++) = 255 - val;
+            frame.at<uchar>(i, k) = 255 - val;
+        }
     }
-    else {
-    float tmpBuffer[90][1200];
-    for (int i = 0; i < 90; i++) {
-        for (int j=0; j < 1200; j++) tmpBuffer[i][j] = (float)buffer.at(i)[j] / 10.0;
-    }
-    qDebug() << "AI result" << gnssAI(tmpBuffer);
-    }
+    cv::resize(frame, frame, cv::Size(369, 369), 0, 0, cv::INTER_CUBIC);
+    cv::imwrite(QString("c:/Hauken/test.png").toStdString(), frame);
+
+    classifyData(frame);
 }
 
+void AI::classifyData(cv::Mat frame)
+{
+    cv::Mat blob;
+    cv::dnn::blobFromImage(frame, blob, 1.0, cv::Size(224, 224), cv::Scalar(0), false, false);
+
+    net.setInput(blob);
+    int classId;
+    double confidence;
+    cv::Mat prob = net.forward();
+    //std::cerr << prob << std::endl;
+    cv::Point classIdPoint;
+    cv::minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
+    classId = classIdPoint.x;
+    double minVal;
+    double maxVal;
+    cv::Point minLoc;
+    cv::Point maxLoc;
+    minMaxLoc(prob, &minVal, &maxVal, &minLoc, &maxLoc );
+
+    double sum = 0;
+    for (int i = 0; i < classes.size(); i++) {
+        sum += prob.at<float>(i);
+        qDebug() << i << prob.at<float>(i);
+    }
+    double probability = maxVal * 100 / sum;
+
+    qDebug() << "Classification" << classes[classId] << probability;
+    emit aiResult(classes[classId], probability);
+}
+
+void AI::findMinAvgMax(const QVector<QVector<float >> &buffer, float *min, float *avg, float *max)
+{
+    float _min = 99999, _max = -99999, _avg = 0;
+
+    for (int i=0; i<buffer.size(); i++) { // find min and max values, used for normalizing values
+        for (int j=0; j<buffer[i].size(); j++) {
+            if (_min > buffer[i][j]) _min = buffer[i][j];
+            else if (_max < buffer[i][j]) _max = buffer[i][j];
+            _avg += buffer[i][j];
+        }
+    }
+
+    *min = _min / 10;
+    *max = _max / 10;
+    _avg = _avg / (buffer.size() * buffer[0].size());
+    *avg = _avg / 10;
+}
+
+void AI::findMinAvgMax(const QVector<QVector<qint16 >> &buffer, qint16 *min, qint16 *avg, qint16 *max)
+{
+    qint16 _min = 32767, _max = -32767;
+    long _avg = 0;
+
+    for (int i=0; i<buffer.size(); i++) { // find min and max values, used for normalizing values
+        for (int j=0; j<buffer[i].size(); j++) {
+            if (_min > buffer[i][j]) _min = buffer[i][j];
+            else if (_max < buffer[i][j]) _max = buffer[i][j];
+            _avg += buffer[i][j];
+        }
+    }
+    *min = _min / 10;
+    *max = _max / 10;
+    _avg = _avg / (buffer.size() * buffer[0].size());
+    *avg = (qint16) (_avg / 10);
+}
+
+void AI::receiveTraceBuffer(const QList<QVector<qint16> > data)
+{
+    if (data.size() > 50) {
+        qint16 min, max, avg;
+        findMinAvgMax(data, &min, &avg, &max);
+        if (max < 30) max = 30;
+        min = avg / 2;
+
+        cv::Mat3f frame((int)data.size(), (int)data.front().size());
+
+        for (int i = data.size() - 1; i >= 0; i--) {
+            for (int j = 0, k = 0; j < data[0].size(); j++, k++) {
+                if (max - min == 0) max += 1;
+                float val = 1 - ((((float)data[i][j] / 10.0) - min) / (max - min)); // * 1.5?
+                if (val < 0) val = 0;
+                if (val > 1) val = 1;
+                frame.at<float>(i, k++) = (val - 0.485) / 0.229;
+                frame.at<float>(i, k++) = (val - 0.456) / 0.224;
+                frame.at<float>(i, k) = (val - 0.406) / 0.225;
+            }
+        }
+        classifyData(frame);
+
+        cv::Mat frameToSave;
+        frame.convertTo(frameToSave, CV_8UC3, 255);
+        cv::imwrite("C:/hauken/test.png", frameToSave);
+    }
+}

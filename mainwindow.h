@@ -187,6 +187,7 @@ private:
     QAction *openAct;
     QAction *saveAct;
     QAction *open1809Act;
+    QAction *openFolderAct;
 
     QAction *optStation;
     QAction *optGnss;

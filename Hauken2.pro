@@ -151,15 +151,18 @@ unix: {
 
 win32 {
   LIBS +=   \#-L$$PWD/../quazip/build/win64 \
-            -lOpenGL32 -L$$PWD/../qtmqtt -lqt6mqtt \
+            -L$$PWD/../qtmqtt -lqt6mqtt \
             -L$$PWD/../quazip-1.4 -lquazip1-qt6  \
             -L$$PWD/../libtorch/lib \
-            -ltorch -lc10 -ltorch_cpu
+            -ltorch -lc10 -ltorch_cpu \
+            -L$$PWD/../opencv/lib -lopencv_highgui490 -lopencv_dnn490 -lopencv_imgproc490 \
+            -lopencv_imgcodecs490 -lopencv_core490
 
   INCLUDEPATH +=    $$PWD/../qtmqtt/include/QtMqtt \
                     $$PWD/../qtmqtt/include \
                     $$PWD/../quazip-1.4 $$PWD/../quazip-1.4/quazip \
-                    $$PWD/../zlib-1.3
+                    $$PWD/../zlib-1.3 \
+                    $$PWD/../opencv/include
 
   QMAKE_CXXFLAGS += -pthread -mbig-obj -fto -allow-multiple-definition
 }
@@ -178,3 +181,9 @@ QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken
 QMAKE_TARGET_COPYRIGHT = GPL
 
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../opencv/release/ -lopencv_core490
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../opencv/debug/ -lopencv_core490
+
+INCLUDEPATH += $$PWD/../opencv/lib
+DEPENDPATH += $$PWD/../opencv/lib

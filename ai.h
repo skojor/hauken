@@ -1,38 +1,52 @@
 #ifndef AI_H
 #define AI_H
 
-#undef slots
-#include "torch/script.h"
-#define slots Q_SLOTS
+#include <opencv2/dnn.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 #include <QString>
-//#include <iostream>
-//#include <memory>
-//#include <string>
-#include <vector>
 #include <QDebug>
 #include <QStringList>
 #include <QList>
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QObject>
+#include <QFile>
+#include <QDateTime>
+#include <QVector>
+#include <iostream>
+#include "config.h"
+#include "typedefs.h"
 
-class AI : public QObject
+
+#define WAITBEFOREANALYZING 10
+
+class AI : public Config
 {
 Q_OBJECT
 
 signals:
-    void aiResult(QString);
+    void aiResult(QString, int);
+    void reqTraceBuffer(int seconds);
+    void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 
 public:
     AI();
     void receiveBuffer(QVector<QVector<float >> buffer);
-    QString gnssAI(float traceBuffer[90][1200]);
+    void receiveTraceBuffer(const QList<QVector<qint16> > data);
+    void startAiTimer() { reqTraceBufferTimer->start(WAITBEFOREANALYZING * 1e3); }
 
 private:
     QStringList classes;
-    torch::jit::script::Module model;
-    at::IntArrayRef sizes;
+    cv::dnn::Net net;
+    QTimer *reqTraceBufferTimer = new QTimer;
+    QTimer *testTimer = new QTimer;
+
+private slots:
+    void classifyData(cv::Mat frame);
+    void findMinAvgMax(const QVector<QVector<float >> &buffer, float *min, float *avg, float *max);
+    void findMinAvgMax(const QVector<QVector<qint16 >> &buffer, qint16 *min, qint16 *avg, qint16 *max);
 };
 
 #endif // AI_H

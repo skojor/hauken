@@ -89,6 +89,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (arduinoPtr->isWatchdogActive()) arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
+    read1809Data->close();
     measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
@@ -127,6 +128,11 @@ void MainWindow::createActions()
             qDebug() << "Trying to read an 1809 file while connected, bad idea";
             QMessageBox::warning(this, "Hauken", "Disconnect the device before trying to read an 1809 file");
         }
+    });
+    openFolderAct = new QAction(tr("Open f&older (DEBUG)"), this);
+    openFolderAct->setStatusTip(tr("Open a folder with 1809 data, for data conversion (INTERNAL, DON'T USE!"));
+    connect(openFolderAct, &QAction::triggered, this, [this] {
+        read1809Data->readFolder(QFileDialog::getExistingDirectory(this, tr("Open folder"), config->getLogFolder(), QFileDialog::ShowDirsOnly));
     });
 
     optStation = new QAction(tr("&General setup"), this);
@@ -206,6 +212,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(saveAct);
     fileMenu->addSeparator();
     fileMenu->addAction(open1809Act);
+    fileMenu->addAction(openFolderAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 
@@ -840,9 +847,6 @@ void MainWindow::setSignals()
     });
 
     connect(mqtt, &Mqtt::newData, positionReport, &PositionReport::updMqttData);
-
-    connect(sdefRecorder, &SdefRecorder::aiBufferReady, aiPtr, &AI::receiveBuffer);
-
     connect(read1809Data, &Read1809Data::newTrace, traceBuffer, &TraceBuffer::addTrace);
     connect(read1809Data, &Read1809Data::playbackRunning, this, [this] (bool b){
         if (b) {
@@ -860,6 +864,10 @@ void MainWindow::setSignals()
     connect(read1809Data, &Read1809Data::playbackRunning, sdefRecorder, &SdefRecorder::deviceDisconnected);
     connect(read1809Data, &Read1809Data::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(read1809Data, &Read1809Data::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
+
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, aiPtr, &AI::startAiTimer); // will start analyze of data after x seconds
+    connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData);
+    connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
 }
 
 void MainWindow::instrStartFreqChanged()
