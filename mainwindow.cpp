@@ -1044,6 +1044,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.33</td><td>Added spectrum mask overlay function (right click spectrum/\"bandplan.csv\")</td></tr>"
        << "<tr><td>2.32</td><td>Support for GNSS NMEA and binary (uBlox) data over TCP/IP</td></tr>"
        << "<tr><td>2.31</td><td>Audio and visual indicators of incidents added. Various minor bugfixes</td></tr>"
        << "<tr><td>2.30</td><td>Bugfix: Trig frequency selection failing on selection outside window. Debugging info removed</td></tr>"
