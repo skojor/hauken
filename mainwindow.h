@@ -29,6 +29,7 @@
 #include <QRegularExpressionValidator>
 #include <QtMultimedia/QMediaPlayer>
 #include <QtMultimedia/QAudioOutput>
+#include <QTimer>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 //#include "typedefs.h"
@@ -258,6 +259,7 @@ private:
     bool traceAlarmRaised = false, recordAlarmRaised = true, gnssAlarmRaised = true, recordDisabledRaised = false;
     QMediaPlayer *player = new QMediaPlayer;
     QAudioOutput *audioOutput = new QAudioOutput;
+    QTimer *notificationTimer = new QTimer;
 
 signals:
     void stopPlot(bool);

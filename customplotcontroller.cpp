@@ -23,8 +23,29 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
             }
         }
     }
-    else
-        qDebug() << "No bandplan file found, skipping";
+    else {
+        qDebug() << "No bandplan file found, creating one";
+        file.open(QIODevice::ReadWrite);
+        file.write("G1,1593,1610,255,0,0\n");
+        file.write("L1/E1,1559,1591,0,0,255\n");
+        file.write("E6,1260,1300,0,0,255\n");
+        file.write("G2,1237,1254,255,0,0\n");
+        file.write("L2,1215,1239.6,0,0,255\n");
+        file.write("G3/E5b,1189,1214,255,255,0\n");
+        file.write("L5/E5a,1164,1189,255,0,0\n");
+
+        file.seek(0); // start at top to read data to memory
+        while (!file.atEnd()) {
+            QString line = file.readLine();
+            QStringList split = line.split(',');
+            if (!line.contains("#") && split.size() == 6) {
+                gnssBands.append(split[0]);
+                gnssBandfrequencies.append(split[1].toDouble());
+                gnssBandfrequencies.append(split[2].toDouble());
+                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), overlayTransparency));
+            }
+        }
+    }
     file.close();
 }
 

@@ -7,7 +7,9 @@ AI::AI()
 
     reqTraceBufferTimer->setSingleShot(true);
     connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
-        emit reqTraceBuffer(120); //WAITBEFOREANALYZING);
+        int wait = WAITBEFOREANALYZING * 2;
+        if (wait > 120) wait = 120;
+        emit reqTraceBuffer(wait);
     });
 
     /*testTimer->start(1000);

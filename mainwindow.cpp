@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
 #ifdef _WIN32
     player->setSource(QUrl::fromLocalFile(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
     player->setAudioOutput(audioOutput);
-    audioOutput->setVolume(50);
+    audioOutput->setVolume(80);
 #endif
 
     createActions();
@@ -83,6 +83,7 @@ MainWindow::MainWindow(QWidget *parent)
         //customPlotController->updSettings();
         waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
+    notificationTimer->setSingleShot(true);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -1265,8 +1266,9 @@ void MainWindow::traceIncidentAlarm(bool state) {
             ledTraceStatus->setState(false);
             labelTraceLedText->setText("Detector triggered");
             qApp->alert(this->parentWidget());
-            if (config->getSoundNotification()) {
+            if (config->getSoundNotification() && !notificationTimer->isActive()) {
                 player->play();
+                notificationTimer->start(config->getNotifyTruncateTime() * 1000); // Mute for x secs to not annoy user
             }
             traceAlarmRaised = true;
         }
