@@ -2,7 +2,11 @@
 
 AI::AI()
 {
-    net = cv::dnn::readNet(QString(getWorkFolder() +  "/model.onnx").toStdString());
+    QFile checkFile(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx");
+    if (checkFile.exists()) {
+        net = cv::dnn::readNet(QString(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx").toStdString());
+        netLoaded = true;
+    }
     classes << "cw" << "jammer" << "wideband";
 
     reqTraceBufferTimer->setSingleShot(true);

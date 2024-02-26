@@ -5,11 +5,12 @@ GnssDevice::GnssDevice(QObject *parent, int val)
 {
     gnssData.id = val;
 
-    connect(gnss, &QSerialPort::readyRead, this, [this]
-            {
-                this->gnssBuffer.append(gnss->readAll());
-                this->handleBuffer();
-            });
+    connect(gnss, &QSerialPort::readyRead, this, [this] {
+        QByteArray buffer = gnss->readAll();
+        gnssBuffer.append(buffer);
+        if (logToFile) appendToLogfile(buffer);
+        handleBuffer();
+    });
 
     connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
             {
@@ -18,7 +19,9 @@ GnssDevice::GnssDevice(QObject *parent, int val)
             });
 
     connect(tcpSocket, &QTcpSocket::readyRead, this, [this] {
-        gnssBuffer.append(tcpSocket->readAll());
+        QByteArray buffer = tcpSocket->readAll();
+        gnssBuffer.append(buffer);
+        if (logToFile) appendToLogfile(buffer);
         handleBuffer();
     });
 
@@ -83,7 +86,7 @@ void GnssDevice::handleBuffer()
         if (binaryIndex != -1 && gnssBuffer.size() > binaryIndex + 6)
             binarySize = 8 + (quint8)gnssBuffer.at(binaryIndex + 4) + (gnssBuffer.at(binaryIndex + 5) << 8);
 
-        nmeaIndex = gnssBuffer.indexOf("$G");
+        nmeaIndex = gnssBuffer.indexOf("$");
         if (nmeaIndex != -1 && gnssBuffer.contains('\n')) {
             int i = 0;
             do {
@@ -92,8 +95,18 @@ void GnssDevice::handleBuffer()
 
             nmeaSize = nmeaSentence.size();
             nmeaSentence = nmeaSentence.simplified();
+            if (nmeaSize > 512) { // failsafe, seems stray data mixed with nmea from faulty serial lines can make hell break loose
+                nmeaSentence.clear();
+                nmeaSize = 0;
+                gnssBuffer.clear();
+            }
+            if (nmeaIndex > 0 && binaryIndex == -1) {   // somehow leftover data has ended up before the nmea sentence, looks like nothing. deleting
+                gnssBuffer.remove(0, nmeaIndex);
+                qDebug() << "GNSS: Leftover data, cleaning";
+            }
+
             //qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
-            if (checkChecksum(nmeaSentence)) {
+            if (nmeaSize  > 20 && checkChecksum(nmeaSentence)) {
                 if (nmeaSentence.contains("GGA"))
                     decodeGga(nmeaSentence);
                 else if (nmeaSentence.contains("GSA"))
@@ -124,9 +137,10 @@ void GnssDevice::handleBuffer()
 
     } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0) && failsafe < 50);
     if (failsafe >= 50) {
-        //qDebug() << "Panic!" << gnssBuffer.size();
+        qDebug() << "Panic!" << gnssBuffer.size();
         gnssBuffer.clear();
     }
+    if (gnssBuffer.size() > 15000) gnssBuffer.clear();
 }
 
 bool GnssDevice::decodeGsa(const QByteArray &val)
@@ -154,7 +168,7 @@ bool GnssDevice::decodeGsa(const QByteArray &val)
 bool GnssDevice::decodeGga(const QByteArray &val)
 {
     QList<QByteArray> split = val.split(',');
-    if (split.size() > 7) {
+    if (split.size() > 9) {
         gnssData.ggaValid = true;
 
         if (!gnssData.gnsValid) gnssData.satsTracked = split.at(7).toInt();
@@ -196,7 +210,7 @@ bool GnssDevice::decodeGsv(const QByteArray &val)
         if (val.contains("$GP") && !gnssData.gnssType.contains("GPS")) gnssData.gnssType += "GPS ";
         else if (val.contains("$GL") && !gnssData.gnssType.contains("GLONASS")) gnssData.gnssType += "GLONASS ";
         else if (val.contains("$GA") && !gnssData.gnssType.contains("Galileo")) gnssData.gnssType += "Galileo ";
-        else if (val.contains("$GA") && !gnssData.gnssType.contains("BeiDou")) gnssData.gnssType += "BeiDou ";
+        else if (val.contains("$PQ") && !gnssData.gnssType.contains("BeiDou")) gnssData.gnssType += "BeiDou ";
         QTimer::singleShot(20000, this, [this] { // Assume after 20 secs all valid systems are active
             checkedAllSatSystems = true;
         });
@@ -361,7 +375,7 @@ void GnssDevice::appendToLogfile(const QByteArray &data)
 {
     if (!logfile.isOpen()) {
         logfile.setFileName(getLogFolder() + "/" + "gnss_" + QString::number(gnssData.id) + QDate::currentDate().toString("_yyyyMMdd.log"));
-        logfile.open(QIODevice::Append | QIODevice::Text);
+        logfile.open(QIODevice::Append);
         logfileStartedDate = QDate::currentDate();
         qDebug() << "GNSS logfile opened" << logfile.fileName();
     }

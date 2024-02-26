@@ -1,9 +1,9 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#undef slots
+/*#undef slots
 #include "ai.h"
-#define slots Q_SLOTS
+#define slots Q_SLOTS*/
 
 #include "config.h"
 #include <QMainWindow>
@@ -60,6 +60,7 @@
 #include "mqttoptions.h"
 #include "led/ledindicator.h"
 #include "read1809data.h"
+#include "ai.h"
 
 class MainWindow : public QMainWindow
 {

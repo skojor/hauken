@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QDateTime>
 #include <QVector>
+#include <QCoreApplication>
 #include <iostream>
 #include "config.h"
 #include "typedefs.h"
@@ -35,13 +36,14 @@ public:
     AI();
     void receiveBuffer(QVector<QVector<float >> buffer);
     void receiveTraceBuffer(const QList<QVector<qint16> > data);
-    void startAiTimer() { reqTraceBufferTimer->start(WAITBEFOREANALYZING * 1e3); }
+    void startAiTimer() { if (netLoaded) reqTraceBufferTimer->start(WAITBEFOREANALYZING * 1e3); }
 
 private:
     QStringList classes;
     cv::dnn::Net net;
     QTimer *reqTraceBufferTimer = new QTimer;
     QTimer *testTimer = new QTimer;
+    bool netLoaded = false;
 
 private slots:
     void classifyData(cv::Mat frame);
