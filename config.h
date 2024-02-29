@@ -205,6 +205,10 @@ public slots:
     void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.simplified().toLocal8Bit()));emit settingsUpdated(); }
     bool getSoundNotification() { return settings->value("email/soundNotification", false).toBool();}
     void setSoundNotification(bool b) { settings->setValue("email/soundNotification", b); emit settingsUpdated();}
+    QString getEmailFilteredRecipients() { return settings->value("email/filteredRecipients", "").toString();}
+    void setEmailFilteredRecipients(QString s) { settings->setValue("email/filteredRecipients", s.trimmed()); emit settingsUpdated();}
+    int getEmailJammerProbabilityFilter() { return settings->value("email/jammerProbabilityFilter", 60).toInt();}
+    void setEmailJammerProbabilityFilter(int i) { settings->setValue("email/jammerProbabilityFilter", i); emit settingsUpdated();}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}

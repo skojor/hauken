@@ -152,7 +152,7 @@ unix: {
 win32 {
   LIBS +=   \#-L$$PWD/../quazip/build/win64 \
             -L$$PWD/../qtmqtt -lqt6mqtt \
-            -L$$PWD/../quazip-1.4 -lquazip1-qt6  \
+            #-L$$PWD/../quazip-1.4 -lquazip1-qt6  \
             #-L$$PWD/../libtorch/lib \
             #-ltorch -lc10 -ltorch_cpu \
             #-L$$PWD/../opencv/lib -lopencv_highgui490 -lopencv_dnn490 -lopencv_imgproc490 \
@@ -167,11 +167,13 @@ win32 {
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../opencv/release \
     -lopencv_core490 -lopencv_highgui490 -lopencv_dnn490 -lopencv_imgproc490 \
-    -lopencv_imgcodecs490
+    -lopencv_imgcodecs490 \
+    -L$$PWD/../quazip-1.4/release -lquazip-qt6
 
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../opencv/debug \
     -lopencv_core490d -lopencv_highgui490d -lopencv_dnn490d -lopencv_imgproc490d \
-    -lopencv_imgcodecs490d
+    -lopencv_imgcodecs490d \
+    -L$$PWD/../quazip-1.4/debug -lquazip1-qt6d
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"

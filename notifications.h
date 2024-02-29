@@ -62,6 +62,7 @@ public slots:
     void recTracePlot(const QPixmap *pic);
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
+    void recPrediction(QString pred, int prob);
 
 private slots:
     void appendIncidentLog(QDateTime dt, const QString string);
@@ -118,6 +119,11 @@ private:
     int delayBetweenEmails;
     bool msGraphConfigured = false, msGraphAuthorized = false;
     QString msGraphTenantId, msGraphApplicationId, msGraphSecret;
+
+    QString prediction;
+    int probability = 0;
+    bool predictionReceived = false;
+    bool notifyPriorityRecipients = false;
 };
 
 #endif // NOTIFICATIONS_H

@@ -169,11 +169,21 @@ void Notifications::sendMail()
             message.setSubject("Notification from " + getStationName() + " (" + getSdefStationInitals() + ")");
             message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), ""));
 
-            for (auto &val : mailRecipients) {
+            if (predictionReceived &&
+                prediction.contains("jammer", Qt::CaseInsensitive) &&
+                probability >= getEmailJammerProbabilityFilter() &&
+                getEmailFilteredRecipients().size() > 5) {
+                notifyPriorityRecipients = true;
+                for (auto &val : getEmailFilteredRecipients().split(";"))
+                    message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+            }
+            else {
+            for (auto &val : mailRecipients)
                 message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
+
             mimeHtml->setHtml("<table>" + mailtext +
-                              (getSdefAddPosition() && positionValid?
+                              (getSdefAddPosition() && positionValid ?
                                                       tr("<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/") +
                                                                                                   QString::number(latitude, 'f', 5) + "+" +
                                                                                                   QString::number(longitude, 'f', 5) + "/@" +
@@ -185,11 +195,17 @@ void Notifications::sendMail()
                                                                                                   "<a href=\"https://nais.kystverket.no/point/" +
                                                                                                   QString::number(longitude, 'f', 5) + "_" +
                                                                                                   QString::number(latitude, 'f', 5)  +
-                                                                                                  tr("\">Link til Kystverket</td></tr>"):"") +
+                                                                                                  tr("\">Link til Kystverket</td></tr>") : "") +
+                              (predictionReceived ? "AI classification: " + prediction +
+                               ", probability " + QString::number(probability) + " %" : "") +
                               "</table><hr><img src='cid:image1' />   ");
+
             //qDebug() << "mail debug:" << mimeHtml->data();
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
+            if (predictionReceived) {
+                predictionReceived = false;
+            }
 
             auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
 
@@ -356,8 +372,12 @@ void Notifications::generateGraphEmail()
     QJsonObject mail, message, body;
     QJsonArray toRecipients, attachments;
     QJsonObject att;
+    QStringList recipients;
 
-    QStringList recipients = getEmailRecipients().split(';');
+    if (!notifyPriorityRecipients) recipients = getEmailRecipients().split(';');
+    else recipients = getEmailFilteredRecipients().split(";");
+    notifyPriorityRecipients = false; // reset until next notification
+
     for (auto &recipient : recipients) {
         QJsonObject receiver, address;
         address.insert("address", recipient.simplified());
@@ -471,4 +491,11 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         qDebug() << "Server responded with code" << output;
         graphMailInProgress = false;
     }
+}
+
+void Notifications::recPrediction(QString pred, int prob)
+{
+    prediction = pred;
+    probability = prob;
+    predictionReceived = true;
 }

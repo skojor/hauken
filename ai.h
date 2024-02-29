@@ -21,7 +21,7 @@
 #include "typedefs.h"
 
 
-#define WAITBEFOREANALYZING 30
+#define WAITBEFOREANALYZING 20
 
 class AI : public Config
 {

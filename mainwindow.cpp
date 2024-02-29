@@ -869,6 +869,8 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarm, aiPtr, &AI::startAiTimer); // will start analyze of data after x seconds
     connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData);
     connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
+    connect(aiPtr, &AI::aiResult, sdefRecorder, &SdefRecorder::recPrediction);
+    connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
 }
 
 void MainWindow::instrStartFreqChanged()
@@ -1045,6 +1047,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.34</td><td>AI classification and filtered notification function</td></tr>"
        << "<tr><td>2.33</td><td>Added spectrum mask overlay function (right click spectrum/\"bandplan.csv\")</td></tr>"
        << "<tr><td>2.32</td><td>Support for GNSS NMEA and binary (uBlox) data over TCP/IP</td></tr>"
        << "<tr><td>2.31</td><td>Audio and visual indicators of incidents added. Various minor bugfixes</td></tr>"

@@ -252,6 +252,8 @@ void SdefRecorder::finishRecording()
     if (file.isOpen()) file.close();
     finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
 
+    if (predictionReceived) updFileWithPrediction(file.fileName());
+
     if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
         QTimer::singleShot(10000, this, &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
     else
@@ -369,4 +371,38 @@ void SdefRecorder::zipit()
         QFile::remove(file.fileName());
         finishedFilename += ".zip";
     }
+}
+
+void SdefRecorder::recPrediction(QString pred, int prob)
+{
+    prediction = pred;
+    probability = prob;
+    predictionReceived = true;
+}
+
+void SdefRecorder::updFileWithPrediction(const QString filename)
+{
+    QFile file(filename);
+    QFile tempFile(filename + ".tmp");
+    if (file.open(QIODevice::ReadOnly) && tempFile.open(QIODevice::WriteOnly)) {
+        QByteArray data;
+
+        do {
+            data = file.readLine();
+            if (data.contains("Note\n")) { // Found empty note line, editing
+                data = "Note Classification:" + prediction.toLocal8Bit() + " (" + QByteArray::number(probability) + " % probability)";
+            }
+            tempFile.write(data);
+        } while (!file.atEnd());
+        file.close();
+        tempFile.close();
+        file.remove();
+        tempFile.rename(filename);
+    }
+    else {
+        qDebug() << "Couldn't open file" << filename << "for reading and/or" << filename + ".tmp" << "for writing. Wanted to add AI prediction, but giving up";
+    }
+    predictionReceived = false; // reset for next file
+    prediction.clear();
+    probability = 0;
 }

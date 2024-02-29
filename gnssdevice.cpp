@@ -91,7 +91,7 @@ void GnssDevice::handleBuffer()
             int i = 0;
             do {
                 nmeaSentence.append(gnssBuffer[nmeaIndex + i++]);
-            } while (gnssBuffer[nmeaIndex + i] != '\n' && nmeaIndex < gnssBuffer.size());
+            } while (gnssBuffer[nmeaIndex + i] != '\n' && nmeaIndex + i < gnssBuffer.size());
 
             nmeaSize = nmeaSentence.size();
             nmeaSentence = nmeaSentence.simplified();

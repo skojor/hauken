@@ -22,7 +22,7 @@
  * Class to take care of recording to file in sdef format.
  * Should run in its own thread, as this can be rather I/O unfriendly, at least
  * on a tiny RPi with a slow SD card.
- * Also takes care of eventual uploading to Casper the friendly cat
+ * Also takes care of eventual uploading to a server
  */
 
 class SdefRecorder : public Config
@@ -43,6 +43,7 @@ public slots:
     void endRecording() { finishRecording();}
     void updPosition(bool b, double l1, double l2);
     void finishRecording();
+    void recPrediction(QString pred, int prob);
 
 private slots:
     QByteArray createHeader();
@@ -53,6 +54,7 @@ private slots:
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
     void zipit();
+    void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
 
 signals:
     void recordingStarted();
@@ -90,6 +92,9 @@ private:
     bool stateCurlAwaitingLogin = false;
     bool stateCurlAwaitingFileUpload = false;
     QStringList filesAwaitingUpload;
+    QString prediction;
+    int probability = 0;
+    bool predictionReceived = false;
 };
 
 #endif // SDEFRECORDER_H

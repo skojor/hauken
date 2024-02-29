@@ -22,8 +22,18 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     leOpt6->setToolTip("If required by the SMTP server, set the password here");
     leOpt6->setEchoMode(QLineEdit::Password);
 
-    layout1->addRow(new QLabel("Email recipients"), leOpt3);
-    leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;");
+    layout1->addRow(new QLabel("AI jammer probability filter"), sbOpt4);
+    sbOpt4->setRange(0, 100);
+    sbOpt4->setToolTip("Send email to recipients below only if signal is classified as a jammer, and the probability is higher than this value");
+
+    layout1->addRow(new QLabel("AI filtered email recipients"), leOpt10);
+    leOpt10->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
+                        "Recipients in this list will only receive a notification if signal is classified as a jammer, and probability is higher\n"
+                        "than the above set value");
+
+    layout1->addRow(new QLabel("General email recipients"), leOpt3);
+    leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
+                       "All notifications will be sent to the recipients added here");
 
     layout1->addRow(new QLabel("Own email address"), leOpt4);
     leOpt4->setToolTip("Set the address the email will show as sent from. Should be a valid address");
@@ -99,6 +109,7 @@ void EmailOptions::start()
     leOpt8->setText(config->getEmailGraphTenantId());
     leOpt9->setText(config->getEmailGraphSecret());
     leOpt7->setText(config->getEmailGraphApplicationId());
+    leOpt10->setText(config->getEmailFilteredRecipients());
 
     sbOpt1->setValue(config->getEmailMinTimeBetweenEmails());
     cbOpt1->setChecked(config->getEmailNotifyMeasurementDeviceHighLevel());
@@ -108,6 +119,7 @@ void EmailOptions::start()
     cbOpt5->setChecked(config->getSoundNotification());
     sbOpt3->setValue(config->getEmailDelayBeforeAddingImages());
     sbOpt2->setValue(config->getNotifyTruncateTime());
+    sbOpt4->setValue(config->getEmailJammerProbabilityFilter());
     dialog->exec();
 }
 
@@ -130,6 +142,8 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailGraphTenantId(leOpt8->text());
     config->setEmailGraphSecret(leOpt9->text());
     config->setEmailGraphApplicationId(leOpt7->text());
+    config->setEmailFilteredRecipients(leOpt10->text());
+    config->setEmailJammerProbabilityFilter(sbOpt4->value());
 
     dialog->close();
 }

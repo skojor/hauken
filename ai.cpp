@@ -7,6 +7,10 @@ AI::AI()
         net = cv::dnn::readNet(QString(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx").toStdString());
         netLoaded = true;
     }
+    else {
+        qDebug() << "Classification model not found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx";
+    }
+
     classes << "cw" << "jammer" << "wideband";
 
     reqTraceBufferTimer->setSingleShot(true);
