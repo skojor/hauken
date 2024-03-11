@@ -36,7 +36,8 @@ public:
     AI();
     void receiveBuffer(QVector<QVector<float >> buffer);
     void receiveTraceBuffer(const QList<QVector<qint16> > data);
-    void startAiTimer() { if (netLoaded) reqTraceBufferTimer->start(WAITBEFOREANALYZING * 1e3); }
+    void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(getNotifyTruncateTime() * 1.5e3); recordingEnded = false; }
+    void recordingHasEnded() { recordingEnded = true; }
 
 private:
     QStringList classes;
@@ -44,6 +45,7 @@ private:
     QTimer *reqTraceBufferTimer = new QTimer;
     QTimer *testTimer = new QTimer;
     bool netLoaded = false;
+    bool recordingEnded = true;
 
 private slots:
     void classifyData(cv::Mat frame);

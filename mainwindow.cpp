@@ -867,10 +867,12 @@ void MainWindow::setSignals()
     connect(read1809Data, &Read1809Data::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, aiPtr, &AI::startAiTimer); // will start analyze of data after x seconds
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
     connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData);
     connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
     connect(aiPtr, &AI::aiResult, sdefRecorder, &SdefRecorder::recPrediction);
     connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
+    connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
 }
 
 void MainWindow::instrStartFreqChanged()

@@ -91,6 +91,8 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
         appendEmailText(dt, msg);
     else if (getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
         appendEmailText(dt, msg);
+    else if (type == NOTIFY::TYPE::AI)
+        appendEmailText(dt, msg);
 }
 
 void Notifications::checkTruncate()
@@ -196,8 +198,8 @@ void Notifications::sendMail()
                                                                                                   QString::number(longitude, 'f', 5) + "_" +
                                                                                                   QString::number(latitude, 'f', 5)  +
                                                                                                   tr("\">Link til Kystverket</td></tr>") : "") +
-                              (predictionReceived ? "AI classification: " + prediction +
-                               ", probability " + QString::number(probability) + " %" : "") +
+                              /* + (predictionReceived ? "AI classification: " + prediction +
+                               ", probability " + QString::number(probability) + " %" : "") +'/*/
                               "</table><hr><img src='cid:image1' />   ");
 
             //qDebug() << "mail debug:" << mimeHtml->data();

@@ -15,8 +15,8 @@ AI::AI()
 
     reqTraceBufferTimer->setSingleShot(true);
     connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
-        int wait = WAITBEFOREANALYZING * 2;
-        if (wait > 120) wait = 120;
+        int wait = 120;
+        //if (wait > 120) wait = 120;
         emit reqTraceBuffer(wait);
     });
 
@@ -111,6 +111,7 @@ void AI::classifyData(cv::Mat frame)
     double probability = maxVal * 100 / sum;
 
     qDebug() << "Classification" << classes[classId] << probability;
+    emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)probability) + " %");
     emit aiResult(classes[classId], probability);
 }
 
