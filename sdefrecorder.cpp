@@ -221,7 +221,7 @@ QByteArray SdefRecorder::createHeader()
            << ", Attenuator: " << (getInstrAutoAtt()? "Auto" : QString::number(getInstrManAtt()))
            << "\n\n";
 
-    return buf.toLocal8Bit();
+    return buf.toUtf8();
 }
 
 QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
@@ -390,7 +390,7 @@ void SdefRecorder::updFileWithPrediction(const QString filename)
         do {
             data = file.readLine();
             if (data.contains("Note\n")) { // Found empty note line, editing
-                data = "Note Classification:" + prediction.toLocal8Bit() + " (" + QByteArray::number(probability) + " % probability)";
+                data = "Note Classification:" + prediction.toLocal8Bit() + " (" + QByteArray::number(probability) + " % probability)\n";
             }
             tempFile.write(data);
         } while (!file.atEnd());

@@ -406,7 +406,7 @@ void Notifications::generateGraphEmail()
         attachments.append(att);
     }
 
-    message.insert("subject", "Notification from " + getStationName() + " (" + getSdefStationInitals() + ")");
+    message.insert("subject", "Notification from " + getStationName().toUtf8() + " (" + getSdefStationInitals() + ")");
     message.insert("body", body);
     message.insert("toRecipients", toRecipients);
     if (fileOk) message.insert("attachments", attachments);
@@ -433,7 +433,7 @@ void Notifications::sendMailWithGraph()
         graphMailInProgress = true;
         QStringList l;
         QString url = "https://graph.microsoft.com/v1.0/users/" + getEmailFromAddress() + "/sendMail";
-        l << "-H" << "Content-Type:application/json;charset=ISO-8859-1"
+        l << "-H" << "Content-Type:application/json;charset=UTF-8"
           << "-s" << "-w" << "%{http_code}"
           << "-H" << graphAccessToken
           << "--data-ascii" << "@" + graphEmailLog.first()

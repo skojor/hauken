@@ -92,7 +92,7 @@ void Read1809Data::readFile(QString filename)
 
         while(!file.atEnd()) {
             // Header
-            QString line = file.readLine();
+            QString line = QString::fromLatin1(file.readLine());
             if (line.contains("filetype", Qt::CaseInsensitive)) {
                 if (line.contains("standard data exchange", Qt::CaseInsensitive)) isMobile = false;
                 else isMobile = true;
