@@ -221,7 +221,7 @@ QByteArray SdefRecorder::createHeader()
            << ", Attenuator: " << (getInstrAutoAtt()? "Auto" : QString::number(getInstrManAtt()))
            << "\n\n";
 
-    return buf.toUtf8();
+    return buf.toLocal8Bit();
 }
 
 QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
