@@ -94,7 +94,7 @@ void CustomPlotController::setupBasics()
     customPlotPtr->addLayer("overlayLayer");
     customPlotPtr->layer("overlayLayer")->setMode(QCPLayer::lmBuffered);
     customPlotPtr->graph(4)->setLayer("overlayLayer");
-    customPlotPtr->graph(4)->setData(QVector<double>() << 1000 << 1700, QVector<double>() << -200 << -200);
+    customPlotPtr->graph(4)->setData(QVector<double>() << 1 << 9900, QVector<double>() << -200 << -200);
     customPlotPtr->xAxis->grid()->setVisible(false);
 
     plotIterator = customPlotPtr->graphCount() - 1;
