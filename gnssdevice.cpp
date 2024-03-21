@@ -91,7 +91,7 @@ void GnssDevice::handleBuffer()
             int i = 0;
             do {
                 nmeaSentence.append(gnssBuffer[nmeaIndex + i++]);
-            } while (gnssBuffer[nmeaIndex + i] != '\n' && nmeaIndex + i < gnssBuffer.size());
+            } while (nmeaIndex + i < gnssBuffer.size() && gnssBuffer[nmeaIndex + i] != '\n');
 
             nmeaSize = nmeaSentence.size();
             nmeaSentence = nmeaSentence.simplified();
@@ -102,7 +102,7 @@ void GnssDevice::handleBuffer()
             }
             if (nmeaIndex > 0 && binaryIndex == -1) {   // somehow leftover data has ended up before the nmea sentence, looks like nothing. deleting
                 gnssBuffer.remove(0, nmeaIndex);
-                qDebug() << "GNSS: Leftover data, cleaning";
+                //qDebug() << "GNSS: Leftover data, cleaning";
             }
 
             //qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
@@ -262,9 +262,13 @@ bool GnssDevice::decodeGns(const QByteArray &val)
 QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const QByteArray time)
 {
     QDateTime dt;
-    dt = QDateTime::fromString(date + time.split('.').at(0), "ddMMyyHHmmss");
-    dt = dt.addYears(100);
-    dt.setTimeSpec(Qt::UTC);
+    QByteArray baTime;
+    if (time.contains(".")) baTime = time.split('.')[0];
+    if (date.size() == 6 && baTime.size() == 6) {
+        dt = QDateTime::fromString(date + baTime, "ddMMyyHHmmss");
+        dt = dt.addYears(100);
+        dt.setTimeSpec(Qt::UTC);
+    }
     return dt;
 }
 
@@ -342,8 +346,9 @@ bool GnssDevice::checkChecksum(const QByteArray &val)
         for(int i=1; i<string.size(); i++) // skip inital sign ($)
             checksum ^= static_cast<quint8>(string[i]);
         if (checksum != val) return false;
+        else return true;
     }
-    return true;
+    return false;
 }
 
 
