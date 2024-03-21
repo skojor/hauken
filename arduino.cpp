@@ -234,10 +234,12 @@ void Arduino::pong(int exitCode, QProcess::ExitStatus exitStatus)
     (void)exitStatus;
 
     if (exitCode != 0) {
+        if (lastPingValid) qDebug() << "Last ping failed (" + pingAddress + ")";
         lastPingValid = false;
         pingStateText->setText("Last ping failed (" + pingAddress + ")");
     }
     else {
+        if (!lastPingValid) qDebug() << "Ping ok";
         lastPingValid = true;
         pingStateText->setText("Last ping ok at " + QDateTime::currentDateTime().toString("hh:mm:ss"));
     }
