@@ -196,6 +196,22 @@ void MainWindow::createActions()
     exitAct->setStatusTip(tr("Shuts down connections and terminates Hauken"));
     exitAct->setShortcut(QKeySequence::Close);
     connect(exitAct, &QAction::triggered, qApp, &QApplication::exit);
+
+    connect(hideShowControls, &QAction::triggered, this, [this] {
+        instrGroupBox->setVisible(!instrGroupBox->isVisible());
+    });
+    connect(hideShowTrigSettings, &QAction::triggered, this, [this] {
+        trigGroupBox->setVisible(!trigGroupBox->isVisible());
+    });
+    connect(hideShowStatusIndicator, &QAction::triggered, this, [this] {
+        grpIndicator->setVisible(!grpIndicator->isVisible());
+    });
+    connect(hideShowGnssWindow, &QAction::triggered, this, [this] {
+        rightBox->setVisible(!rightBox->isVisible());
+    });
+    connect(hideShowIncidentlog, &QAction::triggered, this, [this] {
+        incBox->setVisible(!incBox->isVisible());
+    });
 }
 
 void MainWindow::createMenus()
@@ -245,7 +261,7 @@ void MainWindow::createLayout()
     QVBoxLayout *leftLayout = new QVBoxLayout;
 
     QFormLayout *instrForm = new QFormLayout;
-    QGroupBox *instrGroupBox = new QGroupBox("Measurement receiver");
+    instrGroupBox = new QGroupBox("Measurement receiver");
     instrGroupBox->setMinimumWidth(280);
     instrGroupBox->setMaximumWidth(280);
 
@@ -265,7 +281,7 @@ void MainWindow::createLayout()
     instrGroupBox->setLayout(instrForm);
 
     QFormLayout *trigForm = new QFormLayout;
-    QGroupBox *trigGroupBox = new QGroupBox("Trigger settings");
+    trigGroupBox = new QGroupBox("Trigger settings");
     trigForm->addRow(new QLabel("Trig level (dB)"), instrTrigLevel);
     trigForm->addRow(new QLabel("Single trig bandwidth (kHz)"), instrTrigBandwidth);
     trigForm->addRow(new QLabel("Total trig bandwidth (kHz)"), instrTrigTotalBandwidth);
@@ -288,7 +304,7 @@ void MainWindow::createLayout()
     leftLayout->addWidget(trigGroupBox);
 
     QHBoxLayout *incLayout = new QHBoxLayout;
-    QGroupBox *incBox = new QGroupBox("Incident log");
+    incBox = new QGroupBox("Incident log");
     incLayout->addWidget(incidentLog);
     incBox->setLayout(incLayout);
     incBox->setMaximumHeight(220);
@@ -296,7 +312,7 @@ void MainWindow::createLayout()
     QHBoxLayout *bottomBox = new QHBoxLayout;
 
     QGridLayout *bottomIndicatorLayout = new QGridLayout;
-    QGroupBox *grpIndicator = new QGroupBox("Status indicators");
+    grpIndicator = new QGroupBox("Status indicators");
 
     bottomIndicatorLayout->addWidget(ledTraceStatus, 0, 0, Qt::AlignBottom);
     bottomIndicatorLayout->addWidget(labelTraceLedText, 0, 1);
@@ -1333,3 +1349,16 @@ void MainWindow::recordEnabled(bool state) {
         }
     }
 }
+
+#ifndef QT_NO_CONTEXTMENU
+void MainWindow::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+    menu.addAction(hideShowControls);
+    menu.addAction(hideShowTrigSettings);
+    menu.addAction(hideShowStatusIndicator);
+    menu.addAction(hideShowGnssWindow);
+    menu.addAction(hideShowIncidentlog);
+    menu.exec(event->globalPos());
+}
+#endif // QT_NO_CONTEXTMENU

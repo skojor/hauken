@@ -73,7 +73,11 @@ public:
 public slots:
     void resizeEvent(QResizeEvent *event) override; // override to save changes to win size
     void moveEvent(QMoveEvent *event) override; // override to save position
+
 protected:
+#ifndef QT_NO_CONTEXTMENU
+    void contextMenuEvent(QContextMenuEvent *event) override;
+#endif // QT_NO_CONTEXTMENU
 
 private slots:
     void createMenus();
@@ -177,7 +181,6 @@ private:
     LedIndicator *ledGnssStatus = new LedIndicator;
     QLabel *labelGnssLedText = new QLabel("No GNSS data");
 
-
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
     GnssDevice *gnssDevice1 = new GnssDevice(this, 1);
     GnssDevice *gnssDevice2 = new GnssDevice(this, 2);
@@ -202,11 +205,20 @@ private:
     QAction *optPositionReport;
     QAction *optGeoLimit;
     QAction *optMqtt;
-
+    QAction *hideShowControls = new QAction("Hide/show receiver controls");
+    QAction *hideShowTrigSettings = new QAction("Hide/show trigger settings");
+    QAction *hideShowStatusIndicator = new QAction("Hide/show status indicators");
+    QAction *hideShowGnssWindow = new QAction("Hide/show GNSS status window");
+    QAction *hideShowIncidentlog = new QAction("Hide/show incident log");
     QAction *aboutAct;
     QAction *aboutQtAct;
     QAction *changelogAct;
     QAction *exitAct;
+
+    QGroupBox *instrGroupBox;
+    QGroupBox *trigGroupBox;
+    QGroupBox *grpIndicator;
+    QGroupBox *incBox;
 
     GeneralOptions *generalOptions;
     GnssOptions *gnssOptions;
