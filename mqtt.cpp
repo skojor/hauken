@@ -68,10 +68,12 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
 {
     QStringList subs = getMqttSubTopics();
     QStringList subNames = getMqttSubNames();
+    QStringList subToIncidentlog = getMqttSubToIncidentlog();
+
     QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonValue value = jsonObject.value("value");
-    //qDebug() << "MQTT received" << topic << msg;
+    qDebug() << "MQTT received" << topic << msg;
     if (subValues.size() != subs.size()) {
         subValues.clear();
         for (int i=0; i<subs.size();i++) subValues.append(0);
@@ -80,6 +82,9 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
         if (subs[i] == topic) {
             subValues[i] = value.toDouble();
             emit newData(subNames[i], subValues[i]);
+            if (subToIncidentlog.size() > i) {
+                if (subToIncidentlog[i] == "1") emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
+            }
         }
     }
 }

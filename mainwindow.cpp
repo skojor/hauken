@@ -765,6 +765,7 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer2, &GnssAnalyzer::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(mqtt, &Mqtt::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
     connect(measurementDevice, &MeasurementDevice::updGnssData, gnssAnalyzer3, &GnssAnalyzer::getData);

@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QProcess>
 #include "config.h"
+#include "typedefs.h"
 
 class Mqtt : public Config
 {
@@ -20,6 +21,7 @@ public slots:
 
 signals:
     void newData(QString& name, double& value);
+    void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 
 private slots:
     void stateChanged(QMqttClient::ClientState state);

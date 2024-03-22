@@ -330,6 +330,8 @@ public slots:
     void setMqttSubNames(QStringList l) { settings->setValue("mqtt/subNames", l);emit settingsUpdated(); }
     QStringList getMqttSubTopics() { return settings->value("mqtt/subTopics").toStringList();}
     void setMqttSubTopics(QStringList l) { settings->setValue("mqtt/subTopics", l);emit settingsUpdated(); }
+    QStringList getMqttSubToIncidentlog() { return settings->value("mqtt/subToIncidentlog", QStringList()).toStringList();}
+    void setMqttSubToIncidentlog(QStringList l) { settings->setValue("mqtt/subToIncidentlog", l); emit settingsUpdated();}
 
     QString getMqttWebswitchAddress() { return settings->value("mqtt/webswitchAddress", "").toString().trimmed();}
     void setMqttWebswitchAddress(QString s) { settings->setValue("mqtt/webswitchAddress", s);emit settingsUpdated(); }

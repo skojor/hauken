@@ -22,7 +22,8 @@ enum class TYPE {
     CAMERARECORDER,
     GEOLIMITER,
     PLAYBACK,
-    AI
+    AI,
+    MQTT
 };
 }
 

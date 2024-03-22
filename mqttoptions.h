@@ -22,6 +22,7 @@ private slots:
 
 private:
     QList<QLineEdit *> subNames, subTopics;
+    QList<QCheckBox *> subIncidentlog;
     QList<QGroupBox *> subGroupBoxes;
     QList<QFormLayout *> subLayouts;
 };

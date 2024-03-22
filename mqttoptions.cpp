@@ -28,11 +28,14 @@ void MqttOptions::saveCurrentSettings()
     config->setMqttActivate(cbOpt1->isChecked());
     config->setMqttServer(leOpt1->text());
 
-    QStringList names, topics;
+    QStringList names, topics, toIncidentlog;
     for (auto &val : subNames) if (!val->text().isEmpty()) names.append(val->text());
     for (auto &val : subTopics) if (!val->text().isEmpty()) topics.append(val->text());
+    for (auto &val : subIncidentlog) if (val->isChecked()) toIncidentlog.append("1"); else toIncidentlog.append("0");
+
     config->setMqttSubNames(names);
     config->setMqttSubTopics(topics);
+    config->setMqttSubToIncidentlog(toIncidentlog);
 
     config->setMqttKeepaliveTopic(leOpt12->text());
     config->setMqttUsername(leOpt13->text());
@@ -47,6 +50,7 @@ void MqttOptions::updSubs()
 {
     QStringList names = config->getMqttSubNames();
     QStringList topics = config->getMqttSubTopics();
+    QStringList toIncidentlog = config->getMqttSubToIncidentlog();
 
     if (subGroupBoxes.isEmpty()) {
         //qDebug() << names;
@@ -57,6 +61,14 @@ void MqttOptions::updSubs()
     for (int i=0; i<subNames.size(); i++) {
         if (names.size() >= i+1) subNames[i]->setText(config->getMqttSubNames()[i]);
         if (topics.size() >= i+1) subTopics[i]->setText(config->getMqttSubTopics()[i]);
+        if (toIncidentlog.size() >= i+1) {
+            if (toIncidentlog[i] == "1") subIncidentlog[i]->setChecked(true);
+            else subIncidentlog[i]->setChecked(false);
+        }
+        else {
+            subIncidentlog.append(new QCheckBox);
+            subIncidentlog[i]->setChecked(false);
+        }
     }
 }
 
@@ -69,10 +81,14 @@ void MqttOptions::addSub()
     subGroupBoxes.last()->setLayout(subLayouts.last());
     subNames.append(new QLineEdit);
     subTopics.append(new QLineEdit);
+    subIncidentlog.append(new QCheckBox);
+    subIncidentlog.last()->setText(tr("Show messages in incident log"));
+    subIncidentlog.last()->setToolTip(tr("Enable this option to add a line in the incident log when message topic is received"));
     subLayouts.last()->addRow(new QLabel(tr("Name")), subNames.last());
     subNames.last()->setToolTip(tr("Sensor name to be published in the HTTP report"));
     subLayouts.last()->addRow(new QLabel(tr("Subscription topic")), subTopics.last());
     subTopics.last()->setToolTip(tr("Subscription topic to subscribe to (blank to disable)"));
+    subLayouts.last()->addRow(subIncidentlog.last());
     mainLayout->insertRow(mainLayout->rowCount()-1, subGroupBoxes.last());
     connect(subNames.last(), &QLineEdit::textChanged, this, &MqttOptions::addSub);
 }
