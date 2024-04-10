@@ -188,9 +188,13 @@ void Arduino::relayBtnOffPressed()
     arduino->write("0");
 }
 
-void Arduino::resetWatchdog()
+void Arduino::resetWatchdog() // reset watchdog periodically. Ping watchdog in own routine
 {
-    if ((pingTimer->isActive() && lastPingValid && arduino->isOpen()) || (!pingTimer->isActive() && arduino->isOpen())) arduino->write("1");
+    //if ((pingTimer->isActive() && lastPingValid && arduino->isOpen()) || (!pingTimer->isActive() && arduino->isOpen())) arduino->write("1");
+    if (!pingTimer->isActive() && arduino->isOpen()) {
+        arduino->write("1");
+        //qDebug() << "WDR normal";
+    }
 }
 
 void Arduino::watchdogOn()
@@ -256,5 +260,7 @@ void Arduino::pong(int exitCode, QProcess::ExitStatus exitStatus)
         if (!lastPingValid) qDebug() << "Ping ok";
         lastPingValid = true;
         pingStateText->setText("Last ping ok at " + QDateTime::currentDateTime().toString("hh:mm:ss"));
+        //qDebug() << "WDR ping";
+        arduino->write("1"); // reset watchdog
     }
 }

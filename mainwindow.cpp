@@ -371,7 +371,7 @@ void MainWindow::createLayout()
     plotMinScroll->setValue(config->getPlotYMin());
     plotMaxholdTime->setFixedSize(40,20);
     plotMaxholdTime->setRange(0, 120);
-    waterfallTime->setRange(2, 86400);
+    waterfallTime->setRange(20, 86400);
 
     gridLayout->addLayout(leftLayout, 0, 0, 2, 1);
     gridLayout->addLayout(plotLayout, 0, 1, 1, 2);
