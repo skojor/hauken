@@ -199,18 +199,23 @@ void MainWindow::createActions()
 
     connect(hideShowControls, &QAction::triggered, this, [this] {
         instrGroupBox->setVisible(!instrGroupBox->isVisible());
+        restartWaterfall();
     });
     connect(hideShowTrigSettings, &QAction::triggered, this, [this] {
         trigGroupBox->setVisible(!trigGroupBox->isVisible());
+        restartWaterfall();
     });
     connect(hideShowStatusIndicator, &QAction::triggered, this, [this] {
         grpIndicator->setVisible(!grpIndicator->isVisible());
+        restartWaterfall();
     });
     connect(hideShowGnssWindow, &QAction::triggered, this, [this] {
         rightBox->setVisible(!rightBox->isVisible());
+        restartWaterfall();
     });
     connect(hideShowIncidentlog, &QAction::triggered, this, [this] {
         incBox->setVisible(!incBox->isVisible());
+        restartWaterfall();
     });
 }
 
@@ -1363,3 +1368,10 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event)
     menu.exec(event->globalPos());
 }
 #endif // QT_NO_CONTEXTMENU
+
+void MainWindow::restartWaterfall()
+{
+    QTimer::singleShot(50, this, [this] {       // short delay to allow screen to update before restarting
+        waterfall->updSize(customPlot->axisRect()->rect());
+    });
+}

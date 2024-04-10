@@ -100,7 +100,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
         quint64 ffmFreq = (quint64)optHeaderIfPanEb500.freqHigh << 32 | optHeaderIfPanEb500.freqLow;
         if (ffmFreq != devicePtr->ffmCenterFrequency ||
                 optHeaderIfPanEb500.freqSpan != devicePtr->ffmFrequencySpan) {
-            qDebug() << "chuj" << ffmFreq << devicePtr->ffmCenterFrequency << optHeaderIfPanEb500.freqSpan << devicePtr->ffmFrequencySpan;
+            //qDebug() << ffmFreq << devicePtr->ffmCenterFrequency << optHeaderIfPanEb500.freqSpan << devicePtr->ffmFrequencySpan;
             return false;
         }
     }
@@ -201,7 +201,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
             if (data != 2000) fft.append(data);
             else {
                 if (fft.size() >= calcPscanPointsPerTrace()) {
-                    //if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "stor pakke" << fft.size() << calcPscanPointsPerTrace();
+                    //if (fft.size() > calcPscanPointsPerTrace()) qDebug() << "Stream debug" << fft.size() << calcPscanPointsPerTrace();
 
                     while (fft.size() > calcPscanPointsPerTrace())
                         fft.removeLast();

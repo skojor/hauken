@@ -273,6 +273,10 @@ void SdefRecorder::restartRecording()
 
 bool SdefRecorder::curlLogin()
 {
+    if (!process->atEnd()) {
+        qDebug() << "Curl process stuck, closing";
+        process->close();
+    }
 
     // parameters check
     if (getSdefStationInitals().isEmpty() or getSdefUsername().isEmpty() or getSdefPassword().isEmpty()
@@ -328,6 +332,11 @@ void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
 
 void SdefRecorder::curlUpload()
 {
+    if (process->state() != QProcess::NotRunning) {
+        qDebug() << "Curl process stuck, closing" << process->processId();
+        process->close();
+    }
+
     if (filesAwaitingUpload.size()) {
         QString filename = filesAwaitingUpload.first();
 

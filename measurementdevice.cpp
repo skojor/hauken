@@ -58,7 +58,7 @@ void MeasurementDevice::scpiConnected()
 
 void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
 {
-    qDebug() << "TCP scpi socket state" << state;
+    //qDebug() << "TCP scpi socket state" << state;
 
     if (state == QAbstractSocket::ConnectedState) {
         askId();

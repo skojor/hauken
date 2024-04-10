@@ -16,6 +16,15 @@ Arduino::Arduino(QObject *parent)
     connect(pingProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Arduino::pong);
 
     updSettings();
+
+    if (QSysInfo::kernelType().contains("win")) {
+        pingProcess->setProgram("ping.exe");
+    }
+
+    else if (QSysInfo::kernelType().contains("linux")) {
+        pingProcess->setProgram("ping");
+    }
+
     start();
 }
 
@@ -160,7 +169,7 @@ void Arduino::handleBuffer()
                 watchdogOff();
             }
 
-            if (stateWatchdog) watchdogText->setText("Enabled, " + QString::number(secondsLeft) + " sec since reset");
+            if (stateWatchdog) watchdogText->setText("Enabled, " + QString::number(secondsLeft) + " sec until barking");
             else watchdogText->setText("Disabled");
         }
         //qDebug() << buffer;
@@ -217,15 +226,20 @@ void Arduino::updSettings()
 
 void Arduino::ping()
 {
+    if (pingProcess->state() != QProcess::NotRunning) { // for some reason the process hangs
+        qDebug() << "Ping process stuck, closing" << pingProcess->state() << pingProcess->processId();
+        pingProcess->close();
+        lastPingValid = false;
+    }
+
     if (QSysInfo::kernelType().contains("win")) {
-        pingProcess->setProgram("ping.exe");
         pingProcess->setArguments(QStringList() << "-n" << "1" << pingAddress);
     }
 
     else if (QSysInfo::kernelType().contains("linux")) {
-        pingProcess->setProgram("ping");
         pingProcess->setArguments(QStringList() << "-c" << "1" << pingAddress);
     }
+
     pingProcess->start();
 }
 

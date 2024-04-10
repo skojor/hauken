@@ -122,6 +122,10 @@ void PositionReport::sendReport()
 {
     curlProcess->setArguments(reportArgs);
     //qDebug() << "req to send" << reportArgs;
+    if (curlProcess->state() != QProcess::NotRunning) { // process stuck, closing
+        qDebug() << "Curl process stuck, closing" << curlProcess->processId();
+        curlProcess->close();
+    }
     curlProcess->start();
 }
 
