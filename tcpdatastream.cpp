@@ -6,8 +6,11 @@ TcpDataStream::TcpDataStream()
 
 void TcpDataStream::openListener(const QHostAddress host, const int port)
 {
+    tcpSocket->close();
+
     tcpSocket->connectToHost(host, port);
-    if (tcpSocket->isOpen()) {tcpSocket->waitForConnected(1000);
+    tcpSocket->waitForConnected(1000);
+    if (tcpSocket->isOpen()) {
         tcpSocket->write("\n");
         bytesPerSecTimer->start();
     }
