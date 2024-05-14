@@ -8,7 +8,6 @@ MeasurementDevice::MeasurementDevice(QSharedPointer<Config> c)
 
 void MeasurementDevice::start()
 {
-    //connect(scpiSocket, &QTcpSocket::connected, this, scpiConnected); NO! Don't pretend to be connected until we know what we have connected to!
     connect(scpiSocket, &QTcpSocket::disconnected, this, &MeasurementDevice::scpiDisconnected);
     //connect(scpiSocket, &QTcpSocket::errorOccurred, this, &MeasurementDevice::scpiError);
     connect(scpiSocket, &QTcpSocket::stateChanged, this, &MeasurementDevice::scpiStateChanged);
@@ -33,6 +32,9 @@ void MeasurementDevice::start()
 
     connect(tcpStream, &TcpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
     connect(udpStream, &UdpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
+
+    connect(tcpStream, &TcpDataStream::streamErrorResetConnection, this, &MeasurementDevice::handleNetworkError);
+    connect(udpStream, &UdpDataStream::streamErrorResetConnection, this, &MeasurementDevice::handleNetworkError);
 
     connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
     updGnssDisplayTimer->start(1000);
@@ -103,6 +105,8 @@ void MeasurementDevice::instrDisconnect()
     }
     updFrequencyData->stop();
     scpiSocket->close();
+    tcpStream->closeListener();
+    udpStream->closeListener();
 }
 
 void MeasurementDevice::scpiDisconnected()
@@ -671,7 +675,7 @@ void MeasurementDevice::handleStreamTimeout()
     if (connected) {
         tcpTimeoutTimer->stop();
         if (autoReconnect) { // check stream settings regularly to see if device is available again
-            autoReconnectTimer->start(15000);
+            autoReconnectTimer->start(5000);
             if (!autoReconnectInProgress) {
                 emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Lost datastream. Auto reconnect enabled, waiting for device to be available again");
                 emit deviceStreamTimeout();
@@ -973,4 +977,9 @@ bool MeasurementDevice::isConnected()
         return false;
     else
         return true;
+}
+
+void MeasurementDevice::handleNetworkError()
+{
+    qDebug() << "OBAbug detected, do sth smart here";
 }

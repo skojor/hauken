@@ -34,15 +34,16 @@ bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the ini
     ds >> header.magicNumber >> header.versionMinor >> header.versionMajor >> header.seqNumber
             >> header.reserved >> header.dataSize;
     if (header.magicNumber != 0x000eb200) {
-        //qDebug() << "Packet magic number != 0x000eb200, not Rohde & Schwarz?" << header.magicNumber << header.seqNumber << header.dataSize;
         return false;
     }
 
-    if (header.dataSize > 100000) {
+    else if (header.dataSize > 100000) {
         qDebug() << "Enormous header size" << header.dataSize;
         return false;
     }
-    return true;
+    else {
+        return true;
+    }
 }
 
 bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)

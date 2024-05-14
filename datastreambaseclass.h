@@ -46,7 +46,7 @@ public:
     QElapsedTimer *traceTimer = new QElapsedTimer;
     int errorCtr = 0;
     bool errorHandleSent = false;
-    const int timeoutInMs = 8000;
+    const int timeoutInMs = 4000;
 
 public slots:
     virtual void openListener() = 0;
@@ -80,6 +80,7 @@ signals:
     void tracesPerSecond(double);
     void timeout();
     void streamErrorResetFreq();
+    void streamErrorResetConnection();
 
 private slots:
 

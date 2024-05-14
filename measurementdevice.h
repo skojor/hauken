@@ -127,6 +127,7 @@ private slots:
     void scpiRead();
     void tcpTimeout();
     void handleStreamTimeout();
+    void handleNetworkError();
     void autoReconnectCheckStatus();
 
     void resetFreqSettings();

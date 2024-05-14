@@ -10,6 +10,14 @@
 #include "config.h"
 #include "typedefs.h"
 
+enum SITESTATUS {
+    UNKNOWN,
+    STOP,
+    START,
+    RUNNING,
+    NORUNNING
+};
+
 class Mqtt : public Config
 {
     Q_OBJECT
@@ -36,6 +44,7 @@ private slots:
     void stopKeepaliveTimer();
     void webswitchRequestData();
     void webswitchParseData(int exitCode, QProcess::ExitStatus);
+    void parseMqtt(QString topic, QByteArray msg);
 
 private:
     QMqttClient mqttClient;
@@ -43,6 +52,7 @@ private:
     QTimer *webswitchTimer = new QTimer;
     QList<double> subValues;
     QProcess *webswitchProcess = new QProcess;
+    SITESTATUS siteStatus = UNKNOWN;
 
     // config cache
     bool enabled = false;

@@ -29,6 +29,97 @@ Mqtt::Mqtt(QObject *parent)
         webswitchProcess->setProgram("curl");
     }
     QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy);
+
+
+    QTimer::singleShot(1000, this, [this] {
+        QJsonObject json;
+        json["siteid"] = 1;
+        json["sitename"] = "Bleik";
+        json["testid"] = 1110;
+        json["name"] = "";
+        json["description"] = "";
+        json["comment"] = "";
+        json["status"] = "no running test";
+        json["localtime"] = "2023-09-07T14:27:39+02:00";
+        json["utctime"] = "2023-09-07T12:27:39+02:00";
+        QJsonDocument jsonDoc(json);
+        parseMqtt("basic_status/site1", jsonDoc.toJson());
+    });
+    QTimer::singleShot(3000, this, [this] {
+        QJsonObject json;
+        json["siteid"] = 1;
+        json["sitename"] = "Bleik";
+        json["testid"] = 1110;
+        json["name"] = "6.1.4";
+        json["description"] = "Test: 0.1 µW to 20 W, 2 dB increments PRN: L1, G1, L2, L5";
+        json["comment"] = "";
+        json["status"] = "running";
+        json["localtime"] = "2023-09-07T14:27:39+02:00";
+        json["utctime"] = "2023-09-07T12:27:39+02:00";
+        QJsonDocument jsonDoc(json);
+        parseMqtt("basic_status/site1", jsonDoc.toJson());
+    });
+
+    QTimer::singleShot(4000, this, [this] {
+        QJsonObject json;
+        json["siteid"] = 1;
+        json["sitename"] = "Bleik";
+        json["testid"] = 1110;
+        json["name"] = "6.1.4";
+        json["description"] = "Test: 0.1 µW to 20 W, 2 dB increments PRN: L1, G1, L2, L5";
+        json["comment"] = "";
+        json["status"] = "running";
+        json["localtime"] = "2023-09-07T14:27:39+02:00";
+        json["utctime"] = "2023-09-07T12:27:39+02:00";
+        QJsonDocument jsonDoc(json);
+        parseMqtt("basic_status/site1", jsonDoc.toJson());
+    });
+
+    QTimer::singleShot(5000, this, [this] {
+        QJsonObject json;
+        json["siteid"] = 1;
+        json["sitename"] = "Bleik";
+        json["testid"] = 1110;
+        json["name"] = "6.1.4";
+        json["description"] = "Test: 0.1 µW to 20 W, 2 dB increments PRN: L1, G1, L2, L5";
+        json["comment"] = "";
+        json["status"] = "stop";
+        json["localtime"] = "2023-09-07T14:27:39+02:00";
+        json["utctime"] = "2023-09-07T12:27:39+02:00";
+        QJsonDocument jsonDoc(json);
+        parseMqtt("basic_status/site1", jsonDoc.toJson());
+    });
+
+    QTimer::singleShot(6000, this, [this] {
+        QJsonObject json;
+        json["siteid"] = 1;
+        json["sitename"] = "Bleik";
+        json["testid"] = 1110;
+        json["name"] = "6.1.4";
+        json["description"] = "Test: 0.1 µW to 20 W, 2 dB increments PRN: L1, G1, L2, L5";
+        json["comment"] = "";
+        json["status"] = "no running test";
+        json["localtime"] = "2023-09-07T14:27:39+02:00";
+        json["utctime"] = "2023-09-07T12:27:39+02:00";
+        QJsonDocument jsonDoc(json);
+        parseMqtt("basic_status/site1", jsonDoc.toJson());
+    });
+
+    QTimer::singleShot(7000, this, [this] {
+        QJsonObject json;
+        json["siteid"] = 1;
+        json["sitename"] = "Bleik";
+        json["testid"] = 1110;
+        json["name"] = "6.1.4";
+        json["description"] = "Test: 0.1 µW to 20 W, 2 dB increments PRN: L1, G1, L2, L5";
+        json["comment"] = "";
+        json["status"] = "no running test";
+        json["localtime"] = "2023-09-07T14:27:39+02:00";
+        json["utctime"] = "2023-09-07T12:27:39+02:00";
+        QJsonDocument jsonDoc(json);
+        parseMqtt("basic_status/site1", jsonDoc.toJson());
+    });
+
 }
 
 void Mqtt::stateChanged(QMqttClient::ClientState state)
@@ -83,7 +174,7 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
             subValues[i] = value.toDouble();
             emit newData(subNames[i], subValues[i]);
             if (subToIncidentlog.size() > i) {
-                if (subToIncidentlog[i] == "1") emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
+                if (subToIncidentlog[i] == "1") parseMqtt(topic.name(), msg); //emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
             }
         }
     }
@@ -184,5 +275,44 @@ void Mqtt::webswitchParseData(int exitCode, QProcess::ExitStatus)
             }
         }
         //qDebug() << split << split[2];
+    }
+}
+
+void Mqtt::parseMqtt(QString topic, QByteArray msg)
+{
+    if (topic.contains("basic_status", Qt::CaseInsensitive)) { // special case
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
+        QJsonObject jsonObject = jsonDoc.object();
+        QJsonValue siteid = jsonObject.value("siteid");
+        QJsonValue sitename = jsonObject.value("sitename");
+        QJsonValue testid = jsonObject.value("testid");
+        QJsonValue name = jsonObject.value("name");
+        QJsonValue description = jsonObject.value("description");
+        QJsonValue comment = jsonObject.value("comment");
+        QJsonValue status = jsonObject.value("status");
+        QJsonValue localtime = jsonObject.value("localtime");
+        QJsonValue utctime = jsonObject.value("utctime");
+
+        QString msg;
+        QTextStream ts(&msg);
+
+        if (siteStatus == RUNNING && status.toString().contains("stop", Qt::CaseInsensitive)) { // test ended
+            ts << sitename.toString() << ": " << "Test " << name.toString() << " ended";
+            siteStatus = STOP;
+        }
+        else if (siteStatus != NORUNNING && status.toString().contains("no running test", Qt::CaseInsensitive)) { // no test
+            ts << sitename.toString() << ": " << "No test running";
+            siteStatus = NORUNNING;
+        }
+        else if (siteStatus == RUNNING && status.toString().contains("no running test", Qt::CaseInsensitive)) { // from running to no running test, we missed sth
+            ts << sitename.toString() << ": " << "No test running";
+            siteStatus = NORUNNING;
+        }
+        else if (siteStatus != RUNNING  && status.toString() == "running") { // from sth to running test
+            ts << sitename.toString() << ": " << "Test " << name.toString() << " " << description.toString() << " started";
+            siteStatus = RUNNING;
+        }
+
+        if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
     }
 }

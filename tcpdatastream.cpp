@@ -42,9 +42,10 @@ void TcpDataStream::newData()
         ds >> tmp;
         tcpBuffer.append(tmp);
 
-        if (!headerIsRead and tcpBuffer.size() > 15) {
-            if (!checkHeader(tcpBuffer)) {
-                tcpBuffer.clear();
+        if (!headerIsRead and tcpBuffer.size() > 35) {
+            if (!checkHeader(tcpBuffer)) { // out of sync here
+                tcpBuffer.removeFirst();
+                //tcpBuffer.clear();
             }
             else
                 headerIsRead = true;
