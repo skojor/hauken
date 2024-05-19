@@ -46,6 +46,7 @@ SOURCES += \
     gnssanalyzer.cpp \
     gnssdevice.cpp \
     gnssoptions.cpp \
+    instrumentlist.cpp \
     led/ledindicator.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -108,6 +109,7 @@ HEADERS += \
     gnssanalyzer.h \
     gnssdevice.h \
     gnssoptions.h \
+    instrumentlist.h \
     led/ledindicator.h \
     mainwindow.h \
     measurementdevice.h \
@@ -183,7 +185,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.36.3.0
+VERSION = 2.37.1.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

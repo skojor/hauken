@@ -54,6 +54,9 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt2->setToolTip("Enabling this will put Hauken in PMR mode. This will change a number of options to optimize for PMR detection");
     cbOpt2->setDisabled(true);
 
+    mainLayout->addRow(new QLabel("Instrument address list server"), leOpt8);
+    leOpt8->setToolTip("Address used to download instrument IP address lists. Blank to disable");
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -71,6 +74,7 @@ void GeneralOptions::start()
     cbOpt1->setChecked(config->getNewLogFolder());
     cbOpt2->setChecked(config->getPmrMode());
     leOpt7->setText(config->getSdefStationInitals());
+    leOpt8->setText(config->getIpAddressServer());
 
     dialog->exec();
 }
@@ -94,6 +98,7 @@ void GeneralOptions::saveCurrentSettings()
     config->setNewLogFolder(cbOpt1->isChecked());
     config->setPmrMode(cbOpt2->isChecked());
     config->setSdefStationInitials(leOpt7->text());
+    config->setIpAddressServer(leOpt8->text());
 
     dialog->close();
 }

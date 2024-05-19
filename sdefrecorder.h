@@ -44,6 +44,7 @@ public slots:
     void updPosition(bool b, double l1, double l2);
     void finishRecording();
     void recPrediction(QString pred, int prob);
+    void loginRequest() { curlLogin(); askedForLogin = true; }
 
 private slots:
     QByteArray createHeader();
@@ -65,6 +66,7 @@ signals:
     void reqPositionFrom(POSITIONSOURCE);
     void recordingEnabled();
     void recordingDisabled();
+    void loginSuccessful();
 
 private:
     //QSharedPointer<Config> config;
@@ -95,6 +97,7 @@ private:
     QString prediction;
     int probability = 0;
     bool predictionReceived = false;
+    bool askedForLogin = false;
 };
 
 #endif // SDEFRECORDER_H

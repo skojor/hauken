@@ -511,6 +511,56 @@ public:
     int             maxLevel = -999;
 };
 
+enum class StationType {
+    UNKNOWN,
+    STATIONARY,
+    OFFSHORE,
+    SHIP,
+    MOBILE,
+    PORTABLE
+};
+
+enum class InstrumentCategory {
+    UNKNOWN,
+    RECEIVER,
+    PC
+};
+
+class EquipmentInfo {
+public:
+    EquipmentInfo() {}
+    int index;
+    QString type;
+};
+
+class InstrumentInfo {
+public:
+    InstrumentInfo() {}
+    unsigned char index = 0;
+    InstrumentCategory category = InstrumentCategory::UNKNOWN;
+    QString producer;
+    QString type;
+    QString frequencyRange;
+    QString serialNumber;
+    QString ipAddress;
+    unsigned char equipmentIndex = 0;
+};
+
+class StationInfo {
+public:
+    StationInfo() {}
+    unsigned int StationIndex = 0;
+    QString name;
+    QString officialName;
+    QString address;
+    double latitude = 0;
+    double longitude = 0;
+    QString status;
+    StationType type = StationType::UNKNOWN;
+    unsigned long mmsi = 0;
+    bool active = false;
+    QList<InstrumentInfo> instrumentInfo;
+};
 
 #endif // TYPEDEFS_H
 

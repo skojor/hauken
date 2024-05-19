@@ -61,6 +61,7 @@
 #include "led/ledindicator.h"
 #include "read1809data.h"
 #include "ai.h"
+#include "instrumentlist.h"
 
 class MainWindow : public QMainWindow
 {
@@ -154,7 +155,7 @@ private:
     QComboBox *instrAntPort = new QComboBox;
     QComboBox *instrMode = new QComboBox;
     QComboBox *instrFftMode = new QComboBox;
-    QLineEdit *instrIpAddr = new QLineEdit;
+    QComboBox *instrIpAddr = new QComboBox;
     QLineEdit *instrPort = new QLineEdit;
     QGroupBox *rightBox = new QGroupBox("GNSS status");
 
@@ -260,6 +261,7 @@ private:
     Arduino *arduinoPtr;
     AI *aiPtr;
     Read1809Data *read1809Data;
+    InstrumentList *instrumentList = new InstrumentList;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();

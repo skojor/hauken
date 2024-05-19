@@ -98,6 +98,9 @@ public slots:
     bool getPmrMode() { return settings->value("pmr/mode", false).toBool();}
     void setPmrMode(bool b) { settings->setValue("pmr/mode", b); emit settingsUpdated(); }
 
+    QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString();}
+    void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
+
     // Receiver options
     bool getInstrConnectOnStartup() { return settings->value("instr/ConnectOnStartup", false).toBool(); }
     void setInstrConnectOnStartup(bool b) { settings->setValue("instr/ConnectOnStartup", b); emit settingsUpdated(); }

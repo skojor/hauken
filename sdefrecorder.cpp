@@ -290,7 +290,7 @@ bool SdefRecorder::curlLogin()
     }
 
     if (getSdefZipFiles()) zipit();
-    filesAwaitingUpload.append(finishedFilename); // add to transmit queue
+    if (!finishedFilename.isEmpty()) filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
     QStringList l;
     l << "-H" << "'application/x-www-form-url-encoded'"
@@ -321,7 +321,11 @@ void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
     }
     else if (stateCurlAwaitingLogin) { // curl has successfully logged in, continue
         stateCurlAwaitingLogin = false;
-        QTimer::singleShot(5000, this, &SdefRecorder::curlUpload);
+        if (!askedForLogin) QTimer::singleShot(5000, this, &SdefRecorder::curlUpload);
+        else {
+            emit loginSuccessful();
+            askedForLogin = false;
+        }
     }
     else if (stateCurlAwaitingFileUpload) {
         stateCurlAwaitingFileUpload = false;

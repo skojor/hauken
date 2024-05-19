@@ -84,6 +84,8 @@ MainWindow::MainWindow(QWidget *parent)
         waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
     notificationTimer->setSingleShot(true);
+
+    instrumentList->start(); // check if instrument server is available
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -267,8 +269,8 @@ void MainWindow::createLayout()
 
     QFormLayout *instrForm = new QFormLayout;
     instrGroupBox = new QGroupBox("Measurement receiver");
-    instrGroupBox->setMinimumWidth(280);
-    instrGroupBox->setMaximumWidth(280);
+    instrGroupBox->setMinimumWidth(320);
+    instrGroupBox->setMaximumWidth(320);
 
     instrForm->addRow(startFreqLabel, instrStartFreq);
     instrForm->addRow(stopFreqLabel, instrStopFreq);
@@ -450,14 +452,14 @@ void MainWindow::getConfigValues()
     instrAntPort->setCurrentIndex(config->getInstrAntPort());
     instrMode->setCurrentIndex(config->getInstrMode());
     //instrFftMode->setCurrentIndex(config->getInstrFftMode());
-    instrIpAddr->setText(config->getInstrIpAddr());
+    instrIpAddr->setEditable(true);
     instrPort->setText(QString::number(config->getInstrPort()));
     instrAutoAttChanged();
     instrModeChanged();
     //instrFftModeChanged();
     instrMeasurementTimeChanged();
     instrAttChanged();
-    instrIpChanged();
+    //instrIpChanged();
     instrPortChanged();
 
     instrAntPort->setEditable(true);
@@ -494,14 +496,14 @@ void MainWindow::updInstrButtonsStatus()
     instrDisconnect->setEnabled(measurementDevice->isConnected());
 
     if (!measurementDevice->isConnected()) {
-        QHostAddress test(instrIpAddr->text());
-        if (!test.isNull() && instrPort->text().toUInt() > 0)
+        /*QHostAddress test(instrIpAddr->currentText());
+        if (!test.isNull() && instrPort->text().toUInt() > 0)*/
             instrConnect->setEnabled(true);
-        else
-            instrConnect->setEnabled(false);
+        /*else
+            instrConnect->setEnabled(false);*/
     }
-    else {
-    }
+    /*else {
+    }*/
 }
 
 void MainWindow::instrModeChanged(int a)
@@ -533,7 +535,7 @@ void MainWindow::setValidators()
     instrMeasurementTime->setRange(1, 5000);
     instrAtt->setRange(-40, 40);
 
-    QString ipRange = "(([ 0]+)|([ 0]*[0-9] *)|([0-9][0-9] )|([ 0][0-9][0-9])|(1[0-9][0-9])|([2][0-4][0-9])|(25[0-5]))";
+    /*QString ipRange = "(([ 0]+)|([ 0]*[0-9] *)|([0-9][0-9] )|([ 0][0-9][0-9])|(1[0-9][0-9])|([2][0-4][0-9])|(25[0-5]))";
     QRegularExpression ipRegex ("^" + ipRange
                                + "\\." + ipRange
                                + "\\." + ipRange
@@ -541,7 +543,7 @@ void MainWindow::setValidators()
     QRegularExpressionValidator *ipValidator = new QRegularExpressionValidator(ipRegex, this);
     instrIpAddr->setValidator(ipValidator);
     instrIpAddr->setInputMask("000.000.000.000");
-    instrIpAddr->setCursorPosition(0);
+    instrIpAddr->setCursorPosition(0);*/
 
     instrTrigLevel->setRange(-50, 200);
     instrTrigLevel->setDecimals(0);
@@ -571,12 +573,12 @@ void MainWindow::setSignals()
     connect(this, &MainWindow::antennaPortChanged, measurementDevice, &MeasurementDevice::setAntPort);
     connect(instrMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrModeChanged);
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
-    connect(instrIpAddr, &QLineEdit::textChanged, this, &MainWindow::updInstrButtonsStatus);
-    connect(instrIpAddr, &QLineEdit::editingFinished, this, &MainWindow::instrIpChanged);
-    connect(instrIpAddr, &QLineEdit::returnPressed, this, [this] {
+    //connect(instrIpAddr, &QComboBox::currentTextChanged, this, &MainWindow::instrIpChanged);
+    //connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
+    /*connect(instrIpAddr, &QComboBox:: , this, [this] {
         instrIpChanged();
         measurementDevice->instrConnect();
-    });
+    });*/
 
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
@@ -680,6 +682,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
     connect(config.data(), &Config::settingsUpdated, geoLimit, &GeoLimit::updSettings);
     connect(config.data(), &Config::settingsUpdated, mqtt, &Mqtt::updSettings);
+    connect(config.data(), &Config::settingsUpdated, instrumentList, &InstrumentList::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -895,6 +898,26 @@ void MainWindow::setSignals()
     connect(aiPtr, &AI::aiResult, sdefRecorder, &SdefRecorder::recPrediction);
     connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
     connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
+
+    connect(instrumentList, &InstrumentList::askForLogin, sdefRecorder, &SdefRecorder::loginRequest);
+    connect(sdefRecorder, &SdefRecorder::loginSuccessful, instrumentList, &InstrumentList::loginCompleted);
+    connect(instrumentList, &InstrumentList::instrumentListReady, this, [this] (QStringList ip, QStringList name, QStringList type) {
+        disconnect(instrIpAddr, &QComboBox::currentTextChanged, this, &MainWindow::instrIpChanged);
+        instrIpAddr->clear();
+
+        int selIndex = -1;
+        for (int i = 0; i < ip.size(); i++) {
+            instrIpAddr->addItem(name[i] + " (" + type[i] + ")", ip[i]);
+            qDebug() << ip[i] << config->getInstrIpAddr();
+            if (ip[i].contains(config->getInstrIpAddr())) {
+                qDebug() << "Found ip selection" << i;
+                selIndex = i;
+            }
+        }
+        instrIpAddr->setCurrentIndex(selIndex);
+        connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
+    });
+
 }
 
 void MainWindow::instrStartFreqChanged()
@@ -938,7 +961,8 @@ void MainWindow::instrAutoAttChanged()
 
 void MainWindow::instrIpChanged()
 {
-    config->setInstrIpAddr(instrIpAddr->text());
+    //config->setInstrIpAddr(instrIpAddr->currentText());
+    config->setInstrIpAddr(instrIpAddr->currentData().toString());
     measurementDevice->setAddress(config->getInstrIpAddr());
 }
 
@@ -1038,7 +1062,8 @@ void MainWindow::updateStatusLine(const QString msg)
 void MainWindow::updWindowTitle(const QString msg)
 {
     QString extra;
-    if (!msg.isEmpty()) extra = tr(" using ") + msg;
+    if (!msg.isEmpty()) extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " (" +
+                instrIpAddr->currentData().toString() + ")";
     setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra
                    + " (" + config->getCurrentFilename().split('/').last() + ")");
 }
@@ -1178,7 +1203,7 @@ void MainWindow::saveConfigValues()
     config->setInstrAntPort(instrAntPort->currentIndex());
     config->setInstrMode(instrMode->currentIndex());
     config->setInstrFftMode(instrFftMode->currentText());
-    config->setInstrIpAddr(instrIpAddr->text());
+    config->setInstrIpAddr(instrIpAddr->currentText());
     config->setInstrPort(instrPort->text().toUInt());
     config->setInstrTrigLevel(instrTrigLevel->value());
     config->setInstrMinTrigBW(instrTrigBandwidth->value());

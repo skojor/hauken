@@ -48,7 +48,7 @@ void MeasurementDevice::instrConnect()
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
-    if (!scpiReconnect) tcpTimeoutTimer->start(8000);
+    if (!scpiReconnect) tcpTimeoutTimer->start(3000);
 }
 
 void MeasurementDevice::scpiConnected()
@@ -71,6 +71,9 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
             scpiReconnect = true;
         instrDisconnect();
         autoReconnectTimer->start(5000);
+    }
+    if (state == QAbstractSocket::UnconnectedState) {
+        emit status("Measurement device disconnected");
     }
 }
 
@@ -97,14 +100,15 @@ void MeasurementDevice::instrDisconnect()
     tcpTimeoutTimer->stop();
     autoReconnectTimer->stop();
     emit instrId(QString());
-    emit status("Disconnecting measurement device");
+    if (scpiSocket->state() != QTcpSocket::UnconnectedState) emit status("Disconnecting measurement device");
+
     if (connected) {
         if (useUdpStream) delUdpStreams();
         else delTcpStreams();
         scpiSocket->waitForBytesWritten(1000);
     }
     updFrequencyData->stop();
-    scpiSocket->close();
+    scpiSocket->abort();
     tcpStream->closeListener();
     udpStream->closeListener();
 }
@@ -256,7 +260,7 @@ void MeasurementDevice::askId()
 {
     scpiWrite("*idn?");
     instrumentState = InstrumentState::CHECK_INSTR_ID;
-    tcpTimeoutTimer->start(20000);
+    tcpTimeoutTimer->start(3000);
 }
 
 void MeasurementDevice::checkId(const QByteArray buffer)
@@ -384,7 +388,7 @@ void MeasurementDevice::askTcp()
     if (devicePtr->tcpStream) {
         scpiWrite("trac:tcp?");
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_TCP;
-        tcpTimeoutTimer->start(20000);
+        tcpTimeoutTimer->start(3000);
     }
     else
         stateConnected();
@@ -448,7 +452,7 @@ void MeasurementDevice::askUser(bool checkUserOnly)
         scpiWrite("syst:man:loc:name?");
         if (!checkUserOnly) instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
         else instrumentState = InstrumentState::CHECK_USER_ONLY;
-        tcpTimeoutTimer->start(20000);
+        tcpTimeoutTimer->start(3000);
     }
     else
         checkUser("");

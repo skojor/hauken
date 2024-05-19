@@ -300,7 +300,7 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
             ts << sitename.toString() << ": " << "Test " << name.toString() << " ended";
             siteStatus = STOP;
         }
-        else if (siteStatus != NORUNNING && status.toString().contains("no running test", Qt::CaseInsensitive)) { // no test
+        else if (siteStatus == UNKNOWN && status.toString().contains("no running test", Qt::CaseInsensitive)) { // no test
             ts << sitename.toString() << ": " << "No test running";
             siteStatus = NORUNNING;
         }
