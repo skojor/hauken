@@ -42,7 +42,7 @@ void GnssDevice::start()
 
 void GnssDevice::connectToPort()
 {
-    qDebug() << "connectToPort called";
+    //qDebug() << "connectToPort called";
     QSerialPortInfo portInfo;
 
     if (activate && !portName.isEmpty() && !baudrate.isEmpty()) {
@@ -311,21 +311,24 @@ void GnssDevice::decodeBinary(const QByteArray &val)
 
 bool GnssDevice::checkBinaryChecksum(const QByteArray &val)
 {
-    quint8 calcChkA = 0, calcChkB = 0;
-    quint16 size = val.length() - 4;
-    quint8 chkA = (quint8)val.at(val.size()-2);
-    quint8 chkB = (quint8)val.at(val.size()-1);
+    if (val.size() > 4) {
+        quint8 calcChkA = 0, calcChkB = 0;
+        quint16 size = val.length() - 4;
+        quint8 chkA = (quint8)val.at(val.size()-2);
+        quint8 chkB = (quint8)val.at(val.size()-1);
 
-    for (int i = 2; i<size+2; i++) {
-        calcChkA += (quint8)val.at(i);
-        calcChkB += calcChkA;
+        for (int i = 2; i<size+2; i++) {
+            calcChkA += (quint8)val.at(i);
+            calcChkB += calcChkA;
+        }
+        if (calcChkA == chkA && calcChkB == chkB) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
-    if (calcChkA == chkA && calcChkB == chkB) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    else return false;
 }
 
 
@@ -373,7 +376,16 @@ void GnssDevice::updSettings() // caching these settings in memory since they ar
     }
 
     if (!gnss->isOpen() && !tcpSocket->isOpen() && activate) start(); // reconnect if needed
-    if (!activate && tcpSocket->isOpen()) tcpSocket->close();
+    if (!activate && tcpSocket->isOpen()) {
+        tcpSocket->close();
+        gnssData.posValid = false;
+        emit gnssDisabled();
+    }
+    if (!activate && gnss->isOpen()) {
+        gnss->close();
+        gnssData.posValid = false;
+        emit gnssDisabled();
+    }
 }
 
 void GnssDevice::appendToLogfile(const QByteArray &data)

@@ -36,6 +36,7 @@ SOURCES += \
     autorecorderoptions.cpp \
     cameraoptions.cpp \
     camerarecorder.cpp \
+    changelog.cpp \
     config.cpp \
     customplotcontroller.cpp \
     datastreambaseclass.cpp \
@@ -64,6 +65,7 @@ SOURCES += \
     receiveroptions.cpp \
     sdefoptions.cpp \
     sdefrecorder.cpp \
+    signals.cpp \
     tcpdatastream.cpp \
     traceanalyzer.cpp \
     tracebuffer.cpp \

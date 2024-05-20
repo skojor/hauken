@@ -2,19 +2,16 @@ import QtQuick
 import QtLocation
 import QtPositioning
 
-Rectangle {
+Window {
+    width: Qt.platform.os === "android" ? Screen.width : 512
+    height: Qt.platform.os === "android" ? Screen.height : 512
+    visible: true
+    title: map.center + " zoom " + map.zoomLevel.toFixed(3)
+           + " min " + map.minimumZoomLevel + " max " + map.maximumZoomLevel
 
     Plugin {
         id: mapPlugin
         name: "osm"
-        PluginParameter {
-                    name: "osm.mapping.providersrepository.disabled"
-                    value: "true"
-                }
-                PluginParameter {
-                    name: "osm.mapping.providersrepository.address"
-                    value: "http://maps-redirect.qt.io/osm/5.6/"
-                }
     }
 
     Map {

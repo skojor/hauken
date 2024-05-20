@@ -16,7 +16,7 @@ public:
 public slots:
     void getData(GnssData &data);
     void updSettings();
-    void updStateInstrumentGnss(bool b) { stateInstrumentGnss = b; }
+    void updStateInstrumentGnss(bool b) { stateInstrumentGnss = b; if (!b) updDisplayTimer->stop(); }
 
 signals:
     void alarm();

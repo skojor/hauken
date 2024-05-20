@@ -30,7 +30,6 @@
 #include <QtMultimedia/QMediaPlayer>
 #include <QtMultimedia/QAudioOutput>
 #include <QTimer>
-#include <QtQuickWidgets/QQuickWidget>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 //#include "typedefs.h"
