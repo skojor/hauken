@@ -89,9 +89,23 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt12->setText("Detected incidents triggers spectrum recording");
     cbOpt12->setToolTip("Any incidents detected will cause a recording to be started, and uploaded if configured");
 
+    QGroupBox *gnss4GroupBox = new QGroupBox("GNSS data display");
+    QFormLayout *gnss4Layout = new QFormLayout;
+    gnss4GroupBox->setLayout(gnss4Layout);
+    gnss4Layout->addRow(cbOpt13);
+    cbOpt13->setText("Show GNSS data in a separate window");
+    cbOpt13->setToolTip("Enabling this option opens a new window showing vital GNSS information for one or both GNSS receivers");
+
+    gnss4Layout->addRow(tr("GNSS 1 name"), leOpt1);
+    leOpt1->setToolTip(tr("Name will be displayed on separate window, in title"));
+
+    gnss4Layout->addRow(tr("GNSS 2 name"), leOpt2);
+    leOpt2->setToolTip(tr("Name will be displayed on separate window, in title"));
+
     mainLayout->addWidget(gnss1GroupBox);
     mainLayout->addWidget(gnss2GroupBox);
     mainLayout->addWidget(gnss3GroupBox);
+    mainLayout->addWidget(gnss4GroupBox);
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &GnssOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -123,6 +137,9 @@ void GnssOptions::start()
     cbOpt10->setChecked(config->getGnssSerialPort2TriggerRecording());
     cbOpt11->setChecked(config->getGnssUseInstrumentGnss());
     cbOpt12->setChecked(config->getGnssInstrumentGnssTriggerRecording());
+    cbOpt13->setChecked(config->getGnssDisplayWidget());
+    leOpt1->setText(config->getGnss1Name());
+    leOpt2->setText(config->getGnss2Name());
 
     dialog->exec();
 }
@@ -144,6 +161,9 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssSerialPort2TriggerRecording(cbOpt10->isChecked());
     config->setGnssUseInstrumentGnss(cbOpt11->isChecked());
     config->setGnssInstrumentGnssTriggerRecording(cbOpt12->isChecked());
+    config->setGnssDisplayWidget(cbOpt13->isChecked());
+    config->setGnss1Name(leOpt1->text());
+    config->setGnss2Name(leOpt2->text());
 
     dialog->close();
 }

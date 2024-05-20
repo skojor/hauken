@@ -44,7 +44,7 @@ public slots:
     void updPosition(bool b, double l1, double l2);
     void finishRecording();
     void recPrediction(QString pred, int prob);
-    void loginRequest() { curlLogin(); askedForLogin = true; }
+    void loginRequest() {  askedForLogin = true; curlLogin(); }
 
 private slots:
     QByteArray createHeader();

@@ -63,7 +63,7 @@ void SdefRecorder::updSettings()
         if (!autorecorderTimer->isActive()) {
             autorecorderTimer->start(10000);
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "",
-                "Auto recording is activated, starting recording of currently chosen frequency spectrum and resolution in 10 seconds");
+                               "Auto recording is activated, starting recording of currently chosen frequency spectrum and resolution in 10 seconds");
         }
     }
     else {
@@ -140,8 +140,8 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         QByteArray byteArray = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
         if (addPosition) {
             byteArray +=
-                    QByteArray::number(positionHistory.last().first, 'f', 6) + "," +
-                    QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
+                QByteArray::number(positionHistory.last().first, 'f', 6) + "," +
+                QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
         }
 
         for (auto val : data) {
@@ -181,8 +181,8 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
             if (dateIterator > positionHistory.size() - 1) // should never happen except in early startup
                 dateIterator = positionHistory.size() - 1;
             byteArray +=
-                    QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + "," +
-                    QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6) + ",";
+                QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + "," +
+                QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6) + ",";
         }
 
         for (auto val : data.at(i)) {
@@ -228,9 +228,9 @@ QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
 {
     QString ret;
     ret = QString::asprintf("%02i", abs((int)d)) + '.'
-            + QString::asprintf("%02i", int(((abs(d) - abs((int)d)) * 60))) + '.'
-            + QString::asprintf("%02i", int(((((abs(d) - abs((int)d)) * 60)) - (int)((abs(d) - abs((int)d)) * 60)) * 60))
-            + ( lat ? (d > 0 ? "N": "S") : (d > 0 ? "E": "W")) ;
+          + QString::asprintf("%02i", int(((abs(d) - abs((int)d)) * 60))) + '.'
+          + QString::asprintf("%02i", int(((((abs(d) - abs((int)d)) * 60)) - (int)((abs(d) - abs((int)d)) * 60)) * 60))
+          + ( lat ? (d > 0 ? "N": "S") : (d > 0 ? "E": "W")) ;
     return ret;
 }
 
@@ -240,11 +240,11 @@ void SdefRecorder::finishRecording()
     if (getSdefSaveToFile()) {
         if (recordingTimeoutTimer->isActive()) {
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
-                                                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
-                                                                         QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
-                                                                         + " seconds" :
-                                                                         QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                                                         + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
+                                                                   + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
+                                                                          QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
+                                                                              + " seconds" :
+                                                                          QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                                                                              + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
             if (autorecorderTimer->isActive()) autorecorderTimer->stop();
         }
     }
@@ -279,25 +279,29 @@ bool SdefRecorder::curlLogin()
     }
 
     // parameters check
-    if (getSdefStationInitals().isEmpty() or getSdefUsername().isEmpty() or getSdefPassword().isEmpty()
-            or getStationName().isEmpty()) {
-        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but some parameters are missing in the config. Check it out");
-        return false;
+    if (!askedForLogin) {
+        if (getSdefStationInitals().isEmpty()
+                               or getSdefUsername().isEmpty()
+                               or getSdefPassword().isEmpty()
+                               or getStationName().isEmpty()) {
+            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but some parameters are missing in the config. Check it out");
+            return false;
+        }
+        if (!getSdefAddPosition() and
+            ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0)) {
+            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but the current position is set to equator. Somehow I doubt it");
+            return false;
+        }
     }
-    if (!getSdefAddPosition() and ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0)) {
-        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but the current position is set to equator. Somehow I doubt it");
-        return false;
-    }
-
     if (getSdefZipFiles()) zipit();
-    if (!finishedFilename.isEmpty()) filesAwaitingUpload.append(finishedFilename); // add to transmit queue
+    if (!askedForLogin && !finishedFilename.isEmpty()) filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
     QStringList l;
     l << "-H" << "'application/x-www-form-url-encoded'"
       << "-F" << "brukernavn=" + getSdefUsername()
       << "-F" << "passord=" + getSdefPassword()
       << "--cookie-jar" << getWorkFolder() + "/.kake"
-        << "-k" << getSdefAuthAddress();
+      << "-k" << getSdefAuthAddress();
 
     process->setArguments(l);
     process->start();

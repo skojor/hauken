@@ -173,6 +173,13 @@ public slots:
     bool getGnssInstrumentGnssTriggerRecording() { return settings->value("gnss/InstrumentGnssTriggerRecording", false).toBool();}
     void setGnssInstrumentGnssTriggerRecording(bool b) { settings->setValue("gnss/InstrumentGnssTriggerRecording", b);emit settingsUpdated(); }
 
+    bool getGnssDisplayWidget() { return settings->value("gnss/displayWidget", false).toBool();}
+    void setGnssDisplayWidget(bool b) { settings->setValue("gnss/displayWidget", b); emit settingsUpdated();}
+    QString getGnss1Name() { return settings->value("gnss/gnss1Name", "").toString();}
+    void setGnss1Name(QString s) { settings->setValue("gnss/gnss1Name", s); emit settingsUpdated();}
+    QString getGnss2Name() { return settings->value("gnss/gnss2Name", "").toString();}
+    void setGnss2Name(QString s) { settings->setValue("gnss/gnss2Name", s); emit settingsUpdated();}
+
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}
     void setEmailSmtpServer(QString s) { settings->setValue("email/SmtpServer", s.simplified()); emit settingsUpdated();}
@@ -269,6 +276,9 @@ public slots:
     int getWaterfallTime() { return settings->value("plot/WaterfallTime", 120).toInt();}
     void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val); emit settingsUpdated();}
     int getPlotResolution() { return plotResolution;}
+    QByteArray getGnssDisplayWindowState() { return settings->value("gnssDisplay/windowState", "").toByteArray();}
+    void setGnssDisplayWindowState(QByteArray arr)  { settings->setValue("gnssDisplay/windowState", arr); emit settingsUpdated();}
+
 
     // trig line
     QStringList getTrigFrequencies() { return settings->value("trigFrequencies").toStringList();}

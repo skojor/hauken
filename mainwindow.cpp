@@ -86,10 +86,12 @@ MainWindow::MainWindow(QWidget *parent)
     notificationTimer->setSingleShot(true);
 
     instrumentList->start(); // check if instrument server is available
+    gnssDisplay->start();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    gnssDisplay->close();
     if (arduinoPtr->isWatchdogActive()) arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
     read1809Data->close();
@@ -573,13 +575,6 @@ void MainWindow::setSignals()
     connect(this, &MainWindow::antennaPortChanged, measurementDevice, &MeasurementDevice::setAntPort);
     connect(instrMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::instrModeChanged);
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
-    //connect(instrIpAddr, &QComboBox::currentTextChanged, this, &MainWindow::instrIpChanged);
-    //connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
-    /*connect(instrIpAddr, &QComboBox:: , this, [this] {
-        instrIpChanged();
-        measurementDevice->instrConnect();
-    });*/
-
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
     connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect);
@@ -683,6 +678,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, geoLimit, &GeoLimit::updSettings);
     connect(config.data(), &Config::settingsUpdated, mqtt, &Mqtt::updSettings);
     connect(config.data(), &Config::settingsUpdated, instrumentList, &InstrumentList::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssDisplay, &GnssDisplay::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -908,16 +904,22 @@ void MainWindow::setSignals()
         int selIndex = -1;
         for (int i = 0; i < ip.size(); i++) {
             instrIpAddr->addItem(name[i] + " (" + type[i] + ")", ip[i]);
-            qDebug() << ip[i] << config->getInstrIpAddr();
             if (ip[i].contains(config->getInstrIpAddr())) {
-                qDebug() << "Found ip selection" << i;
                 selIndex = i;
             }
         }
-        instrIpAddr->setCurrentIndex(selIndex);
+        if (selIndex == -1) { // IP not found in list, assuming it is manually entered earlier
+            instrIpAddr->addItem(config->getInstrIpAddr(), config->getInstrIpAddr());
+            instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
+        }
+        else instrIpAddr->setCurrentIndex(selIndex);
         connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
     });
 
+    connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this] (int id) {
+        if (id == 1) gnssDisplay->updGnssData(gnssDevice1->sendGnssData(), 1);
+        else gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
+    });
 }
 
 void MainWindow::instrStartFreqChanged()
@@ -961,9 +963,13 @@ void MainWindow::instrAutoAttChanged()
 
 void MainWindow::instrIpChanged()
 {
+    if (instrIpAddr->currentData().isNull()) { // custom IP/hostname added
+        instrIpAddr->setItemData(instrIpAddr->currentIndex(), instrIpAddr->currentText());
+    }
     //config->setInstrIpAddr(instrIpAddr->currentText());
     config->setInstrIpAddr(instrIpAddr->currentData().toString());
     measurementDevice->setAddress(config->getInstrIpAddr());
+    qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData();
 }
 
 void MainWindow::instrPortChanged()
@@ -1096,6 +1102,9 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.37</td><td>Instrument list collected from external server if available</td></tr>"
+       << "<tr><td>2.36</td><td>MQTT data can be added to incident log</td></tr>"
+       << "<tr><td>2.35</td><td>Watchdog function improved. Spectrum mask bugfix. Foreign letters bugfix</td></tr>"
        << "<tr><td>2.34</td><td>AI classification and filtered notification function</td></tr>"
        << "<tr><td>2.33</td><td>Added spectrum mask overlay function (right click spectrum/\"bandplan.csv\")</td></tr>"
        << "<tr><td>2.32</td><td>Support for GNSS NMEA and binary (uBlox) data over TCP/IP</td></tr>"

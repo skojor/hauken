@@ -1,4 +1,4 @@
-QT       += core gui serialport network
+QT       += core gui serialport network quickwidgets
 greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
@@ -45,6 +45,7 @@ SOURCES += \
     geolimitoptions.cpp \
     gnssanalyzer.cpp \
     gnssdevice.cpp \
+    gnssdisplay.cpp \
     gnssoptions.cpp \
     instrumentlist.cpp \
     led/ledindicator.cpp \
@@ -108,6 +109,7 @@ HEADERS += \
     geolimitoptions.h \
     gnssanalyzer.h \
     gnssdevice.h \
+    gnssdisplay.h \
     gnssoptions.h \
     instrumentlist.h \
     led/ledindicator.h \
@@ -196,3 +198,6 @@ QMAKE_TARGET_COPYRIGHT = GPL
 
 INCLUDEPATH += $$PWD/../opencv/lib
 DEPENDPATH += $$PWD/../opencv/lib
+
+DISTFILES += \
+    map.qml

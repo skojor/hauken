@@ -263,7 +263,6 @@ void InstrumentList::generateInstrumentList()
     usableStnNames.clear();
     usableStnTypes.clear();
 
-    QString buffer;
     for (auto &station: stationInfo) {
         for (auto &instrument : station.instrumentInfo) {
             if (instrument.type.contains("EM200") || instrument.type.contains("EM100") || instrument.type.contains("PR200") ||

@@ -30,6 +30,7 @@
 #include <QtMultimedia/QMediaPlayer>
 #include <QtMultimedia/QAudioOutput>
 #include <QTimer>
+#include <QtQuickWidgets/QQuickWidget>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 //#include "typedefs.h"
@@ -62,6 +63,7 @@
 #include "read1809data.h"
 #include "ai.h"
 #include "instrumentlist.h"
+#include "gnssdisplay.h"
 
 class MainWindow : public QMainWindow
 {
@@ -262,6 +264,7 @@ private:
     AI *aiPtr;
     Read1809Data *read1809Data;
     InstrumentList *instrumentList = new InstrumentList;
+    GnssDisplay *gnssDisplay = new GnssDisplay;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
