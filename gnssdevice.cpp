@@ -182,8 +182,8 @@ bool GnssDevice::decodeGga(const QByteArray &val)
             int(split.at(4).toDouble() / 100) +
             ((split.at(4).toDouble() / 100) - int(split.at(4).toDouble() / 100)) * 1.6667;
 
-        if (split[3][0] == 'S') gnssData.latitude *= -1;
-        if (split[5][0] == 'W') gnssData.longitude *= -1;
+        if (!split[3].isEmpty() && split[3][0] == 'S') gnssData.latitude *= -1;
+        if (!split[5].isEmpty() && split[5][0] == 'W') gnssData.longitude *= -1;
     }
     else gnssData.ggaValid = false;
     return gnssData.ggaValid;

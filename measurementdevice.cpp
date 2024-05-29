@@ -14,8 +14,20 @@ void MeasurementDevice::start()
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
     connect(tcpTimeoutTimer, &QTimer::timeout, this, &MeasurementDevice::tcpTimeout);
 
-    connect(tcpStream, &TcpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler);
+    connect(tcpStream, &TcpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler); // Forwarding signals here
     connect(udpStream, &UdpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler);
+    connect(tcpStream, &TcpDataStream::freqChanged, this, [this] (double a, double b) {
+        emit freqChanged(a, b);
+    });
+    connect(udpStream, &UdpDataStream::freqChanged, this, [this] (double a, double b) {
+        emit freqChanged(a, b);
+    });
+    connect(tcpStream, &TcpDataStream::resChanged, this, [this] (double a) {
+        emit resChanged(a);
+    });
+    connect(udpStream, &UdpDataStream::freqChanged, this, [this] (double a) {
+        emit resChanged(a);
+    });
 
     devicePtr = QSharedPointer<Device>(new Device);
     connect(tcpStream, &TcpDataStream::bytesPerSecond, this, &MeasurementDevice::forwardBytesPerSec);
@@ -222,7 +234,7 @@ QStringList MeasurementDevice::getAntPorts()
 void MeasurementDevice::setMode()
 {
     if (connected) {
-        if (mode == Instrument::Mode::PSCAN) {
+        if (devicePtr->mode == Instrument::Mode::PSCAN) {
             if (devicePtr->hasPscan) {
                 scpiWrite("freq:mode psc");
             }
@@ -236,7 +248,10 @@ void MeasurementDevice::setMode()
             emit modeUsed("ffm");
         }
     }
-    //if (connected) restartStream(); // rerun stream setup if mode changes (obviously)
+    if (connected) {
+        muteNotification = true; // to mute notifications
+        restartStream(); // rerun stream setup if mode changes (obviously)
+    }
 }
 
 void MeasurementDevice::setFftMode()
@@ -281,6 +296,8 @@ void MeasurementDevice::checkId(const QByteArray buffer)
         devicePtr->setType(InstrumentType::ESMB);
     else if (buffer.contains("USRP"))
         devicePtr->setType(InstrumentType::USRP);
+    else if (buffer.contains("ESMW"))
+        devicePtr->setType(InstrumentType::ESMW);
 
     else devicePtr->setType(InstrumentType::UNKNOWN);
 
@@ -498,7 +515,7 @@ void MeasurementDevice::checkUserOnly(const QByteArray buffer)
 
 void MeasurementDevice::stateConnected()
 {
-    if (!autoReconnectInProgress) { // don't nag user if this is an auto reconnect call
+    if (!autoReconnectInProgress && !muteNotification) { // don't nag user if this is an auto reconnect call
         tcpTimeoutTimer->stop();
         emit status("Connected, setting up device");
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
@@ -509,7 +526,7 @@ void MeasurementDevice::stateConnected()
     }
 
     scpiConnected();
-    autoReconnectInProgress = false;
+    autoReconnectInProgress = muteNotification = false;
     runAfterConnected();
     instrumentState = InstrumentState::CONNECTED;
 
@@ -592,9 +609,9 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
     QByteArray modeStr;
-    if (mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
-    else if (mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (mode == Mode::FFM) modeStr = "ifpan";
+    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
+    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
 
     // ssh tunnel hackaround
     tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
@@ -640,9 +657,9 @@ void MeasurementDevice::setupUdpStream()
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
     QByteArray modeStr;
-    if (mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
-    else if (mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (mode == Mode::FFM) modeStr = "ifpan";
+    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
+    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -727,8 +744,8 @@ void MeasurementDevice::updSettings()
         devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq() * 1e6;
         setFfmCenterFrequency();
     }
-    if (devicePtr->ffmFrequencySpan != config->getInstrFfmSpan() * 1e3) {
-        devicePtr->ffmFrequencySpan = config->getInstrFfmSpan() * 1e3;
+    if (devicePtr->ffmFrequencySpan != config->getInstrFfmSpan().toDouble() * 1e3) {
+        devicePtr->ffmFrequencySpan = config->getInstrFfmSpan().toDouble() * 1e3;
         setFfmFrequencySpan();
     }
     if (measurementTime != config->getInstrMeasurementTime()) {
@@ -748,11 +765,22 @@ void MeasurementDevice::updSettings()
         setAntPort();
     }
 
-    if (mode != (Instrument::Mode)config->getInstrMode()) {
-        mode = (Instrument::Mode)config->getInstrMode();
+    if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive) &&
+        devicePtr->mode != Instrument::Mode::PSCAN) {
+        devicePtr->mode = Instrument::Mode::PSCAN;
         setMode();
+        setPscanFrequency();
+        setPscanResolution();
     }
-    if (!fftMode.contains(config->getInstrFftMode().toLocal8Bit())) {
+    else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive) &&
+        devicePtr->mode != Instrument::Mode::FFM) {
+        devicePtr->mode = Instrument::Mode::FFM;
+        setMode();
+        setFfmCenterFrequency();
+        setFfmFrequencySpan();
+    }
+
+    else if (!fftMode.contains(config->getInstrFftMode().toLocal8Bit())) {
         fftMode = config->getInstrFftMode().toLocal8Bit();
         setFftMode();
     }
@@ -952,7 +980,7 @@ void MeasurementDevice::askFfmFreq()
 
 void MeasurementDevice::askFfmSpan()
 {
-    scpiWrite("sens:span?");
+    scpiWrite("sens:freq:span?");
     instrumentState = InstrumentState::CHECK_FFM_SPAN;
 }
 

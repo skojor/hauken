@@ -29,10 +29,10 @@ public slots:
     void setInstrStopFreq(double val) { settings->setValue("instr/StopFreq", val); emit settingsUpdated();}
     QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
     void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
-    double getInstrFfmCenterFreq() { return settings->value("instr/FftCenterFreq", 1560).toDouble();}
-    void setInstrFfmCenterFreq(double f) { settings->setValue("instr/FftCenterFreq", f); emit settingsUpdated();}
-    int getInstrFfmSpan() { return settings->value("instr/FftSpan", 2000).toInt();}
-    void setInstrFfmSpan(int f) { settings->setValue("instr/FftSpan", f); emit settingsUpdated(); emit settingsUpdated();}
+    double getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toDouble();}
+    void setInstrFfmCenterFreq(double f) { settings->setValue("instr/FfmCenterFreq", f); emit settingsUpdated();}
+    QString getInstrFfmSpan() { return settings->value("instr/FfmSpan", "2000").toString();}
+    void setInstrFfmSpan(QString s) { settings->setValue("instr/FfmSpan", s); emit settingsUpdated(); emit settingsUpdated();}
     int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt();}
     void setInstrMeasurementTime(int val) { settings->setValue("instr/MeasurementTime", val); emit settingsUpdated();}
     int getInstrManAtt() { return settings->value("instr/ManAtt", 0).toInt(); }
@@ -41,8 +41,8 @@ public slots:
     void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); emit settingsUpdated();}
     int getInstrAntPort() { return settings->value("instr/AntPort", "Default").toUInt(); }
     void setInstrAntPort(int index) { settings->setValue("instr/AntPort", QString::number(index)); emit settingsUpdated();}
-    int getInstrMode() { return settings->value("instr/Mode", 0).toInt(); }
-    void setInstrMode(int val) { settings->setValue("instr/Mode", val); emit settingsUpdated();}
+    QString getInstrMode() { return settings->value("instr/Mode", 0).toString(); }
+    void setInstrMode(QString val) { settings->setValue("instr/Mode", val); emit settingsUpdated();}
     QString getInstrFftMode() { return settings->value("instr/FftMode", 0).toString(); }
     void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instr/FftMode", val); emit settingsUpdated();}
     QString getInstrIpAddr() { return settings->value("instr/IpAddr", "").toString(); }

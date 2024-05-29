@@ -1,4 +1,4 @@
-QT       += core gui serialport network quickwidgets
+QT       += core gui serialport network
 greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning

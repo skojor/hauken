@@ -333,21 +333,47 @@ void CustomPlotController::updSettings()
     plotResolution = config->getPlotResolution();
     fill.fill(-200, plotResolution);
 
-    if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrStartFreq()
-        || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
-        || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)
-        || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
-        || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
-        startFreq = config->getInstrStartFreq();
-        stopFreq = config->getInstrStopFreq();
-        resolution = config->getInstrResolution().toDouble();
-        customPlotPtr->xAxis->setRangeLower(startFreq);
-        customPlotPtr->xAxis->setRangeUpper(stopFreq);
-        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
-        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-        reCalc();
-        customPlotPtr->replot();
+    /*if (true) { // (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
+        if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrStartFreq()
+            || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
+            || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)
+            || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
+            || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
+            startFreq = config->getInstrStartFreq();
+            stopFreq = config->getInstrStopFreq();
+            if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) resolution = config->getInstrResolution().toDouble();
+            else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive))
+                resolution = config->getInstrFfmSpan().toDouble() / 1600; // FIXME
+            customPlotPtr->xAxis->setRangeLower(startFreq);
+            customPlotPtr->xAxis->setRangeUpper(stopFreq);
+            customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+            customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+            reCalc();
+            customPlotPtr->replot();
+        }
     }
+    else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive)) {
+        if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrFfmCenterFreq() - (int)(config->getInstrFfmSpan().toDouble() / 2000)
+            || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrFfmCenterFreq() + (int)(config->getInstrFfmSpan().toDouble() / 2000)
+            || (int)(resolution) != (config->getInstrFfmSpan().toDouble() / 1600.0)
+            || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
+            || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
+            startFreq = (int)config->getInstrFfmCenterFreq() - (int)(config->getInstrFfmSpan().toDouble() / 2000);
+            stopFreq = (int)config->getInstrFfmCenterFreq() + (int)(config->getInstrFfmSpan().toDouble() / 2000);
+            resolution = config->getInstrFfmSpan().toDouble() / 1600; // FIXME
+            customPlotPtr->xAxis->setRangeLower(startFreq);
+            customPlotPtr->xAxis->setRangeUpper(stopFreq);
+            customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+            customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+            reCalc();
+            customPlotPtr->replot();
+        }
+    }
+*/
+    customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+    customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+    reCalc();
+    customPlotPtr->replot();
     if (config->getInstrNormalizeSpectrum())
         customPlotPtr->yAxis->setLabel("dBμV (normalized)");
     else
@@ -419,4 +445,26 @@ void CustomPlotController::updTextLabelPositions()
 
 void CustomPlotController::updOverlay()
 {
+
+}
+
+void CustomPlotController::freqChanged(double a, double b)
+{
+    if (a < b) {
+        if (customPlotPtr->xAxis->range().lower > b / 1e6) {
+            customPlotPtr->xAxis->setRangeLower(a / 1e6);
+            //customPlotPtr->replot();
+        }
+        customPlotPtr->xAxis->setRangeUpper(b / 1e6);
+        customPlotPtr->xAxis->setRangeLower(a / 1e6);
+        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+        reCalc();
+        customPlotPtr->replot();
+    }
+}
+
+void CustomPlotController::resChanged(double a)
+{
+    resolution = a / 1e6;
 }

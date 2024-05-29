@@ -11,10 +11,11 @@
 #include <QList>
 #include <QSharedPointer>
 #include <QThread>
+#include <QCoreApplication>
 #include "typedefs.h"
 #include "tcpdatastream.h"
 #include "udpdatastream.h"
-#include "qcustomplot.h"
+//#include "qcustomplot.h"
 #include "config.h"
 
 using namespace Instrument;
@@ -53,6 +54,8 @@ signals:
     void modeUsed(QString);
     void freqRangeUsed(unsigned long, unsigned long);
     void resUsed(int);
+    void freqChanged(double, double);
+    void resChanged(double);
 
 public slots:
     void start();
@@ -165,7 +168,7 @@ private:
     int attenuator;
     bool autoAttenuator;
     QByteArray antPort;
-    Instrument::Mode mode;
+    //Instrument::Mode mode;
     QByteArray fftMode;
     QTimer *tcpTimeoutTimer = new QTimer;
     QTimer *autoReconnectTimer = new QTimer;
@@ -174,6 +177,7 @@ private:
     bool useUdpStream = true;
     bool autoReconnect;
     bool autoReconnectInProgress = false;
+    bool muteNotification = false;
 
     UdpDataStream *udpStream = new UdpDataStream;
     TcpDataStream *tcpStream = new TcpDataStream;

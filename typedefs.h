@@ -29,6 +29,7 @@ enum class TYPE {
 
 namespace Instrument {
 enum class Mode {
+    UNKNOWN,
     PSCAN,
     FFM,
 };
@@ -49,7 +50,10 @@ enum class Tags
     IFPAN   =     501,
     CW      =     801,
     PSCAN   =    1201,
+    PIFPAN  =    1601,
+    FPIFPAN =    1602,
     GPSC    =    1801,
+    ADVIFP  =   10501,
     ADVPSC  =   11201
 };
 
@@ -80,6 +84,7 @@ enum class InstrumentType
     EM200,
     ESMB,
     USRP,
+    ESMW,
     UNKNOWN
 };
 
@@ -173,13 +178,13 @@ public:
     quint32 freqSpan = 0;
     qint16  avgTime = 0;
     qint16  avgType = 0;
-    qint32  measureTime = 0;
+    quint32 measureTime = 0;
     quint32 freqHigh = 0;
     qint32  demodFreqChannel = 0;
     quint32 demodFreqLow = 0;
     quint32 demodFreqHigh = 0;
     quint64 outputTimestamp = 0;
-    const int size = 40;
+    const int size = 40;                // TODO old version? Should be much bigger
 };
 
 class GenAttrAdvanced
@@ -309,11 +314,37 @@ public:
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
-                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000";
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
             minFrequency = 8e3;
-            maxFrequency = 6e9;
+            maxFrequency = 8e9;
             hasAntNames = true;
+        }
+        else if (type == Instrument::InstrumentType::ESMW) {
+            udpStream = true;
+            tcpStream = true;
+            systManLocName = true;
+            advProtocol = true;
+            id = "ESMW";
+            hasPscan = true;
+            hasAvgType = true;
+            hasAutoAtt = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts.clear(); // TODO << "Ant1" << "Ant2";
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "80000" << "125000"
+                     << "250000" << "500000";
+            fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            minFrequency = 8e3;
+            maxFrequency = 8e9;
+            hasAntNames = false;
         }
         else if (type == Instrument::InstrumentType::ESMB) {
             udpStream = true;
@@ -369,9 +400,25 @@ public:
             tcpStream = true;
             systManLocName = true;
             advProtocol = true;
-            id = "PR200";
+            id = "EM200";
             hasPscan = true;
-            hasAntNames = true;
+            hasAvgType = true;
+            hasAutoAtt = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts.clear();
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000";
+            fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            minFrequency = 8e3;
+            maxFrequency = 8e9;
+            hasAntNames = false;
         }
         else if (type == Instrument::InstrumentType::USRP) {
             udpStream = true;
@@ -420,7 +467,7 @@ public:
     bool hasAttOnOff = false;
     bool hasAntNames = false;
 
-    Instrument::Mode mode = Instrument::Mode::PSCAN;
+    Instrument::Mode mode = Instrument::Mode::UNKNOWN;
     quint64 pscanStartFrequency = 0, pscanStopFrequency = 0;
     quint32 pscanResolution;
     quint64 ffmCenterFrequency;

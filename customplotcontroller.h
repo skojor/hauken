@@ -40,6 +40,8 @@ public slots:
     void stopFlashTrigline();
     void updDeviceConnected(bool b);
     void reqTracePlot() { *tracePlot = customPlotPtr->toPixmap(); emit retTracePlot(tracePlot);}
+    void freqChanged(double a, double b);
+    void resChanged(double a);
 
 private slots:
     void setupBasics();

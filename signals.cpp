@@ -4,7 +4,10 @@ void MainWindow::setSignals()
 {
     connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);
     connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStopFreqChanged);
-    connect(instrResolution, &QComboBox::currentTextChanged, config.data(), &Config::setInstrResolution);
+    connect(instrFfmCenterFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrFfmCenterFreqChanged); //Taken care of after init.
+    connect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
+    //connect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged); // Taken care of after init.
+
     connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrMeasurementTime);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setInstrManAtt);
     connect(instrAutoAtt, &QCheckBox::toggled, this, &MainWindow::instrAutoAttChanged);
@@ -335,6 +338,15 @@ void MainWindow::setSignals()
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this] (int id) {
         if (id == 1) gnssDisplay->updGnssData(gnssDevice1->sendGnssData(), 1);
         else gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
+    });
+
+    connect(measurementDevice, &MeasurementDevice::freqChanged, this, [=] (double a, double b) {
+        //qDebug() << a << b;
+        customPlotController->freqChanged(a, b);
+    });
+    connect(measurementDevice, &MeasurementDevice::resChanged, this, [=] (double a) {
+        customPlotController->resChanged(a);
+        //qDebug() << a;
     });
 }
 

@@ -89,7 +89,10 @@ private slots:
     void getConfigValues();
     void saveConfigValues();
     void instrAutoAttChanged();
-    void instrModeChanged(int a = 0);
+    void instrModeChanged();
+    void instrResolutionChanged();
+    void instrFfmSpanChanged();
+    void instrFfmCenterFreqChanged();
     void updInstrButtonsStatus();
     void setValidators();
     void setSignals();
@@ -150,6 +153,10 @@ private:
     QLabel *stopFreqLabel = new QLabel("End frequency (MHz)");
     QLabel *modeLabel = new QLabel;
     QComboBox *instrResolution = new QComboBox;
+    QDoubleSpinBox *instrFfmCenterFreq = new QDoubleSpinBox; // Added 230524
+    QComboBox *instrFfmSpan = new QComboBox; // - " -
+    QFormLayout *instrForm = new QFormLayout; // - " -
+
     QSpinBox *instrMeasurementTime = new QSpinBox;
     QSpinBox *instrAtt = new QSpinBox;
     QCheckBox *instrAutoAtt = new QCheckBox;

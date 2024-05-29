@@ -47,6 +47,9 @@ public:
     int errorCtr = 0;
     bool errorHandleSent = false;
     const int timeoutInMs = 4000;
+    unsigned long startfreq = 0, stopfreq = 0;
+    unsigned int resolution = 0;
+    int traceCtr = 0;
 
 public slots:
     virtual void openListener() = 0;
@@ -81,6 +84,8 @@ signals:
     void timeout();
     void streamErrorResetFreq();
     void streamErrorResetConnection();
+    void freqChanged(double, double);
+    void resChanged(double);
 
 private slots:
 

@@ -21,9 +21,9 @@ void DataStreamBaseClass::processData(const QByteArray &buf)
 {
     if (checkHeader(buf) && checkOptHeader(buf)) {
         if (attrHeader.tag == (int)Instrument::Tags::GPSC || genAttrAdvHeader.tag == (int)Instrument::Tags::GPSC)
-        readGpscompassData(buf);
-    else
-        fillFft(buf);
+            readGpscompassData(buf);
+        else
+            fillFft(buf);
     }
     tcpBuffer.clear();
 }
@@ -32,7 +32,7 @@ bool DataStreamBaseClass::checkHeader(const QByteArray &buf)    // Reads the ini
 {
     QDataStream ds(buf);
     ds >> header.magicNumber >> header.versionMinor >> header.versionMajor >> header.seqNumber
-            >> header.reserved >> header.dataSize;
+        >> header.reserved >> header.dataSize;
     if (header.magicNumber != 0x000eb200) {
         return false;
     }
@@ -62,7 +62,7 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
         quint32 stepFreq = 0;
 
         if (((devicePtr->optHeaderPr100 || devicePtr->optHeaderEb500) && attrHeader.optHeaderLength) ||
-                (devicePtr->advProtocol && genAttrAdvHeader.optHeaderLength)) {
+            (devicePtr->advProtocol && genAttrAdvHeader.optHeaderLength)) {
             readPscanOptHeader(ds);
             startFreq = (quint64)optHeaderPscanEb500.startFreqHigh << 32 | optHeaderPscanEb500.startFreqLow;
             stopFreq  = (quint64)optHeaderPscanEb500.stopFreqHigh << 32 | optHeaderPscanEb500.stopFreqLow;
@@ -76,11 +76,11 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
         }
 
         if (startFreq != devicePtr->pscanStartFrequency ||
-                stopFreq != devicePtr->pscanStopFrequency ||
-                stepFreq != devicePtr->pscanResolution) {
-            qDebug() << "Freq/resolution mismatch" << (long)startFreq - (long)devicePtr->pscanStartFrequency
+            stopFreq != devicePtr->pscanStopFrequency ||
+            stepFreq != devicePtr->pscanResolution) {
+            /*qDebug() << "Freq/resolution mismatch" << (long)startFreq - (long)devicePtr->pscanStartFrequency
                      << (long)stopFreq - (long)devicePtr->pscanStopFrequency
-                     << stepFreq << devicePtr->pscanResolution << genAttrAdvHeader.tag;
+                     << stepFreq << devicePtr->pscanResolution << genAttrAdvHeader.tag;*/
             errorCtr++;
 
             if (!errorHandleSent && errorCtr > 100) {
@@ -91,19 +91,23 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
             return false;
         }
         else {
+            if (startFreq != startfreq || stopFreq != stopfreq) {
+                startfreq = startFreq;
+                stopfreq = stopFreq;
+                emit freqChanged(startfreq, stopfreq);
+            }
+            if (resolution != stepFreq) {
+                resolution = stepFreq;
+                emit resChanged(resolution);
+            }
             errorCtr = 0;
             errorHandleSent = false;
         }
     }
 
     else if (devicePtr->mode == Instrument::Mode::FFM && attrHeader.tag != (int)Instrument::Tags::GPSC && genAttrAdvHeader.tag != (int)Instrument::Tags::GPSC) {
-        readIfpanOptHeader(ds);
-        quint64 ffmFreq = (quint64)optHeaderIfPanEb500.freqHigh << 32 | optHeaderIfPanEb500.freqLow;
-        if (ffmFreq != devicePtr->ffmCenterFrequency ||
-                optHeaderIfPanEb500.freqSpan != devicePtr->ffmFrequencySpan) {
-            //qDebug() << ffmFreq << devicePtr->ffmCenterFrequency << optHeaderIfPanEb500.freqSpan << devicePtr->ffmFrequencySpan;
-            return false;
-        }
+        if (attrHeader.tag == (int)Instrument::Tags::IFPAN || genAttrAdvHeader.tag == (int)Instrument::Tags::ADVIFP) readIfpanOptHeader(ds); // Same for old and new protocol
+        // TODO: Error checks
     }
     return true;
 }
@@ -111,39 +115,60 @@ bool DataStreamBaseClass::checkOptHeader(const QByteArray &buf)
 void DataStreamBaseClass::readAttrHeader(QDataStream &ds)
 {
     ds >> attrHeader.tag >> attrHeader.length >> attrHeader.numItems >> attrHeader.channelNumber
-            >> attrHeader.optHeaderLength >> attrHeader.selectorFlags;
+        >> attrHeader.optHeaderLength >> attrHeader.selectorFlags;
 }
 
 void DataStreamBaseClass::readIfpanOptHeader(QDataStream &ds)
 {
     ds >> optHeaderIfPanEb500.freqLow >> optHeaderIfPanEb500.freqSpan >> optHeaderIfPanEb500.avgTime
-            >> optHeaderIfPanEb500.avgType >> optHeaderIfPanEb500.measureTime >> optHeaderIfPanEb500.freqHigh
-            >> optHeaderIfPanEb500.demodFreqChannel >> optHeaderIfPanEb500.demodFreqLow
-            >> optHeaderIfPanEb500.demodFreqHigh >> optHeaderIfPanEb500.outputTimestamp;
+        >> optHeaderIfPanEb500.avgType >> optHeaderIfPanEb500.measureTime >> optHeaderIfPanEb500.freqHigh
+        >> optHeaderIfPanEb500.demodFreqChannel >> optHeaderIfPanEb500.demodFreqLow
+        >> optHeaderIfPanEb500.demodFreqHigh >> optHeaderIfPanEb500.outputTimestamp;
+    unsigned long tmpStart = (quint64)optHeaderIfPanEb500.freqHigh << 32 | optHeaderIfPanEb500.freqLow - optHeaderIfPanEb500.freqSpan / 2;
+    unsigned long tmpStop = tmpStart + optHeaderIfPanEb500.freqSpan;
+    if (startfreq != tmpStart || stopfreq != tmpStop) {
+        startfreq = tmpStart;
+        stopfreq = tmpStop;
+        emit freqChanged(startfreq, stopfreq);
+    }
+
+    if (attrHeader.tag == (int)Instrument::Tags::IFPAN) { // Old protocol
+        if (resolution != (int)(optHeaderIfPanEb500.freqSpan / (attrHeader.numItems - 1))) {
+            resolution = optHeaderIfPanEb500.freqSpan / (attrHeader.numItems - 1);
+            emit resChanged(resolution);
+        }
+    }
+    else if(genAttrAdvHeader.tag == (int)Instrument::Tags::ADVIFP) { // New protocol
+        if (resolution != (int)(optHeaderIfPanEb500.freqSpan / (genAttrAdvHeader.numItems - 1))) {
+            resolution = optHeaderIfPanEb500.freqSpan / (genAttrAdvHeader.numItems - 1);
+            emit resChanged(resolution);
+            emit freqChanged(startfreq, stopfreq);
+        }
+    }
 }
 
 void DataStreamBaseClass::readPscanOptHeader(QDataStream &ds)
 {
     ds >> optHeaderPscanEb500.startFreqLow >> optHeaderPscanEb500.stopFreqLow
-            >> optHeaderPscanEb500.stepFreq >> optHeaderPscanEb500.startFreqHigh
-            >> optHeaderPscanEb500.stopFreqHigh >> optHeaderPscanEb500.reserved
-            >> optHeaderPscanEb500.outputTimestamp;
+        >> optHeaderPscanEb500.stepFreq >> optHeaderPscanEb500.startFreqHigh
+        >> optHeaderPscanEb500.stopFreqHigh >> optHeaderPscanEb500.reserved
+        >> optHeaderPscanEb500.outputTimestamp;
     // not reading last values of eb500 specific optHeader, because they are not relevant anyway
 }
 
 void DataStreamBaseClass::readDscanOptHeader(QDataStream &ds)
 {
     ds >> esmbOptHeader.startFreq >> esmbOptHeader.stopFreq >> esmbOptHeader.stepFreq
-            >> esmbOptHeader.markFreq >> esmbOptHeader.bwZoom >> esmbOptHeader.refLevel;
+        >> esmbOptHeader.markFreq >> esmbOptHeader.bwZoom >> esmbOptHeader.refLevel;
 }
 
 void DataStreamBaseClass::readAdvHeader(QDataStream &ds)
 {
     ds >> genAttrAdvHeader.tag >> genAttrAdvHeader.reserved >> genAttrAdvHeader.length
-            >> genAttrAdvHeader.res1 >> genAttrAdvHeader.res2 >> genAttrAdvHeader.res3 >> genAttrAdvHeader.res4
-            >> genAttrAdvHeader.numItems >> genAttrAdvHeader.channelNumber >> genAttrAdvHeader.optHeaderLength
-            >> genAttrAdvHeader.selectorFlagsLow >> genAttrAdvHeader.selectorFlagsHigh
-            >> genAttrAdvHeader.res5 >> genAttrAdvHeader.res6 >> genAttrAdvHeader.res7 >> genAttrAdvHeader.res8;
+        >> genAttrAdvHeader.res1 >> genAttrAdvHeader.res2 >> genAttrAdvHeader.res3 >> genAttrAdvHeader.res4
+        >> genAttrAdvHeader.numItems >> genAttrAdvHeader.channelNumber >> genAttrAdvHeader.optHeaderLength
+        >> genAttrAdvHeader.selectorFlagsLow >> genAttrAdvHeader.selectorFlagsHigh
+        >> genAttrAdvHeader.res5 >> genAttrAdvHeader.res6 >> genAttrAdvHeader.res7 >> genAttrAdvHeader.res8;
 }
 
 void DataStreamBaseClass::fillFft(const QByteArray &buf)
@@ -185,14 +210,31 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                 /*else if (fft.size() < calcPscanPointsPerTrace())
                     qDebug() << "WTF?" << fft.size() << calcPscanPointsPerTrace();*/
                 fft.clear();
-                if (traceTimer->isValid()) emit tracesPerSecond(1e9 / traceTimer->nsecsElapsed());
-                traceTimer->start();
+                traceCtr++;
+                if (traceTimer->isValid() && traceCtr >= 10) {
+                    emit tracesPerSecond(1e10 / traceTimer->nsecsElapsed());
+                    traceCtr = 0;
+                    traceTimer->start();
+                }
+                if (!traceTimer->isValid()) traceTimer->start();
             }
         }
     }
 
-    else if (devicePtr->mode == Instrument::Mode::FFM && attrHeader.tag == (int)Instrument::Tags::IFPAN) {
-        qDebug() << "FFM it is";
+    else if (devicePtr->mode == Instrument::Mode::FFM && (attrHeader.tag == (int)Instrument::Tags::IFPAN || genAttrAdvHeader.tag == (int)Instrument::Tags::ADVIFP)) {
+        while (!ds.atEnd()) {
+            ds >> data;
+            fft.append(data);
+        }
+        emit newFftData(fft);
+        fft.clear();
+        traceCtr++;
+        if (traceTimer->isValid() && traceCtr >= 100) {
+            emit tracesPerSecond(1e11 / traceTimer->nsecsElapsed());
+            traceCtr = 0;
+            traceTimer->start();
+        }
+        if (!traceTimer->isValid()) traceTimer->start();
     }
 
     else if (devicePtr->mode == Instrument::Mode::PSCAN && attrHeader.tag == (int)Instrument::Tags::DSCAN) {
@@ -215,7 +257,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
         }
     }
 
-    else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag << genAttrAdvHeader.tag;
+    else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag << genAttrAdvHeader.tag << (int)devicePtr->mode;
     //if (tcpBuffer.size() > 0) tcpBuffer.clear();
 }
 

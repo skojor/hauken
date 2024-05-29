@@ -272,7 +272,7 @@ void MainWindow::createLayout()
     QGridLayout *gridLayout = new QGridLayout;
     QVBoxLayout *leftLayout = new QVBoxLayout;
 
-    QFormLayout *instrForm = new QFormLayout;
+    //QFormLayout *instrForm = new QFormLayout;
     instrGroupBox = new QGroupBox("Measurement receiver");
     instrGroupBox->setMinimumWidth(320);
     instrGroupBox->setMaximumWidth(320);
@@ -455,7 +455,7 @@ void MainWindow::getConfigValues()
     instrAtt->setValue(config->getInstrManAtt());
     instrAutoAtt->setChecked(config->getInstrAutoAtt());
     instrAntPort->setCurrentIndex(config->getInstrAntPort());
-    instrMode->setCurrentIndex(config->getInstrMode());
+    instrMode->setCurrentIndex(instrMode->findText(config->getInstrMode()));
     //instrFftMode->setCurrentIndex(config->getInstrFftMode());
     instrIpAddr->setEditable(true);
     instrPort->setText(QString::number(config->getInstrPort()));
@@ -466,6 +466,7 @@ void MainWindow::getConfigValues()
     instrAttChanged();
     //instrIpChanged();
     instrPortChanged();
+    instrFfmCenterFreq->setValue(config->getInstrFfmCenterFreq());
 
     instrAntPort->setEditable(true);
     instrAntPort->setLineEdit(antPortLineEdit);
@@ -503,7 +504,7 @@ void MainWindow::updInstrButtonsStatus()
     if (!measurementDevice->isConnected()) {
         /*QHostAddress test(instrIpAddr->currentText());
         if (!test.isNull() && instrPort->text().toUInt() > 0)*/
-            instrConnect->setEnabled(true);
+        instrConnect->setEnabled(true);
         /*else
             instrConnect->setEnabled(false);*/
     }
@@ -511,30 +512,52 @@ void MainWindow::updInstrButtonsStatus()
     }*/
 }
 
-void MainWindow::instrModeChanged(int a)
+void MainWindow::instrModeChanged()
 {
-    (void)a;
-    if (instrMode->currentIndex() == (int)Instrument::Mode::PSCAN) {
+    if (instrMode->currentText().contains("pscan", Qt::CaseInsensitive)/* &&
+        measurementDevice->getCurrentMode() != Instrument::Mode::PSCAN*/) {
+
         startFreqLabel->setText("Start frequency (MHz)");
-        stopFreqLabel->setDisabled(false);
-        instrStopFreq->setDisabled(false);
+        stopFreqLabel->setHidden(false);
+        instrStopFreq->setHidden(false);
         modeLabel->setText("Pscan resolution (kHz)");
+
+        instrForm->replaceWidget(instrFfmCenterFreq, instrStartFreq);
+        instrForm->replaceWidget(instrFfmSpan, instrResolution);
+        instrFfmCenterFreq->setHidden(true);
+        instrFfmSpan->setHidden(true);
+        instrStartFreq->setHidden(false);
+        instrResolution->setHidden(false);
+        config->setInstrMode(instrMode->currentText());
+        measurementDevice->setMode();
     }
-    else {
+    else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
+             measurementDevice->getCurrentMode() != Instrument::Mode::FFM*/) {
         startFreqLabel->setText("FFM center frequency (MHz)");
-        stopFreqLabel->setDisabled(true);
-        instrStopFreq->setDisabled(true);
+        stopFreqLabel->setHidden(true);
+        instrStopFreq->setHidden(true);
         modeLabel->setText("FFM span (kHz)");
+
+        instrForm->replaceWidget(instrStartFreq, instrFfmCenterFreq);
+        instrForm->replaceWidget(instrResolution, instrFfmSpan);
+        instrFfmCenterFreq->setHidden(false);
+        instrFfmSpan->setHidden(false);
+        instrStartFreq->setHidden(true);
+        instrResolution->setHidden(true);
+        config->setInstrMode(instrMode->currentText());
+        measurementDevice->setMode();
     }
-    config->setInstrMode(instrMode->currentIndex());
     instrStartFreqChanged();
     instrStopFreqChanged();
+    setResolutionFunction();
 }
 
 void MainWindow::setValidators()
 {
     instrStartFreq->setRange(20, 6e3);
     instrStartFreq->setDecimals(0);
+    instrFfmCenterFreq->setRange(0.1, 8e3);
+    instrFfmCenterFreq->setDecimals(0);
     instrStopFreq->setRange(20, 6e3);
     instrStopFreq->setDecimals(0);
     instrMeasurementTime->setRange(1, 5000);
@@ -566,23 +589,36 @@ void MainWindow::setValidators()
 
 void MainWindow::instrStartFreqChanged()
 {
-    if (config->getInstrMode() == 0) { //Pscan
+    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN) {
         config->setInstrStartFreq(instrStartFreq->value());
-    }
-    else { // ffm
-        config->setInstrFfmCenterFreq(instrStartFreq->value());
-        measurementDevice->setFfmCenterFrequency();
     }
     if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrStopFreqChanged()
 {
-    if (config->getInstrMode() == 0) { //Pscan
+    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN) {
         config->setInstrStartFreq(instrStartFreq->value());
         config->setInstrStopFreq(instrStopFreq->value());
     }
     if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+}
+
+void MainWindow::instrFfmCenterFreqChanged()
+{
+    if (measurementDevice->getCurrentMode() == Instrument::Mode::FFM) {
+        config->setInstrFfmCenterFreq(instrFfmCenterFreq->value());
+    }
+    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+}
+
+void MainWindow::instrFfmSpanChanged()
+{
+   // if (measurementDevice->isConnected() &&
+   //     measurementDevice->getCurrentMode() == Instrument::Mode::FFM) { // save settings only when connected and mode established
+        config->setInstrFfmSpan(instrFfmSpan->currentText());
+   // }
+
 }
 
 void MainWindow::instrMeasurementTimeChanged()
@@ -646,7 +682,7 @@ void MainWindow::setInputsState(const bool state)
     if (state && instrAutoAtt->isChecked())
         instrAtt->setDisabled(true);
 
-    instrMode->setEnabled(false);       // disabled until further
+    instrMode->setEnabled(state);       // disabled until further TODO
     instrFftMode->setEnabled(state);
     instrDisconnect->setEnabled(state);
     instrConnect->setDisabled(state);
@@ -658,19 +694,30 @@ void MainWindow::setInputsState(const bool state)
 
 void MainWindow::setResolutionFunction()
 {
+    disconnect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
+    disconnect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
+
     instrResolution->clear();
-    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN) {
-        QString val = config->getInstrResolution();
-        instrResolution->addItems(measurementDevice->getDevicePscanResolutions());
-        if (instrResolution->findText(val) >= 0)
-            instrResolution->setCurrentIndex(instrResolution->findText(val));
-    }
-    else {
-        QString val = config->getInstrResolution();
-        instrResolution->addItems(measurementDevice->getDeviceFfmSpans());
-        if (instrResolution->findText(val) >= 0)
-            instrResolution->setCurrentIndex(instrResolution->findText(val));
-    }
+    instrResolution->addItems(measurementDevice->getDevicePscanResolutions());
+    //qDebug() << "pscan debug" << config->getInstrResolution() << measurementDevice->getDevicePscanResolutions();
+    if (instrResolution->findText(config->getInstrResolution()) >= 0)
+        instrResolution->setCurrentIndex(instrResolution->findText(config->getInstrResolution()));
+
+    instrFfmSpan->clear();
+    instrFfmSpan->addItems(measurementDevice->getDeviceFfmSpans());
+    //qDebug() << "FFM debug" << config->getInstrFfmSpan() << measurementDevice->getDeviceFfmSpans();
+    if (instrFfmSpan->findText(config->getInstrFfmSpan()) >= 0)
+        instrFfmSpan->setCurrentIndex(instrFfmSpan->findText(config->getInstrFfmSpan()));
+
+    connect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
+    connect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
+}
+
+void MainWindow::instrResolutionChanged() // pscan res. change
+{
+    //if (measurementDevice->isConnected()) { // save settings only when connected and mode established
+        config->setInstrResolution(instrResolution->currentText());
+    //}
 }
 
 void MainWindow::setDeviceAntPorts()
@@ -796,7 +843,7 @@ void MainWindow::save()
 
 void MainWindow::saveConfigValues()
 {
-    config->setInstrStartFreq(instrStartFreq->value());
+    /*   config->setInstrStartFreq(instrStartFreq->value());
     config->setInstrStopFreq(instrStopFreq->value());
     config->setInstrResolution(instrResolution->currentText());
     config->setInstrMeasurementTime(instrMeasurementTime->value());
@@ -821,7 +868,7 @@ void MainWindow::saveConfigValues()
     gnssOptions->saveCurrentSettings();
     receiverOptions->saveCurrentSettings();
     sdefOptions->saveCurrentSettings();
-    emailOptions->saveCurrentSettings();
+    emailOptions->saveCurrentSettings();*/
 }
 
 void MainWindow::showBytesPerSec(int val)
@@ -1002,3 +1049,4 @@ void MainWindow::restartWaterfall()
         waterfall->updSize(customPlot->axisRect()->rect());
     });
 }
+

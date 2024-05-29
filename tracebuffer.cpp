@@ -144,7 +144,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
         for (int i=0; i<plotResolution; i++) {
             //int val = data.at(rate * i);
             int top = -800;
-            for (int j=1; j<(int)rate; j++) {
+            for (int j=1; j<=(int)rate; j++) {
                 if (top < data.at(rate * i + j))
                     top = data.at(rate * i + j); // pick the strongest sample to show in plot
                 //val += data.at(rate * i + j);
