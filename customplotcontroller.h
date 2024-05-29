@@ -80,7 +80,7 @@ private:
     QColor colorFlash = QColor(0, 150, 0, 20);
     bool flip = true;
     bool deviceConnected = false;
-    int plotResolution;
+    int plotResolution = 0;
     QPixmap *tracePlot = new QPixmap;
     bool markGnss = false;
     int plotIterator = 0;

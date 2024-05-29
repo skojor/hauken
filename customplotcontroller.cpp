@@ -161,7 +161,7 @@ void CustomPlotController::doReplot()
 void CustomPlotController::reCalc()
 {
     if ((int)(resolution * 1e6) > 0 && customPlotPtr->xAxis->range().upper > 0 && customPlotPtr->xAxis->range().lower > 0) {
-        nrOfValues = 1 + ( 1e3 * (customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
+        nrOfValues = 1 + ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) / resolution);
         if (nrOfValues > 1) {
             double rate = ((customPlotPtr->xAxis->range().upper - customPlotPtr->xAxis->range().lower) * 1e6) / (plotResolution - 1);
             keyValues.clear();
@@ -225,7 +225,6 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
             selMax = tmp;
         }
         if (selMax >= stopFreq) selMax = keyValues.last(); //stopFreq - resolution / 1000;
-        //qDebug() << selMin << selMax;
 
         QMenu *menu = new QMenu;
         menu->addAction("Include " + QString::number(selMin, 'f', 3) +
@@ -330,7 +329,7 @@ void CustomPlotController::saveTrigSelectionToConfig()
 
 void CustomPlotController::updSettings()
 {
-    plotResolution = config->getPlotResolution();
+    if (plotResolution == 0) plotResolution = config->getPlotResolution();
     fill.fill(-200, plotResolution);
 
     /*if (true) { // (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
@@ -450,6 +449,9 @@ void CustomPlotController::updOverlay()
 
 void CustomPlotController::freqChanged(double a, double b)
 {
+    stopFreq = b;
+    startFreq = a;
+
     if (a < b) {
         if (customPlotPtr->xAxis->range().lower > b / 1e6) {
             customPlotPtr->xAxis->setRangeLower(a / 1e6);
