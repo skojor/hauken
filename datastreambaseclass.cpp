@@ -192,7 +192,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
             ds >> data;
             if (data > 2000) { // shouldn't happen, unless hell breaks loose. discard all the data
                 fft.clear();
-                qDebug() << "Dropped trace, values > 200 dBuV!";
+                //qDebug() << "Dropped trace, values > 200 dBuV!";
                 break;
             }
             else if (data != 2000) fft.append(data);
@@ -257,7 +257,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
         }
     }
 
-    else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag << genAttrAdvHeader.tag << (int)devicePtr->mode;
+    //else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag << genAttrAdvHeader.tag << (int)devicePtr->mode;
     //if (tcpBuffer.size() > 0) tcpBuffer.clear();
 }
 
