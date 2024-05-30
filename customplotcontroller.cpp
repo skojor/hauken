@@ -131,16 +131,19 @@ void CustomPlotController::setupBasics()
 
 void CustomPlotController::plotTrace(const QVector<double> &data)
 {
+    if (keyValues.isEmpty()) reCalc();
     customPlotPtr->graph(0)->setData(keyValues, data);
 }
 
 void CustomPlotController::plotMaxhold(const QVector<double> &data)
 {
+    if (keyValues.isEmpty()) reCalc();
     customPlotPtr->graph(1)->setData(keyValues, data);
 }
 
 void CustomPlotController::plotTriglevel(const QVector<double> &data)
 {
+    if (keyValues.isEmpty()) reCalc();
     QVector<double> copy;
 
     if (!data.isEmpty() && !freqSelection.isEmpty()) {

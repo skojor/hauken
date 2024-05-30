@@ -419,7 +419,9 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
         QList<QByteArray> brokenList = list.split(',');
         //qDebug() << brokenList;
         if (brokenList.size() > 2) {
-            inUseByIp = brokenList[0].split(' ')[1].simplified();
+            QList<QByteArray> brkList = brokenList[0].split(' ');
+            if (brkList.size() > 1) inUseByIp = brokenList[0].split(' ')[1].simplified();
+            else inUseByIp = brokenList[0].simplified();
             inUseByIp.remove('\"');
             QString text = "remote";
             if (inUseByIp.size() > 6) {
