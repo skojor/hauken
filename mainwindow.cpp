@@ -378,7 +378,7 @@ void MainWindow::createLayout()
     plotMinScroll->setValue(config->getPlotYMin());
     plotMaxholdTime->setFixedSize(40,20);
     plotMaxholdTime->setRange(0, 120);
-    waterfallTime->setRange(20, 86400);
+    waterfallTime->setRange(120, 86400);
 
     gridLayout->addLayout(leftLayout, 0, 0, 2, 1);
     gridLayout->addLayout(plotLayout, 0, 1, 1, 2);
@@ -609,16 +609,19 @@ void MainWindow::instrFfmCenterFreqChanged()
     if (measurementDevice->getCurrentMode() == Instrument::Mode::FFM) {
         config->setInstrFfmCenterFreq(instrFfmCenterFreq->value());
     }
-    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected()) {
+        traceBuffer->restartCalcAvgLevel();
+        waterfall->restartPlot();
+    }
 }
 
 void MainWindow::instrFfmSpanChanged()
 {
-   // if (measurementDevice->isConnected() &&
-   //     measurementDevice->getCurrentMode() == Instrument::Mode::FFM) { // save settings only when connected and mode established
-        config->setInstrFfmSpan(instrFfmSpan->currentText());
-   // }
-
+    config->setInstrFfmSpan(instrFfmSpan->currentText());
+    if (measurementDevice->isConnected()) {
+        traceBuffer->restartCalcAvgLevel();
+        waterfall->restartPlot();
+    }
 }
 
 void MainWindow::instrMeasurementTimeChanged()
@@ -716,7 +719,7 @@ void MainWindow::setResolutionFunction()
 void MainWindow::instrResolutionChanged() // pscan res. change
 {
     //if (measurementDevice->isConnected()) { // save settings only when connected and mode established
-        config->setInstrResolution(instrResolution->currentText());
+    config->setInstrResolution(instrResolution->currentText());
     //}
 }
 

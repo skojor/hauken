@@ -224,7 +224,7 @@ void CustomPlotController::showSelectionMenu(const QRect &rect, QMouseEvent *eve
             selMin = selMax;
             selMax = tmp;
         }
-        if (selMax >= stopFreq) selMax = keyValues.last(); //stopFreq - resolution / 1000;
+        if (!keyValues.isEmpty() && selMax >= stopFreq) selMax = keyValues.last(); //stopFreq - resolution / 1000;
 
         QMenu *menu = new QMenu;
         menu->addAction("Include " + QString::number(selMin, 'f', 3) +

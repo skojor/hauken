@@ -58,6 +58,7 @@ private:
     COLORS colorset;
     bool greyscale = false;
     QMutex mutex;
+    bool timeout = true;
 };
 
 #endif // WATERFALL_H

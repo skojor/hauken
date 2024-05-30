@@ -323,7 +323,7 @@ void MainWindow::setSignals()
         int selIndex = -1;
         for (int i = 0; i < ip.size(); i++) {
             instrIpAddr->addItem(name[i] + " (" + type[i] + ")", ip[i]);
-            if (ip[i].contains(config->getInstrIpAddr())) {
+            if (ip[i] == config->getInstrIpAddr()) {
                 selIndex = i;
             }
         }
