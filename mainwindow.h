@@ -63,6 +63,8 @@
 #include "ai.h"
 #include "instrumentlist.h"
 #include "gnssdisplay.h"
+#include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
+#include "udpdatastream.h"
 
 class MainWindow : public QMainWindow
 {
@@ -285,6 +287,9 @@ private:
     QMediaPlayer *player = new QMediaPlayer;
     QAudioOutput *audioOutput = new QAudioOutput;
     QTimer *notificationTimer = new QTimer;
+
+    UdpDataStream *udpStream = new UdpDataStream;
+    TcpDataStream *tcpStream = new TcpDataStream;
 
 signals:
     void stopPlot(bool);

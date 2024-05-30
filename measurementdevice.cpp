@@ -520,7 +520,7 @@ void MeasurementDevice::stateConnected()
         emit status("Connected, setting up device");
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
     }
-    else {
+    else if (!muteNotification) {
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Reconnected");
         emit reconnected();
     }
