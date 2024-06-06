@@ -13,7 +13,8 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     comboOpt1->addItem("InstrumentGNSS");
     comboOpt1->addItem("GNSS receiver 1");
     comboOpt1->addItem("GNSS receiver 2");
-    comboOpt1->setToolTip("Which GNSS receiver should be used for the position data");
+    comboOpt1->addItem("Manual position");
+    comboOpt1->setToolTip("Which position source should be used for the position data");
 
     mainLayout->addRow(new QLabel("Receiver http(s) address"), leOpt1);
     leOpt1->setToolTip("The receiving address for the json report");

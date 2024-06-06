@@ -28,7 +28,12 @@ PositionReport::PositionReport(QObject *parent)
         if (sensorTemp > -30 && sensorHumidity > 0) sensorDataValid = true;
     });
 
-    if (!posSource.isEmpty()) gnssReqTimer->start(1000);
+    if (!posSource.isEmpty() && !posSource.contains("Manual", Qt::CaseInsensitive)) gnssReqTimer->start(1000);
+    else if (posSource.contains("Manual", Qt::CaseInsensitive)) {
+        gnssData.latitude = getStnLatitude().toDouble();
+        gnssData.longitude = getStnLongitude().toDouble();
+        gnssData.posValid = true;
+    }
     if (addSensorData && getArduinoReadDHT20()) sensorDataTimer->start(60 * 1e3);
 
     uptime.start();
@@ -115,7 +120,7 @@ void PositionReport::generateReport()
     }
 
     reportArgs << url;
-    //qDebug() << reportArgs;
+    qDebug() << reportArgs;
 }
 
 void PositionReport::sendReport()
