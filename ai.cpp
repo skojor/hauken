@@ -11,7 +11,7 @@ AI::AI()
         qDebug() << "Classification model not found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx";
     }
 
-    classes << "cw" << "jammer" << "wideband";
+    classes << "cw" << "jammer" << "other" << "wideband";
 
     reqTraceBufferTimer->setSingleShot(true);
     connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
@@ -79,7 +79,6 @@ void AI::receiveBuffer(QVector<QVector<float >> buffer)
         }
     }
     cv::resize(frame, frame, cv::Size(369, 369), 0, 0, cv::INTER_CUBIC);
-    cv::imwrite(QString("c:/Hauken/test.png").toStdString(), frame);
 
     classifyData(frame);
 }
@@ -111,8 +110,14 @@ void AI::classifyData(cv::Mat frame)
     double probability = maxVal * 100 / sum;
 
     qDebug() << "Classification" << classes[classId] << probability;
-    emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)probability) + " %");
-    emit aiResult(classes[classId], probability);
+    if (probability >= 50) {
+        emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)probability) + " %");
+        emit aiResult(classes[classId], probability);
+    }
+    else {
+        emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: other/uncertain");
+        emit aiResult("other", 0);
+    }
 }
 
 void AI::findMinAvgMax(const QVector<QVector<float >> &buffer, float *min, float *avg, float *max)

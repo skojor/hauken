@@ -407,7 +407,10 @@ void SdefRecorder::updFileWithPrediction(const QString filename)
         do {
             data = file.readLine();
             if (data.contains("Note\n")) { // Found empty note line, editing
-                data = "Note " + prediction.toLocal8Bit() + " [" + QByteArray::number(probability) + " % probability]\n";
+                if (probability > 0)
+                    data = "Note " + prediction.toLocal8Bit() + " [" + QByteArray::number(probability) + " % probability]\n";
+                else
+                    data = "Note " + prediction.toLocal8Bit() + "\n";
             }
             tempFile.write(data);
         } while (!file.atEnd());

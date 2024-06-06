@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.39</td><td>AI category added (other). Various bugfixes</td></tr>"
        << "<tr><td>2.38</td><td>Added GNSS data display in separate window</td></tr>"
        << "<tr><td>2.37</td><td>Instrument list collected from external server if available</td></tr>"
        << "<tr><td>2.36</td><td>MQTT data can be added to incident log</td></tr>"
