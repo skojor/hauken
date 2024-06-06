@@ -47,7 +47,7 @@ public slots:
     void setInUse(QString s) { inUse = true; inUseBy = s; }
     void setInUseByIp(QString s) { inUseByIp = s.simplified(); qDebug() << "rec" << inUseByIp; }
     void updMqttData(QString& name, double& val);
-    void setModeUsed(QString s) { modeUsed = s; qDebug() << "mode" << s; }
+    void setModeUsed(QString s) { modeUsed = s; }
     void setFreqUsed(unsigned long a, unsigned long b) { startFreqUsed = a, stopFreqUsed = b; }
     void setResUsed(int a) { resUsed = a; }
 

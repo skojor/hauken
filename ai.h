@@ -35,9 +35,12 @@ signals:
 public:
     AI();
     void receiveBuffer(QVector<QVector<float >> buffer);
-    void receiveTraceBuffer(const QList<QVector<qint16> > data);
+    void receiveTraceBuffer(const QList<QVector<qint16> > &data);
     void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(getNotifyTruncateTime() * 1.5e3); recordingEnded = false; }
     void recordingHasEnded() { recordingEnded = true; }
+    void freqChanged(double a, double b) { startfreq = a; stopfreq = b;}
+    void resChanged(double a) { resolution = a;}
+    void setTrigCenterFrequency(double a) { trigCenterFrequency = a * 1e6; qDebug() << "trig center" << trigCenterFrequency;}
 
 private:
     QStringList classes;
@@ -46,11 +49,14 @@ private:
     QTimer *testTimer = new QTimer;
     bool netLoaded = false;
     bool recordingEnded = true;
+    double startfreq, stopfreq, resolution, startrange, stoprange;
+    double trigCenterFrequency;
 
 private slots:
     void classifyData(cv::Mat frame);
     void findMinAvgMax(const QVector<QVector<float >> &buffer, float *min, float *avg, float *max);
     void findMinAvgMax(const QVector<QVector<qint16 >> &buffer, qint16 *min, qint16 *avg, qint16 *max);
+    void findTrigRange();
 };
 
 #endif // AI_H

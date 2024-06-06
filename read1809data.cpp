@@ -219,9 +219,11 @@ void Read1809Data::readFile(QString filename)
                     emit tracesPerSec(1.0 / maxHoldTime);
                     emit resUsed(filterBW);
                     (void)isDBuV; // TODO
-                    setInstrStartFreq(freqStart / 1e3);
+                    /*setInstrStartFreq(freqStart / 1e3);
                     setInstrStopFreq(freqStop / 1e3);
-                    setInstrResolution(QString::number(filterBW, 'f'));
+                    setInstrResolution(QString::number(filterBW, 'f'));*/
+                    emit freqChanged((double)freqStart * 1e3, (double)freqStop * 1e3);
+                    emit resChanged(filterBW * 1e3);
                     // Data readout starts now
                     playbackStartPosition = file.pos();
                     wdg->show();            // start controller widget
@@ -378,7 +380,22 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                         note += conv + " ";
                     }
                 }
-
+                else if (line.contains("freqstart", Qt::CaseInsensitive) || line.contains("freqstop", Qt::CaseInsensitive)) {
+                    bool ok = false;
+                    unsigned long tmp;
+                    QStringList list = line.split(' ');
+                    if (list.size() == 2) tmp = list[1].toULong(&ok);
+                    if (ok && line.contains("freqstart", Qt::CaseInsensitive)) freqStart = tmp;
+                    else if (ok && line.contains("freqstop", Qt::CaseInsensitive)) freqStop = tmp;
+                    else qDebug() << "Conversion error in 1809 header frequency info, check content";
+                }
+                else if (line.contains("filterbandwidth", Qt::CaseInsensitive)) {
+                    bool ok = false;
+                    float tmp;
+                    QStringList list = line.split(' ');
+                    if (list.size() == 2) tmp = list[1].toFloat(&ok);
+                    if (ok) filterBW = tmp;
+                }
 
                 else if (line.count(':') == 2 && line.size() > 100) { // ugly hack, just skip header and start reading from first timestamp
                     if (!start.isValid()) { // First line
@@ -415,10 +432,22 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
             //if (abs(min - avg) > 30) min = avg - 30;
             min = avg / 2; // avg val = white pixel, anything less = still white
 
-            cv::Mat frame((int)array.size(), (int)array.front().size(), CV_8UC3, cv::Scalar());
+            double startrange = 1560000; // Hardcoded for now
+            double stoprange = 1610000;
+
+            //double displayResolution = (freqStop - freqStart) / filterBW;
+            int jFirst = (startrange - freqStart) / (filterBW);
+            int jLast = array.front().size() - ((freqStop - stoprange) / (filterBW));
+
+            if (jLast - jFirst <= 0) { // sth very wrong happened here
+                jFirst = 0;
+                jLast = array.front().size();
+            }
+
+            cv::Mat frame((int)array.size(), jLast - jFirst, CV_8UC3, cv::Scalar());
 
             for (int i = 0; i < array.size(); i++) {
-                for (int j = 0, k = 0; j < array[0].size(); j++, k++) {
+                for (int j = jFirst, k = 0; j < jLast; j++, k++) {
                     if (max - min == 0) max += 1;
                     int val = (1.5 * 255 * (array[i][j] - min)) / (max - min);
                     if (val < 0) val = 0;

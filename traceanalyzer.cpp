@@ -77,6 +77,7 @@ void TraceAnalyzer::alarmTriggered()
             if (!pmrMode) emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Incident registered, " + alarmText + ". Recording is not enabled");
             else emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "PMR " + alarmText);
         }
+        emit trigRegistered(singleTrigCenterFrequency);
     }
 }
 
@@ -116,9 +117,9 @@ void TraceAnalyzer::updSettings()
     singleTrigBandwidth = config->getInstrMinTrigBW();
     totalTrigBandwidth = config->getInstrTotalTrigBW();
     trigTime = config->getInstrMinTrigTime();
-    startFreq = config->getInstrStartFreq();
+    /*startFreq = config->getInstrStartFreq();
     stopFreq = config->getInstrStopFreq();
-    resolution = config->getInstrResolution().toDouble();
+    resolution = config->getInstrResolution().toDouble();*/
     pmrMode = config->getPmrMode();
 }
 

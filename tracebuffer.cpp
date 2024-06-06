@@ -23,9 +23,9 @@ void TraceBuffer::start()
 
 void TraceBuffer::deleteOlderThan()
 {
-    mutex.lock();
+    //mutex.lock();
     if (traceBuffer.size() > 2) {
-        while (!datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
+        while (!traceBuffer.isEmpty() && !datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
             normTraceBuffer.removeFirst();
@@ -33,7 +33,7 @@ void TraceBuffer::deleteOlderThan()
         }
         while (maxholdBuffer.size() > 120) maxholdBuffer.removeLast();
     }
-    mutex.unlock();
+    //mutex.unlock();
 }
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
@@ -145,7 +145,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
             //int val = data.at(rate * i);
             int top = -800;
             for (int j=1; j<=(int)rate; j++) {
-                if (top < data.at(rate * i + j))
+                if (data.size() > rate * i + j && top < data.at(rate * i + j))
                     top = data.at(rate * i + j); // pick the strongest sample to show in plot
                 //val += data.at(rate * i + j);
             }

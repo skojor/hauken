@@ -7,7 +7,7 @@ UdpDataStream::UdpDataStream()
 void UdpDataStream::openListener()
 {
     udpSocket->close();
-    udpPort = 5555;
+    udpPort = 5559;
     for (int i=0; i<10; i++) {
         if (!udpSocket->bind(udpPort)) {
             udpSocket->close();

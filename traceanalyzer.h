@@ -28,11 +28,14 @@ public slots:
     double getKhzAboveLimitTotal() { return khzAboveLimitTotal; }
     void setAnalyzerReady() { ready = true;}
     void setAnalyzerNotReady() { ready = false;}
+    void freqChanged(double a, double b) { startFreq = a * 1e-6; stopFreq = b * 1e-6;}
+    void resChanged(double a) { resolution = a * 1e-3;}
 
 signals:
     void alarm();
     void alarmEnded();
     void toIncidentLog(const NOTIFY::TYPE, const QString,const QString);
+    void trigRegistered(double centerfreq);
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);

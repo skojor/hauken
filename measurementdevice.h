@@ -15,7 +15,6 @@
 #include "typedefs.h"
 #include "tcpdatastream.h"
 #include "udpdatastream.h"
-//#include "qcustomplot.h"
 #include "config.h"
 
 using namespace Instrument;
@@ -25,10 +24,7 @@ class MeasurementDevice : public QObject
     Q_OBJECT
 public:
     explicit MeasurementDevice(QSharedPointer<Config> c);
-    ~MeasurementDevice()
-    {
-        if (connected) instrDisconnect();
-    }
+    ~MeasurementDevice();
 
 protected:
 
@@ -54,8 +50,8 @@ signals:
     void modeUsed(QString);
     void freqRangeUsed(unsigned long, unsigned long);
     void resUsed(int);
-    void freqChanged(double, double);
-    void resChanged(double);
+    //void freqChanged(double, double);
+    //void resChanged(double);
 
 public slots:
     void start();
@@ -67,7 +63,7 @@ public slots:
     void setAttenuator();
     void setAutoAttenuator();
     void setAntPort();
-    QStringList getAntPorts();
+    //QStringList antPorts();
     void setAddress(const QString s) { scpiAddress->setAddress(s); }
     void setPort(const int p) { scpiPort = p; }
     void setMode();
@@ -81,32 +77,34 @@ public slots:
     void instrConnect();
     void instrDisconnect();
     void runAfterConnected();
-    QString getId() { return devicePtr->id; }
-    QString getLongId() { return devicePtr->longId; }
-    void restartStream();
+    QString id() { return devicePtr->id; }
+    QString longId() { return devicePtr->longId; }
+    void restartStream(bool withDisconnect = true);
     void setupUdpStream();
     void setupTcpStream();
     void setUseTcp(bool b) { useUdpStream = !b; }
     void setAutoReconnect(bool b) { autoReconnect = b; }
-    void forwardBytesPerSec(int);
-    void forwardTracesPerSec(double d) { tracesPerSecValue = d; emit tracesPerSec(d);}
-    void fftDataHandler(QVector<qint16> &);
-    double getTracesPerSec() { return tracesPerSecValue;}
-    QSharedPointer<Device> getMeasurementDeviceData() { return devicePtr;}
+    QSharedPointer<Device> measurementDeviceData() { return devicePtr;}
 
-    QStringList getDevicePscanResolutions() { return devicePtr->pscanResolutions;}
-    QStringList getDeviceAntPorts() { return devicePtr->antPorts;}
-    QStringList getDeviceFfmSpans() { return devicePtr->ffmSpans;}
-    Instrument::Mode getCurrentMode() { return devicePtr->mode;}
-    QStringList getDeviceFftModes() { return devicePtr->fftModes;}
-    quint64 getDeviceMinFreq() { return devicePtr->minFrequency;}
-    quint64 getDeviceMaxFreq() { return devicePtr->maxFrequency;}
+    QStringList devicePscanResolutions() { return devicePtr->pscanResolutions;}
+    QStringList deviceAntPorts() { return devicePtr->antPorts;}
+    QStringList deviceFfmSpans() { return devicePtr->ffmSpans;}
+    Instrument::Mode currentMode() { return devicePtr->mode;}
+    QStringList deviceFftModes() { return devicePtr->fftModes;}
+    quint64 deviceMinFreq() { return devicePtr->minFrequency;}
+    quint64 deviceMaxFreq() { return devicePtr->maxFrequency;}
 
     void reqPosition() { emit positionUpdate(devicePtr->positionValid,
                                              devicePtr->latitude,
                                              devicePtr->longitude);}
     GnssData sendGnssData();
     void updateAntennaName(const int index, const QString name);
+    void setUdpStreamPtr(QSharedPointer<UdpDataStream> ptr) { udpStream = ptr;}
+    void setTcpStreamPtr(QSharedPointer<TcpDataStream> ptr) { tcpStream = ptr;}
+    void handleStreamTimeout();
+    void handleNetworkError();
+    void autoReconnectCheckStatus();
+    void resetFreqSettings();
 
 private slots:
     void scpiConnected();
@@ -129,11 +127,7 @@ private slots:
     void scpiWrite(QByteArray data);
     void scpiRead();
     void tcpTimeout();
-    void handleStreamTimeout();
-    void handleNetworkError();
-    void autoReconnectCheckStatus();
 
-    void resetFreqSettings();
     void abor() { scpiWrite("abor");}
     void initImm() { scpiWrite("init:imm");}
     void updGnssDisplay();
@@ -179,11 +173,14 @@ private:
     bool autoReconnectInProgress = false;
     bool muteNotification = false;
 
-    UdpDataStream *udpStream = new UdpDataStream;
-    TcpDataStream *tcpStream = new TcpDataStream;
+    /*UdpDataStream *udpStream = new UdpDataStream;
+    TcpDataStream *tcpStream = new TcpDataStream;*/
     QByteArray tcpOwnAdress = "127.0.0.1";
     QByteArray tcpOwnPort = "0";
     QSharedPointer<Config> config;
+    QSharedPointer<UdpDataStream> udpStream;
+    QSharedPointer<TcpDataStream> tcpStream;
+
     double tracesPerSecValue = 0;
 
     double latitude = 0, longitude = 0;
@@ -196,6 +193,10 @@ private:
     bool firstConnection = true;
     QString inUseBy, inUseByIp, inUseMode;
     unsigned long inUseStart = 0, inUseStop = 0, inUseRes = 0;
+    bool waitingForReply = false;
+    const int tcpTimeoutInMs = 2000;
+
+    bool modeChangeInProgress = false;
 };
 
 #endif // MEASUREMENTDEVICE_H

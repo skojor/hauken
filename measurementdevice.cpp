@@ -6,6 +6,11 @@ MeasurementDevice::MeasurementDevice(QSharedPointer<Config> c)
     start();
 }
 
+MeasurementDevice::~MeasurementDevice()
+{
+    if (connected) instrDisconnect();
+}
+
 void MeasurementDevice::start()
 {
     connect(scpiSocket, &QTcpSocket::disconnected, this, &MeasurementDevice::scpiDisconnected);
@@ -14,39 +19,11 @@ void MeasurementDevice::start()
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
     connect(tcpTimeoutTimer, &QTimer::timeout, this, &MeasurementDevice::tcpTimeout);
 
-    connect(tcpStream, &TcpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler); // Forwarding signals here
-    connect(udpStream, &UdpDataStream::newFftData, this, &MeasurementDevice::fftDataHandler);
-    connect(tcpStream, &TcpDataStream::freqChanged, this, [this] (double a, double b) {
-        emit freqChanged(a, b);
-    });
-    connect(udpStream, &UdpDataStream::freqChanged, this, [this] (double a, double b) {
-        emit freqChanged(a, b);
-    });
-    connect(tcpStream, &TcpDataStream::resChanged, this, [this] (double a) {
-        emit resChanged(a);
-    });
-    connect(udpStream, &UdpDataStream::freqChanged, this, [this] (double a) {
-        emit resChanged(a);
-    });
-
-    devicePtr = QSharedPointer<Device>(new Device);
-    connect(tcpStream, &TcpDataStream::bytesPerSecond, this, &MeasurementDevice::forwardBytesPerSec);
-    connect(udpStream, &UdpDataStream::bytesPerSecond, this, &MeasurementDevice::forwardBytesPerSec);
-    connect(tcpStream, &TcpDataStream::tracesPerSecond, this, &MeasurementDevice::forwardTracesPerSec);
-    connect(udpStream, &UdpDataStream::tracesPerSecond, this, &MeasurementDevice::forwardTracesPerSec);
-
-    connect(tcpStream, &TcpDataStream::timeout, this, &MeasurementDevice::handleStreamTimeout);
-    connect(udpStream, &UdpDataStream::timeout, this, &MeasurementDevice::handleStreamTimeout);
-
     autoReconnectTimer->setSingleShot(true);
     connect(autoReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::autoReconnectCheckStatus);
     emit connectedStateChanged(connected);
 
-    connect(tcpStream, &TcpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
-    connect(udpStream, &UdpDataStream::streamErrorResetFreq, this, &MeasurementDevice::resetFreqSettings);
-
-    connect(tcpStream, &TcpDataStream::streamErrorResetConnection, this, &MeasurementDevice::handleNetworkError);
-    connect(udpStream, &UdpDataStream::streamErrorResetConnection, this, &MeasurementDevice::handleNetworkError);
+    devicePtr = QSharedPointer<Device>(new Device);
 
     connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
     updGnssDisplayTimer->start(1000);
@@ -60,7 +37,8 @@ void MeasurementDevice::instrConnect()
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
-    if (!scpiReconnect) tcpTimeoutTimer->start(3000);
+    if (!scpiReconnect) tcpTimeoutTimer->start(tcpTimeoutInMs);
+
 }
 
 void MeasurementDevice::scpiConnected()
@@ -86,16 +64,18 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
     }
     if (state == QAbstractSocket::UnconnectedState) {
         emit status("Measurement device disconnected");
+        firstConnection = true;
     }
 }
 
 void MeasurementDevice::scpiWrite(QByteArray data)
 {
-    if (!scpiThrottleTimer->isValid()) scpiThrottleTimer->start();
-    int throttle = scpiThrottleTime;
-    if (devicePtr->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
-    while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
-        QCoreApplication::processEvents();
+    if (scpiThrottleTimer->isValid()) {
+        int throttle = scpiThrottleTime;
+        if (devicePtr->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
+        while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
+            QCoreApplication::processEvents();
+        }
     }
     scpiThrottleTimer->start();
     scpiSocket->write(data + '\n');
@@ -226,14 +206,14 @@ void MeasurementDevice::setAntPort()
     }
 }
 
-QStringList MeasurementDevice::getAntPorts()
+/*QStringList MeasurementDevice::antPorts()
 {
     return devicePtr->antPorts;
-}
+}*/
 
 void MeasurementDevice::setMode()
 {
-    if (connected) {
+    if (connected && !autoReconnectInProgress) {
         if (devicePtr->mode == Instrument::Mode::PSCAN) {
             if (devicePtr->hasPscan) {
                 scpiWrite("freq:mode psc");
@@ -248,9 +228,9 @@ void MeasurementDevice::setMode()
             emit modeUsed("ffm");
         }
     }
-    if (connected) {
-        muteNotification = true; // to mute notifications
-        restartStream(); // rerun stream setup if mode changes (obviously)
+    if (connected && !autoReconnectInProgress) {
+        muteNotification = true;
+        restartStream(false); // rerun stream setup if mode changes (obviously)
     }
 }
 
@@ -274,12 +254,14 @@ void MeasurementDevice::setMeasurementMode()
 void MeasurementDevice::askId()
 {
     scpiWrite("*idn?");
+    waitingForReply = true;
     instrumentState = InstrumentState::CHECK_INSTR_ID;
-    tcpTimeoutTimer->start(3000);
+    tcpTimeoutTimer->start(tcpTimeoutInMs);
 }
 
 void MeasurementDevice::checkId(const QByteArray buffer)
 {
+    waitingForReply = false;
     devicePtr->clearSettings();
 
     if (buffer.contains("EB500"))
@@ -351,8 +333,9 @@ void MeasurementDevice::askUdp()
 {
     if (devicePtr->udpStream) {
         scpiWrite("trac:udp?");
+        waitingForReply = true;
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_UDP;
-        tcpTimeoutTimer->start(20000);
+        tcpTimeoutTimer->start(tcpTimeoutInMs);
     }
 }
 
@@ -360,12 +343,13 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
 {
     QList<QByteArray> datastreamList = buffer.split('\n');
     bool inUse = false;
+    waitingForReply = false;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
-        for (auto && ownIp : myOwnAddresses) {
+        /*for (auto && ownIp : myOwnAddresses) {
             if (list.contains(ownIp.toString().toLocal8Bit())) // FIXME: Check for same UDP stream port!!
                 break; // we are the users, continue
-        }
+        }*/
         if (brokenList.size() > 2 && !list.contains("DEF")) {
             inUse = true;
         }
@@ -392,9 +376,9 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
             stateConnected();
     }
     else if (autoReconnectInProgress && inUse) {
-        if (devicePtr->tcpStream)
+        /*if (devicePtr->tcpStream) // Why? We already know it is in use?!
             askTcp();
-        else
+        else*/
             handleStreamTimeout();
     }
 
@@ -404,8 +388,9 @@ void MeasurementDevice::askTcp()
 {
     if (devicePtr->tcpStream) {
         scpiWrite("trac:tcp?");
+        waitingForReply = true;
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_TCP;
-        tcpTimeoutTimer->start(3000);
+        tcpTimeoutTimer->start(tcpTimeoutInMs);
     }
     else
         stateConnected();
@@ -415,6 +400,7 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
 {
     QList<QByteArray> datastreamList = buffer.split('\n');
     bool inUse = false;
+    waitingForReply = false;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
         //qDebug() << brokenList;
@@ -469,9 +455,10 @@ void MeasurementDevice::askUser(bool checkUserOnly)
 {
     if (devicePtr->systManLocName) {
         scpiWrite("syst:man:loc:name?");
+        waitingForReply = true;
         if (!checkUserOnly) instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
         else instrumentState = InstrumentState::CHECK_USER_ONLY;
-        tcpTimeoutTimer->start(3000);
+        tcpTimeoutTimer->start(tcpTimeoutInMs);
     }
     else
         checkUser("");
@@ -479,6 +466,7 @@ void MeasurementDevice::askUser(bool checkUserOnly)
 
 void MeasurementDevice::checkUser(const QByteArray buffer)
 {
+    waitingForReply = false;
     QString msg = devicePtr->id + tr(" may be in use");
     if (!buffer.isEmpty()) {
         msg += tr(" by ") + QString(buffer).simplified();
@@ -505,6 +493,7 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
 
 void MeasurementDevice::checkUserOnly(const QByteArray buffer)
 {
+    waitingForReply = false;
     if (!buffer.isEmpty()) {
         inUseBy = QString(buffer).simplified();
     }
@@ -517,8 +506,9 @@ void MeasurementDevice::checkUserOnly(const QByteArray buffer)
 
 void MeasurementDevice::stateConnected()
 {
+    tcpTimeoutTimer->stop();
+
     if (!autoReconnectInProgress && !muteNotification) { // don't nag user if this is an auto reconnect call
-        tcpTimeoutTimer->stop();
         emit status("Connected, setting up device");
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
     }
@@ -554,14 +544,11 @@ void MeasurementDevice::tcpTimeout()
 void MeasurementDevice::delUdpStreams()
 {
     scpiWrite("trac:udp:del all");
-
-    udpStream->closeListener();
 }
 
 void MeasurementDevice::delTcpStreams()
 {
     scpiWrite("trac:tcp:del all");
-    tcpStream->closeListener();
 }
 
 void MeasurementDevice::runAfterConnected()
@@ -577,8 +564,8 @@ void MeasurementDevice::runAfterConnected()
     setAntPort();
     setMeasurementMode();
     setMode();
+    restartStream(false);
     setFftMode();
-    restartStream();
     startDevice();
 }
 
@@ -594,11 +581,15 @@ void MeasurementDevice::startDevice()
     scpiWrite("init:imm");
 }
 
-void MeasurementDevice::restartStream()
+void MeasurementDevice::restartStream(bool withDisconnect)
 {
     if (connected) {
         delUdpStreams();
         delTcpStreams();
+        if (withDisconnect) {
+            udpStream->closeListener();
+            tcpStream->closeListener();
+        }
         if (useUdpStream)
             setupUdpStream();
         else
@@ -681,7 +672,7 @@ void MeasurementDevice::setupUdpStream()
     //askUser(true);
 }
 
-void MeasurementDevice::forwardBytesPerSec(int val)
+/*void MeasurementDevice::forwardBytesPerSec(int val)
 {
     emit bytesPerSec(val);
 }
@@ -689,7 +680,7 @@ void MeasurementDevice::forwardBytesPerSec(int val)
 void MeasurementDevice::fftDataHandler(QVector<qint16> &data)
 {
     emit newTrace(data);
-}
+}*/
 
 void MeasurementDevice::handleStreamTimeout()
 {
@@ -770,14 +761,14 @@ void MeasurementDevice::updSettings()
     if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive) &&
         devicePtr->mode != Instrument::Mode::PSCAN) {
         devicePtr->mode = Instrument::Mode::PSCAN;
-        setMode();
+        //setMode();
         setPscanFrequency();
         setPscanResolution();
     }
     else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive) &&
-        devicePtr->mode != Instrument::Mode::FFM) {
+             devicePtr->mode != Instrument::Mode::FFM) {
         devicePtr->mode = Instrument::Mode::FFM;
-        setMode();
+        //setMode();
         setFfmCenterFrequency();
         setFfmFrequencySpan();
     }
@@ -868,6 +859,7 @@ GnssData MeasurementDevice::sendGnssData()
 
 void MeasurementDevice::askForAntennaNames()
 {
+    waitingForReply = true;
     if (instrumentState == InstrumentState::CHECK_ANT_NAME1) {
         scpiWrite("syst:ant:rx:name2?");
         instrumentState = InstrumentState::CHECK_ANT_NAME2;
@@ -880,6 +872,7 @@ void MeasurementDevice::askForAntennaNames()
 
 void MeasurementDevice::antennaNamesReply(QByteArray buffer)
 {
+    waitingForReply = false;
     if (instrumentState == InstrumentState::CHECK_ANT_NAME1) {
         devicePtr->antPorts[0] = buffer.simplified();
         devicePtr->antPorts[0].remove('\"');
@@ -933,6 +926,7 @@ void MeasurementDevice::askFrequencies()
 
 void MeasurementDevice::checkPscanStartFreq(const QByteArray buffer)
 {
+    waitingForReply = false;
     unsigned long s = buffer.simplified().toULong();
     if (s > 0 && s < 9e9) inUseStart = s;
     askPscanStopFreq();
@@ -940,6 +934,7 @@ void MeasurementDevice::checkPscanStartFreq(const QByteArray buffer)
 
 void MeasurementDevice::checkPscanStopFreq(const QByteArray buffer)
 {
+    waitingForReply = false;
     unsigned long s = buffer.simplified().toULong();
     if (s > 0 && s < 9e9) inUseStop = s;
     askPscanResolution();
@@ -947,6 +942,7 @@ void MeasurementDevice::checkPscanStopFreq(const QByteArray buffer)
 
 void MeasurementDevice::checkPscanResolution(const QByteArray buffer)
 {
+    waitingForReply = false;
     unsigned long s = buffer.simplified().toULong();
     if (s > 0 && s < 9e9) inUseRes = s;
     instrumentState = InstrumentState::CONNECTED; // Done
@@ -959,35 +955,41 @@ void MeasurementDevice::checkPscanResolution(const QByteArray buffer)
 void MeasurementDevice::askPscanStartFreq()
 {
     scpiWrite("freq:psc:start?");
+    waitingForReply = true;
     instrumentState = InstrumentState::CHECK_PSCAN_START_FREQ;
 }
 
 void MeasurementDevice::askPscanStopFreq()
 {
     scpiWrite("freq:psc:stop?");
+    waitingForReply = true;
     instrumentState = InstrumentState::CHECK_PSCAN_STOP_FREQ;
 }
 
 void MeasurementDevice::askPscanResolution()
 {
     scpiWrite("sens:psc:step?");
+    waitingForReply = true;
     instrumentState = InstrumentState::CHECK_PSCAN_RESOLUTION;
 }
 
 void MeasurementDevice::askFfmFreq()
 {
     scpiWrite("sens:freq?");
+    waitingForReply = true;
     instrumentState = InstrumentState::CHECK_FFM_CENTERFREQ;
 }
 
 void MeasurementDevice::askFfmSpan()
 {
     scpiWrite("sens:freq:span?");
+    waitingForReply = true;
     instrumentState = InstrumentState::CHECK_FFM_SPAN;
 }
 
 void MeasurementDevice::checkFfmFreq(const QByteArray buffer)
 {
+    waitingForReply = false;
     unsigned long s = buffer.simplified().toULong();
     if (s > 0 && s < 9e9) inUseStart = s;
     askFfmSpan();
@@ -995,6 +997,7 @@ void MeasurementDevice::checkFfmFreq(const QByteArray buffer)
 
 void MeasurementDevice::checkFfmSpan(const QByteArray buffer)
 {
+    waitingForReply = false;
     unsigned long s = buffer.simplified().toULong();
     if (s > 0 && s < 400e6) {
         inUseStart -= s / 2;

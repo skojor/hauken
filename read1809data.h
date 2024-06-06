@@ -57,6 +57,8 @@ signals:
     void modeUsed(QString);
     void freqRangeUsed(unsigned long, unsigned long);
     void resUsed(int);
+    void freqChanged(double, double);
+    void resChanged(double);
 
 
 private:

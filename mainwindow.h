@@ -63,8 +63,8 @@
 #include "ai.h"
 #include "instrumentlist.h"
 #include "gnssdisplay.h"
-/*#include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
-#include "udpdatastream.h"*/
+#include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
+#include "udpdatastream.h"
 
 class MainWindow : public QMainWindow
 {
@@ -288,8 +288,9 @@ private:
     QAudioOutput *audioOutput = new QAudioOutput;
     QTimer *notificationTimer = new QTimer;
 
-    /*UdpDataStream *udpStream = new UdpDataStream;
-    TcpDataStream *tcpStream = new TcpDataStream;*/
+    QSharedPointer<UdpDataStream> udpStream = QSharedPointer<UdpDataStream>(new UdpDataStream, &QObject::deleteLater);
+    QSharedPointer<TcpDataStream> tcpStream = QSharedPointer<TcpDataStream>(new TcpDataStream, &QObject::deleteLater);
+    double tracesPerSecond = 0;
 
 signals:
     void stopPlot(bool);

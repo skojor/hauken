@@ -89,7 +89,8 @@ MainWindow::MainWindow(QWidget *parent)
     instrumentList->start(); // check if instrument server is available
     gnssDisplay->start();
 
-
+    measurementDevice->setUdpStreamPtr(udpStream);
+    measurementDevice->setTcpStreamPtr(tcpStream);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -515,7 +516,7 @@ void MainWindow::updInstrButtonsStatus()
 void MainWindow::instrModeChanged()
 {
     if (instrMode->currentText().contains("pscan", Qt::CaseInsensitive)/* &&
-        measurementDevice->getCurrentMode() != Instrument::Mode::PSCAN*/) {
+        measurementDevice->currentMode() != Instrument::Mode::PSCAN*/) {
 
         startFreqLabel->setText("Start frequency (MHz)");
         stopFreqLabel->setHidden(false);
@@ -532,7 +533,7 @@ void MainWindow::instrModeChanged()
         measurementDevice->setMode();
     }
     else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
-             measurementDevice->getCurrentMode() != Instrument::Mode::FFM*/) {
+             measurementDevice->currentMode() != Instrument::Mode::FFM*/) {
         startFreqLabel->setText("FFM center frequency (MHz)");
         stopFreqLabel->setHidden(true);
         instrStopFreq->setHidden(true);
@@ -589,7 +590,7 @@ void MainWindow::setValidators()
 
 void MainWindow::instrStartFreqChanged()
 {
-    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN) {
+    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
         config->setInstrStartFreq(instrStartFreq->value());
     }
     if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
@@ -597,7 +598,7 @@ void MainWindow::instrStartFreqChanged()
 
 void MainWindow::instrStopFreqChanged()
 {
-    if (measurementDevice->getCurrentMode() == Instrument::Mode::PSCAN) {
+    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
         config->setInstrStartFreq(instrStartFreq->value());
         config->setInstrStopFreq(instrStopFreq->value());
     }
@@ -606,7 +607,7 @@ void MainWindow::instrStopFreqChanged()
 
 void MainWindow::instrFfmCenterFreqChanged()
 {
-    if (measurementDevice->getCurrentMode() == Instrument::Mode::FFM) {
+    if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
         config->setInstrFfmCenterFreq(instrFfmCenterFreq->value());
     }
     if (measurementDevice->isConnected()) {
@@ -666,8 +667,8 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         setResolutionFunction();
         setDeviceAntPorts();
         setDeviceFftModes();
-        instrStartFreq->setMinimum(measurementDevice->getDeviceMinFreq() / 1e6);
-        instrStopFreq->setMaximum(measurementDevice->getDeviceMaxFreq() / 1e6);
+        instrStartFreq->setMinimum(measurementDevice->deviceMinFreq() / 1e6);
+        instrStopFreq->setMaximum(measurementDevice->deviceMaxFreq() / 1e6);
     }
     else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
@@ -685,7 +686,7 @@ void MainWindow::setInputsState(const bool state)
     if (state && instrAutoAtt->isChecked())
         instrAtt->setDisabled(true);
 
-    instrMode->setEnabled(state);       // disabled until further TODO
+    instrMode->setEnabled(state);
     instrFftMode->setEnabled(state);
     instrDisconnect->setEnabled(state);
     instrConnect->setDisabled(state);
@@ -701,14 +702,14 @@ void MainWindow::setResolutionFunction()
     disconnect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
 
     instrResolution->clear();
-    instrResolution->addItems(measurementDevice->getDevicePscanResolutions());
-    //qDebug() << "pscan debug" << config->getInstrResolution() << measurementDevice->getDevicePscanResolutions();
+    instrResolution->addItems(measurementDevice->devicePscanResolutions());
+    //qDebug() << "pscan debug" << config->getInstrResolution() << measurementDevice->devicePscanResolutions();
     if (instrResolution->findText(config->getInstrResolution()) >= 0)
         instrResolution->setCurrentIndex(instrResolution->findText(config->getInstrResolution()));
 
     instrFfmSpan->clear();
-    instrFfmSpan->addItems(measurementDevice->getDeviceFfmSpans());
-    //qDebug() << "FFM debug" << config->getInstrFfmSpan() << measurementDevice->getDeviceFfmSpans();
+    instrFfmSpan->addItems(measurementDevice->deviceFfmSpans());
+    //qDebug() << "FFM debug" << config->getInstrFfmSpan() << measurementDevice->deviceFfmSpans();
     if (instrFfmSpan->findText(config->getInstrFfmSpan()) >= 0)
         instrFfmSpan->setCurrentIndex(instrFfmSpan->findText(config->getInstrFfmSpan()));
 
@@ -727,10 +728,10 @@ void MainWindow::setDeviceAntPorts()
 {
     instrAntPort->clear();
     int index = config->getInstrAntPort();
-    instrAntPort->addItems(measurementDevice->getDeviceAntPorts());
+    instrAntPort->addItems(measurementDevice->deviceAntPorts());
     instrAntPort->setEnabled(instrAntPort->count() > 1);
 
-    qDebug() << "ant index change:" << index;
+    //qDebug() << "ant index change:" << index;
     instrAntPort->setCurrentIndex(index);
     emit antennaPortChanged();
 }
@@ -739,7 +740,7 @@ void MainWindow::setDeviceFftModes()
 {
     instrFftMode->clear();
     QString val = config->getInstrFftMode(); // tmp keeper
-    instrFftMode->addItems(measurementDevice->getDeviceFftModes());
+    instrFftMode->addItems(measurementDevice->deviceFftModes());
     instrFftMode->setEnabled(instrFftMode->count() > 1); // no point in having 0 choices...
 
     if (instrFftMode->findText(val) >= 0) {
@@ -878,8 +879,8 @@ void MainWindow::showBytesPerSec(int val)
 {
     if (!config->getGeoLimitActive() || geoLimit->areWeInsidePolygon()) {
         QString msg = "Traffic " + QString::number(val / 1000) + " kB/sec";
-        if (measurementDevice->getTracesPerSec() > 0)
-            msg += ", " + QString::number(measurementDevice->getTracesPerSec(), 'f', 1) + " traces/sec";
+        if (tracesPerSecond > 0)
+            msg += ", " + QString::number(tracesPerSecond, 'f', 1) + " traces/sec";
         int khzAboveLimit = traceAnalyzer->getKhzAboveLimit();
         int khzAboveLimitTotal = traceAnalyzer->getKhzAboveLimitTotal();
         if (khzAboveLimit || khzAboveLimitTotal)

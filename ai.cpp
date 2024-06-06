@@ -151,18 +151,26 @@ void AI::findMinAvgMax(const QVector<QVector<qint16 >> &buffer, qint16 *min, qin
     *avg = (qint16) (_avg / 10);
 }
 
-void AI::receiveTraceBuffer(const QList<QVector<qint16> > data)
+void AI::receiveTraceBuffer(const QList<QVector<qint16> > &data)
 {
     if (data.size() > 50) {
+        findTrigRange();
         qint16 min, max, avg;
         findMinAvgMax(data, &min, &avg, &max);
         if (max < 30) max = 30;
         min = avg / 2;
+        double displayResolution = (stopfreq - startfreq) / data.front().size();
+        int jFirst = (startrange - startfreq) / displayResolution;
+        int jLast = data.front().size() - ((stopfreq - stoprange) / displayResolution);
 
-        cv::Mat3f frame((int)data.size(), (int)data.front().size());
+        if (jLast - jFirst <= 0) { // sth very wrong happened here
+            jFirst = 0;
+            jLast = data.front().size();
+        }
+        cv::Mat3f frame((int)data.size(), jLast - jFirst);
 
         for (int i = data.size() - 1; i >= 0; i--) {
-            for (int j = 0, k = 0; j < data[0].size(); j++, k++) {
+            for (int j = jFirst, k = 0; j < jLast; j++, k++) {
                 if (max - min == 0) max += 1;
                 float val = 1 - ((((float)data[i][j] / 10.0) - min) / (max - min)); // * 1.5?
                 if (val < 0) val = 0;
@@ -173,9 +181,32 @@ void AI::receiveTraceBuffer(const QList<QVector<qint16> > data)
             }
         }
         classifyData(frame);
+    }
+}
 
-        cv::Mat frameToSave;
-        frame.convertTo(frameToSave, CV_8UC3, 255);
-        cv::imwrite("C:/hauken/test.png", frameToSave);
+void AI::findTrigRange()
+{
+    QStringList trigFrequencies = getTrigFrequencies();
+    startrange = 0;
+    stoprange = 0;
+
+    if (trigFrequencies.size() >= 2) {
+        for (int i = 0; i < trigFrequencies.size(); i += 2) {
+            if (trigCenterFrequency >= trigFrequencies[i].toDouble() * 1e6 && trigCenterFrequency <= trigFrequencies[i+1].toDouble() * 1e6) {
+                startrange = trigFrequencies[i].toDouble() * 1e6;
+                stoprange = trigFrequencies[i+1].toDouble() * 1e6;
+                qDebug() << "Trig in the range" << startrange << stoprange;
+                break;
+            }
+        }
+        if (startrange > 0 && stoprange > 0) { // found a valid range
+
+        }
+    }
+    if ((int)startrange == 0 || (int)stoprange == 0) {
+        // no trig area set? sth wrong here, but proceed as if we know what we are doing
+        qDebug() << "AI debug: Trig not found in a valid range, proceeding anyway" << startrange << stoprange << startfreq / 1e6 << stopfreq / 1e6;
+        startrange = startfreq;
+        stoprange = stopfreq;
     }
 }

@@ -63,9 +63,6 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::status, this, &MainWindow::updateStatusLine);
     connect(measurementDevice, &MeasurementDevice::instrId, this, &MainWindow::updWindowTitle);
     connect(measurementDevice, &MeasurementDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(measurementDevice, &MeasurementDevice::bytesPerSec, this, &MainWindow::showBytesPerSec);
-    connect(measurementDevice, &MeasurementDevice::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
-    //connect(measurementDevice, &MeasurementDevice::tracesPerSec, waterfall, &Waterfall::updTracesPerSecond);
 
     connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMax);
     connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMin);
@@ -90,7 +87,8 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, traceAnalyzer, &TraceAnalyzer::setAnalyzerReady);
 
     if (!config->getGeoLimitActive()) {
-        connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+        connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+        connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
     }
 
     connect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
@@ -201,7 +199,7 @@ void MainWindow::setSignals()
         else positionReport->updPosition(this->measurementDevice->sendGnssData());
     });
     connect(positionReport, &PositionReport::reqMeasurementDevicePtr, this, [this] {
-        if (measurementDevice) positionReport->setMeasurementDevicePtr(measurementDevice->getMeasurementDeviceData());
+        if (measurementDevice) positionReport->setMeasurementDevicePtr(measurementDevice->measurementDeviceData());
     });
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
     connect(measurementDevice, &MeasurementDevice::deviceBusy, positionReport, &PositionReport::setInUse);
@@ -277,11 +275,13 @@ void MainWindow::setSignals()
     });
     connect(geoLimit, &GeoLimit::currentPositionOk, this, [this](bool weAreInsidePolygon) {
         if (weAreInsidePolygon) {
-            connect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+            connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+            connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
             waterfall->restartPlot();
         }
         else {
-            disconnect(measurementDevice, &MeasurementDevice::newTrace, traceBuffer, &TraceBuffer::addTrace);
+            disconnect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+            disconnect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
             emit stopPlot(false);
             traceBuffer->emptyBuffer();
         }
@@ -304,7 +304,11 @@ void MainWindow::setSignals()
     //connect(read1809Data, &Read1809Data::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(read1809Data, &Read1809Data::playbackRunning, sdefRecorder, &SdefRecorder::deviceDisconnected);
     connect(read1809Data, &Read1809Data::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(read1809Data, &Read1809Data::tracesPerSec, sdefRecorder, &SdefRecorder::updTracesPerSecond);
+    connect(read1809Data, &Read1809Data::tracesPerSec, this, [this] (double d) {
+        sdefRecorder->updTracesPerSecond(d);
+        tracesPerSecond = d;
+        showBytesPerSec(0); // to force tracePerSecond view
+    });
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, aiPtr, &AI::startAiTimer); // will start analyze of data after x seconds
     connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
@@ -340,13 +344,61 @@ void MainWindow::setSignals()
         else gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
     });
 
-    connect(measurementDevice, &MeasurementDevice::freqChanged, this, [=] (double a, double b) {
-        //qDebug() << a << b;
+    // Tcp/udp shared pointer signals
+    connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+    connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+    connect(tcpStream.data(), &TcpDataStream::freqChanged, this, [this] (double a, double b) {
         customPlotController->freqChanged(a, b);
+        traceAnalyzer->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
     });
-    connect(measurementDevice, &MeasurementDevice::resChanged, this, [=] (double a) {
+    connect(udpStream.data(), &UdpDataStream::freqChanged, this, [this] (double a, double b) {
+        customPlotController->freqChanged(a, b);
+        traceAnalyzer->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+    });
+    connect(tcpStream.data(), &TcpDataStream::resChanged, this, [this] (double a) {
         customPlotController->resChanged(a);
-        //qDebug() << a;
+        traceAnalyzer->resChanged(a);
+        aiPtr->resChanged(a);
     });
+    connect(udpStream.data(), &UdpDataStream::resChanged, this, [this] (double a) {
+        customPlotController->resChanged(a);
+        traceAnalyzer->resChanged(a);
+        aiPtr->resChanged(a);
+    });
+
+    connect(read1809Data, &Read1809Data::freqChanged, this, [this] (double a, double b) {
+        customPlotController->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+        traceAnalyzer->freqChanged(a, b);
+    });
+    connect(read1809Data, &Read1809Data::resChanged, this, [this] (double a) {
+        customPlotController->resChanged(a);
+        aiPtr->resChanged(a);
+        traceAnalyzer->resChanged(a);
+    });
+
+    connect(tcpStream.data(), &TcpDataStream::bytesPerSecond, this, &MainWindow::showBytesPerSec);
+    connect(udpStream.data(), &UdpDataStream::bytesPerSecond, this, &MainWindow::showBytesPerSec);
+    connect(tcpStream.data(), &TcpDataStream::tracesPerSecond, this, [this] (double d) {
+        sdefRecorder->updTracesPerSecond(d);
+        tracesPerSecond = d; // For view on mainWindow
+    });
+    connect(udpStream.data(), &UdpDataStream::tracesPerSecond, this, [this] (double d) {
+        sdefRecorder->updTracesPerSecond(d);
+        tracesPerSecond = d; // For view on mainWindow
+    });
+
+    connect(tcpStream.data(), &TcpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
+    connect(udpStream.data(), &UdpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
+
+    connect(tcpStream.data(), &TcpDataStream::streamErrorResetFreq, measurementDevice, &MeasurementDevice::resetFreqSettings);
+    connect(udpStream.data(), &UdpDataStream::streamErrorResetFreq, measurementDevice, &MeasurementDevice::resetFreqSettings);
+
+    connect(tcpStream.data(), &TcpDataStream::streamErrorResetConnection, measurementDevice, &MeasurementDevice::handleNetworkError);
+    connect(udpStream.data(), &UdpDataStream::streamErrorResetConnection, measurementDevice, &MeasurementDevice::handleNetworkError);
+
+    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, aiPtr, &AI::setTrigCenterFrequency);
 }
 
