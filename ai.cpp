@@ -110,7 +110,7 @@ void AI::classifyData(cv::Mat frame)
     double probability = maxVal * 100 / sum;
 
     qDebug() << "Classification" << classes[classId] << probability;
-    if (probability >= 50) {
+    if (probability >= 39) {
         emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)probability) + " %");
         emit aiResult(classes[classId], probability);
     }

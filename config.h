@@ -41,7 +41,7 @@ public slots:
     void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); emit settingsUpdated();}
     int getInstrAntPort() { return settings->value("instr/AntPort", "Default").toUInt(); }
     void setInstrAntPort(int index) { settings->setValue("instr/AntPort", QString::number(index)); emit settingsUpdated();}
-    QString getInstrMode() { return settings->value("instr/Mode", 0).toString(); }
+    QString getInstrMode() { return settings->value("instr/Mode", "PScan").toString(); }
     void setInstrMode(QString val) { settings->setValue("instr/Mode", val); emit settingsUpdated();}
     QString getInstrFftMode() { return settings->value("instr/FftMode", 0).toString(); }
     void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instr/FftMode", val); emit settingsUpdated();}

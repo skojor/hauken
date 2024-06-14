@@ -120,7 +120,7 @@ void PositionReport::generateReport()
     }
 
     reportArgs << url;
-    qDebug() << reportArgs;
+    //qDebug() << reportArgs;
 }
 
 void PositionReport::sendReport()

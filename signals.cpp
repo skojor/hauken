@@ -345,8 +345,8 @@ void MainWindow::setSignals()
     });
 
     // Tcp/udp shared pointer signals
-    connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
-    connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+    //connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+    //connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
     connect(tcpStream.data(), &TcpDataStream::freqChanged, this, [this] (double a, double b) {
         customPlotController->freqChanged(a, b);
         traceAnalyzer->freqChanged(a, b);
