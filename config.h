@@ -223,7 +223,7 @@ public slots:
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
     void setCameraName(QString s) { settings->setValue("camera/Name", s);emit settingsUpdated(); }
-    QString getCameraStreamAddress() { return settings->value("camera/StreamAddress").toString();}
+    QString getCameraStreamAddress() { return settings->value("camera/StreamAddress", "first").toString();}
     void setCameraStreamAddress(QString s) { settings->setValue("camera/StreamAddress", s);emit settingsUpdated(); }
     bool getCameraDeviceTrigger() { return settings->value("camera/DeviceTrigger").toBool();}
     void setCameraDeviceTrigger(bool b) { settings->setValue("camera/DeviceTrigger", b);emit settingsUpdated(); }

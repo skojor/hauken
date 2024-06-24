@@ -98,6 +98,7 @@ public slots:
                                              devicePtr->latitude,
                                              devicePtr->longitude);}
     GnssData sendGnssData();
+    bool isPositionValid() { return devicePtr->positionValid;}
     void updateAntennaName(const int index, const QString name);
     void setUdpStreamPtr(QSharedPointer<UdpDataStream> ptr) { udpStream = ptr;}
     void setTcpStreamPtr(QSharedPointer<TcpDataStream> ptr) { tcpStream = ptr;}

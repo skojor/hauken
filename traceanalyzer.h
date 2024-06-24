@@ -36,6 +36,7 @@ signals:
     void alarmEnded();
     void toIncidentLog(const NOTIFY::TYPE, const QString,const QString);
     void trigRegistered(double centerfreq);
+    void maxLevelMeasured(double);
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
@@ -58,6 +59,7 @@ private:
     int trigTime;
     double startFreq, stopFreq, resolution;
     bool pmrMode;
+    qint16 maxLevel;
     //QList<PmrTable> pmrTable;
 };
 

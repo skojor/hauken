@@ -11,6 +11,7 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
     if (ready) { // dont do anything until trace buffer says go
 
         khzAboveLimit = khzAboveLimitTotal = singleTrigCenterFrequency = 0;
+        maxLevel = -999;
         int valuesAboveLimit = 0, valuesAboveLimitTotal = 0;
         if (averageData.size() == data.size()) {
             for (int i=0; i<data.size(); i++) {
@@ -33,9 +34,13 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 
                     valuesAboveLimit = 0;
                 }
+                if (data[i] > maxLevel) maxLevel = data[i];
             }
             khzAboveLimitTotal = valuesAboveLimitTotal * resolution;
         }
+
+        emit maxLevelMeasured((double)maxLevel * 0.1);
+
         if (khzAboveLimit > singleTrigBandwidth || khzAboveLimitTotal > totalTrigBandwidth) {
             if (trigTime == 0) { // trig time 0 means sound the alarm immediately
                 alarmTriggered();

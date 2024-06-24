@@ -247,6 +247,7 @@ void Read1809Data::readDataline()
 
         if (traceLine.size() > 3) {
             traceTime = QTime::fromString(traceLine[a++]);
+
             if (isMobile) {
                 latitude = traceLine[a++];
                 longitude = traceLine[a++];
@@ -258,9 +259,27 @@ void Read1809Data::readDataline()
         /*if (trace.size() != datapoints) { // nvmd, not important
             qDebug() << "Wrong number of datapoints in" << file.fileName() << ", expected/received" << datapoints << trace.size();
         }*/
+        bool sameTrace = true;
+
         if (trace.size() == datapoints) {
+            if (oldTrace.size() != trace.size()) {
+                oldTrace = trace;
+                sameTrace = false;
+            }
+            else {
+                for (int i=0; i<20; i++) { // compare 20 first values, if same then skip the entire line
+                    if (trace[i] != oldTrace[i]) {
+                        sameTrace = false;
+                        break;
+                    }
+                }
+            }
             updPlaybackPosition();
-            emit newTrace(trace);
+            if (!sameTrace) {
+                oldTrace = trace;
+                emit newTrace(trace);
+            }
+            else readDataline(); // loop back and get a new line immediately
         }
     }
     else {
@@ -422,9 +441,25 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                         for (int i = a; i < traceLine.size(); i++)
                             trace.push_back(traceLine[i].toInt());
                     }
-                    if (trace.size() == datapoints) array.push_back(trace);
+                    bool sameTrace = true;
+
+                    if (oldFolderTrace.size() != trace.size()) {
+                        oldFolderTrace = trace;
+                        sameTrace = false;
+                    }
+                    else if (trace.size() == datapoints) {
+                        for (int i=0; i<20; i++) {
+                            if (oldFolderTrace[i] != trace[i]) {
+                                sameTrace = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (!sameTrace) array.push_back(trace);
+                    else qDebug() <<"indianer";
                 }
             }
+
             file.close();
             qint16 min, max, avg;
             findMinAvgMax(array, &min, &max, &avg);

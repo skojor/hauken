@@ -44,6 +44,7 @@ public slots:
     void updSettings();
     void reqPosition() { emit positionUpdate(gnssData.posValid, gnssData.latitude, gnssData.longitude);}
     GnssData sendGnssData() { return gnssData;}
+    bool isValid() { return gnssData.posValid;}
 
 signals:
     void analyzeThisData(GnssData &);

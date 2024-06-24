@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
     receiverOptions = new ReceiverOptions(config);
     sdefOptions = new SdefOptions(config);
     emailOptions = new EmailOptions(config);
-    //cameraOptions = new CameraOptions(config);
+    cameraOptions = new CameraOptions(config);
     arduinoOptions = new ArduinoOptions(config);
     autoRecorderOptions = new AutoRecorderOptions(config);
     positionReportOptions = new PositionReportOptions(config);
@@ -57,10 +57,12 @@ MainWindow::MainWindow(QWidget *parent)
     waterfallThread->setObjectName("waterfall");
     waterfall->moveToThread(waterfallThread);
 
-    /*cameraRecorder = new CameraRecorder(config);
+    cameraRecorder = new CameraRecorder(config);
     cameraThread = new QThread;
     cameraThread->setObjectName("camera");
-    cameraRecorder->moveToThread(cameraThread);*/
+    cameraRecorder->moveToThread(cameraThread);
+    connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
+    cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -164,9 +166,9 @@ void MainWindow::createActions()
     optEmail->setStatusTip(tr("Setup of email server and notfications"));
     connect(optEmail, &QAction::triggered, this, [this]{ this->emailOptions->start();});
 
-    /*optCamera = new QAction(tr("&Camera"), this);
+    optCamera = new QAction(tr("&Camera"), this);
     optCamera->setStatusTip("Setup of camera recording");
-    connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});*/
+    connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});
 
     optArduino = new QAction(tr("&Arduino"), this);
     optArduino->setStatusTip("Setup of Arduino relay/temperature control");
@@ -251,7 +253,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optStream);
     optionMenu->addAction(optSdef);
     optionMenu->addAction(optEmail);
-    //optionMenu->addAction(optCamera);
+    optionMenu->addAction(optCamera);
     optionMenu->addAction(optArduino);
     optionMenu->addAction(optAutoRecorder);
     optionMenu->addAction(optPositionReport);

@@ -400,5 +400,13 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &UdpDataStream::streamErrorResetConnection, measurementDevice, &MeasurementDevice::handleNetworkError);
 
     connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, aiPtr, &AI::setTrigCenterFrequency);
-}
 
+    connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this] () {
+        if (gnssDevice1->isValid()) cameraRecorder->updPosition(gnssDevice1->sendGnssData());
+        else if (gnssDevice2->isValid()) cameraRecorder->updPosition(gnssDevice2->sendGnssData());
+        else if (measurementDevice->isPositionValid()) cameraRecorder->updPosition(measurementDevice->sendGnssData());
+    });
+    connect(traceAnalyzer, &TraceAnalyzer::maxLevelMeasured, cameraRecorder, &CameraRecorder::receivedSignalLevel);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, cameraRecorder, &CameraRecorder::startRecorder);
+
+}

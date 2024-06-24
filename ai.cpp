@@ -11,7 +11,7 @@ AI::AI()
         qDebug() << "Classification model not found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx";
     }
 
-    classes << "cw" << "jammer" << "other" << "wideband";
+    classes << "jammer" << "other";
 
     reqTraceBufferTimer->setSingleShot(true);
     connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {

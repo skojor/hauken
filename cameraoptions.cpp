@@ -6,17 +6,13 @@ CameraOptions::CameraOptions(QSharedPointer<Config> c)
 
     setWindowTitle("Camera configuration");
 
-    mainLayout->addRow(new QLabel("USB camera source"), comboOpt1);
-    fillCameraCombo();
-    comboOpt1->setToolTip("Select which USB camera device to use, or none to disable");
-    comboOpt1->setDisabled(true);
-
-    mainLayout->addRow(new QLabel("Network camera address"), leOpt1);
-    leOpt1->setToolTip("Input the RTSP stream address to use, or leave blank to disable\nRTSP streams typically looks something like this:\nrtsp://192.168.100.100:554/stream1");
-
     mainLayout->addRow(cbOpt1);
-    cbOpt1->setText("Measurement device high level triggers recording");
-    cbOpt1->setToolTip("If checked, the above chosen camera will be used to create a recording\nwhenever signal levels exceeds the limit settings");
+    cbOpt1->setText("Activate camera when recording is triggered");
+    cbOpt1->setToolTip("A triggered recording will also start camera recording");
+
+    mainLayout->addRow(new QLabel("Camera source"), leOpt1);
+    //fillCameraCombo();
+    leOpt1->setToolTip("Name of USB (first or second) or IP camera device ip to use, or none to disable");
 
     mainLayout->addRow(new QLabel("Record time (seconds)"), sbOpt1);
     sbOpt1->setToolTip("Time in seconds to record a video after the incident ended");

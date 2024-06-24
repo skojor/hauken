@@ -91,6 +91,9 @@ private:
     QSlider *slider = new QSlider(Qt::Horizontal);
 
     int filenumber;
+    QList<qint16> oldTrace;
+    std::vector<qint16> oldFolderTrace; // TODO; Why use two totally different type of containers??
+    QTime oldTraceTime;
 
 private slots:
     void readDataline();

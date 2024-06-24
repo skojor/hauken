@@ -7,137 +7,78 @@ CameraRecorder::CameraRecorder(QSharedPointer<Config> c)
 
 void CameraRecorder::start()
 {
-    qDebug() << "Cam recorder thread started";
-    updSettings();
+    //qDebug() << "Cam recorder thread started";
+    //updSettings();
+    recordTimer = new QTimer();
+    snapTimer = new QTimer();
+    alarmTimer = new QTimer();
+    alarmPulse = new QTimer();
+    bufferTimer = new QTimer();
+    reqPositionTimer = new QTimer();
+
+    camOpened = false;
+
+    connect(recordTimer, &QTimer::timeout, this, &CameraRecorder::endRecording);
+    connect(snapTimer, &QTimer::timeout, this, &CameraRecorder::trigCapture);
+    connect(alarmTimer, &QTimer::timeout, this, &CameraRecorder::alarmOff);
+    connect(alarmPulse, &QTimer::timeout, this, &CameraRecorder::alarmOn);
+    connect(bufferTimer, &QTimer::timeout, this, &CameraRecorder::grabCam);  // stupid, but needed to empty the openCV frame buffer...
+    connect(reqPositionTimer, &QTimer::timeout, this, [this] {
+        emit reqPosition();
+    });
+    reqPositionTimer->start(1000);
+
+    signalLevel = 0.0;
+
     //selectCamera();
+    //bufferTimer->start(20);
+
+    //QTimer::singleShot(15000, this, &CameraRecorder::startRecorder);
 }
 
 void CameraRecorder::selectCamera()
 {
-#ifdef __linux__
-    SwsContext *img_convert_ctx;
-    AVFormatContext* format_ctx = avformat_alloc_context();
-    AVCodecContext* codec_ctx = NULL;
-    int video_stream_index;
-    if (avformat_open_input(&format_ctx, "http://195.196.36.242/mjpg/video.mjpg",
-                            NULL, NULL) != 0) {
-        qDebug() << "Cannot open RTSP stream";
-    }
-    else
-        qDebug() << "RTSP stream opened with great success";
+    if (config->getCameraDeviceTrigger() && !config->getCameraStreamAddress().isEmpty()) {
+        if (config->getCameraStreamAddress().contains("first", Qt::CaseInsensitive))
+            cap.open(0, cv::CAP_DSHOW);
+        else if (config->getCameraStreamAddress().contains("second", Qt::CaseInsensitive))
+            cap.open(1, cv::CAP_DSHOW);
+        else
+            cap.open(config->getCameraStreamAddress().toStdString());
 
-    av_register_all();
-    avformat_network_init();
-
-    if (avformat_find_stream_info(format_ctx, NULL) < 0) {
-        qDebug() << "No stream found in RTSP";
-    }
-
-    for (int i = 0; i < format_ctx->nb_streams; i++) {
-        if (format_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
-            video_stream_index = i;
-    }
-    AVPacket packet;
-    av_init_packet(&packet);
-
-    //open output file
-    AVFormatContext* output_ctx = avformat_alloc_context();
-
-    AVStream* stream = NULL;
-    int cnt = 0;
-
-    //start reading packets from stream and write them to file
-    av_read_play(format_ctx);    //play RTSP
-
-    // Get the codec
-    AVCodec *codec = NULL;
-    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-    if (!codec) {
-        exit(1);
-    }
-
-    // Add this to allocate the context by codec
-    codec_ctx = avcodec_alloc_context3(codec);
-
-    avcodec_get_context_defaults3(codec_ctx, codec);
-    avcodec_copy_context(codec_ctx, format_ctx->streams[video_stream_index]->codec);
-
-    if (avcodec_open2(codec_ctx, codec, NULL) < 0)
-        exit(1);
-
-    img_convert_ctx = sws_getContext(codec_ctx->width, codec_ctx->height,
-                                     codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_RGB24,
-                                     SWS_BICUBIC, NULL, NULL, NULL);
-
-    int size = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width,
-                                  codec_ctx->height);
-    uint8_t* picture_buffer = (uint8_t*) (av_malloc(size));
-    AVFrame* picture = av_frame_alloc();
-    AVFrame* picture_rgb = av_frame_alloc();
-    int size2 = avpicture_get_size(AV_PIX_FMT_RGB24, codec_ctx->width,
-                                   codec_ctx->height);
-    uint8_t* picture_buffer_2 = (uint8_t*) (av_malloc(size2));
-    avpicture_fill((AVPicture *) picture, picture_buffer, AV_PIX_FMT_YUV420P,
-                   codec_ctx->width, codec_ctx->height);
-    avpicture_fill((AVPicture *) picture_rgb, picture_buffer_2, AV_PIX_FMT_RGB24,
-                   codec_ctx->width, codec_ctx->height);
-
-    while (av_read_frame(format_ctx, &packet) >= 0 && cnt < 1000) { //read ~ 1000 frames
-
-        qDebug()  << "1 Frame: " << cnt;
-        if (packet.stream_index == video_stream_index) {    //packet is video
-            qDebug()  << "2 Is Video";
-            if (stream == NULL) {    //create stream in file
-                qDebug()  << "3 create stream";
-                stream = avformat_new_stream(output_ctx,
-                                             format_ctx->streams[video_stream_index]->codec->codec);
-                avcodec_copy_context(stream->codec,
-                                     format_ctx->streams[video_stream_index]->codec);
-                stream->sample_aspect_ratio =
-                        format_ctx->streams[video_stream_index]->codec->sample_aspect_ratio;
-            }
-            int check = 0;
-            packet.stream_index = stream->id;
-            qDebug() << "4 decoding";
-            int result = avcodec_decode_video2(codec_ctx, picture, &check, &packet);
-            qDebug() << "Bytes decoded " << result << " check " << check;
-            if (cnt > 100)    //cnt < 0)
-            {
-                sws_scale(img_convert_ctx, picture->data, picture->linesize, 0,
-                          codec_ctx->height, picture_rgb->data, picture_rgb->linesize);
-                QString file_name = "test.ppm";
-                QFile output_file(file_name);
-                output_file.open(QIODevice::WriteOnly);
-                QDataStream output(&output_file);
-
-                output << "P3 " << codec_ctx->width << " " << codec_ctx->height
-                            << " 255\n";
-                for (int y = 0; y < codec_ctx->height; y++) {
-                    for (int x = 0; x < codec_ctx->width * 3; x++)
-                        output
-                                << (int) (picture_rgb->data[0]
-                                   + y * picture_rgb->linesize[0])[x] << " ";
-                }
-                output_file.close();
-            }
-            cnt++;
+        cap.set(cv::CAP_PROP_BUFFERSIZE, 3);
+        if (cap.isOpened() == false)
+            qDebug() << "Cannot open camera" << config->getCameraStreamAddress();
+        else {
+            camOpened = true;
         }
-        av_free_packet(&packet);
-        av_init_packet(&packet);
     }
-    av_free(picture);
-    av_free(picture_rgb);
-    av_free(picture_buffer);
-    av_free(picture_buffer_2);
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280); //FIXME
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
 
-    av_read_pause(format_ctx);
-    avio_close(output_ctx->pb);
-    avformat_free_context(output_ctx);
-#endif
+    qDebug() << "Camera resolution: " << cap.get(cv::CAP_PROP_FRAME_WIDTH) << " x " << cap.get(cv::CAP_PROP_FRAME_HEIGHT);
 }
 
 void CameraRecorder::startRecorder()
 {
+    if (!camOpened && !recordTimer->isActive()) {
+        selectCamera();
+        bufferTimer->start(20);
+        recordTimer->start((4 + config->getCameraRecordTime()) * 1000); // 3-4 sec. init. time of camera
+
+        imageCtr = 1;
+        if (config->getCameraRecordTime() > 0) {
+            snapTimer->start(1000.0 / 25.0);
+            QString filename;
+            QTextStream ts2(&filename);
+            ts2 << config->getWorkFolder() << "/" << QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") << ".avi";
+
+            qDebug() << "Camera recording triggered, saving to" << filename << ", resolution"
+                     << cap.get(cv::CAP_PROP_FRAME_WIDTH) << "x" << cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+
+            video.open(filename.toStdString(), cv::VideoWriter::fourcc('M','J','P','G'), 25, cv::Size(cap.get(cv::CAP_PROP_FRAME_WIDTH),cap.get(cv::CAP_PROP_FRAME_HEIGHT)));
+        }
+    }
 }
 
 void CameraRecorder::stopRecorder()
@@ -150,4 +91,46 @@ void CameraRecorder::updSettings()
     rtspStream = config->getCameraStreamAddress();
     doRecord = config->getCameraDeviceTrigger();
     recordTime = config->getCameraRecordTime();
+}
+
+void CameraRecorder::endRecording()
+{
+    snapTimer->stop();
+    recordTimer->stop();
+    bufferTimer->stop();
+    video.release();
+    cap.release();
+    camOpened = false;
+}
+
+void CameraRecorder::trigCapture()
+{
+    if (!frame.empty()) {
+        QString txt;
+        QTextStream ts(&txt);
+        ts << QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss") << ":  "
+           << gnss.latitude << " " << gnss.longitude << ", tracked sats: "
+           << gnss.satsTracked << ", max. signal level: " << QString::number(signalLevel, 'f', 1);
+        cv::rectangle(frame, cv::Point(90, frame.rows - 5), cv::Point(frame.cols - 90, frame.rows - 35), CV_RGB(20, 20, 20), -1);
+        cv::putText(frame, txt.toStdString(), cv::Point(100, frame.rows - 10), cv::QT_FONT_NORMAL, 0.6, CV_RGB(255, 0, 0));
+        video.write(frame);
+    }
+}
+
+void CameraRecorder::updPosition(GnssData g)
+{
+    gnss = g;
+}
+
+void CameraRecorder::alarmOn()
+{
+}
+
+void CameraRecorder::alarmOff()
+{
+}
+
+void CameraRecorder::grabCam()
+{
+    cap >> frame;
 }
