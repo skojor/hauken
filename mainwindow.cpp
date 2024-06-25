@@ -45,7 +45,7 @@ MainWindow::MainWindow(QWidget *parent)
     mqttOptions = new MqttOptions(config);
 
     arduinoPtr = new Arduino(this);
-    aiPtr = new AI;
+    aiPtr = new AI(config);
     read1809Data = new Read1809Data;
 
     sdefRecorderThread->setObjectName("SdefRecorder");

@@ -33,10 +33,10 @@ signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 
 public:
-    AI();
+    AI(QSharedPointer<Config> c);
     void receiveBuffer(QVector<QVector<float >> buffer);
     void receiveTraceBuffer(const QList<QVector<qint16> > &data);
-    void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(getNotifyTruncateTime() * 1.5e3); recordingEnded = false; }
+    void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(45 * 1e3); recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); recordingEnded = false; }
     void recordingHasEnded() { recordingEnded = true; }
     void freqChanged(double a, double b) { startfreq = a; stopfreq = b;}
     void resChanged(double a) { resolution = a;}
@@ -51,12 +51,15 @@ private:
     bool recordingEnded = true;
     double startfreq, stopfreq, resolution, startrange, stoprange;
     double trigCenterFrequency;
+    QSharedPointer<Config> config;
+
 
 private slots:
     void classifyData(cv::Mat frame);
     void findMinAvgMax(const QVector<QVector<float >> &buffer, float *min, float *avg, float *max);
     void findMinAvgMax(const QVector<QVector<qint16 >> &buffer, qint16 *min, qint16 *avg, qint16 *max);
     void findTrigRange();
+    std::vector<float> sigmoid(const std::vector<float>& m1);
 };
 
 #endif // AI_H

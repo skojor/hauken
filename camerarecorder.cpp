@@ -61,7 +61,7 @@ void CameraRecorder::selectCamera()
 
 void CameraRecorder::startRecorder()
 {
-    if (!camOpened && !recordTimer->isActive()) {
+    if (config->getCameraDeviceTrigger() && !camOpened && !recordTimer->isActive()) {
         selectCamera();
         bufferTimer->start(20);
         recordTimer->start((4 + config->getCameraRecordTime()) * 1000); // 3-4 sec. init. time of camera
