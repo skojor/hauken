@@ -101,6 +101,18 @@ public slots:
     QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString();}
     void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
 
+    // Window settings
+    bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}
+    void setShowReceiverControls(bool b) { settings->setValue("showReceiverControls", b); }
+    bool getShowTriggerSettings() { return settings->value("showTriggerSettings", true).toBool();}
+    void setShowTriggerSettings(bool b) { settings->setValue("showTriggerSettings", b); }
+    bool getShowStatusIndicators() { return settings->value("showStatusIndicators", true).toBool();}
+    void setShowStatusIndicators(bool b) { settings->setValue("showStatusIndicators", b); }
+    bool getShowGnssStatusWindow() { return settings->value("showGnssStatusWindow", true).toBool();}
+    void setShowGnssStatusWindow(bool b) { settings->setValue("showGnssStatusWindow", b); }
+    bool getShowIncidentLog() { return settings->value("showIncidentLog", true).toBool();}
+    void setShowIncidentLog(bool b) { settings->setValue("showIncidentLog", b); }
+
     // Receiver options
     bool getInstrConnectOnStartup() { return settings->value("instr/ConnectOnStartup", false).toBool(); }
     void setInstrConnectOnStartup(bool b) { settings->setValue("instr/ConnectOnStartup", b); emit settingsUpdated(); }
@@ -179,6 +191,8 @@ public slots:
     void setGnss1Name(QString s) { settings->setValue("gnss/gnss1Name", s); emit settingsUpdated();}
     QString getGnss2Name() { return settings->value("gnss/gnss2Name", "").toString();}
     void setGnss2Name(QString s) { settings->setValue("gnss/gnss2Name", s); emit settingsUpdated();}
+    bool getGnssShowNotifications() { return settings->value("gnss/showNotifications", true).toBool();}
+    void setGnssShowNotifications(bool b) { settings->setValue("gnss/showNotification", b); emit settingsUpdated();}
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}

@@ -175,7 +175,7 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
         posOffsetTriggered = false;
         emit alarmEnded();
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkAltOffset(GnssData &data)
@@ -201,7 +201,7 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
         altOffsetTriggered = false;
         emit alarmEnded();
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkTimeOffset(GnssData &data)
@@ -228,7 +228,7 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
         timeOffsetTriggered = false;
         emit alarmEnded();
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkCnoOffset(GnssData &data)
@@ -254,7 +254,7 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
         cnoLimitTriggered = false;
         emit alarmEnded();
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkAgcOffset(GnssData &data)
@@ -280,7 +280,7 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
         agcLimitTriggered = false;
         emit alarmEnded();
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
 void GnssAnalyzer::checkJammingIndicator(GnssData &data)
@@ -305,5 +305,5 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
         jamIndTriggered = false;
         emit alarmEnded();
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }

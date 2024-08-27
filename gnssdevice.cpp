@@ -421,7 +421,7 @@ void GnssDevice::checkPosValid()
         ts << "Position valid";
         posInvalidTriggered = false;
     }
-    if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
+    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
 }
 
 void GnssDevice::connectTcpSocket()

@@ -209,22 +209,27 @@ void MainWindow::createActions()
 
     connect(hideShowControls, &QAction::triggered, this, [this] {
         instrGroupBox->setVisible(!instrGroupBox->isVisible());
+        config->setShowReceiverControls(instrGroupBox->isVisible());
         restartWaterfall();
     });
     connect(hideShowTrigSettings, &QAction::triggered, this, [this] {
         trigGroupBox->setVisible(!trigGroupBox->isVisible());
+        config->setShowTriggerSettings(trigGroupBox->isVisible());
         restartWaterfall();
     });
     connect(hideShowStatusIndicator, &QAction::triggered, this, [this] {
         grpIndicator->setVisible(!grpIndicator->isVisible());
+        config->setShowStatusIndicators(grpIndicator->isVisible());
         restartWaterfall();
     });
     connect(hideShowGnssWindow, &QAction::triggered, this, [this] {
         rightBox->setVisible(!rightBox->isVisible());
+        config->setShowGnssStatusWindow(rightBox->isVisible());
         restartWaterfall();
     });
     connect(hideShowIncidentlog, &QAction::triggered, this, [this] {
         incBox->setVisible(!incBox->isVisible());
+        config->setShowIncidentLog(incBox->isVisible());
         restartWaterfall();
     });
 }
@@ -391,6 +396,14 @@ void MainWindow::createLayout()
     centralWidget->setLayout(gridLayout);
 
     gnssStatus->setReadOnly(true);
+
+    // Load default view settings
+    instrGroupBox->setVisible(config->getShowReceiverControls());
+    trigGroupBox->setVisible(config->getShowTriggerSettings());
+    grpIndicator->setVisible(config->getShowStatusIndicators());
+    rightBox->setVisible(config->getShowGnssStatusWindow());
+    incBox->setVisible(config->getShowIncidentLog());
+
     instrMeasurementTime->setFocus();
 }
 
@@ -765,7 +778,7 @@ void MainWindow::updWindowTitle(const QString msg)
     QString extra;
     if (!msg.isEmpty()) extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " (" +
                 instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra
+    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + " Jammetest edition " + extra
                    + " (" + config->getCurrentFilename().split('/').last() + ")");
 }
 

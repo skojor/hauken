@@ -2,7 +2,7 @@
 #define MQTT_H
 
 #include <QWidget>
-#include "QtMqtt"
+#include <QtMqtt/QtMqtt>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>

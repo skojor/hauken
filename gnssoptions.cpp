@@ -96,6 +96,10 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt13->setText("Show GNSS data in a separate window");
     cbOpt13->setToolTip("Enabling this option opens a new window showing vital GNSS information for one or both GNSS receivers");
 
+    cbOpt14->setText("GNSS messages to incident log");
+    cbOpt14->setToolTip("Enable this option to show GNSS messages in the incident log");
+    gnss4Layout->addRow(cbOpt14);
+
     gnss4Layout->addRow(tr("GNSS 1 name"), leOpt1);
     leOpt1->setToolTip(tr("Name will be displayed on separate window, in title"));
 
@@ -140,6 +144,7 @@ void GnssOptions::start()
     cbOpt13->setChecked(config->getGnssDisplayWidget());
     leOpt1->setText(config->getGnss1Name());
     leOpt2->setText(config->getGnss2Name());
+    cbOpt14->setChecked(config->getGnssShowNotifications());
 
     dialog->exec();
 }
@@ -164,6 +169,7 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssDisplayWidget(cbOpt13->isChecked());
     config->setGnss1Name(leOpt1->text());
     config->setGnss2Name(leOpt2->text());
+    config->setGnssShowNotifications(cbOpt14->isChecked());
 
     dialog->close();
 }

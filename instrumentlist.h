@@ -14,7 +14,7 @@
 #include <QCoreApplication>
 #include "typedefs.h"
 #include "config.h"
-#include "QtMqtt"
+#include <QtMqtt/QtMqtt>
 
 /*
  * Class to read a list of stations, then read a list of instruments and IP addresses

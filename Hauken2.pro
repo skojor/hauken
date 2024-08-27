@@ -1,4 +1,4 @@
-QT       += core gui serialport network
+QT       += core gui serialport network mqtt
 greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
@@ -6,7 +6,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia position
 CONFIG += c++17
 QMAKE_CXXFLAGS += -DGLIBCXX_USE_CXX11_ABI=0
 
-#QMAKE_CXXFLAGS += -pthread -mbig-obj -fto -allow-multiple-definition -std=c++17
+#QMAKE_CXXFLAGS += -pthread -flto -Wl,-allow-multiple-definition -std=c++17
 
 TARGET = Hauken
 RC_ICONS = icons/hawk.ico #icon.ico
@@ -156,17 +156,7 @@ unix: {
 }
 
 win32 {
-  LIBS +=   \#-L$$PWD/../quazip/build/win64 \
-            -L$$PWD/../qtmqtt -lqt6mqtt \
-            #-L$$PWD/../quazip-1.4 -lquazip1-qt6  \
-            #-L$$PWD/../libtorch/lib \
-            #-ltorch -lc10 -ltorch_cpu \
-            #-L$$PWD/../opencv/lib -lopencv_highgui490 -lopencv_dnn490 -lopencv_imgproc490 \
-            #-lopencv_imgcodecs490 -lopencv_core490
-
-  INCLUDEPATH +=    $$PWD/../qtmqtt/include/QtMqtt \
-                    $$PWD/../qtmqtt/include \
-                    $$PWD/../quazip-1.4 $$PWD/../quazip-1.4/quazip \
+  INCLUDEPATH +=    $$PWD/../quazip-1.4 $$PWD/../quazip-1.4/quazip \
                     $$PWD/../zlib-1.3 \
                     $$PWD/../opencv/include
 }

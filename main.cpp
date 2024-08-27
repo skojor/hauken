@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
     logFilePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) +
                   "/haukenDebug_" + QDateTime::currentDateTime().toString("yyyyMMdd") +".log";
     a.setApplicationVersion(ver);
+    a.setStyle(QLatin1String("windowsvista"));
 
     MainWindow w;
     //w.setAttribute(Qt::WA_DeleteOnClose);
