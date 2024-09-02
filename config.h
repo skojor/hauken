@@ -192,7 +192,7 @@ public slots:
     QString getGnss2Name() { return settings->value("gnss/gnss2Name", "").toString();}
     void setGnss2Name(QString s) { settings->setValue("gnss/gnss2Name", s); emit settingsUpdated();}
     bool getGnssShowNotifications() { return settings->value("gnss/showNotifications", true).toBool();}
-    void setGnssShowNotifications(bool b) { settings->setValue("gnss/showNotification", b); emit settingsUpdated();}
+    void setGnssShowNotifications(bool b) { settings->setValue("gnss/showNotifications", b); emit settingsUpdated();}
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}

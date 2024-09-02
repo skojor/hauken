@@ -7,8 +7,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setStatusBar(statusBar);
     updWindowTitle();
-    resize(1200, 680);
-    setMinimumSize(1024, 680);
+    //resize(1200, 680);
+    //setMinimumSize(1024, 280);
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
@@ -327,7 +327,7 @@ void MainWindow::createLayout()
     incBox = new QGroupBox("Incident log");
     incLayout->addWidget(incidentLog);
     incBox->setLayout(incLayout);
-    incBox->setMaximumHeight(220);
+    //incBox->setMaximumHeight(220);
 
     QHBoxLayout *bottomBox = new QHBoxLayout;
 
@@ -356,7 +356,9 @@ void MainWindow::createLayout()
     rightBox->setLayout(rightLayout);
     rightBox->setMaximumWidth(240);
     rightBox->setMaximumHeight(220);
+    rightBox->setMinimumHeight(1);
     rightLayout->addWidget(gnssStatus);
+    qDebug() << customPlot->sizePolicy() << customPlot->maximumSize();
 
     QHBoxLayout *statusBox = new QHBoxLayout;
     statusBox->addWidget(rightBox);
@@ -365,6 +367,8 @@ void MainWindow::createLayout()
     plotLayout->addWidget(plotMaxScroll, 0, 0, 1, 1);
     plotLayout->addWidget(plotMinScroll, 2, 0, 1, 1);
     plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+    customPlot->setVisible(true);
+
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnTrigRecording);
     btnTrigRecording->setFixedWidth(100);
@@ -374,6 +378,7 @@ void MainWindow::createLayout()
     bottomPlotLayout->addWidget(showWaterfall);
     bottomPlotLayout->addWidget(new QLabel("Waterfall time"));
     bottomPlotLayout->addWidget(waterfallTime);
+
     if (config->getPmrMode()) bottomPlotLayout->addWidget(btnPmrTable);
 
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
@@ -390,10 +395,10 @@ void MainWindow::createLayout()
 
     gridLayout->addLayout(leftLayout, 0, 0, 2, 1);
     gridLayout->addLayout(plotLayout, 0, 1, 1, 2);
-    gridLayout->addLayout(statusBox, 1, 2, 1, 1);
-    gridLayout->addLayout(bottomBox, 1, 1, 1, 1);
+    //gridLayout->addLayout(statusBox, 1, 2, 1, 1);
+    //gridLayout->addLayout(bottomBox, 1, 1, 1, 1);
 
-    centralWidget->setLayout(gridLayout);
+    centralWidget->setLayout(gridLayout);    
 
     gnssStatus->setReadOnly(true);
 

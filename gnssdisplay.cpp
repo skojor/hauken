@@ -36,7 +36,7 @@ void GnssDisplay::updGnssData(GnssData g, int id)
 
 void GnssDisplay::setupWidget()
 {
-    wdg->resize(640, 480);
+    wdg->resize(640, 550);
     wdg->setWindowTitle("GNSS data");
     QGridLayout *mainLayout = new QGridLayout;
 
@@ -61,6 +61,10 @@ void GnssDisplay::setupWidget()
     gnss1RightLayout->addRow("CW jamming indicator", gnss1CwJamming);
     gnss1RightLayout->addRow("Jamming state", gnss1JammingState);
     gnss1RightGroupBox->setLayout(gnss1RightLayout);
+    gnss1RightGroupBox->setMaximumWidth(240);
+    gnss2RightGroupBox->setMaximumWidth(240);
+    gnss1LeftGroupBox->setMaximumWidth(240);
+    gnss2LeftGroupBox->setMaximumWidth(240);
 
     gnss2LeftGroupBox->setTitle("GNSS receiver 2");
     QFormLayout *gnss2LeftLayout = new QFormLayout;
