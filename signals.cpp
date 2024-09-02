@@ -336,6 +336,7 @@ void MainWindow::setSignals()
             instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
         }
         else instrIpAddr->setCurrentIndex(selIndex);
+        measurementDevice->setAddress(instrIpAddr->currentData().toString());
         connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
     });
 

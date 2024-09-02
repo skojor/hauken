@@ -463,12 +463,14 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
             file.close();
             qint16 min, max, avg;
             findMinAvgMax(array, &min, &max, &avg);
-            if (max < 30) max = 30;
+            //if (max < 30) max = 30;
             //if (abs(min - avg) > 30) min = avg - 30;
             min = avg / 2; // avg val = white pixel, anything less = still white
 
             double startrange = 1560000; // Hardcoded for now
             double stoprange = 1610000;
+            if (stoprange > freqStop) stoprange = freqStop;
+            if (startrange < freqStart) startrange = freqStart;
 
             //double displayResolution = (freqStop - freqStart) / filterBW;
             int jFirst = (startrange - freqStart) / (filterBW);
@@ -493,9 +495,10 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                 }
             }
 
+            //cv::Mat3f frame((int)array.size(), jLast - jFirst);
             cv::Mat frameResized;
             cv::resize(frame, frameResized, cv::Size(369, 369), 0, 0, cv::INTER_CUBIC);
-            qDebug() << note;
+            //qDebug() << note;
             if (note.contains("Selvsving")) note = "oscillation";
             else if (note.contains("Jammer")) note = "jammer";
             else if (note.contains("Diverse")) note = "other";

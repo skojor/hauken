@@ -51,7 +51,7 @@ void AI::receiveBuffer(QVector<QVector<float >> buffer)
     for (int i = 0; i < buffer.size(); i++) {
         for (int j = 0, k = 0; j < buffer[0].size(); j++, k++) {
             if (max - min == 0) max += 1;
-            int val = (1.5 * 255 * (buffer[i][j] - min)) / (max - min); // / (max - min));
+            int val = (2.5 * 255 * (buffer[i][j] - min)) / (max - min); // / (max - min));
             if (val < 0) val = 0;
             if (val > 255) val = 255;
             frame.at<uchar>(i, k++) = 255 - val;
@@ -187,7 +187,7 @@ void AI::receiveTraceBuffer(const QList<QVector<qint16> > &data)
         for (int i = data.size() - 1; i >= 0; i--) {
             for (int j = jFirst, k = 0; j < jLast; j++, k++) {
                 if (max - min == 0) max += 1;
-                float val = 1.1 * (1.0 - ((((float)data[i][j] / 10.0) - min) / (max - min)));
+                float val = 1.5 * (1.0 - ((((float)data[i][j] / 10.0) - min) / (max - min)));
                 if (val < 0) val = 0;
                 if (val > 1) val = 1;
                 frame.at<float>(i, k++) = val;
