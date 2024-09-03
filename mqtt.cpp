@@ -31,7 +31,7 @@ Mqtt::Mqtt(QObject *parent)
     QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy);
 
 
-    QTimer::singleShot(1000, this, [this] {
+ /*   QTimer::singleShot(1000, this, [this] {
         QJsonObject json;
         json["siteid"] = 1;
         json["sitename"] = "Bleik";
@@ -119,7 +119,7 @@ Mqtt::Mqtt(QObject *parent)
         QJsonDocument jsonDoc(json);
         parseMqtt("basic_status/site1", jsonDoc.toJson());
     });
-
+*/
 }
 
 void Mqtt::stateChanged(QMqttClient::ClientState state)
