@@ -365,6 +365,8 @@ public slots:
 
     QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString().trimmed();}
     void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);emit settingsUpdated(); }
+    bool getMqttTestTriggersRecording() { return settings->value("mqtt/testTriggersRecording", false).toBool();}
+    void setMqttTestTriggersRecording(bool b) { settings->setValue("mqtt/testTriggersRecording", b);}
 
 private slots:
     QByteArray simpleEncr(QByteArray);

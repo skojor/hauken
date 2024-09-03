@@ -187,6 +187,8 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqtt, &Mqtt::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(mqtt, &Mqtt::triggerRecording, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(mqtt, &Mqtt::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
     connect(measurementDevice, &MeasurementDevice::updGnssData, gnssAnalyzer3, &GnssAnalyzer::getData);
