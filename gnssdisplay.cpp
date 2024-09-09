@@ -57,14 +57,14 @@ void GnssDisplay::setupWidget()
     QFormLayout *gnss1RightLayout = new QFormLayout;
     gnss1RightLayout->addRow("Position offset", gnss1PosOffset);
     gnss1RightLayout->addRow("Altitude offset", gnss1AltOffset);
-    gnss1RightLayout->addRow("Time offset", gnss1TimeOffset);
+    /*gnss1RightLayout->addRow("Time offset", gnss1TimeOffset);
     gnss1RightLayout->addRow("CW jamming indicator", gnss1CwJamming);
-    gnss1RightLayout->addRow("Jamming state", gnss1JammingState);
+    gnss1RightLayout->addRow("Jamming state", gnss1JammingState);*/
     gnss1RightGroupBox->setLayout(gnss1RightLayout);
-    gnss1RightGroupBox->setMaximumWidth(240);
+    /*gnss1RightGroupBox->setMaximumWidth(240);
     gnss2RightGroupBox->setMaximumWidth(240);
     gnss1LeftGroupBox->setMaximumWidth(240);
-    gnss2LeftGroupBox->setMaximumWidth(240);
+    gnss2LeftGroupBox->setMaximumWidth(240);*/
 
     gnss2LeftGroupBox->setTitle("GNSS receiver 2");
     QFormLayout *gnss2LeftLayout = new QFormLayout;
@@ -83,9 +83,9 @@ void GnssDisplay::setupWidget()
     QFormLayout *gnss2RightLayout = new QFormLayout;
     gnss2RightLayout->addRow("Position offset", gnss2PosOffset);
     gnss2RightLayout->addRow("Altitude offset", gnss2AltOffset);
-    gnss2RightLayout->addRow("Time offset", gnss2TimeOffset);
+    /*gnss2RightLayout->addRow("Time offset", gnss2TimeOffset);
     gnss2RightLayout->addRow("CW jamming indicator", gnss2CwJamming);
-    gnss2RightLayout->addRow("Jamming state", gnss2JammingState);
+    gnss2RightLayout->addRow("Jamming state", gnss2JammingState);*/
     gnss2RightGroupBox->setLayout(gnss2RightLayout);
 
     mainLayout->addWidget(gnss1LeftGroupBox, 0, 0);
@@ -130,7 +130,7 @@ void GnssDisplay::updText()
         else gnss1PosOffset->setText("<span style='font-size:x-large;'>> 10 km</span>");
         if (abs(gnss1.altOffset) < 9999) gnss1AltOffset->setText("<span style='font-size:x-large;'>" + QString::number(abs(gnss1.altOffset), 'f', 0) + " m</span>");
         else gnss1AltOffset->setText("<span style='font-size:x-large;'>> 10 km</span>");
-        if (gnss1.timeOffset < 9999) gnss1TimeOffset->setText("<span style='font-size:x-large;'>" + QString::number(gnss1.timeOffset) + " ms</span>");
+        /*if (gnss1.timeOffset < 9999) gnss1TimeOffset->setText("<span style='font-size:x-large;'>" + QString::number(gnss1.timeOffset) + " ms</span>");
         else gnss1TimeOffset->setText("<span style='font-size:x-large;'>> 10 s</span>");
         gnss1CwJamming->setText("<span style='font-size:x-large;'>" + QString::number(gnss1.jammingIndicator) + "</span>");
         QString jam;
@@ -138,7 +138,7 @@ void GnssDisplay::updText()
         else if (gnss1.jammingState == JAMMINGSTATE::WARNINGFIXOK) jam = "Warning, fix ok";
         else if (gnss1.jammingState == JAMMINGSTATE::CRITICALNOFIX) jam = "Critical, no fix";
         else jam = "Unknown";
-        gnss1JammingState->setText(tr("<span style='font-size:x-large;'>") + jam + tr("</span>"));
+        gnss1JammingState->setText(tr("<span style='font-size:x-large;'>") + jam + tr("</span>"));*/
 
     }
     else {
@@ -176,7 +176,7 @@ void GnssDisplay::updText()
         else gnss2PosOffset->setText("<span style='font-size:x-large;'>> 10 km</span>");
         if (abs(gnss2.altOffset) < 9999) gnss2AltOffset->setText("<span style='font-size:x-large;'>" + QString::number(abs(gnss2.altOffset), 'f', 0) + " m</span>");
         else gnss2AltOffset->setText("<span style='font-size:x-large;'>> 10 km</span>");
-        if (gnss2.timeOffset < 9999) gnss2TimeOffset->setText("<span style='font-size:x-large;'>" + QString::number(gnss2.timeOffset) + " ms</span>");
+        /*if (gnss2.timeOffset < 9999) gnss2TimeOffset->setText("<span style='font-size:x-large;'>" + QString::number(gnss2.timeOffset) + " ms</span>");
         else gnss2TimeOffset->setText("<span style='font-size:x-large;'>> 10 s</span>");
         gnss2CwJamming->setText("<span style='font-size:x-large;'>" + QString::number(gnss2.jammingIndicator) + "</span>");
         QString jam;
@@ -184,7 +184,7 @@ void GnssDisplay::updText()
         else if (gnss2.jammingState == JAMMINGSTATE::WARNINGFIXOK) jam = "Warning, fix ok";
         else if (gnss2.jammingState == JAMMINGSTATE::CRITICALNOFIX) jam = "Critical, no fix";
         else jam = "Unknown";
-        gnss2JammingState->setText(tr("<span style='font-size:x-large;'>") + jam + tr("</span>"));
+        gnss2JammingState->setText(tr("<span style='font-size:x-large;'>") + jam + tr("</span>"));*/
     }
     else {
         if (gnss2Name.isEmpty()) gnss2LeftGroupBox->setTitle("GNSS receiver 1 - position invalid");

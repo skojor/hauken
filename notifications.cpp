@@ -78,7 +78,7 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
 void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QString string, QDateTime dt)
 {
     QString msg = string;
-    if (type == NOTIFY::TYPE::MEASUREMENTDEVICE) msg.prepend(name + ": ");
+    if (type == NOTIFY::TYPE::MEASUREMENTDEVICE); // msg.prepend(name + ": ");
     else if (type == NOTIFY::TYPE::GNSSDEVICE || type == NOTIFY::TYPE::GNSSANALYZER) msg.prepend("GNSS" + name + ": ");
     else if (type == NOTIFY::TYPE::GEOLIMITER) msg.prepend("Geoblocking: ");
 
@@ -113,11 +113,13 @@ void Notifications::appendIncidentLog(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts << "<tr><td>" << dt.toString("dd.MM.yy") << "</td><td>"
-       << dt.toString("hh:mm:ss") << "</td><td>" << string
+    ts /*<< "<tr><td style='font-size: 14pt'>" << dt.toString("dd.MM.yy") << "</td><td style='font-size: 14pt'>"*/
+        << "<tr><td style='font-size: 14pt'>" << dt.toString("hh:mm:ss")
+       << "</td>" << "<td style='font-size: 14pt'>" << string
        << "</td></tr>";
 
     emit showIncident(text);
+
 }
 
 void Notifications::appendLogFile(QDateTime dt, const QString string)
@@ -275,9 +277,9 @@ bool Notifications::simpleParametersCheck()
 }
 
 void Notifications::setupIncidentTable()
-{
-    emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
-    appendIncidentLog(QDateTime::currentDateTime(), "Application started");
+{ // <th width=50 align=left>Date</th>
+    emit showIncident("<tr><th width=90 align=left>Time</th><th width=100% align=left>Text</th></tr>");
+    //appendIncidentLog(QDateTime::currentDateTime(), "Application started");
 }
 
 void Notifications::recTracePlot(const QPixmap *pic)

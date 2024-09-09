@@ -239,12 +239,12 @@ void SdefRecorder::finishRecording()
     emit recordingEnded();
     if (getSdefSaveToFile()) {
         if (recordingTimeoutTimer->isActive()) {
-            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
+            /*emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
                                                                    + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
                                                                           QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
                                                                               + " seconds" :
                                                                           QString::number(dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                                                              + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));
+                                                                              + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60 == 1? " minute" : " minutes")));*/
             if (autorecorderTimer->isActive()) autorecorderTimer->stop();
         }
     }

@@ -126,6 +126,7 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
 {
     if (state == QMqttClient::ClientState::Disconnected) {
         qDebug() << "MQTT disconnected";
+        reconnect();
     }
     else if (state == QMqttClient::ClientState::Connecting) {
         qDebug() << "MQTT connecting";
@@ -297,7 +298,7 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
         QTextStream ts(&msg);
 
         if (siteStatus == RUNNING && status.toString().contains("stop", Qt::CaseInsensitive)) { // test ended
-            ts << sitename.toString() << ": " << "Test " << name.toString() << " ended";
+            ts /*<< sitename.toString() << ": "*/ << "Test " << name.toString() << " ended";
             siteStatus = STOP;
             if (getMqttTestTriggersRecording())
                 QTimer::singleShot(10000, this, [this] {
@@ -305,17 +306,17 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
                 });
         }
         else if (siteStatus == UNKNOWN && status.toString().contains("no running test", Qt::CaseInsensitive)) { // no test
-            ts << sitename.toString() << ": " << "No test running";
+            ts /*<< sitename.toString() << ": "*/ << "No test running";
             siteStatus = NORUNNING;
         }
         else if (siteStatus == RUNNING && status.toString().contains("no running test", Qt::CaseInsensitive)) { // from running to no running test, we missed sth
-            ts << sitename.toString() << ": " << "No test running";
+            ts /*<< sitename.toString() << ": "*/ << "No test running";
             siteStatus = NORUNNING;
         }
         else if (siteStatus != RUNNING  && status.toString() == "running") { // from sth to running test
-            ts << sitename.toString() << ": " << name.toString() << " "
-               << description.toString() << " started at " << utctime.toString() << " UTC"
-               << (getMqttTestTriggersRecording()?" (recording)":"");
+            ts /*<< sitename.toString() << ": "*/ << "Test " << name.toString() << ": "
+               << description.toString() << " running"; // at " << utctime.toString() << " UTC"
+               //<< (getMqttTestTriggersRecording()?" (recording)":"");
             siteStatus = RUNNING;
             if (getMqttTestTriggersRecording()) emit triggerRecording();
         }

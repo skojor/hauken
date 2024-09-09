@@ -65,7 +65,8 @@ MainWindow::MainWindow(QWidget *parent)
     cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(true);
+    incidentLog->setReadOnly(false);
+
 
 #ifdef _WIN32
     player->setSource(QUrl::fromLocalFile(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
