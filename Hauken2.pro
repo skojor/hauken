@@ -62,6 +62,7 @@ SOURCES += \
     positionreportoptions.cpp \
     qcustomplot.cpp \
     read1809data.cpp \
+    receiver.cpp \
     receiveroptions.cpp \
     sdefoptions.cpp \
     sdefrecorder.cpp \
@@ -126,6 +127,7 @@ HEADERS += \
     positionreportoptions.h \
     qcustomplot.h \
     read1809data.h \
+    receiver.h \
     receiveroptions.h \
     sdefoptions.h \
     sdefrecorder.h \

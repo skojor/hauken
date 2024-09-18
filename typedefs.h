@@ -57,6 +57,23 @@ enum class Tags
     ADVPSC  =   11201
 };
 
+enum class ReceiverState {
+    Disconnected,
+    Connecting,
+    Connected,
+    Reconnecting
+};
+
+enum class ReceiverInitiateOrder {
+    None,
+    CheckInstrumentId,
+    CheckInstrumentAvailableTcp,
+    CheckInstrumentAvalableUdp,
+    CheckUserOnly,
+    CheckAntName1,
+    CheckAntName2
+};
+
 enum class InstrumentState {
     DISCONNECTED,
     CONNECTING,

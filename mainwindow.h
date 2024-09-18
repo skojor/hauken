@@ -65,6 +65,7 @@
 #include "gnssdisplay.h"
 #include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
 #include "udpdatastream.h"
+#include "receiver.h"
 
 class MainWindow : public QMainWindow
 {
@@ -290,6 +291,8 @@ private:
 
     QSharedPointer<UdpDataStream> udpStream = QSharedPointer<UdpDataStream>(new UdpDataStream, &QObject::deleteLater);
     QSharedPointer<TcpDataStream> tcpStream = QSharedPointer<TcpDataStream>(new TcpDataStream, &QObject::deleteLater);
+    Receiver *receiver = new Receiver(config);
+
     double tracesPerSecond = 0;
 
 signals:
