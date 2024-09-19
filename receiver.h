@@ -47,6 +47,7 @@ private slots:
     void handleTcpSocketTimeout();
     void receiverInitiate();
     void reqReceiverId();
+    void writeToReceiver(QByteArray data);
 
 private:
     QSharedPointer<Config> config;
@@ -56,10 +57,13 @@ private:
     int receiverPort = 0;
     QTcpSocket *tcpSocket = new QTcpSocket;
     QTimer *tcpSocketTimeoutTimer = new QTimer;
+    QElapsedTimer *tcpSocketWriteThrottleElapsedTimer = new QElapsedTimer;
+
     ReceiverState receiverState = ReceiverState::Disconnected;
     ReceiverInitiateOrder receiverInitiateOrder = ReceiverInitiateOrder::None;
 
     const int tcpSocketTimeout = 2000; // milliseconds
+    const int scpiThrottleTime = 5; // ms
 };
 
 #endif // RECEIVER_H
