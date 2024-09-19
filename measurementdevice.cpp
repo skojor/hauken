@@ -200,7 +200,7 @@ void MeasurementDevice::setAutoAttenuator()
 void MeasurementDevice::setAntPort()
 {
     if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default")) {
-        if (!devicePtr->advProtocol && devicePtr->type != InstrumentType::USRP) scpiWrite("syst:ant:rx " + antPort);
+        if (!devicePtr->advProtocol && devicePtr->type != InstrumentType::E310) scpiWrite("syst:ant:rx " + antPort);
         else if (antPort.contains("1")) scpiWrite("route:vuhf:input (@0)");  // em200 specific
         else if (antPort.contains("2")) scpiWrite("route:vuhf:input (@1)");  // em200 specific
     }
@@ -276,8 +276,8 @@ void MeasurementDevice::checkId(const QByteArray buffer)
         devicePtr->setType(InstrumentType::EM200);
     else if (buffer.contains("ESMB"))
         devicePtr->setType(InstrumentType::ESMB);
-    else if (buffer.contains("USRP"))
-        devicePtr->setType(InstrumentType::USRP);
+    else if (buffer.contains("E310"))
+        devicePtr->setType(InstrumentType::E310);
     else if (buffer.contains("ESMW"))
         devicePtr->setType(InstrumentType::ESMW);
 
@@ -887,7 +887,7 @@ void MeasurementDevice::antennaNamesReply(QByteArray buffer)
         devicePtr->antPorts[1].remove('\'');
         //if (devicePtr->antPorts[0].isEmpty()) devicePtr->antPorts[0] = "Ant. 1";
         //if (devicePtr->antPorts[1].isEmpty()) devicePtr->antPorts[1] = "Ant. 2";
-        if (devicePtr->type == InstrumentType::USRP) {
+        if (devicePtr->type == InstrumentType::E310) {
             devicePtr->antPorts[0].prepend("RX2_A:");
             devicePtr->antPorts[1].prepend("TRX_A:");
         }

@@ -665,7 +665,7 @@ void MainWindow::instrIpChanged()
     }
     //config->setInstrIpAddr(instrIpAddr->currentText());
     config->setInstrIpAddr(instrIpAddr->currentData().toString());
-    measurementDevice->setAddress(config->getInstrIpAddr()); // TBR
+    //measurementDevice->setAddress(config->getInstrIpAddr()); // TBR
     receiver->setIpAddress(instrIpAddr->currentData().toString());
     qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData();
 }
@@ -673,7 +673,7 @@ void MainWindow::instrIpChanged()
 void MainWindow::instrPortChanged()
 {
     config->setInstrPort(instrPort->text().toUInt());
-    measurementDevice->setPort(config->getInstrPort()); // TBR
+    //measurementDevice->setPort(config->getInstrPort()); // TBR
     receiver->setPort(instrPort->text().toInt());
 }
 
@@ -923,8 +923,8 @@ void MainWindow::moveEvent(QMoveEvent *event)
 void MainWindow::instrAutoConnect()
 {
     if (config->getInstrConnectOnStartup() && instrCheckSettings()) {
-        measurementDevice->instrConnect(); // TBR
-        receiver->connectInstrument();
+        //measurementDevice->instrConnect(); // TBR
+        receiver->connectReceiver();
     }
 }
 

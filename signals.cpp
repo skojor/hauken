@@ -19,8 +19,8 @@ void MainWindow::setSignals()
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
-    connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect); //TBR
-    connect(instrConnect, &QPushButton::clicked, receiver, &Receiver::connectInstrument);
+    //connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect); //TBR
+    connect(instrConnect, &QPushButton::clicked, receiver, &Receiver::connectReceiver);
 
     connect(instrDisconnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrDisconnect);
 

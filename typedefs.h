@@ -66,9 +66,15 @@ enum class ReceiverState {
 
 enum class ReceiverInitiateOrder {
     None,
-    CheckInstrumentId,
-    CheckInstrumentAvailableTcp,
-    CheckInstrumentAvalableUdp,
+    ReqReceiverId,
+    WaitForReceiverId,
+    ReceivedId,
+    ReqUdpState,
+    WaitForUdpState,
+    ReceivedUdpState,
+    ReqTcpState,
+    WaitForTcpState,
+    ReceivedTcpState,
     CheckUserOnly,
     CheckAntName1,
     CheckAntName2
@@ -100,7 +106,7 @@ enum class InstrumentType
     EM100,
     EM200,
     ESMB,
-    USRP,
+    E310,
     ESMW,
     UNKNOWN
 };
@@ -437,11 +443,11 @@ public:
             maxFrequency = 8e9;
             hasAntNames = false;
         }
-        else if (type == Instrument::InstrumentType::USRP) {
+        else if (type == Instrument::InstrumentType::E310) {
             udpStream = true;
             tcpStream = true;
             systManLocName = true;
-            id = "USRP";
+            id = "E310";
             attrHeader = true;
             hasPscan = true;
             optHeaderEb500 = true;

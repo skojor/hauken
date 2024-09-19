@@ -32,22 +32,31 @@ public:
     explicit Receiver(QSharedPointer<Config> c);
     void setIpAddress(QString address) { receiverAddress = address;}
     void setPort(int port = 5555) { receiverPort = port;}
-    void connectInstrument();
-    void disconnectInstrument();
+    void connectReceiver();
+    void disconnectReceiver();
 
 signals:
     void receiverConnected();
     void receiverDisconnected();
-    void warning(QString text);
+    void status(QString);
+    void warning(QString);
+    void receiverName(QString);
     void toIncidentLog(const NOTIFY::TYPE,const QString,const QString);
 
 private slots:
     void handleTcpSocketStateChanged(QAbstractSocket::SocketState state);
     void handleTcpSocketReadData();
     void handleTcpSocketTimeout();
-    void receiverInitiate();
+    void handleScpiReplyTimeout();
+    void initiateReceiver();
     void reqReceiverId();
-    void writeToReceiver(QByteArray data);
+    void parseReceiverId(QByteArray buffer);
+    void reqReceiverUdpState();
+    void parseReceiverUdpState(QByteArray buffer);
+    void reqReceiverTcpState();
+    void parseReceiverTcpState(QByteArray buffer);
+
+    void writeToReceiver(QByteArray data, bool awaitReply = false);
 
 private:
     QSharedPointer<Config> config;
@@ -57,12 +66,16 @@ private:
     int receiverPort = 0;
     QTcpSocket *tcpSocket = new QTcpSocket;
     QTimer *tcpSocketTimeoutTimer = new QTimer;
+    QTimer *scpiAwaitingReplyTimer = new QTimer;
     QElapsedTimer *tcpSocketWriteThrottleElapsedTimer = new QElapsedTimer;
 
     ReceiverState receiverState = ReceiverState::Disconnected;
     ReceiverInitiateOrder receiverInitiateOrder = ReceiverInitiateOrder::None;
 
+    Device device;
+
     const int tcpSocketTimeout = 2000; // milliseconds
+    const int scpiAwaitingReplyTimeout = 300;
     const int scpiThrottleTime = 5; // ms
 };
 
