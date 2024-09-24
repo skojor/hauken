@@ -75,9 +75,7 @@ enum class ReceiverInitiateOrder {
     ReqTcpState,
     WaitForTcpState,
     ReceivedTcpState,
-    CheckUserOnly,
-    CheckAntName1,
-    CheckAntName2
+    Ready
 };
 
 enum class InstrumentState {

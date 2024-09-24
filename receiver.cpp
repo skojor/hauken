@@ -26,7 +26,7 @@ void Receiver::connectReceiver()
 
 void Receiver::disconnectReceiver()
 {
-
+    // Tidy up after disconnect here
 }
 
 void Receiver::handleTcpSocketStateChanged(QAbstractSocket::SocketState state)
@@ -40,6 +40,12 @@ void Receiver::handleTcpSocketStateChanged(QAbstractSocket::SocketState state)
         }
         receiverState = ReceiverState::Connected;
         initiateReceiver();
+    }
+    else if (state == QAbstractSocket::ClosingState) {
+        qDebug() << "Receiver TCP socket closing";
+        receiverState = ReceiverState::Disconnected;
+        disconnectReceiver();
+        emit receiverDisconnected();
     }
 }
 
@@ -74,6 +80,9 @@ void Receiver::initiateReceiver()
             reqReceiverUdpState();
         else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedUdpState && device.tcpStream)
             reqReceiverTcpState();
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedTcpState) {
+            receiverInitiateOrder = ReceiverInitiateOrder::Ready;
+        }
     }
     else {
         qDebug() << "Asked to initiate a disconnected receiver, giving up";
@@ -164,12 +173,12 @@ void Receiver::parseReceiverUdpState(QByteArray buffer)
     bool inUse = false;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
-        /*for (auto && ownIp : myOwnAddresses) {
+        for (auto&& ownIp : myOwnAddresses) {
             if (list.contains(ownIp.toString().toLocal8Bit())) // FIXME: Check for same stream port!!
                 break; // we are the users, continue
-        }*/
-        if (brokenList.size() > 2 && !list.contains("DEF")) {
-            inUse = true;
+            if (brokenList.size() > 2 && !list.contains("DEF")) {
+                inUse = true;
+            }
         }
     }
     receiverInitiateOrder = ReceiverInitiateOrder::ReceivedUdpState;
@@ -186,14 +195,109 @@ void Receiver::reqReceiverTcpState()
 void Receiver::parseReceiverTcpState(QByteArray buffer)
 {
     QList<QByteArray> datastreamList = buffer.split('\n');
+    bool inUse = false;
+    QString inUseByIp;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
-        //qDebug() << brokenList;
         if (brokenList.size() > 2) {
             QList<QByteArray> brkList = brokenList[0].split(' ');
+            if (brkList.size() > 1) inUseByIp = brokenList[0].split(' ')[1].simplified();
+            else inUseByIp = brokenList[0].simplified();
+            inUseByIp.remove('\"');
+            QString text = "remote";
+            if (inUseByIp.size() > 6) {
+                for (auto && ownIp : myOwnAddresses) {
+                    if (list.contains(ownIp.toString().toLocal8Bit()))
+                        text = "local";
+                }
+                emit ipOfUser(text);
+                if (list.toLower().contains("psc")) emit modeUsed("pscan");
+                else if (list.toLower().contains("cw")) emit modeUsed("cw");
+                else if (list.toLower().contains("ifp")) emit modeUsed("ifpan");
+            }
+        }
+        if (list.contains(tcpOwnAdress) && list.contains(tcpOwnPort))
+            break; // we are the users, continue
+        if (brokenList.size() > 2 && !list.contains("DEF")) {
+            inUse = true;
         }
     }
     receiverInitiateOrder = ReceiverInitiateOrder::ReceivedTcpState;
     initiateReceiver(); // Continue receiver init process
 }
 
+void Receiver::setupUdpStream()
+{
+    udpStream->setDeviceType(device);
+    udpStream->openListener();
+    QByteArray modeStr;
+    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
+    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
+
+    QByteArray gpsc;
+    if (askForPosition) gpsc = ", gpsc";
+    QByteArray em200Specific;
+    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+
+    scpiWrite("trac:udp:tag:on '" +
+              scpiSocket->localAddress().toString().toLocal8Bit() +
+              "', " +
+              QByteArray::number(udpStream->getUdpPort()) + ", " +
+              modeStr + gpsc);
+    scpiWrite("trac:udp:flag:on '" +
+              scpiSocket->localAddress().toString().toLocal8Bit() +
+              "', " +
+              QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
+    if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
+    //askUser(true);
+}
+
+
+void Receiver::setupTcpStream()
+{
+    tcpStream->setDeviceType(devicePtr);
+    tcpStream->openListener(*scpiAddress, scpiPort + 10);
+    QByteArray modeStr;
+    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
+    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
+
+    // ssh tunnel hackaround
+    tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
+    tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
+
+    scpiWrite("trac:tcp:sock?");
+    disconnect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
+    scpiSocket->waitForReadyRead(1000);
+    //QThread::msleep(500);
+
+    QByteArray tmpBuffer = scpiSocket->readAll();
+    QList<QByteArray> split = tmpBuffer.split(',');
+    if (split.size() > 1) {
+        tcpOwnAdress = split.at(0).simplified();
+        tcpOwnPort = split.at(1).simplified();
+    }
+    connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
+
+    QByteArray gpsc;
+    if (askForPosition) gpsc = ", gpsc";
+    QByteArray em200Specific;
+    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+
+    scpiWrite("trac:tcp:tag:on " +
+              tcpOwnAdress +
+              ", " +
+              //scpiSocket->localAddress().toString().toLocal8Bit() +
+              //"', " +
+              tcpOwnPort + ", " +
+              modeStr + gpsc);
+    scpiWrite("trac:tcp:flag:on " +
+              tcpOwnAdress +
+              ", " +
+              //scpiSocket->localAddress().toString().toLocal8Bit() +
+              //"', " +
+              tcpOwnPort + ", 'volt:ac', 'opt'" + em200Specific);
+    if (instrumentState == InstrumentState::CONNECTED) askTcp(); // To update the current user ip address 230908
+    //askUser(true);
+}

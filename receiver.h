@@ -42,6 +42,8 @@ signals:
     void warning(QString);
     void receiverName(QString);
     void toIncidentLog(const NOTIFY::TYPE,const QString,const QString);
+    void ipOfUser(QString);
+    void modeUsed(QString);
 
 private slots:
     void handleTcpSocketStateChanged(QAbstractSocket::SocketState state);
@@ -57,7 +59,10 @@ private slots:
     void parseReceiverTcpState(QByteArray buffer);
 
     void writeToReceiver(QByteArray data, bool awaitReply = false);
-
+    void setUdpStreamPtr(QSharedPointer<UdpDataStream> ptr) { udpStream = ptr;}
+    void setTcpStreamPtr(QSharedPointer<TcpDataStream> ptr) { tcpStream = ptr;}
+    void setupUdpStream();
+    void setupTcpStream();
 private:
     QSharedPointer<Config> config;
     QSharedPointer<UdpDataStream> udpStream;
@@ -71,6 +76,9 @@ private:
 
     ReceiverState receiverState = ReceiverState::Disconnected;
     ReceiverInitiateOrder receiverInitiateOrder = ReceiverInitiateOrder::None;
+    QList<QHostAddress> myOwnAddresses = QNetworkInterface::allAddresses();
+    QByteArray tcpOwnAdress = "127.0.0.1";
+    QByteArray tcpOwnPort = "0";
 
     Device device;
 
