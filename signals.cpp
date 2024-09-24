@@ -19,7 +19,9 @@ void MainWindow::setSignals()
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
-    connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect);
+    //connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect); //TBR
+    connect(instrConnect, &QPushButton::clicked, receiver, &Receiver::connectReceiver);
+
     connect(instrDisconnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrDisconnect);
 
     connect(instrTrigLevel, QOverload<double>::of(&QDoubleSpinBox::valueChanged), config.data(), &Config::setInstrTrigLevel);
@@ -337,6 +339,7 @@ void MainWindow::setSignals()
         }
         else instrIpAddr->setCurrentIndex(selIndex);
         connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
+        receiver->setIpAddress(instrIpAddr->currentData().toString());
     });
 
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this] (int id) {

@@ -156,7 +156,7 @@ private:
     QTcpSocket *scpiSocket = new QTcpSocket;
     InstrumentState instrumentState = InstrumentState::DISCONNECTED;
     // pointer below contains what each instr can/cannot do, and needed freq/other settings for packet inspection etc.
-    // used a shared pointer just because I wanted to, and more important because it is safer in multithread env.
+    // used a shared pointer because it is safer in a multithread env.
     QSharedPointer<Device> devicePtr;
 
     int measurementTime;

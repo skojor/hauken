@@ -81,7 +81,7 @@ MainWindow::MainWindow(QWidget *parent)
     setSignals();
     getConfigValues();
     instrConnected(false); // to set initial inputs state
-    instrAutoConnect();
+    QTimer::singleShot(500, this, &MainWindow::instrAutoConnect);
     QTimer::singleShot(50, customPlotController, [this] {
         //customPlotController->updSettings();
         waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
@@ -665,14 +665,16 @@ void MainWindow::instrIpChanged()
     }
     //config->setInstrIpAddr(instrIpAddr->currentText());
     config->setInstrIpAddr(instrIpAddr->currentData().toString());
-    measurementDevice->setAddress(config->getInstrIpAddr());
+    //measurementDevice->setAddress(config->getInstrIpAddr()); // TBR
+    receiver->setIpAddress(instrIpAddr->currentData().toString());
     qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData();
 }
 
 void MainWindow::instrPortChanged()
 {
     config->setInstrPort(instrPort->text().toUInt());
-    measurementDevice->setPort(config->getInstrPort());
+    //measurementDevice->setPort(config->getInstrPort()); // TBR
+    receiver->setPort(instrPort->text().toInt());
 }
 
 void MainWindow::instrConnected(bool state) // takes care of enabling/disabling user inputs
@@ -921,7 +923,8 @@ void MainWindow::moveEvent(QMoveEvent *event)
 void MainWindow::instrAutoConnect()
 {
     if (config->getInstrConnectOnStartup() && instrCheckSettings()) {
-        measurementDevice->instrConnect();
+        //measurementDevice->instrConnect(); // TBR
+        receiver->connectReceiver();
     }
 }
 

@@ -126,6 +126,7 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
 {
     if (state == QMqttClient::ClientState::Disconnected) {
         qDebug() << "MQTT disconnected";
+        reconnect();
     }
     else if (state == QMqttClient::ClientState::Connecting) {
         qDebug() << "MQTT connecting";
@@ -164,7 +165,7 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
     QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonValue value = jsonObject.value("value");
-    qDebug() << "MQTT received" << topic << msg;
+    //qDebug() << "MQTT received" << topic << msg;
     if (subValues.size() != subs.size()) {
         subValues.clear();
         for (int i=0; i<subs.size();i++) subValues.append(0);
