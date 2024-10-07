@@ -256,6 +256,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
             }
         }
     }
+    else qDebug() << "Unknown tag received:" << attrHeader.tag << genAttrAdvHeader.tag << (int)devicePtr->mode;
 
     //else qDebug() << "Asked for pscan and got... what?" << attrHeader.tag << genAttrAdvHeader.tag << (int)devicePtr->mode;
     //if (tcpBuffer.size() > 0) tcpBuffer.clear();

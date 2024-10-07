@@ -59,8 +59,8 @@ public slots:
     void setOwnAddress(QHostAddress addr) { ownAddress = addr; }
     void setOwnPort(quint16 p) { port = p; }
     void setDeviceType(QSharedPointer<Device> p) { devicePtr = p; }
-    quint16 getUdpPort() { return udpSocket->localPort(); }
-    quint16 getTcpPort() { return tcpSocket->localPort(); }
+    quint16 getUdpPort() { if (udpSocket->BoundState == QAbstractSocket::BoundState) return udpSocket->localPort(); else return 0;}
+    quint16 getTcpPort() { if (tcpSocket->isOpen()) return tcpSocket->localPort(); else return 0;}
     virtual void newData() = 0;
     void processData(const QByteArray &);
     bool checkHeader(const QByteArray &);
@@ -86,6 +86,7 @@ signals:
     void streamErrorResetConnection();
     void freqChanged(double, double);
     void resChanged(double);
+    void connected();
 
 private slots:
 

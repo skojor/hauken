@@ -9,43 +9,57 @@ Receiver::Receiver(QSharedPointer<Config> c)
     connect(scpiAwaitingReplyTimer, &QTimer::timeout, this, &Receiver::handleScpiReplyTimeout);
 
     tcpSocketWriteThrottleElapsedTimer->start();
+    device = QSharedPointer<Device>(new Device);
 }
 
 
 void Receiver::connectReceiver()
 {
     if (receiverAddress.isEmpty() || receiverPort == 0) {
-        emit warning("Missing device IP address or port");
+        emit popup("Missing device IP address or port");
     }
     else {
         tcpSocket->connectToHost(receiverAddress, receiverPort);
         tcpSocketTimeoutTimer->start(tcpSocketTimeout);
     }
-
 }
 
 void Receiver::disconnectReceiver()
 {
-    // Tidy up after disconnect here
+    if (tcpSocket->isOpen() && receiverInitiateOrder != ReceiverInitiateOrder::InUseWarningSent)
+        deleteOwnStream();
+
+    tcpSocketTimeoutTimer->stop();
+    scpiAwaitingReplyTimer->stop();
+    tcpStream->closeListener();
+    udpStream->closeListener();
+
+    QTimer::singleShot(10, this, &Receiver::disconnectTcpSocket); // Delay disconnect until last commands has been sent
+    emit status(tr("Measurement receiver disconnected"));
 }
 
 void Receiver::handleTcpSocketStateChanged(QAbstractSocket::SocketState state)
 {
+    qDebug() << "Receiver TCP state" << state;
+
     if (state == QAbstractSocket::ConnectingState) {
         receiverState = ReceiverState::Connecting;
+        receiverInitiateOrder = ReceiverInitiateOrder::None;
     }
     else if (state == QAbstractSocket::ConnectedState) {
         if (receiverState != ReceiverState::Reconnecting) {
-            emit receiverConnected();
+            emit receiverStateChanged(true);
         }
         receiverState = ReceiverState::Connected;
+        tcpSocketTimeoutTimer->stop(); // we are connected, stop worrying
         initiateReceiver();
     }
     else if (state == QAbstractSocket::ClosingState) {
         qDebug() << "Receiver TCP socket closing";
         receiverState = ReceiverState::Disconnected;
+        receiverInitiateOrder = ReceiverInitiateOrder::None;
         disconnectReceiver();
-        emit receiverDisconnected();
+        emit receiverStateChanged(false);
     }
 }
 
@@ -64,11 +78,16 @@ void Receiver::handleTcpSocketReadData()
         parseReceiverUdpState(buffer);
     else if (receiverInitiateOrder == ReceiverInitiateOrder::WaitForTcpState)
         parseReceiverTcpState(buffer);
+    else if (receiverInitiateOrder == ReceiverInitiateOrder::WaitForUser)
+        parseUser(buffer);
+    else if (receiverInitiateOrder == ReceiverInitiateOrder::WaitForSocketInfo)
+        parseSocketInfo(buffer);
 }
 
 void Receiver::handleTcpSocketTimeout()
 {
-
+    qDebug() << "TCP socket operation timed out, disconnecting";
+    disconnectReceiver();
 }
 
 void Receiver::initiateReceiver()
@@ -76,24 +95,49 @@ void Receiver::initiateReceiver()
     if (receiverState == ReceiverState::Connected) { // No point in setting up a disconnected instrument
         if (receiverInitiateOrder == ReceiverInitiateOrder::None)
             reqReceiverId();
-        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedId && device.udpStream)
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedId && device->udpStream)
             reqReceiverUdpState();
-        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedUdpState && device.tcpStream)
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedUdpState && device->tcpStream)
             reqReceiverTcpState();
-        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedTcpState) {
-            receiverInitiateOrder = ReceiverInitiateOrder::Ready;
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReqUser)
+            reqUser();
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedUser)
+            issueWarning();
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::InUseWarningSent)
+            disconnectReceiver();
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::UdpStreamConnected)
+            setupUdpStream();
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::TcpStreamConnected)
+            setupTcpStream();
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::ReceivedTcpState ||
+                 (!device->tcpStream && receiverInitiateOrder == ReceiverInitiateOrder::ReceivedUdpState ||
+                  receiverInitiateOrder == ReceiverInitiateOrder::InUseByMyself)) {
+            if (device->tcpStream && config->getInstrUseTcpDatastream())
+                connectTcpStream();
+            else
+                connectUdpStream();
+        }
+        else if (receiverInitiateOrder == ReceiverInitiateOrder::StreamConfigured) {
+            receiverInitiateOrder = ReceiverInitiateOrder::Idle; // We are done (?)
+            emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, device->id, "Connected to " + device->longId);
         }
     }
+
     else {
         qDebug() << "Asked to initiate a disconnected receiver, giving up";
         receiverInitiateOrder = ReceiverInitiateOrder::None;
     }
 }
 
+void Receiver::handleStreamTimeout()
+{
+    qDebug() << "Stream timeout triggered";
+}
+
 void Receiver::writeToReceiver(QByteArray data, bool awaitReply)
 {
     int throttle = scpiThrottleTime;
-    if (device.id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
+    if (device->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
 
     if (tcpSocketWriteThrottleElapsedTimer->isValid()) {
         while (tcpSocketWriteThrottleElapsedTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
@@ -124,40 +168,42 @@ void Receiver::reqReceiverId()
 void Receiver::parseReceiverId(QByteArray buffer)
 {
     scpiAwaitingReplyTimer->stop();
-    device.clearSettings();
+    device->clearSettings();
 
     if (buffer.contains("EB500"))
-        device.setType(InstrumentType::EB500);
+        device->setType(InstrumentType::EB500);
     else if (buffer.contains("PR100"))
-        device.setType(InstrumentType::PR100);
+        device->setType(InstrumentType::PR100);
     else if (buffer.contains("PR200"))
-        device.setType(InstrumentType::PR200);
+        device->setType(InstrumentType::PR200);
     else if (buffer.contains("EM100"))
-        device.setType(InstrumentType::EM100);
+        device->setType(InstrumentType::EM100);
     else if (buffer.contains("EM200"))
-        device.setType(InstrumentType::EM200);
+        device->setType(InstrumentType::EM200);
     else if (buffer.contains("ESMB"))
-        device.setType(InstrumentType::ESMB);
+        device->setType(InstrumentType::ESMB);
     else if (buffer.contains("E310"))
-        device.setType(InstrumentType::E310);
+        device->setType(InstrumentType::E310);
     else if (buffer.contains("ESMW"))
-        device.setType(InstrumentType::ESMW);
+        device->setType(InstrumentType::ESMW);
 
-    else device.setType(InstrumentType::UNKNOWN);
+    else device->setType(InstrumentType::UNKNOWN);
 
-    if (device.type != InstrumentType::UNKNOWN) {
-        QString msg = "Measurement receiver type " + device.id + " found, checking if available";
+    if (device->type != InstrumentType::UNKNOWN) {
+        QString msg = "Measurement receiver type " + device->id + " found, checking if available";
+        device->longId = tr(buffer.simplified());
         emit status(msg);
-        device.longId = tr(buffer.simplified());
+        emit receiverName(device->longId);
+        device->longId = tr(buffer.simplified());
 
-        emit receiverName(device.longId);
+        emit receiverName(device->longId);
         receiverInitiateOrder = ReceiverInitiateOrder::ReceivedId;
         initiateReceiver(); // Continue receiver init process
     }
     else {
         QString msg = "Unknown instrument ID: " + tr(buffer);
-        emit warning(msg);
         disconnectReceiver();
+        emit popup(msg);
     }
 }
 
@@ -174,14 +220,17 @@ void Receiver::parseReceiverUdpState(QByteArray buffer)
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
         for (auto&& ownIp : myOwnAddresses) {
-            if (list.contains(ownIp.toString().toLocal8Bit())) // FIXME: Check for same stream port!!
+            if (list.contains(ownIp.toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
                 break; // we are the users, continue
             if (brokenList.size() > 2 && !list.contains("DEF")) {
                 inUse = true;
             }
         }
     }
-    receiverInitiateOrder = ReceiverInitiateOrder::ReceivedUdpState;
+    if (!inUse)
+        receiverInitiateOrder = ReceiverInitiateOrder::ReceivedUdpState;
+    else
+        receiverInitiateOrder = ReceiverInitiateOrder::ReqUser;
     initiateReceiver(); // Continue receiver init process
 }
 
@@ -216,88 +265,202 @@ void Receiver::parseReceiverTcpState(QByteArray buffer)
                 else if (list.toLower().contains("ifp")) emit modeUsed("ifpan");
             }
         }
-        if (list.contains(tcpOwnAdress) && list.contains(tcpOwnPort))
+        if (list.contains(tcpOwnAdress) && list.contains(QByteArray::number(tcpStream->getTcpPort())))
             break; // we are the users, continue
         if (brokenList.size() > 2 && !list.contains("DEF")) {
             inUse = true;
         }
     }
-    receiverInitiateOrder = ReceiverInitiateOrder::ReceivedTcpState;
+    if (!inUse)
+        receiverInitiateOrder = ReceiverInitiateOrder::ReceivedTcpState;
+    else
+        receiverInitiateOrder = ReceiverInitiateOrder::ReqUser;
     initiateReceiver(); // Continue receiver init process
 }
 
-void Receiver::setupUdpStream()
+void Receiver::reqUser()
 {
-    udpStream->setDeviceType(device);
-    udpStream->openListener();
-    QByteArray modeStr;
-    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
-    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
-
-    QByteArray gpsc;
-    if (askForPosition) gpsc = ", gpsc";
-    QByteArray em200Specific;
-    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
-
-    scpiWrite("trac:udp:tag:on '" +
-              scpiSocket->localAddress().toString().toLocal8Bit() +
-              "', " +
-              QByteArray::number(udpStream->getUdpPort()) + ", " +
-              modeStr + gpsc);
-    scpiWrite("trac:udp:flag:on '" +
-              scpiSocket->localAddress().toString().toLocal8Bit() +
-              "', " +
-              QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
-    if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
-    //askUser(true);
+    if (device->systManLocName) {
+        writeToReceiver("syst:man:loc:name?", true);
+        receiverInitiateOrder = ReceiverInitiateOrder::WaitForUser;
+    }
+    else
+        parseUser("unknown user"); // Skip username process if device is not capable
 }
 
-
-void Receiver::setupTcpStream()
+void Receiver::parseUser(QByteArray buffer)
 {
-    tcpStream->setDeviceType(devicePtr);
-    tcpStream->openListener(*scpiAddress, scpiPort + 10);
-    QByteArray modeStr;
-    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
-    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
+    if (!buffer.isEmpty())
+        receiverUser = QString(buffer).simplified();
+    else
+        receiverUser.clear();
+    receiverInitiateOrder = ReceiverInitiateOrder::ReceivedUser;
+    initiateReceiver();
+}
 
+void Receiver::issueWarning()
+{
+    if (!flagWarningIssued &&
+        !receiverUser.contains(config->getStationName().toLocal8Bit())) {
+        QString msg = device->id + tr(" may be in use");
+        if (!receiverUser.isEmpty())
+            msg += tr(" by ") + receiverUser;
+
+        msg += tr(". Press connect once more to override");
+        emit receiverBusy(receiverUser);
+        emit popup(msg);
+        receiverInitiateOrder = ReceiverInitiateOrder::InUseWarningSent;
+        flagWarningIssued = true;
+    }
+    else {
+        receiverInitiateOrder = ReceiverInitiateOrder::InUseByMyself;
+    }
+    initiateReceiver();
+}
+
+void Receiver::reqSocketInfo() // TODO: Why on earth are we doing this??
+{
+    writeToReceiver("trac:tcp:sock?", true);
+    receiverInitiateOrder = ReceiverInitiateOrder::WaitForSocketInfo;
+}
+
+void Receiver::parseSocketInfo(QByteArray buffer) // TODO: Why on earth are we doing this??
+{
     // ssh tunnel hackaround
-    tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
+    tcpOwnAdress = tcpSocket->localAddress().toString().toLocal8Bit();
     tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
 
-    scpiWrite("trac:tcp:sock?");
-    disconnect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
-    scpiSocket->waitForReadyRead(1000);
-    //QThread::msleep(500);
-
-    QByteArray tmpBuffer = scpiSocket->readAll();
-    QList<QByteArray> split = tmpBuffer.split(',');
+    QList<QByteArray> split = buffer.split(',');
     if (split.size() > 1) {
         tcpOwnAdress = split.at(0).simplified();
         tcpOwnPort = split.at(1).simplified();
     }
-    connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
+    receiverInitiateOrder = ReceiverInitiateOrder::ReceivedSocketInfo;
+
+    //tcpOwnPort = tcpStream->getTcpPort();
+    initiateReceiver();
+}
+
+void Receiver::connectUdpStream()
+{
+    receiverInitiateOrder = ReceiverInitiateOrder::WaitForUdpStreamConnected;
+    udpStream->setDeviceType(device);
+    udpStream->openListener();
+}
+
+void Receiver::setupUdpStream()
+{
+    QByteArray modeStr;
+    if (device->mode == Mode::PSCAN && !device->optHeaderDscan) modeStr = "pscan";
+    else if (device->mode == Mode::PSCAN && device->optHeaderDscan) modeStr = "dscan";
+    else {
+        modeStr = "ifpan";
+        device->mode = Mode::FFM;
+    }
 
     QByteArray gpsc;
-    if (askForPosition) gpsc = ", gpsc";
+    if ((config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument")) || config->getGnssUseInstrumentGnss()) gpsc = ", gpsc";
     QByteArray em200Specific;
-    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+    if (device->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
 
-    scpiWrite("trac:tcp:tag:on " +
-              tcpOwnAdress +
-              ", " +
-              //scpiSocket->localAddress().toString().toLocal8Bit() +
-              //"', " +
-              tcpOwnPort + ", " +
-              modeStr + gpsc);
-    scpiWrite("trac:tcp:flag:on " +
-              tcpOwnAdress +
-              ", " +
-              //scpiSocket->localAddress().toString().toLocal8Bit() +
-              //"', " +
-              tcpOwnPort + ", 'volt:ac', 'opt'" + em200Specific);
-    if (instrumentState == InstrumentState::CONNECTED) askTcp(); // To update the current user ip address 230908
-    //askUser(true);
+    writeToReceiver("trac:udp:tag:on \"" +
+                    tcpSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                    QByteArray::number(udpStream->getUdpPort()) + ", " + modeStr + gpsc);
+    writeToReceiver("trac:udp:flag:on '" +
+                    tcpSocket->localAddress().toString().toLocal8Bit() + "', " +
+                    QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
+    receiverInitiateOrder = ReceiverInitiateOrder::StreamConfigured;
+    initiateReceiver();
+}
+
+void Receiver::connectTcpStream()
+{
+    receiverInitiateOrder = ReceiverInitiateOrder::WaitForTcpStreamConnected;
+    tcpStream->setDeviceType(device);
+    QHostAddress address(config->getInstrIpAddr());
+    tcpStream->openListener(address, tcpSocket->peerPort() + 10);
+}
+
+void Receiver::setupTcpStream()
+{
+    QByteArray modeStr;
+    if (device->mode == Mode::PSCAN && !device->optHeaderDscan) modeStr = "pscan";
+    else if (device->mode == Mode::PSCAN && device->optHeaderDscan) modeStr = "dscan";
+    else {
+        modeStr = "ifpan";
+        device->mode = Mode::FFM;
+    }
+
+    QByteArray gpsc;
+    if ((config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument")) || config->getGnssUseInstrumentGnss()) gpsc = ", gpsc";
+    QByteArray em200Specific;
+    if (device->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+
+    writeToReceiver("trac:tcp:tag:on \"" +
+                    tcpSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                    QByteArray::number(tcpStream->getTcpPort()) + ", " + modeStr + gpsc);
+    writeToReceiver("trac:tcp:flag:on \"" +
+                    tcpSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                    QByteArray::number(tcpStream->getTcpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
+    receiverInitiateOrder = ReceiverInitiateOrder::StreamConfigured;
+    initiateReceiver();
+}
+
+void Receiver::deleteUdpStreams()
+{
+    writeToReceiver("trac:udp:del all");
+}
+
+void Receiver::deleteTcpStreams()
+{
+    writeToReceiver("trac:tcp:del all");
+}
+
+void Receiver::deleteOwnStream()
+{
+    if (config->getInstrUseTcpDatastream())
+        writeToReceiver("trac:tcp:del \"" + tcpSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                        QByteArray::number(tcpStream->getTcpPort()));
+    else
+        writeToReceiver("trac:udp:del \"" + tcpSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                        QByteArray::number(udpStream->getUdpPort()));
+}
+
+void Receiver::setPscanStartFrequency(double freq)
+{
+    abor();
+    if (device->hasPscan && device->mode == Instrument::Mode::PSCAN)
+        writeToReceiver("freq:psc:start " + QByteArray::number(freq) + "M");
+    else if (device->hasDscan && device->mode == Instrument::Mode::PSCAN) // esmb mode
+        writeToReceiver("freq:dsc:start " + QByteArray::number(freq) + "M");
+    initImm();
+    emit resetBuffers();
+}
+
+void Receiver::setPscanStopFrequency(double freq)
+{
+    abor();
+    if (device->hasPscan && device->mode == Instrument::Mode::PSCAN)
+        writeToReceiver("freq:psc:stop " + QByteArray::number(freq) + "M");
+    else if (device->hasDscan && device->mode == Instrument::Mode::PSCAN) // esmb mode
+        writeToReceiver("freq:dsc:stop " + QByteArray::number(freq) + "M");
+    initImm();
+    emit resetBuffers();
+}
+
+void Receiver::setMode(Instrument::Mode mode) {
+    if (mode == Instrument::Mode::PSCAN) {
+        if (device->hasPscan) {
+            writeToReceiver("freq:mode psc");
+        }
+        else if (device->hasDscan) {
+            writeToReceiver("freq:mode dsc");
+        }
+        emit modeUsed("pscan");
+    }
+    else {
+        writeToReceiver("freq:mode ffm");
+        emit modeUsed("ffm");
+    }
+
 }

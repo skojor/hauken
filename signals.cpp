@@ -2,6 +2,53 @@
 
 void MainWindow::setSignals()
 {
+    //MainWindow signals
+    //connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect); //TBR
+    connect(instrConnect, &QPushButton::clicked, receiver, &Receiver::connectReceiver);
+    connect(instrDisconnect, &QPushButton::clicked, receiver, &Receiver::disconnectReceiver);
+
+    // Receiver signals
+    connect(receiver, &Receiver::status, this, &MainWindow::updateStatusLine);
+    connect(receiver, &Receiver::receiverStateChanged, this, &MainWindow::instrConnected);
+
+    connect(receiver, &Receiver::receiverStateChanged, waterfall, &Waterfall::stopPlot); // own thread, needs own signal
+    connect(receiver, &Receiver::receiverStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
+    connect(receiver, &Receiver::receiverStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
+    connect(receiver, &Receiver::popup, this, &MainWindow::generatePopup);
+    connect(receiver, &Receiver::receiverName, this, &MainWindow::updWindowTitle);
+    connect(receiver, &Receiver::receiverBusy, positionReport, &PositionReport::setInUse);
+    connect(receiver, &Receiver::receiverStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
+    connect(receiver, &Receiver::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(receiver, &Receiver::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
+    connect(receiver, &Receiver::modeUsed, positionReport, &PositionReport::setModeUsed);
+
+    connect(receiver, &Receiver::receiverStateChanged, this, [this](bool state) {
+        if (state && config->getGeoLimitActive() && !geoLimit->areWeInsidePolygon()) { // don't reconnect all if outside borders
+            emit stopPlot(false);
+        }
+    });
+    connect(receiver, &Receiver::receiverStateChanged, this, [this] (bool b) {
+        if (b) {
+            QTimer::singleShot(1500, this, [this] {
+                this->gnssAnalyzer3->updStateInstrumentGnss(true);
+            });
+        }
+        else {
+            gnssAnalyzer3->updStateInstrumentGnss(false);
+        }
+    });
+    connect(receiver, &Receiver::receiverStreamTimeout, this, [this] {
+        emit stopPlot(false);
+    });
+
+    // TCP/UDP stream signals
+    connect(udpStream.data(), &UdpDataStream::connected, receiver, &Receiver::udpStreamConnected);
+    connect(tcpStream.data(), &TcpDataStream::connected, receiver, &Receiver::tcpStreamConnected);
+    connect(tcpStream.data(), &TcpDataStream::timeout, receiver, &Receiver::handleStreamTimeout);
+    connect(udpStream.data(), &UdpDataStream::timeout, receiver, &Receiver::handleStreamTimeout);
+
+    // MainWindow signals
+    connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), receiver, &Receiver::setPscanStartFrequency);
     connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);
     connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStopFreqChanged);
     connect(instrFfmCenterFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrFfmCenterFreqChanged); //Taken care of after init.
@@ -19,10 +66,10 @@ void MainWindow::setSignals()
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
-    //connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect); //TBR
-    connect(instrConnect, &QPushButton::clicked, receiver, &Receiver::connectReceiver);
 
-    connect(instrDisconnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrDisconnect);
+
+
+    //connect(instrDisconnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrDisconnect); TBR
 
     connect(instrTrigLevel, QOverload<double>::of(&QDoubleSpinBox::valueChanged), config.data(), &Config::setInstrTrigLevel);
     connect(instrTrigBandwidth, QOverload<double>::of(&QDoubleSpinBox::valueChanged), config.data(), &Config::setInstrMinTrigBW);
@@ -40,9 +87,9 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, waterfall, &Waterfall::stopPlot); // own thread, needs own signal
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, customPlotController, &CustomPlotController::updDeviceConnected);
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, sdefRecorder, &SdefRecorder::deviceDisconnected);
-    connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, this, [this] {
+    /*TBRconnect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, this, [this] {
         emit stopPlot(false);
-    });
+    });*/
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, [this](bool state) {
         if (state && config->getGeoLimitActive() && !geoLimit->areWeInsidePolygon()) { // don't reconnect all if outside borders
             emit stopPlot(false);
@@ -64,7 +111,7 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::popup, this, &MainWindow::generatePopup);
     connect(measurementDevice, &MeasurementDevice::status, this, &MainWindow::updateStatusLine);
     connect(measurementDevice, &MeasurementDevice::instrId, this, &MainWindow::updWindowTitle);
-    connect(measurementDevice, &MeasurementDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    //(TBRconnect(measurementDevice, &MeasurementDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(plotMaxScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMax);
     connect(plotMinScroll, QOverload<int>::of(&QSpinBox::valueChanged), config.data(), &Config::setPlotYMin);
@@ -93,7 +140,7 @@ void MainWindow::setSignals()
         connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
     }
 
-    connect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
+    //TBRconnect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::resetAverageLevel);
     connect(traceBuffer, &TraceBuffer::averageLevelReady, traceAnalyzer, &TraceAnalyzer::setAverageTrace);
@@ -132,7 +179,7 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
     connect(sdefRecorder, &SdefRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
+    //TBRconnect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, sdefRecorder, &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this] (){
         if (measurementDevice->isConnected() || read1809Data->isRunning()) {
@@ -206,7 +253,7 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, positionReport, &PositionReport::setMeasurementDeviceConnectionStatus);
     connect(measurementDevice, &MeasurementDevice::deviceBusy, positionReport, &PositionReport::setInUse);
     connect(measurementDevice, &MeasurementDevice::ipOfUser, positionReport, &PositionReport::setInUseByIp);
-    connect(measurementDevice, &MeasurementDevice::modeUsed, positionReport, &PositionReport::setModeUsed);
+    //connect(measurementDevice, &MeasurementDevice::modeUsed, positionReport, &PositionReport::setModeUsed);
     connect(measurementDevice, &MeasurementDevice::freqRangeUsed, positionReport, &PositionReport::setFreqUsed);
     connect(measurementDevice, &MeasurementDevice::resUsed, positionReport, &PositionReport::setResUsed);
     connect(measurementDevice, &MeasurementDevice::reconnected, positionReport, &PositionReport::setMeasurementDeviceReconnected);
@@ -393,8 +440,8 @@ void MainWindow::setSignals()
         tracesPerSecond = d; // For view on mainWindow
     });
 
-    connect(tcpStream.data(), &TcpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
-    connect(udpStream.data(), &UdpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
+    // TBR connect(tcpStream.data(), &TcpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
+    // TBR connect(udpStream.data(), &UdpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
 
     connect(tcpStream.data(), &TcpDataStream::streamErrorResetFreq, measurementDevice, &MeasurementDevice::resetFreqSettings);
     connect(udpStream.data(), &UdpDataStream::streamErrorResetFreq, measurementDevice, &MeasurementDevice::resetFreqSettings);

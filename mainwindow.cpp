@@ -91,8 +91,10 @@ MainWindow::MainWindow(QWidget *parent)
     instrumentList->start(); // check if instrument server is available
     gnssDisplay->start();
 
-    measurementDevice->setUdpStreamPtr(udpStream);
-    measurementDevice->setTcpStreamPtr(tcpStream);
+    receiver->setUdpStreamPtr(udpStream);
+    receiver->setTcpStreamPtr(tcpStream);
+    //measurementDevice->setUdpStreamPtr(udpStream); TBR
+    //measurementDevice->setTcpStreamPtr(tcpStream); TBR
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -101,7 +103,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     if (arduinoPtr->isWatchdogActive()) arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
     read1809Data->close();
-    measurementDevice->instrDisconnect();
+    //measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
     QMainWindow::closeEvent(event);
@@ -530,6 +532,9 @@ void MainWindow::updInstrButtonsStatus()
 
 void MainWindow::instrModeChanged()
 {
+    if (instrMode->currentText().isEmpty())
+        instrMode->setCurrentIndex(0); // Failsafe if config lacks any mode info
+
     if (instrMode->currentText().contains("pscan", Qt::CaseInsensitive)/* &&
         measurementDevice->currentMode() != Instrument::Mode::PSCAN*/) {
 
@@ -545,7 +550,8 @@ void MainWindow::instrModeChanged()
         instrStartFreq->setHidden(false);
         instrResolution->setHidden(false);
         config->setInstrMode(instrMode->currentText());
-        measurementDevice->setMode();
+        //measurementDevice->setMode();
+        receiver->setMode(Instrument::Mode::PSCAN);
     }
     else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
              measurementDevice->currentMode() != Instrument::Mode::FFM*/) {
@@ -561,7 +567,8 @@ void MainWindow::instrModeChanged()
         instrStartFreq->setHidden(true);
         instrResolution->setHidden(true);
         config->setInstrMode(instrMode->currentText());
-        measurementDevice->setMode();
+        //measurementDevice->setMode();
+        receiver->setMode(Instrument::Mode::FFM);
     }
     instrStartFreqChanged();
     instrStopFreqChanged();
@@ -780,7 +787,7 @@ void MainWindow::updWindowTitle(const QString msg)
     QString extra;
     if (!msg.isEmpty()) extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " (" +
                 instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + " Jammetest edition " + extra
+    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra
                    + " (" + config->getCurrentFilename().split('/').last() + ")");
 }
 

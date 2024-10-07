@@ -79,7 +79,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
     }
     scpiThrottleTimer->start();
     scpiSocket->write(data + '\n');
-    //qDebug() << ">>" << data;
+    qDebug() << ">>" << data;
 }
 
 void MeasurementDevice::instrDisconnect()
@@ -304,7 +304,7 @@ void MeasurementDevice::checkId(const QByteArray buffer)
 void MeasurementDevice::scpiRead()
 {
     QByteArray buffer = scpiSocket->readAll();
-    //qDebug() << "<<" << buffer;
+    qDebug() << "<<" << buffer;
     if (instrumentState == InstrumentState::CHECK_INSTR_ID)
         checkId(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP)
@@ -604,7 +604,7 @@ void MeasurementDevice::setupTcpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "IFPan";
 
     // ssh tunnel hackaround
     tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
@@ -641,6 +641,11 @@ void MeasurementDevice::setupTcpStream()
               //scpiSocket->localAddress().toString().toLocal8Bit() +
               //"', " +
               tcpOwnPort + ", 'volt:ac', 'opt'" + em200Specific);
+
+    scpiWrite("trac:udp:tag:on '192.168.100.92', 443, VIF");
+    scpiWrite("trac:udp:flag:on '192.168.100.92', 443, 'opt'");
+
+
     if (instrumentState == InstrumentState::CONNECTED) askTcp(); // To update the current user ip address 230908
     //askUser(true);
 }

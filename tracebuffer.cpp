@@ -250,7 +250,7 @@ void TraceBuffer::restartCalcAvgLevel()
     averageLevelMaintenanceTimer->stop();
     averageLevel.clear();
     averageDispLevel.clear();
-    averageDispLevel.resize(plotResolution);
+    if (plotResolution > 0) averageDispLevel.resize(plotResolution);
     averageDispLevelNormalized.clear();
     emit averageLevelCalculating();
     avgFactor = 40;

@@ -30,6 +30,9 @@ void UdpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
     qDebug() << "UDP stream state" << state;
     if (state == QAbstractSocket::UnconnectedState)
         timeoutTimer->stop();
+    else if (state == QAbstractSocket::BoundState)
+        emit connected();
+
 }
 
 void UdpDataStream::newData()

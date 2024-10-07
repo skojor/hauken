@@ -60,8 +60,8 @@ enum class Tags
 enum class ReceiverState {
     Disconnected,
     Connecting,
-    Connected,
-    Reconnecting
+    Reconnecting,
+    Connected
 };
 
 enum class ReceiverInitiateOrder {
@@ -75,7 +75,20 @@ enum class ReceiverInitiateOrder {
     ReqTcpState,
     WaitForTcpState,
     ReceivedTcpState,
-    Ready
+    ReqUser,
+    WaitForUser,
+    ReceivedUser,
+    InUseWarningSent,
+    InUseByMyself,
+    WaitForUdpStreamConnected,
+    WaitForTcpStreamConnected,
+    UdpStreamConnected,
+    TcpStreamConnected,
+    StreamConfigured,
+    ReqSocketInfo,
+    WaitForSocketInfo,
+    ReceivedSocketInfo,
+    Idle
 };
 
 enum class InstrumentState {

@@ -27,8 +27,9 @@ QString Config::findWorkFolderName()
 {
     if (QSysInfo::kernelType().contains("win")) {
         QFileInfo checkDir("D:/");
-        if (checkDir.exists() && checkDir.isWritable()) return "D:/Hauken";
-        else return "C:/Hauken";
+        /*if (checkDir.exists() && checkDir.isWritable()) return "D:/Hauken";
+        else*/
+        return "C:/Hauken";
     }
     else
         return QString(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken");

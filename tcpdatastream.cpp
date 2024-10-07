@@ -7,12 +7,17 @@ TcpDataStream::TcpDataStream()
 void TcpDataStream::openListener(const QHostAddress host, const int port)
 {
     tcpSocket->close();
-
-    tcpSocket->connectToHost(host, port);
-    tcpSocket->waitForConnected(1000);
+    int p = 0;
+    while (p < 10 && !tcpSocket->isOpen()) {
+        tcpSocket->connectToHost(host, port + p++); // Try next port is not possible to connect
+        tcpSocket->waitForConnected(1000);
+    }
     if (tcpSocket->isOpen()) {
         tcpSocket->write("\n");
         bytesPerSecTimer->start();
+    }
+    else {
+        qDebug() << "Could not set up TCP stream connection, check network settings";
     }
 }
 
@@ -25,9 +30,11 @@ void TcpDataStream::closeListener()
 
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    //qDebug() << "TCP stream state" << state;
+    qDebug() << "TCP stream state" << state;
     if (state == QAbstractSocket::UnconnectedState)
         timeoutTimer->stop();
+    else if (state == QAbstractSocket::ConnectedState)
+        emit connected();
 }
 
 void TcpDataStream::newData()
