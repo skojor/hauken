@@ -7,6 +7,9 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.42</td><td>Datastream rebuild, various reconnect issues fixed</td></tr>"
+       << "<tr><td>2.41</td><td>Jammertest version, unreleased</td></tr>"
+       << "<tr><td>2.40</td><td>Camera support readded</td></tr>"
        << "<tr><td>2.39</td><td>AI category added (other). Various bugfixes</td></tr>"
        << "<tr><td>2.38</td><td>Added GNSS data display in separate window</td></tr>"
        << "<tr><td>2.37</td><td>Instrument list collected from external server if available</td></tr>"
