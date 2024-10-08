@@ -50,7 +50,7 @@ void MeasurementDevice::scpiConnected()
 
 void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
 {
-    //qDebug() << "TCP scpi socket state" << state;
+    qDebug() << "TCP scpi socket state" << state;
 
     if (state == QAbstractSocket::ConnectedState) {
         askId();
@@ -70,21 +70,25 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
 
 void MeasurementDevice::scpiWrite(QByteArray data)
 {
-    if (scpiThrottleTimer->isValid()) {
-        int throttle = scpiThrottleTime;
-        if (devicePtr->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
-        while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
-            QCoreApplication::processEvents();
+    if (scpiSocket->state() == QAbstractSocket::ConnectedState) {
+        if (scpiThrottleTimer->isValid()) {
+            int throttle = scpiThrottleTime;
+            if (devicePtr->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
+            while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
+                QCoreApplication::processEvents();
+            }
         }
+        scpiThrottleTimer->start();
+        scpiSocket->write(data + '\n');
+        qDebug() << ">>" << data;
     }
-    scpiThrottleTimer->start();
-    scpiSocket->write(data + '\n');
-    //qDebug() << ">>" << data;
 }
 
 void MeasurementDevice::instrDisconnect()
 {
+    muteNotification = false;
     discPressed = true;
+    deviceInUseWarningIssued = false;
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect && !discPressed ? ". Trying to reconnect" : " "));
@@ -92,15 +96,16 @@ void MeasurementDevice::instrDisconnect()
     tcpTimeoutTimer->stop();
     autoReconnectTimer->stop();
     emit instrId(QString());
-    if (scpiSocket->state() != QTcpSocket::UnconnectedState) emit status("Disconnecting measurement device");
+    if (scpiSocket->state() != QAbstractSocket::UnconnectedState) emit status("Disconnecting measurement device");
 
     if (connected) {
-        if (useUdpStream) delUdpStreams();
-        else delTcpStreams();
-        scpiSocket->waitForBytesWritten(1000);
+        /*if (useUdpStream) delUdpStreams();
+        else delTcpStreams();*/
+        delOwnStream();
+        scpiSocket->waitForBytesWritten(10);
     }
     updFrequencyData->stop();
-    scpiSocket->abort();
+    scpiSocket->close();
     tcpStream->closeListener();
     udpStream->closeListener();
 }
@@ -108,7 +113,7 @@ void MeasurementDevice::instrDisconnect()
 void MeasurementDevice::scpiDisconnected()
 {
     tcpTimeoutTimer->stop();
-    emit status("Measurement device disconnected");
+    //emit status("Measurement device disconnected");
     emit connectedStateChanged(false);
 }
 
@@ -287,6 +292,7 @@ void MeasurementDevice::checkId(const QByteArray buffer)
         QString msg = "Measurement receiver type " + devicePtr->id + " found, checking if available";
         emit status(msg);
         devicePtr->longId = tr(buffer.simplified());
+        if (!devicePtr->tcpStream && config->getInstrUseTcpDatastream()) config->setInstrUseTcpDatastream(false); // Switch off tcp stream option if device doesn't support it
         config->setInstrId(devicePtr->longId);
         config->setMeasurementDeviceName(devicePtr->id);
 
@@ -304,7 +310,7 @@ void MeasurementDevice::checkId(const QByteArray buffer)
 void MeasurementDevice::scpiRead()
 {
     QByteArray buffer = scpiSocket->readAll();
-    //qDebug() << "<<" << buffer;
+    qDebug() << "<<" << buffer;
     if (instrumentState == InstrumentState::CHECK_INSTR_ID)
         checkId(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP)
@@ -346,13 +352,14 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
     waitingForReply = false;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
-        /*for (auto && ownIp : myOwnAddresses) {
-            if (list.contains(ownIp.toString().toLocal8Bit())) // FIXME: Check for same UDP stream port!!
+        //for (auto&& ownIp : myOwnAddresses) {
+            //if (list.contains(ownIp.toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
+            if (list.contains(scpiSocket->localAddress().toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
                 break; // we are the users, continue
-        }*/
-        if (brokenList.size() > 2 && !list.contains("DEF")) {
-            inUse = true;
-        }
+            if (brokenList.size() > 2 && !list.contains("DEF")) {
+                inUse = true;
+            }
+        //}
     }
     if (!autoReconnectInProgress) {
         QString msg = (inUse? "Instrument is in use (UDP)":"Instrument is not in use (UDP)");
@@ -362,7 +369,7 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
             askUser();
         else if (inUse && deviceInUseWarningIssued) {
             deviceInUseWarningIssued = false;
-            delUdpStreams();
+            //delUdpStreams();
             askTcp();
         }
         else {
@@ -379,9 +386,8 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
         /*if (devicePtr->tcpStream) // Why? We already know it is in use?!
             askTcp();
         else*/
-            handleStreamTimeout();
+        handleStreamTimeout();
     }
-
 }
 
 void MeasurementDevice::askTcp()
@@ -403,7 +409,6 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
     waitingForReply = false;
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
-        //qDebug() << brokenList;
         if (brokenList.size() > 2) {
             QList<QByteArray> brkList = brokenList[0].split(' ');
             if (brkList.size() > 1) inUseByIp = brokenList[0].split(' ')[1].simplified();
@@ -435,7 +440,7 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
             askUser();
         else if (inUse && deviceInUseWarningIssued) { // overtake device
             deviceInUseWarningIssued = false;
-            if (!useUdpStream) delTcpStreams();
+            //if (!useUdpStream) delTcpStreams();
             stateConnected();
         }
         else { // all checks done, we are cool to go
@@ -451,17 +456,23 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
 }
 
 
-void MeasurementDevice::askUser(bool checkUserOnly)
+void MeasurementDevice::askUser(bool flagCheckUserOnly)
 {
     if (devicePtr->systManLocName) {
         scpiWrite("syst:man:loc:name?");
         waitingForReply = true;
-        if (!checkUserOnly) instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
-        else instrumentState = InstrumentState::CHECK_USER_ONLY;
+        if (!flagCheckUserOnly)
+            instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
+        else
+            instrumentState = InstrumentState::CHECK_USER_ONLY;
         tcpTimeoutTimer->start(tcpTimeoutInMs);
     }
-    else
-        checkUser("");
+    else {
+        if (!flagCheckUserOnly)
+            checkUser("");
+        else
+            checkUserOnly("");
+    }
 }
 
 void MeasurementDevice::checkUser(const QByteArray buffer)
@@ -477,7 +488,7 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
     }
     msg += tr(". Press connect once more to override");
     if (!firstConnection || buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
-        qDebug() << "In use by myself, how silly! Continuing..." << buffer << config->getStationName();
+        //qDebug() << "In use by myself, how silly! Continuing..." << buffer << config->getStationName();
         deviceInUseWarningIssued = true;
         askUdp();
     }
@@ -512,7 +523,7 @@ void MeasurementDevice::stateConnected()
         emit status("Connected, setting up device");
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
     }
-    else if (!muteNotification) {
+    else if (autoReconnectInProgress) {
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Reconnected");
         emit reconnected();
     }
@@ -551,6 +562,18 @@ void MeasurementDevice::delTcpStreams()
     scpiWrite("trac:tcp:del all");
 }
 
+void MeasurementDevice::delOwnStream()
+{
+    if (scpiSocket->state() == QAbstractSocket::ConnectedState && (tcpStream->getTcpPort() > 0 || udpStream->getUdpPort() > 0)) {
+        if (config->getInstrUseTcpDatastream())
+            scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                      QByteArray::number(tcpStream->getTcpPort()));
+        else
+            scpiWrite("trac:udp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                      QByteArray::number(udpStream->getUdpPort()));
+    }
+}
+
 void MeasurementDevice::runAfterConnected()
 {
     setUser();
@@ -564,7 +587,7 @@ void MeasurementDevice::runAfterConnected()
     setAntPort();
     setMeasurementMode();
     setMode();
-    restartStream(false);
+    //restartStream(false);
     setFftMode();
     startDevice();
 }
@@ -579,13 +602,16 @@ void MeasurementDevice::setUser()
 void MeasurementDevice::startDevice()
 {
     scpiWrite("init:imm");
+    if (devicePtr->type == Instrument::InstrumentType::EM100 && devicePtr->mode == Instrument::Mode::FFM)
+        scpiWrite("freq:mode cw");
 }
 
 void MeasurementDevice::restartStream(bool withDisconnect)
 {
     if (connected) {
-        delUdpStreams();
-        delTcpStreams();
+        //delUdpStreams();
+        //delTcpStreams();
+        delOwnStream();
         if (withDisconnect) {
             udpStream->closeListener();
             tcpStream->closeListener();
@@ -604,9 +630,9 @@ void MeasurementDevice::setupTcpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp";
 
-    // ssh tunnel hackaround
+    /*// ssh tunnel hackaround
     tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
     tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
 
@@ -622,25 +648,20 @@ void MeasurementDevice::setupTcpStream()
         tcpOwnPort = split.at(1).simplified();
     }
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
+*/
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
     QByteArray em200Specific;
     if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
 
-    scpiWrite("trac:tcp:tag:on " +
-              tcpOwnAdress +
-              ", " +
-              //scpiSocket->localAddress().toString().toLocal8Bit() +
-              //"', " +
-              tcpOwnPort + ", " +
-              modeStr + gpsc);
-    scpiWrite("trac:tcp:flag:on " +
-              tcpOwnAdress +
-              ", " +
-              //scpiSocket->localAddress().toString().toLocal8Bit() +
-              //"', " +
-              tcpOwnPort + ", 'volt:ac', 'opt'" + em200Specific);
+    scpiWrite("trac:tcp:tag:on \"" +
+              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(tcpStream->getTcpPort()) + ", " + modeStr + gpsc);
+    scpiWrite("trac:tcp:flag:on \"" +
+              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(tcpStream->getTcpPort()) +
+              ", 'volt:ac', 'opt'" + em200Specific);
     if (instrumentState == InstrumentState::CONNECTED) askTcp(); // To update the current user ip address 230908
     //askUser(true);
 }
@@ -652,21 +673,21 @@ void MeasurementDevice::setupUdpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifpan";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, cw";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
     QByteArray em200Specific;
     if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
 
-    scpiWrite("trac:udp:tag:on '" +
+    scpiWrite("trac:udp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
-              "', " +
+              "\", " +
               QByteArray::number(udpStream->getUdpPort()) + ", " +
               modeStr + gpsc);
-    scpiWrite("trac:udp:flag:on '" +
+    scpiWrite("trac:udp:flag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
-              "', " +
+              "\", " +
               QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
     if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
     //askUser(true);

@@ -118,12 +118,13 @@ private slots:
     void checkUdp(const QByteArray buffer);
     void askTcp();
     void checkTcp(const QByteArray buffer);
-    void askUser(bool checkUserOnly = false);
+    void askUser(bool flagCheckUserOnly = false);
     void checkUser(const QByteArray buffer);
     void checkUserOnly(const QByteArray buffer);
     void stateConnected();
     void delUdpStreams();
     void delTcpStreams();
+    void delOwnStream();
 
     void scpiWrite(QByteArray data);
     void scpiRead();

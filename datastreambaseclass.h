@@ -28,7 +28,7 @@ public:
     explicit DataStreamBaseClass(QObject *parent = nullptr);
     QVector<qint16>fft;
     QHostAddress ownAddress;
-    quint16 port = 0, udpPort;
+    quint16 port = 0, udpPort = 5559;
     QTcpSocket *tcpSocket = new QTcpSocket;
     QUdpSocket *udpSocket = new QUdpSocket;
     int byteCtr = 0;
@@ -59,7 +59,7 @@ public slots:
     void setOwnAddress(QHostAddress addr) { ownAddress = addr; }
     void setOwnPort(quint16 p) { port = p; }
     void setDeviceType(QSharedPointer<Device> p) { devicePtr = p; }
-    quint16 getUdpPort() { return udpSocket->localPort(); }
+    quint16 getUdpPort() { return udpPort; }
     quint16 getTcpPort() { return tcpSocket->localPort(); }
     virtual void newData() = 0;
     void processData(const QByteArray &);

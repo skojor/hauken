@@ -124,7 +124,7 @@ void TraceBuffer::calcMaxhold()
     if (!maxholdBufferAggregate.isEmpty()) {
         if (!maxholdBuffer.isEmpty()) {
             int size = maxholdBuffer.size();
-            for (int seconds = 0; seconds < maxholdTime && seconds < size; seconds++) {
+            for (int seconds = 0; seconds < maxholdTime - 1 && seconds < size; seconds++) {
                 for (int i=0; i<plotResolution; i++) {
                     if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
                 }
