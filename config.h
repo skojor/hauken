@@ -370,10 +370,9 @@ private slots:
     QByteArray simpleEncr(QByteArray);
 
 private:
-    QString basicFile = findWorkFolderName() + "/hauken.conf";
-    QSettings *basicSettings = new QSettings(basicFile, QSettings::IniFormat);
-    QString curFile = basicSettings->value("lastFile", "default.ini").toString();
-    QSettings *settings = new QSettings(curFile, QSettings::IniFormat);
+    QSettings *basicSettings;
+    QString curFile;
+    QSettings *settings;
     bool ready = false;
     QString measurementDeviceName;
     const int plotResolution = 1200;

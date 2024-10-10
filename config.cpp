@@ -3,6 +3,11 @@
 Config::Config(QObject *parent)
     : QObject(parent)
 {
+    basicSettings = new QSettings(); //(findWorkFolderName() + "/hauken.conf");
+    curFile = basicSettings->value("lastFile", "c:/Hauken/default.ini").toString();
+    if (!basicSettings->value("lastFile").isValid()) basicSettings->setValue("lastFile", "c:/Hauken/default.ini");
+
+    settings = new QSettings(curFile, QSettings::IniFormat);
 }
 
 void Config::newFileName(const QString file)
@@ -25,10 +30,10 @@ QByteArray Config::simpleEncr(QByteArray toEncrypt)
 
 QString Config::findWorkFolderName()
 {
-    if (QSysInfo::kernelType().contains("win")) {
-        QFileInfo checkDir("D:/");
+   if (QSysInfo::kernelType().contains("win")) {
+        /*QFileInfo checkDir("D:/");
         if (checkDir.exists() && checkDir.isWritable()) return "D:/Hauken";
-        else return "C:/Hauken";
+        else*/ return "C:/Hauken";
     }
     else
         return QString(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken");

@@ -778,7 +778,7 @@ void MainWindow::updWindowTitle(const QString msg)
     QString extra;
     if (!msg.isEmpty()) extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " (" +
                 instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + " Jammetest edition " + extra
+    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra
                    + " (" + config->getCurrentFilename().split('/').last() + ")");
 }
 
