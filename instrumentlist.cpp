@@ -1,8 +1,8 @@
 #include "instrumentlist.h"
 
-InstrumentList::InstrumentList(QObject *parent)
+InstrumentList::InstrumentList(QSharedPointer<Config> c)
 {
-    this->setParent(parent);
+    config = c;
     curlProcess->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
 
     if (QSysInfo::kernelType().contains("win")) {
@@ -25,7 +25,7 @@ void InstrumentList::start()
 
 void InstrumentList::updSettings()
 {
-    QString tmpServer = getIpAddressServer();
+    QString tmpServer = config->getIpAddressServer();
     if (tmpServer != server) { // address changed, reconnect
         server = tmpServer;
         if (isStarted && !server.isEmpty()) emit  askForLogin();
@@ -37,7 +37,7 @@ void InstrumentList::checkConnection()
     curlProcess->close();
 
     QStringList reportArgs;
-    reportArgs << "--cookie" << getWorkFolder() + "/.kake" << "-k" << server + "?action=ListStations";
+    reportArgs << "--cookie" << config->getWorkFolder() + "/.kake" << "-k" << server + "?action=ListStations";
     curlProcess->setArguments(reportArgs);
     curlProcess->start();
 
@@ -120,7 +120,7 @@ void InstrumentList::parseInstrumentList(const QByteArray &ba)
 
 void InstrumentList::loadFile()
 {
-    QFile file(getWorkFolder() + "/stationdata.csv");
+    QFile file(config->getWorkFolder() + "/stationdata.csv");
     QTextStream ts(&file);
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -142,7 +142,7 @@ void InstrumentList::loadFile()
 
 void InstrumentList::saveFile()
 {
-    QFile file(getWorkFolder() + "/stationdata.csv");
+    QFile file(config->getWorkFolder() + "/stationdata.csv");
     QTextStream ts(&file);
 
     if (!file.open(QIODevice::WriteOnly)) {
@@ -190,7 +190,7 @@ void InstrumentList::askForInstruments()
     curlProcess->close();
 
     QStringList reportArgs;
-    reportArgs << "--cookie" << getWorkFolder() + "/.kake" << "-k"
+    reportArgs << "--cookie" << config->getWorkFolder() + "/.kake" << "-k"
                << server + "?action=ListInstruments&stnId=" + QString::number(stationInfo[stnIndex].StationIndex);
     curlProcess->setArguments(reportArgs);
     curlProcess->start();
@@ -201,7 +201,7 @@ void InstrumentList::askForEquipmentList()
     curlProcess->close();
 
     QStringList reportArgs;
-    reportArgs << "--cookie" << getWorkFolder() + "/.kake" << "-k"
+    reportArgs << "--cookie" << config->getWorkFolder() + "/.kake" << "-k"
                << server + "?action=ListUtstyr";
     curlProcess->setArguments(reportArgs);
     curlProcess->start();

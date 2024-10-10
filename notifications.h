@@ -49,11 +49,11 @@ public:
     QString msg;
 };
 
-class Notifications : public Config
+class Notifications : public QObject
 {
     Q_OBJECT
 public:
-    explicit Notifications(QObject *parent = nullptr);
+    Notifications(QSharedPointer<Config>);
 
 public slots:
     void start();
@@ -102,6 +102,7 @@ private:
     QList<QString> graphEmailLog;
     bool positionValid = false;
     double latitude = 0, longitude = 0;
+    QSharedPointer<Config> config;
 
     QProcess *process;
 

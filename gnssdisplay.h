@@ -28,11 +28,11 @@
  *
 */
 
-class GnssDisplay : public Config
+class GnssDisplay : public QObject
 {
     Q_OBJECT
 public:
-    explicit GnssDisplay(QObject *parent = nullptr);
+    explicit GnssDisplay(QSharedPointer<Config>);
     void start();
     void close();
     void updSettings();
@@ -70,6 +70,8 @@ private:
 
     QTimer *updateGnssDataTimer = new QTimer;
     QString gnss1Name, gnss2Name;
+
+    QSharedPointer<Config> config;
 
 signals:
     void requestGnssData(int);

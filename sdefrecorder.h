@@ -25,11 +25,11 @@
  * Also takes care of eventual uploading to a server
  */
 
-class SdefRecorder : public Config
+class SdefRecorder : public QObject
 {
     Q_OBJECT
 public:
-    explicit SdefRecorder();
+    SdefRecorder(QSharedPointer<Config> c);
 
 public slots:
     void start();
@@ -98,6 +98,7 @@ private:
     int probability = 0;
     bool predictionReceived = false;
     bool askedForLogin = false;
+    QSharedPointer<Config> config;
 };
 
 #endif // SDEFRECORDER_H

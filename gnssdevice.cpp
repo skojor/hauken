@@ -1,9 +1,9 @@
 #include "gnssdevice.h"
 
-GnssDevice::GnssDevice(QObject *parent, int val)
-    : Config{parent}
+GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
 {
-    gnssData.id = val;
+    config = c;
+    gnssData.id = id;
 
     connect(gnss, &QSerialPort::readyRead, this, [this] {
         QByteArray buffer = gnss->readAll();
@@ -31,7 +31,7 @@ GnssDevice::GnssDevice(QObject *parent, int val)
 
 void GnssDevice::start()
 {
-    if (((gnssData.id == 1 && getGnssSerialPort1Activate()) || (gnssData.id == 2 && getGnssSerialPort2Activate())) &&
+    if (((gnssData.id == 1 && config->getGnssSerialPort1Activate()) || (gnssData.id == 2 && config->getGnssSerialPort2Activate())) &&
         (!gnss->isOpen() || tcpSocket->state() == QAbstractSocket::UnconnectedState)) connectToPort();
     sendToAnalyzerTimer->stop();
 
@@ -358,21 +358,21 @@ bool GnssDevice::checkChecksum(const QByteArray &val)
 
 void GnssDevice::updSettings() // caching these settings in memory since they are used often
 {
-    if (gnssData.id == 1 && !getGnssSerialPort1Activate()) gnss->close();
-    else if (gnssData.id == 2 && !getGnssSerialPort2Activate()) gnss->close();
+    if (gnssData.id == 1 && !config->getGnssSerialPort1Activate()) gnss->close();
+    else if (gnssData.id == 2 && !config->getGnssSerialPort2Activate()) gnss->close();
     if (gnssData.id == 1) {
-        activate = getGnssSerialPort1Activate();
-        portName = getGnssSerialPort1Name();
-        baudrate = getGnssSerialPort1Baudrate();
-        logToFile = getGnssSerialPort1LogToFile();
-        uBloxDevice = getGnssSerialPort1MonitorAgc();
+        activate = config->getGnssSerialPort1Activate();
+        portName = config->getGnssSerialPort1Name();
+        baudrate = config->getGnssSerialPort1Baudrate();
+        logToFile = config->getGnssSerialPort1LogToFile();
+        uBloxDevice = config->getGnssSerialPort1MonitorAgc();
     }
     else {
-        activate = getGnssSerialPort2Activate();
-        portName = getGnssSerialPort2Name();
-        baudrate = getGnssSerialPort2Baudrate();
-        logToFile = getGnssSerialPort2LogToFile();
-        uBloxDevice = getGnssSerialPort2MonitorAgc();
+        activate = config->getGnssSerialPort2Activate();
+        portName = config->getGnssSerialPort2Name();
+        baudrate = config->getGnssSerialPort2Baudrate();
+        logToFile = config->getGnssSerialPort2LogToFile();
+        uBloxDevice = config->getGnssSerialPort2MonitorAgc();
     }
 
     if (!gnss->isOpen() && !tcpSocket->isOpen() && activate) start(); // reconnect if needed
@@ -391,7 +391,7 @@ void GnssDevice::updSettings() // caching these settings in memory since they ar
 void GnssDevice::appendToLogfile(const QByteArray &data)
 {
     if (!logfile.isOpen()) {
-        logfile.setFileName(getLogFolder() + "/" + "gnss_" + QString::number(gnssData.id) + QDate::currentDate().toString("_yyyyMMdd.log"));
+        logfile.setFileName(config->getLogFolder() + "/" + "gnss_" + QString::number(gnssData.id) + QDate::currentDate().toString("_yyyyMMdd.log"));
         logfile.open(QIODevice::Append);
         logfileStartedDate = QDate::currentDate();
         qDebug() << "GNSS logfile opened" << logfile.fileName();
@@ -421,7 +421,7 @@ void GnssDevice::checkPosValid()
         ts << "Position valid";
         posInvalidTriggered = false;
     }
-    if (!msg.isEmpty() && getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
 }
 
 void GnssDevice::connectTcpSocket()

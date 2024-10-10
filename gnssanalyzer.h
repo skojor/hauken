@@ -7,11 +7,11 @@
 #include "config.h"
 #include "typedefs.h"
 
-class GnssAnalyzer : public Config
+class GnssAnalyzer : public QObject
 {
     Q_OBJECT
 public:
-    GnssAnalyzer(QObject *parent = nullptr, int i = 0);
+    GnssAnalyzer(QSharedPointer<Config>, int id);
 
 public slots:
     void getData(GnssData &data);
@@ -62,6 +62,7 @@ private:
     bool stateInstrumentGnss = true; // goes false if instrumentGnss is used and stream disappears
 
     const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
+    QSharedPointer<Config> config;
 };
 
 #endif // GNSSANALYZER_H

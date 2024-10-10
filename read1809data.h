@@ -28,11 +28,11 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-class Read1809Data : public Config
+class Read1809Data : public QObject
 {
     Q_OBJECT
 public:
-    explicit Read1809Data(QObject *parent = nullptr);
+    Read1809Data(QSharedPointer<Config>);
     void readFolder(QString folder);
     void readFile(QString);
     void openFile();
@@ -94,6 +94,7 @@ private:
     QList<qint16> oldTrace;
     std::vector<qint16> oldFolderTrace; // TODO; Why use two totally different type of containers??
     QTime oldTraceTime;
+    QSharedPointer<Config> config;
 
 private slots:
     void readDataline();

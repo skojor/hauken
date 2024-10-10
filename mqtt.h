@@ -18,11 +18,11 @@ enum SITESTATUS {
     NORUNNING
 };
 
-class Mqtt : public Config
+class Mqtt : public QObject
 {
     Q_OBJECT
 public:
-    explicit Mqtt(QObject *parent = nullptr);
+    explicit Mqtt(QSharedPointer<Config>);
 
 public slots:
     void updSettings();
@@ -53,6 +53,7 @@ private:
     QList<double> subValues;
     QProcess *webswitchProcess = new QProcess;
     SITESTATUS siteStatus = UNKNOWN;
+    QSharedPointer<Config> config;
 
     // config cache
     bool enabled = false;

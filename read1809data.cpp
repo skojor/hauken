@@ -1,8 +1,9 @@
 #include "read1809data.h"
 #include "opencv2/imgcodecs.hpp"
 
-Read1809Data::Read1809Data(QObject *parent)
-    : Config{parent}{
+Read1809Data::Read1809Data(QSharedPointer<Config> c)
+{
+    config = c;
     connect(timer, &QTimer::timeout, this, &Read1809Data::readDataline);
 
     buffer->setBuffer(&bufferArray);
@@ -60,10 +61,10 @@ void Read1809Data::readFile(QString filename)
             if (filelist.size() > 1) {
                 qDebug() << "Multiple files in zip, I have no idea how to handle this!" << filelist;
             }
-            tempfile = getLogFolder() + "/" + filelist.first();
+            tempfile = config->getLogFolder() + "/" + filelist.first();
             qDebug() << tempfile << filelist;
         }
-        JlCompress::extractFiles(filename, filelist, getLogFolder());
+        JlCompress::extractFiles(filename, filelist, config->getLogFolder());
     }
 
     if (tempfile.isEmpty()) file.setFileName(filename);
@@ -357,10 +358,10 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
             if (filelist.size() > 1) {
                 qDebug() << "Multiple files in zip, I have no idea how to handle this!" << filelist;
             }
-            tempfile = getLogFolder() + "/" + filelist.first();
+            tempfile = config->getLogFolder() + "/" + filelist.first();
             qDebug() << tempfile << filelist;
         }
-        JlCompress::extractFiles(filename, filelist, getLogFolder());
+        JlCompress::extractFiles(filename, filelist, config->getLogFolder());
     }
 
     if (tempfile.isEmpty()) file.setFileName(filename);

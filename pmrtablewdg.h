@@ -30,10 +30,10 @@
 #define ENDL endl
 #endif
 
-class PmrTableWdg : public Config
+class PmrTableWdg : public QObject
 {
 public:
-    explicit PmrTableWdg(QSharedPointer<Config> c);
+    PmrTableWdg(QSharedPointer<Config> c);
     ~PmrTableWdg();
 
     void start();

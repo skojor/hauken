@@ -326,10 +326,10 @@ void PmrTableWdg::loadTable()
 
 void PmrTableWdg::createTableWdg()
 {
-    bool useReds = getPmrUseReds();
-    bool useYellows = getPmrUseYellows();
-    bool useGreens = getPmrUseGreens();
-    bool useWhites = getPmrUseWhites();
+    bool useReds = config->getPmrUseReds();
+    bool useYellows = config->getPmrUseYellows();
+    bool useGreens = config->getPmrUseGreens();
+    bool useWhites = config->getPmrUseWhites();
 
     tableWidget->clear();
     tableWidget->setRowCount(pmrTable.size());
@@ -404,10 +404,10 @@ void PmrTableWdg::createTableWdg()
 
 void PmrTableWdg::updTableWdg()
 {
-    bool useGreens = getPmrUseGreens();
-    bool useYellows = getPmrUseYellows();
-    bool useReds = getPmrUseReds();
-    bool useWhites = getPmrUseWhites();
+    bool useGreens = config->getPmrUseGreens();
+    bool useYellows = config->getPmrUseYellows();
+    bool useReds = config->getPmrUseReds();
+    bool useWhites = config->getPmrUseWhites();
 
 
     for (int i=0; i<tableWidget->rowCount(); i++) {

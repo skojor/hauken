@@ -32,11 +32,11 @@ enum class UBLOX {
     READY
 };
 
-class GnssDevice : public Config
+class GnssDevice : public QObject
 {
     Q_OBJECT
 public:
-    explicit GnssDevice(QObject *parent = nullptr, int val = 0);
+    explicit GnssDevice(QSharedPointer<Config>, int id);
 
 public slots:
     void start();
@@ -88,6 +88,7 @@ private:
     QHostAddress *hostAddress = new QHostAddress;
     QTcpSocket *tcpSocket = new QTcpSocket;
     int portnumber = 0;
+    QSharedPointer<Config> config;
 
     // Config cache
     bool activate = false;

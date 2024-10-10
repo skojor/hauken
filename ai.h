@@ -23,7 +23,7 @@
 
 #define WAITBEFOREANALYZING 20
 
-class AI : public Config
+class AI : public QObject
 {
 Q_OBJECT
 

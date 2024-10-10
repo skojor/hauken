@@ -194,11 +194,11 @@ private:
     QLabel *labelGnssLedText = new QLabel("No GNSS data");
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
-    GnssDevice *gnssDevice1 = new GnssDevice(this, 1);
-    GnssDevice *gnssDevice2 = new GnssDevice(this, 2);
-    GnssAnalyzer *gnssAnalyzer1 = new GnssAnalyzer(this, 1);
-    GnssAnalyzer *gnssAnalyzer2 = new GnssAnalyzer(this, 2);
-    GnssAnalyzer *gnssAnalyzer3 = new GnssAnalyzer(this, 3);
+    GnssDevice *gnssDevice1 = new GnssDevice(config, 1);
+    GnssDevice *gnssDevice2 = new GnssDevice(config, 2);
+    GnssAnalyzer *gnssAnalyzer1 = new GnssAnalyzer(config, 1);
+    GnssAnalyzer *gnssAnalyzer2 = new GnssAnalyzer(config, 2);
+    GnssAnalyzer *gnssAnalyzer3 = new GnssAnalyzer(config, 3);
 
     QAction *newAct;
     QAction *openAct;
@@ -256,10 +256,10 @@ private:
 
     TraceBuffer *traceBuffer = new TraceBuffer(config);
     TraceAnalyzer *traceAnalyzer = new TraceAnalyzer(config);
-    Notifications *notifications = new Notifications;
+    Notifications *notifications = new Notifications(config);
     QThread *notificationsThread = new QThread;
 
-    SdefRecorder *sdefRecorder = new SdefRecorder();
+    SdefRecorder *sdefRecorder = new SdefRecorder(config);
     QThread *sdefRecorderThread = new QThread;
 
     Waterfall *waterfall;
@@ -271,16 +271,16 @@ private:
     Arduino *arduinoPtr;
     AI *aiPtr;
     Read1809Data *read1809Data;
-    InstrumentList *instrumentList = new InstrumentList;
-    GnssDisplay *gnssDisplay = new GnssDisplay;
+    InstrumentList *instrumentList = new InstrumentList(config);
+    GnssDisplay *gnssDisplay = new GnssDisplay(config);
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
     bool dispWaterfall;
 
-    PositionReport *positionReport = new PositionReport;
-    GeoLimit *geoLimit = new GeoLimit;
-    Mqtt *mqtt = new Mqtt;
+    PositionReport *positionReport = new PositionReport(config);
+    GeoLimit *geoLimit = new GeoLimit(config);
+    Mqtt *mqtt = new Mqtt(config);
     QLineEdit *antPortLineEdit = new QLineEdit;
 
     bool traceAlarmRaised = false, recordAlarmRaised = true, gnssAlarmRaised = true, recordDisabledRaised = false;

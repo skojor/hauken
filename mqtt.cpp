@@ -1,16 +1,16 @@
 #include "mqtt.h"
 
-Mqtt::Mqtt(QObject *parent)
+Mqtt::Mqtt(QSharedPointer<Config> c)
 {
-    this->setParent(parent);
+    config = c;
 
     connect(&mqttClient, &QMqttClient::stateChanged, this, &Mqtt::stateChanged);
     connect(&mqttClient, &QMqttClient::errorChanged, this, &Mqtt::error);
     connect(&mqttClient, &QMqttClient::messageSent, this, &Mqtt::msgSent);
     connect(&mqttClient, &QMqttClient::messageReceived, this, &Mqtt::msgReceived);
     connect(keepaliveTimer, &QTimer::timeout, this, [this] {
-        mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
-        for (auto &val : getMqttSubTopics()) {
+        mqttClient.publish(config->getMqttKeepaliveTopic(), QByteArray());
+        for (auto &val : config->getMqttSubTopics()) {
             QString request = val.replace("N/", "R/");
             mqttClient.publish(request, QByteArray());
         }
@@ -133,7 +133,7 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
     else if (state == QMqttClient::ClientState::Connected) {
         qDebug() << "MQTT connected to broker, requesting subscriptions";
         subscribe();
-        if (!getMqttKeepaliveTopic().isEmpty()) mqttClient.publish(getMqttKeepaliveTopic(), QByteArray());
+        if (!config->getMqttKeepaliveTopic().isEmpty()) mqttClient.publish(config->getMqttKeepaliveTopic(), QByteArray());
 
     }
 }
@@ -150,16 +150,16 @@ void Mqtt::msgSent(qint32 id)
 
 void Mqtt::subscribe()
 {
-    for (auto &val : getMqttSubTopics()) {
+    for (auto &val : config->getMqttSubTopics()) {
         mqttClient.subscribe(val);
     }
 }
 
 void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
 {
-    QStringList subs = getMqttSubTopics();
-    QStringList subNames = getMqttSubNames();
-    QStringList subToIncidentlog = getMqttSubToIncidentlog();
+    QStringList subs = config->getMqttSubTopics();
+    QStringList subNames = config->getMqttSubNames();
+    QStringList subToIncidentlog = config->getMqttSubToIncidentlog();
 
     QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
     QJsonObject jsonObject = jsonDoc.object();
@@ -189,41 +189,41 @@ void Mqtt::reconnect()
 
 void Mqtt::updSettings()
 {
-    if (getMqttActivate() != enabled) {
-        enabled = getMqttActivate();
+    if (config->getMqttActivate() != enabled) {
+        enabled = config->getMqttActivate();
         if (enabled) {
             reconnect();
         }
     }
-    if (getMqttServer() != mqttClient.hostname()) {
-        mqttClient.setHostname(getMqttServer());
+    if (config->getMqttServer() != mqttClient.hostname()) {
+        mqttClient.setHostname(config->getMqttServer());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
         reconnect();
     }
-    if (getMqttUsername() != mqttClient.username()) {
-        mqttClient.setUsername(getMqttUsername());
+    if (config->getMqttUsername() != mqttClient.username()) {
+        mqttClient.setUsername(config->getMqttUsername());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
         reconnect();
     }
-    if (getMqttPassword() != mqttClient.password()) {
-        mqttClient.setPassword(getMqttPassword());
+    if (config->getMqttPassword() != mqttClient.password()) {
+        mqttClient.setPassword(config->getMqttPassword());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
         reconnect();
     }
-    if (getMqttPort() != mqttClient.port()) {
-        mqttClient.setPort(getMqttPort());
+    if (config->getMqttPort() != mqttClient.port()) {
+        mqttClient.setPort(config->getMqttPort());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
         reconnect();
     }
 
-    if (getMqttKeepaliveTopic() != keepaliveTopic) {
-        keepaliveTopic = getMqttKeepaliveTopic();
+    if (config->getMqttKeepaliveTopic() != keepaliveTopic) {
+        keepaliveTopic = config->getMqttKeepaliveTopic();
         if (!keepaliveTopic.isEmpty()) startKeepaliveTimer();
         else stopKeepaliveTimer();
     }
 
-    if (getMqttWebswitchAddress() != webswitchAddress) {
-        webswitchAddress = getMqttWebswitchAddress();
+    if (config->getMqttWebswitchAddress() != webswitchAddress) {
+        webswitchAddress = config->getMqttWebswitchAddress();
         if (webswitchAddress.isEmpty()) webswitchTimer->stop();
         else {
             webswitchRequestData();
@@ -250,7 +250,7 @@ void Mqtt::checkConnection()
 void Mqtt::webswitchRequestData()
 {
     QStringList args;
-    args << "-s" << "-w" << "%{http_code}" << getMqttWebswitchAddress();
+    args << "-s" << "-w" << "%{http_code}" << config->getMqttWebswitchAddress();
     webswitchProcess->setArguments(args);
     webswitchProcess->start();
     //qDebug() << "req ws data" << args;

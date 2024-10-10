@@ -24,11 +24,11 @@
 #include <QElapsedTimer>
 
 
-class PositionReport : public Config
+class PositionReport : public QObject
 {
     Q_OBJECT
 public:
-    explicit PositionReport(QObject *parent = nullptr);
+    explicit PositionReport(QSharedPointer<Config>);
     void start();
     void updSettings();
 
@@ -62,6 +62,8 @@ private:
     unsigned long startFreqUsed, stopFreqUsed, resUsed;
 
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
+    QSharedPointer<Config> config;
+
     double sensorTemp = -99, sensorHumidity = 0;
 
     // config cache

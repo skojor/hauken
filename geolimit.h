@@ -20,11 +20,11 @@
 #include "config.h"
 #include "typedefs.h"
 
-class GeoLimit : public Config
+class GeoLimit : public QObject
 {
     Q_OBJECT
 public:
-    explicit GeoLimit(QObject *parent = nullptr);
+    explicit GeoLimit(QSharedPointer<Config> c);
     void updSettings();
     void receivePosition(GnssData data) { if (data.posValid) gnssData = data; } // only update if valid position
     bool waitingForPosition() { return awaitingPosition;}
@@ -42,6 +42,7 @@ private:
     bool activated = false;
     GnssData gnssData;
     int graceTime = 0; // time in seconds to not check, to not change state too fast
+    QSharedPointer<Config> config;
 
 private slots:
     void activate();

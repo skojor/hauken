@@ -44,9 +44,9 @@ MainWindow::MainWindow(QWidget *parent)
     geoLimitOptions = new GeoLimitOptions(config);
     mqttOptions = new MqttOptions(config);
 
-    arduinoPtr = new Arduino(this);
+    arduinoPtr = new Arduino(config);
     aiPtr = new AI(config);
-    read1809Data = new Read1809Data;
+    read1809Data = new Read1809Data(config);
 
     sdefRecorderThread->setObjectName("SdefRecorder");
     sdefRecorder->moveToThread(sdefRecorderThread);

@@ -3,7 +3,7 @@
 Config::Config(QObject *parent)
     : QObject(parent)
 {
-    basicSettings = new QSettings(); //(findWorkFolderName() + "/hauken.conf");
+    basicSettings = new QSettings("Nkom", "Hauken"); //(findWorkFolderName() + "/hauken.conf");
     curFile = basicSettings->value("lastFile", "c:/Hauken/default.ini").toString();
     if (!basicSettings->value("lastFile").isValid()) basicSettings->setValue("lastFile", "c:/Hauken/default.ini");
 

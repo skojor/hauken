@@ -32,12 +32,12 @@
  */
 
 
-class InstrumentList : public Config
+class InstrumentList : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit InstrumentList(QObject *parent = nullptr);
+    explicit InstrumentList(QSharedPointer<Config>);
     void start();
     void updSettings();
     void loginCompleted();
@@ -67,6 +67,7 @@ private:
     int stnIndex = 0;
     int nrOfStations = 0;
     QStringList instrumentList;
+    QSharedPointer<Config> config;
 
 signals:
     void askForLogin();

@@ -29,15 +29,15 @@
  */
 
 
-class Arduino : public Config
+class Arduino : public QObject
 {
 public:
-    explicit Arduino(QObject *parent = nullptr);
+    Arduino(QSharedPointer<Config> c);
     void connectToPort();
     void start();
     void close() {
         //qDebug() << "Closing...";
-        setArduinoWindowState(wdg->saveGeometry());
+        config->setArduinoWindowState(wdg->saveGeometry());
         wdg->close();
     }
     void updSettings();
@@ -82,6 +82,7 @@ private:
     QTimer *pingTimer = new QTimer;
     QProcess *pingProcess = new QProcess;
     bool pingActivated = false, lastPingValid = false;
+    QSharedPointer<Config> config;
 
     // Config cache
     QString pingAddress;

@@ -1,8 +1,8 @@
 #include "positionreport.h"
 
-PositionReport::PositionReport(QObject *parent)
-    : Config{parent}
+PositionReport::PositionReport(QSharedPointer<Config> c)
 {
+    config = c;
     connect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &PositionReport::checkReturnValue);
     curlProcess->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
 
@@ -30,11 +30,11 @@ PositionReport::PositionReport(QObject *parent)
 
     if (!posSource.isEmpty() && !posSource.contains("Manual", Qt::CaseInsensitive)) gnssReqTimer->start(1000);
     else if (posSource.contains("Manual", Qt::CaseInsensitive)) {
-        gnssData.latitude = getStnLatitude().toDouble();
-        gnssData.longitude = getStnLongitude().toDouble();
+        gnssData.latitude = config->getStnLatitude().toDouble();
+        gnssData.longitude = config->getStnLongitude().toDouble();
         gnssData.posValid = true;
     }
-    if (addSensorData && getArduinoReadDHT20()) sensorDataTimer->start(60 * 1e3);
+    if (addSensorData && config->getArduinoReadDHT20()) sensorDataTimer->start(60 * 1e3);
 
     uptime.start();
 }
@@ -54,7 +54,7 @@ void PositionReport::generateReport()
     reportArgs.clear();
     reportArgs << "-H" << "Content-Type:application/x-www-form-urlencoded"
                << "-s" << "-w" << "%{http_code}" << "-k";
-    reportArgs << "--data" << "id=" + (id.isEmpty() ? getSdefStationInitals() : id)
+    reportArgs << "--data" << "id=" + (id.isEmpty() ? config->getSdefStationInitals() : id)
                << "--data" << "timestamp=" + QString::number(QDateTime::currentSecsSinceEpoch()); //QString::number(gnssData.timestamp.toMSecsSinceEpoch() / 1000);
     if (gnssData.posValid) {
         reportArgs << "--data" << "posValid=true";
@@ -136,20 +136,20 @@ void PositionReport::sendReport()
 
 void PositionReport::updSettings()
 {
-    if (getPosReportActivated() != posReportActive) {
-        posReportActive = getPosReportActivated();
+    if (config->getPosReportActivated() != posReportActive) {
+        posReportActive = config->getPosReportActivated();
         configReportTimer();
     }
-    addPosition = getPosReportAddPos();
-    addCogSog = getPosReportAddSogCog();
-    addGnssStats = getPosReportAddGnssStats();
-    addConnStats = getPosReportAddConnStats();
-    addSensorData = getPosReportAddSensorData();
-    addMqttData = getPosReportAddMqttData();
-    posSource = getPosReportSource();
-    url = getPosReportUrl();
-    reportInterval = getPosReportSendInterval();
-    id = getPosReportId();
+    addPosition = config->getPosReportAddPos();
+    addCogSog = config->getPosReportAddSogCog();
+    addGnssStats = config->getPosReportAddGnssStats();
+    addConnStats = config->getPosReportAddConnStats();
+    addSensorData = config->getPosReportAddSensorData();
+    addMqttData = config->getPosReportAddMqttData();
+    posSource = config->getPosReportSource();
+    url = config->getPosReportUrl();
+    reportInterval = config->getPosReportSendInterval();
+    id = config->getPosReportId();
 
     configReportTimer();
     if (!devicePtr) emit reqMeasurementDevicePtr();

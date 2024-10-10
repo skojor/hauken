@@ -1,8 +1,8 @@
 #include "sdefrecorder.h"
 
-SdefRecorder::SdefRecorder()
+SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
-    //qDebug() << "Working folder" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
+    config = c;
 }
 
 void SdefRecorder::start()
@@ -26,8 +26,8 @@ void SdefRecorder::start()
     connect(autorecorderTimer, &QTimer::timeout, this, &SdefRecorder::triggerRecording); // auto recording triggers recording here
 
     process->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
-    process->setStandardOutputFile(getWorkFolder() + "/.process.out");
-    process->setStandardErrorFile(getWorkFolder() + "/.process.err");
+    process->setStandardOutputFile(config->getWorkFolder() + "/.process.out");
+    process->setStandardErrorFile(config->getWorkFolder() + "/.process.err");
     if (QSysInfo::kernelType().contains("win")) {
         process->setProgram("curl.exe");
     }
@@ -40,26 +40,26 @@ void SdefRecorder::start()
 
 void SdefRecorder::updSettings()
 {
-    saveToSdef = getSdefSaveToFile();
-    recordTime = getSdefRecordTime() * 60e3;
-    maxRecordTime = getSdefMaxRecordTime() * 60e3;
-    addPosition = getSdefAddPosition();
-    QString src = getSdefGpsSource();
+    saveToSdef = config->getSdefSaveToFile();
+    recordTime = config->getSdefRecordTime() * 60e3;
+    maxRecordTime = config->getSdefMaxRecordTime() * 60e3;
+    addPosition = config->getSdefAddPosition();
+    QString src = config->getSdefGpsSource();
     if (src == "InstrumentGnss")
         positionSource = POSITIONSOURCE::INSTRUMENTGNSS;
     else if (src.contains("1"))
         positionSource = POSITIONSOURCE::GNSSDEVICE1;
     else
         positionSource = POSITIONSOURCE::GNSSDEVICE2;
-    //prevLat = getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
-    //prevLng = getStnLongitude().toDouble();
+    //prevLat = config->getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
+    //prevLng = config->getStnLongitude().toDouble();
 
     if (addPosition && !reqPositionTimer->isActive()) reqPositionTimer->start(1000); // ask for position once per sec.
 
     if (saveToSdef) emit recordingEnabled();
     else emit recordingDisabled();
 
-    if (getAutoRecorderActivate()) {
+    if (config->getAutoRecorderActivate()) {
         if (!autorecorderTimer->isActive()) {
             autorecorderTimer->start(10000);
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "",
@@ -93,7 +93,7 @@ void SdefRecorder::triggerRecording()
             }
             else {
                 file.write(createHeader());
-                if (getSdefPreRecordTime() > 0) emit reqTraceHistory(getSdefPreRecordTime());
+                if (config->getSdefPreRecordTime() > 0) emit reqTraceHistory(config->getSdefPreRecordTime());
                 else historicDataSaved = true;
             }
         }
@@ -108,21 +108,21 @@ void SdefRecorder::manualTriggeredRecording()
 
 QString SdefRecorder::createFilename()
 {
-    QString dir = getLogFolder();
+    QString dir = config->getLogFolder();
     QString filename;
     QTextStream ts(&filename);
 
-    if (getNewLogFolder()) { // create new folder for incident
-        dir = getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+    if (config->getNewLogFolder()) { // create new folder for incident
+        dir = config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
         if (!QDir().mkpath(dir)) {
             emit warning("Cannot create folder " + dir + ", check your settings!");
             failed = true;
         }
     }
 
-    ts << dir << "/" << getSdefStationInitals() << "_"
-       << QString::number(getInstrStartFreq() * 1e3, 'f', 0) << "-"
-       << QString::number(getInstrStopFreq() * 1e3, 'f', 0) << "_"
+    ts << dir << "/" << config->getSdefStationInitals() << "_"
+       << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
+       << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << "_"
        << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm")
        << ".cef";
 
@@ -158,7 +158,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
     QElapsedTimer timer; timer.start();
     QByteArray byteArray;
     QDateTime startTime = datetime.last();
-    int dateIterator = positionHistory.size() - 1 - getSdefPreRecordTime(); // to iterate through the pos. history. this one gets weird if recording is triggered before trace buffer is filled, but no worries
+    int dateIterator = positionHistory.size() - 1 - config->getSdefPreRecordTime(); // to iterate through the pos. history. this one gets weird if recording is triggered before trace buffer is filled, but no worries
     if (dateIterator < 0) dateIterator = 0;
 
     for (int i=data.size() - 1; i >= 0; i--) {
@@ -203,22 +203,22 @@ QByteArray SdefRecorder::createHeader()
     QString buf;
     QTextStream stream(&buf, QIODevice::ReadWrite);
 
-    stream << (getSdefAddPosition()?"FileType MobileData":"FileType Standard Data exchange Format 2.0") << '\n'
-           << "LocationName " << getStationName() << "\n"
-           << "Latitude " << convertDdToddmmss((addPosition ? prevLat : getStnLatitude().toDouble())) << "\n"
-           << "Longitude " << convertDdToddmmss((addPosition ? prevLng : getStnLongitude().toDouble()), false) << '\n'
-           << "FreqStart " << QString::number(getInstrStartFreq() * 1e3, 'f', 0) << '\n'
-           << "FreqStop " << QString::number(getInstrStopFreq() * 1e3, 'f', 0) << '\n'
+    stream << (config->getSdefAddPosition()?"FileType MobileData":"FileType Standard Data exchange Format 2.0") << '\n'
+           << "LocationName " << config->getStationName() << "\n"
+           << "Latitude " << convertDdToddmmss((addPosition ? prevLat : config->getStnLatitude().toDouble())) << "\n"
+           << "Longitude " << convertDdToddmmss((addPosition ? prevLng : config->getStnLongitude().toDouble()), false) << '\n'
+           << "FreqStart " << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << '\n'
+           << "FreqStop " << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << '\n'
            << "AntennaType NoAntenna" << '\n'
-           << "FilterBandwidth " << QString::number(getInstrResolution().toDouble(), 'f', 3) << '\n'
+           << "FilterBandwidth " << QString::number(config->getInstrResolution().toDouble(), 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n' \
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
-           << "DataPoints " << QString::number(1 + ((getInstrStopFreq() - getInstrStartFreq()) / (getInstrResolution().toDouble() / 1e3))) << '\n'
-           << "ScanTime " << QString::number((double)getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
+           << "DataPoints " << QString::number(1 + ((config->getInstrStopFreq() - config->getInstrStartFreq()) / (config->getInstrResolution().toDouble() / 1e3))) << '\n'
+           << "ScanTime " << QString::number((double)config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Detector FFM" << '\n'
-           << "Note Instrument: " << getInstrId() << "; Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
-           << "Note\nNote " << getSdefStationInitals() << ", MaxHoldTime: " << QString::number(1 / tracePerSecond, 'f', 2)
-           << ", Attenuator: " << (getInstrAutoAtt()? "Auto" : QString::number(getInstrManAtt()))
+           << "Note Instrument: " << config->getInstrId() << "; Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
+           << "Note\nNote " << config->getSdefStationInitals() << ", MaxHoldTime: " << QString::number(1 / tracePerSecond, 'f', 2)
+           << ", Attenuator: " << (config->getInstrAutoAtt()? "Auto" : QString::number(config->getInstrManAtt()))
            << "\n\n";
 
     return buf.toLocal8Bit();
@@ -237,7 +237,7 @@ QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
 void SdefRecorder::finishRecording()
 {
     emit recordingEnded();
-    if (getSdefSaveToFile()) {
+    if (config->getSdefSaveToFile()) {
         if (recordingTimeoutTimer->isActive()) {
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording ended after "
                                                                    + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60 ?
@@ -254,10 +254,10 @@ void SdefRecorder::finishRecording()
 
     if (predictionReceived) updFileWithPrediction(file.fileName());
 
-    if (getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
+    if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
         QTimer::singleShot(10000, this, &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
     else
-        if (getSdefZipFiles() && recording) zipit(); // Zip the file anyways, we don't shit storage space here
+        if (config->getSdefZipFiles() && recording) zipit(); // Zip the file anyways, we don't shit storage space here
 
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
@@ -280,28 +280,28 @@ bool SdefRecorder::curlLogin()
 
     // parameters check
     if (!askedForLogin) {
-        if (getSdefStationInitals().isEmpty()
-                               or getSdefUsername().isEmpty()
-                               or getSdefPassword().isEmpty()
-                               or getStationName().isEmpty()) {
+        if (config->getSdefStationInitals().isEmpty()
+                               or config->getSdefUsername().isEmpty()
+                               or config->getSdefPassword().isEmpty()
+                               or config->getStationName().isEmpty()) {
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but some parameters are missing in the config. Check it out");
             return false;
         }
-        if (!getSdefAddPosition() and
-            ((int)getStnLatitude().toDouble() * 1e6 == 0 or (int)getStnLongitude().toDouble() * 1e6 == 0)) {
+        if (!config->getSdefAddPosition() and
+            ((int)config->getStnLatitude().toDouble() * 1e6 == 0 or (int)config->getStnLongitude().toDouble() * 1e6 == 0)) {
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but the current position is set to equator. Somehow I doubt it");
             return false;
         }
     }
-    if (getSdefZipFiles()) zipit();
+    if (config->getSdefZipFiles()) zipit();
     if (!askedForLogin && !finishedFilename.isEmpty()) filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
     QStringList l;
     l << "-H" << "'application/x-www-form-url-encoded'"
-      << "-F" << "brukernavn=" + getSdefUsername()
-      << "-F" << "passord=" + getSdefPassword()
-      << "--cookie-jar" << getWorkFolder() + "/.kake"
-      << "-k" << getSdefAuthAddress();
+      << "-F" << "brukernavn=" + config->getSdefUsername()
+      << "-F" << "passord=" + config->getSdefPassword()
+      << "--cookie-jar" << config->getWorkFolder() + "/.kake"
+      << "-k" << config->getSdefAuthAddress();
 
     process->setArguments(l);
     process->start();
@@ -349,12 +349,12 @@ void SdefRecorder::curlUpload()
         QString filename = filesAwaitingUpload.first();
 
         QStringList l;
-        l << "--cookie" << getWorkFolder() + "/.kake"
+        l << "--cookie" << config->getWorkFolder() + "/.kake"
           << "-X" << "POST"
           << "-F" << "file=@" + filename // + ".zip"
           << "-f"
           << "-k"
-          << getSdefServer();
+          << config->getSdefServer();
 
         process->setArguments(l);
         process->start();

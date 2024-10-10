@@ -1,9 +1,8 @@
 #include "gnssdisplay.h"
 
-GnssDisplay::GnssDisplay(QObject *parent)
+GnssDisplay::GnssDisplay(QSharedPointer<Config> c)
 {
-    this->setParent(parent);
-
+    config = c;
     wdg->setAttribute(Qt::WA_QuitOnClose);
     //wdg->setWindowFlag(Qt::WindowStaysOnTopHint);
 
@@ -22,7 +21,7 @@ void GnssDisplay::close()
     isClosing = true;   // don't reopen widget after shutdown
 
     qDebug() << "Closing Gnss Display widget...";
-    setGnssDisplayWindowState(wdg->saveGeometry());
+    config->setGnssDisplayWindowState(wdg->saveGeometry());
     wdg->close();
 
 }
@@ -90,18 +89,18 @@ void GnssDisplay::setupWidget()
     mainLayout->addWidget(gnss2LeftGroupBox, 1, 0);
     mainLayout->addWidget(gnss2RightGroupBox, 1, 1);
     wdg->setLayout(mainLayout);
-    wdg->restoreGeometry(getGnssDisplayWindowState());
+    wdg->restoreGeometry(config->getGnssDisplayWindowState());
     wdg->adjustSize();
 }
 
 void GnssDisplay::updSettings()
 {
-    if (!isClosing && getGnssDisplayWidget() && !wdg->isVisible()) {
+    if (!isClosing && config->getGnssDisplayWidget() && !wdg->isVisible()) {
         wdg->show();
     }
-    else if (!getGnssDisplayWidget() && wdg->isVisible()) wdg->close();
-    gnss1Name = getGnss1Name();
-    gnss2Name = getGnss2Name();
+    else if (!config->getGnssDisplayWidget() && wdg->isVisible()) wdg->close();
+    gnss1Name = config->getGnss1Name();
+    gnss2Name = config->getGnss2Name();
     if (gnss1Name.isEmpty()) gnss1RightGroupBox->setTitle("GNSS receiver 1 - info/calculations");
     else gnss1RightGroupBox->setTitle(gnss1Name + " - info/calculations");
     if (gnss2Name.isEmpty()) gnss2RightGroupBox->setTitle("GNSS receiver 2 - info/calculations");

@@ -1,9 +1,9 @@
 #include "geolimit.h"
 
 
-GeoLimit::GeoLimit(QObject *parent)
+GeoLimit::GeoLimit(QSharedPointer<Config> c)
 {
-    this->setParent(parent);
+    config = c;
     connect(timer, &QTimer::timeout, this, &GeoLimit::checkCurrentPosition);
 }
 
@@ -115,17 +115,17 @@ void GeoLimit::restart()
 
 void GeoLimit::updSettings()
 {
-    if (filename != getGeoLimitFilename()) {
-        filename = getGeoLimitFilename();
+    if (filename != config->getGeoLimitFilename()) {
+        filename = config->getGeoLimitFilename();
         if (activated && !filename.isEmpty()) readKmlFile();
     }
-    if (!activated && getGeoLimitActive()) {
+    if (!activated && config->getGeoLimitActive()) {
         activated = true;
-        if (!triedReadingFileNoSuccess) filename = getGeoLimitFilename();
+        if (!triedReadingFileNoSuccess) filename = config->getGeoLimitFilename();
         if (!filename.isEmpty()) readKmlFile();
         activate();
     }
-    else if (activated && !getGeoLimitActive()) {
+    else if (activated && !config->getGeoLimitActive()) {
         activated = false;
         weAreInsidePolygon = true; // allow any pos.
         awaitingPosition = false;

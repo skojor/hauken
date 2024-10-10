@@ -1,9 +1,8 @@
 #include "arduino.h"
 
-Arduino::Arduino(QObject *parent)
+Arduino::Arduino(QSharedPointer<Config> c)
 {
-    //(void)parent;
-    this->setParent(parent);
+    config = c;
 
     connect(arduino, &QSerialPort::readyRead, this, [this]
     {
@@ -30,13 +29,13 @@ Arduino::Arduino(QObject *parent)
 
 void Arduino::start()
 {
-    if (getArduinoEnable()) connectToPort();
+    if (config->getArduinoEnable()) connectToPort();
 
     wdg->setAttribute(Qt::WA_QuitOnClose);
     wdg->setWindowFlag(Qt::WindowStaysOnTopHint);
 
-    relayOnBtn->setText(getArduinoRelayOnText());
-    relayOffBtn->setText(getArduinoRelayOffText());
+    relayOnBtn->setText(config->getArduinoRelayOnText());
+    relayOffBtn->setText(config->getArduinoRelayOffText());
 
     connect(relayOnBtn, &QPushButton::clicked, this, &Arduino::relayBtnOnPressed);
     connect(relayOffBtn, &QPushButton::clicked, this, &Arduino::relayBtnOffPressed);
@@ -83,11 +82,11 @@ void Arduino::start()
     //qDebug() << dialog->sizeHint();
     wdg->adjustSize();
 
-    wdg->restoreGeometry(getArduinoWindowState());
+    wdg->restoreGeometry(config->getArduinoWindowState());
     if (arduino->isOpen()) {
         wdg->show();
     }
-    if (watchdogRelayActive && getArduinoActivateWatchdog()) {
+    if (watchdogRelayActive && config->getArduinoActivateWatchdog()) {
         watchdogTimer->start(5000); // reset watchdog every 5 sec
     }
 }
@@ -97,9 +96,9 @@ void Arduino::connectToPort()
 
     QSerialPortInfo portInfo;
 
-    if (!getArduinoSerialName().isEmpty() && !getArduinoBaudrate().isEmpty()) {
+    if (!config->getArduinoSerialName().isEmpty() && !config->getArduinoBaudrate().isEmpty()) {
         for (auto &val : QSerialPortInfo::availablePorts()) {
-            if (!val.isNull() && val.portName().contains(getArduinoSerialName(), Qt::CaseInsensitive))
+            if (!val.isNull() && val.portName().contains(config->getArduinoSerialName(), Qt::CaseInsensitive))
                 portInfo = val;
         }
         if (!portInfo.isNull())
@@ -107,7 +106,7 @@ void Arduino::connectToPort()
         else {
             qDebug() << "Arduino: couldn't find serial port" << portInfo.portName() << ", check settings";
         }
-        arduino->setBaudRate(getArduinoBaudrate().toUInt());
+        arduino->setBaudRate(config->getArduinoBaudrate().toUInt());
         if (arduino->open(QIODevice::ReadWrite)) {
             qDebug() << "Arduino: connected to" << arduino->portName();
             // This is needed to make Arduino start sending data
@@ -131,8 +130,8 @@ void Arduino::handleBuffer()
             if (list.at(1).contains("on")) relayState = true;
             else relayState = false;
             tempBox->setText(QString::number(temperature) + " °C");
-            if (relayState) relayStateText->setText(getArduinoRelayOnText());
-            else relayStateText->setText(getArduinoRelayOffText());
+            if (relayState) relayStateText->setText(config->getArduinoRelayOnText());
+            else relayStateText->setText(config->getArduinoRelayOffText());
         }
         else if (dht20Active && !watchdogRelayActive && list.size() == 5) {
             bool ok = false;
@@ -160,11 +159,11 @@ void Arduino::handleBuffer()
             tmp = list.at(3).toInt(&ok);
             if (ok) secondsLeft = tmp;
 
-            if (!stateWatchdog && getArduinoActivateWatchdog()) {
+            if (!stateWatchdog && config->getArduinoActivateWatchdog()) {
                 qDebug() << "Watchdog set to be activated, but is currently disabled. Asking to activate";
                 watchdogOn();
             }
-            else if (stateWatchdog && !getArduinoActivateWatchdog()) {
+            else if (stateWatchdog && !config->getArduinoActivateWatchdog()) {
                 qDebug() << "Watchdog set to be inactive, but is currently enabled. Asking to deactivate";
                 watchdogOff();
             }
@@ -215,11 +214,11 @@ void Arduino::watchdogOff()
 
 void Arduino::updSettings()
 {
-    pingAddress = getArduinoPingAddress();
-    pingInterval = getArduinoPingInterval();
-    tempRelayActive = getArduinoReadTemperatureAndRelay();
-    dht20Active = getArduinoReadDHT20();
-    watchdogRelayActive  = getArduinoWatchdogRelay();
+    pingAddress = config->getArduinoPingAddress();
+    pingInterval = config->getArduinoPingInterval();
+    tempRelayActive = config->getArduinoReadTemperatureAndRelay();
+    dht20Active = config->getArduinoReadDHT20();
+    watchdogRelayActive  = config->getArduinoWatchdogRelay();
 
     if (!pingAddress.isEmpty() && pingInterval > 0) {
         pingTimer->start(pingInterval * 1e3);

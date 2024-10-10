@@ -202,7 +202,7 @@ void AI::receiveTraceBuffer(const QList<QVector<qint16> > &data)
 
 void AI::findTrigRange()
 {
-    QStringList trigFrequencies = getTrigFrequencies();
+    QStringList trigFrequencies = config->getTrigFrequencies();
     startrange = 0;
     stoprange = 0;
 

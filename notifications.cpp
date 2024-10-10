@@ -1,8 +1,8 @@
 #include "notifications.h"
 
-Notifications::Notifications(QObject *parent)
-    : Config{parent}
+Notifications::Notifications(QSharedPointer<Config> c)
 {
+    config = c;
 }
 
 void Notifications::start()
@@ -85,11 +85,11 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
-    if (getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
+    if (config->getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
         appendEmailText(dt,  msg);
-    else if (getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER)
+    else if (config->getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER)
         appendEmailText(dt, msg);
-    else if (getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
+    else if (config->getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
         appendEmailText(dt, msg);
     else if (type == NOTIFY::TYPE::AI)
         appendEmailText(dt, msg);
@@ -123,7 +123,7 @@ void Notifications::appendIncidentLog(QDateTime dt, const QString string)
 void Notifications::appendLogFile(QDateTime dt, const QString string)
 {
     if (!incidentLogfile->isOpen()) {
-        incidentLogfile->setFileName(getWorkFolder() + "/incident.log");
+        incidentLogfile->setFileName(config->getWorkFolder() + "/incident.log");
         incidentLogfile->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
     }
 
@@ -142,11 +142,11 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) {
         mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
-        int delay = getEmailDelayBeforeAddingImages();
+        int delay = config->getEmailDelayBeforeAddingImages();
         if (delay > truncateTime * 2) delay = (truncateTime * 2) - 1; // no point in requesting an image after the mail is sent...
         QTimer::singleShot(delay * 1e3, this, [this] { emit reqTracePlot(); }); // also ask for a plot image at this time
     }
-    if (getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
+    if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
 }
 
 void Notifications::sendMail()
@@ -168,15 +168,15 @@ void Notifications::sendMail()
 
             auto mimeHtml = new SimpleMail::MimeHtml;
             SimpleMail::MimeMessage message;
-            message.setSubject("Notification from " + getStationName() + " (" + getSdefStationInitals() + ")");
-            message.setSender(SimpleMail::EmailAddress(getEmailFromAddress(), ""));
+            message.setSubject("Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")");
+            message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
             if (predictionReceived &&
                 prediction.contains("jammer", Qt::CaseInsensitive) &&
-                probability >= getEmailJammerProbabilityFilter() &&
-                getEmailFilteredRecipients().size() > 5) {
+                probability >= config->getEmailJammerProbabilityFilter() &&
+                config->getEmailFilteredRecipients().size() > 5) {
                 notifyPriorityRecipients = true;
-                for (auto &val : getEmailFilteredRecipients().split(";"))
+                for (auto &val : config->getEmailFilteredRecipients().split(";"))
                     message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
             else {
@@ -185,7 +185,7 @@ void Notifications::sendMail()
             }
 
             mimeHtml->setHtml("<table>" + mailtext +
-                              (getSdefAddPosition() && positionValid ?
+                              (config->getSdefAddPosition() && positionValid ?
                                                       tr("<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/") +
                                                                                                   QString::number(latitude, 'f', 5) + "+" +
                                                                                                   QString::number(longitude, 'f', 5) + "/@" +
@@ -266,7 +266,7 @@ bool Notifications::simpleParametersCheck()
         return true;
     }
     else {
-        if (getEmailFromAddress().isEmpty()) {
+        if (config->getEmailFromAddress().isEmpty()) {
             emit warning("Notification is not possible until from address is set");
             return false;
         }
@@ -291,21 +291,21 @@ void Notifications::recTracePlot(const QPixmap *pic)
 
 void Notifications::updSettings()
 {
-    mailserverAddress = getEmailSmtpServer();
-    mailserverPort = getEmailSmtpPort();
-    smtpUser = getEmailSmtpUser();
-    smtpPass = getEmailSmtpPassword();
-    recipients = getEmailRecipients();
-    fromAddress = getEmailFromAddress();
-    truncateTime = getNotifyTruncateTime();
-    if (!workFolder.contains(getWorkFolder())) {
-        workFolder = getWorkFolder();
+    mailserverAddress = config->getEmailSmtpServer();
+    mailserverPort = config->getEmailSmtpPort();
+    smtpUser = config->getEmailSmtpUser();
+    smtpPass = config->getEmailSmtpPassword();
+    recipients = config->getEmailRecipients();
+    fromAddress = config->getEmailFromAddress();
+    truncateTime = config->getNotifyTruncateTime();
+    if (!workFolder.contains(config->getWorkFolder())) {
+        workFolder = config->getWorkFolder();
         if (incidentLogfile->isOpen()) incidentLogfile->close(); // in case user changes folder settings
     }
-    delayBetweenEmails = getEmailMinTimeBetweenEmails();
-    msGraphTenantId = getEmailGraphTenantId();
-    msGraphApplicationId = getEmailGraphApplicationId();
-    msGraphSecret = getEmailGraphSecret();
+    delayBetweenEmails = config->getEmailMinTimeBetweenEmails();
+    msGraphTenantId = config->getEmailGraphTenantId();
+    msGraphApplicationId = config->getEmailGraphApplicationId();
+    msGraphSecret = config->getEmailGraphSecret();
 
     if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
         msGraphConfigured = true;
@@ -355,12 +355,12 @@ void Notifications::retryEmails()
 void Notifications::authGraph()
 {
     simpleParametersCheck();
-    QString url = "https://login.microsoftonline.com/" + getEmailGraphTenantId() + "/oauth2/v2.0/token";
+    QString url = "https://login.microsoftonline.com/" + config->getEmailGraphTenantId() + "/oauth2/v2.0/token";
     QStringList l;
     l //<< "-H" << "\"Content-Type:" << "application/x-www-form-url-encoded\""
         << "--data" << "grant_type=client_credentials"
-        << "--data" << "client_id=" + getEmailGraphApplicationId()
-        << "--data" << "client_secret=" + getEmailGraphSecret()
+        << "--data" << "client_id=" + config->getEmailGraphApplicationId()
+        << "--data" << "client_secret=" + config->getEmailGraphSecret()
         << "--data" << "scope=https://graph.microsoft.com/.default"
         << url;
 
@@ -376,8 +376,8 @@ void Notifications::generateGraphEmail()
     QJsonObject att;
     QStringList recipients;
 
-    if (!notifyPriorityRecipients) recipients = getEmailRecipients().split(';');
-    else recipients = getEmailFilteredRecipients().split(";");
+    if (!notifyPriorityRecipients) recipients = config->getEmailRecipients().split(';');
+    else recipients = config->getEmailFilteredRecipients().split(";");
     notifyPriorityRecipients = false; // reset until next notification
 
     for (auto &recipient : recipients) {
@@ -406,7 +406,7 @@ void Notifications::generateGraphEmail()
         attachments.append(att);
     }
 
-    message.insert("subject", "Notification from " + getStationName().toUtf8() + " (" + getSdefStationInitals() + ")");
+    message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");
     message.insert("body", body);
     message.insert("toRecipients", toRecipients);
     if (fileOk) message.insert("attachments", attachments);
@@ -432,7 +432,7 @@ void Notifications::sendMailWithGraph()
     if (!graphEmailLog.isEmpty()) {
         graphMailInProgress = true;
         QStringList l;
-        QString url = "https://graph.microsoft.com/v1.0/users/" + getEmailFromAddress() + "/sendMail";
+        QString url = "https://graph.microsoft.com/v1.0/users/" + config->getEmailFromAddress() + "/sendMail";
         l << "-H" << "Content-Type:application/json;charset=UTF-8"
           << "-s" << "-w" << "%{http_code}"
           << "-H" << graphAccessToken
