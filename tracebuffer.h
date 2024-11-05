@@ -101,6 +101,7 @@ private:
     const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;
+    bool useDbm = false;
 };
 
 #endif // TRACEBUFFER_H

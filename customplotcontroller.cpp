@@ -372,16 +372,23 @@ void CustomPlotController::updSettings()
         }
     }
 */
-    customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
-    customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-    reCalc();
-    customPlotPtr->replot();
     if (config->getInstrNormalizeSpectrum())
         customPlotPtr->yAxis->setLabel("dBμV (normalized)");
     else
         customPlotPtr->yAxis->setLabel("dBμV");
     // qDebug() << customPlotPtr->axisRect()->rect();
     updTextLabelPositions();
+
+    if (config->getUseDbm()) {
+        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin() - 107);
+        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax() - 107);
+    }
+    else {
+        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+    }
+    reCalc();
+    customPlotPtr->replot();
 }
 
 void CustomPlotController::flashTrigline()

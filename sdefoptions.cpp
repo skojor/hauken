@@ -54,6 +54,10 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     sbOpt3->setToolTip("Record traces this many seconds before incident was triggered. Maximum 120 seconds.");
     sbOpt3->setRange(0, 120);
 
+    mainLayout->addRow(cbOpt5);
+    cbOpt5->setText("Use new ms format in 1809 file");
+    cbOpt5->setToolTip("Enable this option to add date and millisecond timestamp in 1809 file");
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
     connect(cbOpt3, &QCheckBox::toggled, this, [this] (bool b) {
@@ -77,6 +81,7 @@ void SdefOptions::start()
     sbOpt2->setValue(config->getSdefMaxRecordTime());
     comboOpt1->setCurrentText(config->getSdefGpsSource());
     sbOpt3->setValue(config->getSdefPreRecordTime());
+    cbOpt5->setChecked(config->getSdefNewMsFormat());
     dialog->exec();
 }
 
@@ -94,6 +99,6 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());
-    emit updSettings();
+    config->setSdefNewMsFormat(cbOpt5->isChecked());
     dialog->close();
 }

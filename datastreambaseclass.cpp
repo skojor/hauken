@@ -322,3 +322,13 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
         //qDebug() << "GPS debug" << gpsValid << lat << lng;
     }
 }
+
+bool DataStreamBaseClass::checkVifHeader()
+{
+    return true;
+}
+
+void DataStreamBaseClass::vifPacketReceived()
+{
+
+}

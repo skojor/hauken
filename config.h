@@ -100,6 +100,8 @@ public slots:
 
     QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString();}
     void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
+    bool getUseDbm() { return settings->value("useDbm", false).toBool();}
+    void setUseDbm(bool b) { settings->setValue("useDbm", b); emit settingsUpdated();}
 
     // Window settings
     bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}
@@ -152,6 +154,8 @@ public slots:
     void setSdefServer(QString s) { settings->setValue("sdef/Server", s); emit settingsUpdated();}
     QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString().trimmed();}
     void setSdefAuthAddress(QString s) { settings->setValue("sdef/AuthAddress", s); emit settingsUpdated();}
+    bool getSdefNewMsFormat() { return settings->value("sdef/newMsFormat", false).toBool();}
+    void setSdefNewMsFormat(bool b) { settings->setValue("sdef/newMsFormat", b); emit settingsUpdated();}
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
@@ -192,7 +196,7 @@ public slots:
     QString getGnss2Name() { return settings->value("gnss/gnss2Name", "").toString();}
     void setGnss2Name(QString s) { settings->setValue("gnss/gnss2Name", s); emit settingsUpdated();}
     bool getGnssShowNotifications() { return settings->value("gnss/showNotifications", true).toBool();}
-    void setGnssShowNotifications(bool b) { settings->setValue("gnss/showNotification", b); emit settingsUpdated();}
+    void setGnssShowNotifications(bool b) { settings->setValue("gnss/showNotifications", b); emit settingsUpdated();}
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}

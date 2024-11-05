@@ -152,6 +152,8 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 
             //val /= (int)rate + 1;
             //if (top > 150) val = top; // hack to boost display of small bw signals
+            if (useDbm) top -= 1070;
+
             displayBuffer.append(((double)top / 10.0)); // / (int)rate + 1);
             tmpNormTraceBuffer[i] = top;
         }
@@ -275,6 +277,7 @@ void TraceBuffer::updSettings()
     normalizeSpectrum = config->getInstrNormalizeSpectrum();
     averageDispLevelNormalized.clear();
     tracesNeededForAvg = config->getInstrTracesNeededForAverage();
+    useDbm = config->getUseDbm();
     maintainAvgLevel();
 }
 

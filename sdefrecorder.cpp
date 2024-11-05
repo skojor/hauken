@@ -69,6 +69,7 @@ void SdefRecorder::updSettings()
     else {
         if (autorecorderTimer->isActive()) autorecorderTimer->stop();
     }
+    useNewMsFormat = config->getSdefNewMsFormat();
 }
 
 void SdefRecorder::triggerRecording()
@@ -137,7 +138,12 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
     }
     else*/
     if (historicDataSaved) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
-        QByteArray byteArray = QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
+        QByteArray byteArray;
+        if (useNewMsFormat)
+            byteArray += QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit();
+        else
+            byteArray += QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
+
         if (addPosition) {
             byteArray +=
                 QByteArray::number(positionHistory.last().first, 'f', 6) + "," +
@@ -165,7 +171,10 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime, const QLi
         byteArray.clear();
         bool ok = true;
 
-        byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit() + ',';
+        if (useNewMsFormat)
+            byteArray += datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit();
+        else
+            byteArray += datetime.at(i).toString("hh:mm:ss,").toLocal8Bit();
 
         if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed, counters updated in if below here
             QVector<float> tmpTrace;
@@ -314,7 +323,7 @@ bool SdefRecorder::curlLogin()
 
 void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    if (exitCode != 0) {
+    if (exitCode != 0 && !config->getSdefUsername().isEmpty() && !config->getSdefPassword().isEmpty()) {
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Uploading of SDeF data failed, trying again later");
         if (stateCurlAwaitingLogin)
             qDebug() << "Curl login failed:" << exitStatus << exitCode;

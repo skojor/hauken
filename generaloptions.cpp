@@ -57,6 +57,10 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("Instrument address list server"), leOpt8);
     leOpt8->setToolTip("Address used to download instrument IP address lists. Blank to disable");
 
+    mainLayout->addRow(cbOpt3);
+    cbOpt3->setText("Use dBm instead of dBμV");
+    cbOpt3->setToolTip("Change scale to dBm");
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -75,6 +79,7 @@ void GeneralOptions::start()
     cbOpt2->setChecked(config->getPmrMode());
     leOpt7->setText(config->getSdefStationInitals());
     leOpt8->setText(config->getIpAddressServer());
+    cbOpt3->setChecked(config->getUseDbm());
 
     dialog->exec();
 }
@@ -99,6 +104,7 @@ void GeneralOptions::saveCurrentSettings()
     config->setPmrMode(cbOpt2->isChecked());
     config->setSdefStationInitials(leOpt7->text());
     config->setIpAddressServer(leOpt8->text());
+    config->setUseDbm(cbOpt3->isChecked());
 
     dialog->close();
 }

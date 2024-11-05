@@ -75,6 +75,8 @@ public slots:
     int calcPscanPointsPerTrace();
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
+    bool checkVifHeader();
+    void vifPacketReceived();
 
 signals:
     void connectedState(bool);

@@ -99,6 +99,9 @@ private:
     bool predictionReceived = false;
     bool askedForLogin = false;
     QSharedPointer<Config> config;
+
+    // Config cache
+    bool useNewMsFormat;
 };
 
 #endif // SDEFRECORDER_H

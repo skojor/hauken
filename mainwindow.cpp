@@ -379,9 +379,9 @@ void MainWindow::createLayout()
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
 
     //plotMaxScroll->setFixedSize(40, 30);
-    plotMaxScroll->setRange(-30,200);
+    plotMaxScroll->setRange(-200,200);
     plotMinScroll->setFixedSize(40, 30);
-    plotMinScroll->setRange(-50, 170);
+    plotMinScroll->setRange(-200, 200);
     plotMaxScroll->setValue(config->getPlotYMax());
     plotMinScroll->setValue(config->getPlotYMin());
     plotMaxholdTime->setFixedSize(40,20);

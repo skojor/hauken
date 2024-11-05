@@ -147,6 +147,7 @@ private slots:
     void checkPscanResolution(const QByteArray buffer);
     void checkFfmFreq(const QByteArray buffer);
     void checkFfmSpan(const QByteArray buffer);
+    void setIfMode();
 
 private:
     bool connected = false;
@@ -168,6 +169,7 @@ private:
     QByteArray fftMode;
     QTimer *tcpTimeoutTimer = new QTimer;
     QTimer *autoReconnectTimer = new QTimer;
+    QTimer *timedReconnectTimer = new QTimer;
     QElapsedTimer *scpiThrottleTimer = new QElapsedTimer;
     bool deviceInUseWarningIssued = false;
     bool useUdpStream = true;
@@ -196,7 +198,7 @@ private:
     QString inUseBy, inUseByIp, inUseMode;
     unsigned long inUseStart = 0, inUseStop = 0, inUseRes = 0;
     bool waitingForReply = false;
-    const int tcpTimeoutInMs = 2000;
+    const int tcpTimeoutInMs = 10000;
 
     bool modeChangeInProgress = false;
 };

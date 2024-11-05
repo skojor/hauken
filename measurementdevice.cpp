@@ -18,7 +18,9 @@ void MeasurementDevice::start()
     connect(scpiSocket, &QTcpSocket::stateChanged, this, &MeasurementDevice::scpiStateChanged);
     connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
     connect(tcpTimeoutTimer, &QTimer::timeout, this, &MeasurementDevice::tcpTimeout);
+    connect(timedReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::instrConnect);
 
+    timedReconnectTimer->setSingleShot(true);
     autoReconnectTimer->setSingleShot(true);
     connect(autoReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::autoReconnectCheckStatus);
     emit connectedStateChanged(connected);
@@ -95,13 +97,15 @@ void MeasurementDevice::instrDisconnect()
     }
     tcpTimeoutTimer->stop();
     autoReconnectTimer->stop();
+    timedReconnectTimer->stop();
+
     emit instrId(QString());
     if (scpiSocket->state() != QAbstractSocket::UnconnectedState) emit status("Disconnecting measurement device");
 
     if (connected) {
         /*if (useUdpStream) delUdpStreams();
         else delTcpStreams();*/
-        delOwnStream();
+        delTcpStreams();
         scpiSocket->waitForBytesWritten(10);
     }
     updFrequencyData->stop();
@@ -543,7 +547,7 @@ void MeasurementDevice::tcpTimeout()
     if (instrumentState != InstrumentState::CONNECTED) {  // sth timed out
         if (firstConnection && config->getInstrConnectOnStartup()) {  // First time connecting and we are set to connect on startup, let's give it some time and retry
             emit status("TCP timeout, retrying in 15 seconds");
-            QTimer::singleShot(15000, this, &MeasurementDevice::instrConnect);
+            timedReconnectTimer->start(15e3);
         }
         else {
             instrDisconnect();
@@ -589,6 +593,7 @@ void MeasurementDevice::runAfterConnected()
     setMode();
     //restartStream(false);
     setFftMode();
+    setIfMode();
     startDevice();
 }
 
@@ -610,7 +615,7 @@ void MeasurementDevice::restartStream(bool withDisconnect)
 {
     if (connected) {
         //delUdpStreams();
-        //delTcpStreams();
+        delTcpStreams();
         delOwnStream();
         if (withDisconnect) {
             udpStream->closeListener();
@@ -673,7 +678,7 @@ void MeasurementDevice::setupUdpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, cw";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, cw, vif";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -691,6 +696,12 @@ void MeasurementDevice::setupUdpStream()
               QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
     if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
     //askUser(true);
+
+    /*scpiWrite("trac:udp:tag:on \"" + // TEST, IQ data (short)
+              scpiSocket->localAddress().toString().toLocal8Bit() +
+              "\", " +
+              QByteArray::number(udpStream->getUdpPort() + 1) + ", " +
+              "vif");*/
 }
 
 /*void MeasurementDevice::forwardBytesPerSec(int val)
@@ -1040,4 +1051,9 @@ bool MeasurementDevice::isConnected()
 void MeasurementDevice::handleNetworkError()
 {
     qDebug() << "OBAbug detected, do sth smart here";
+}
+
+void MeasurementDevice::setIfMode()
+{
+    scpiWrite("syst:if:rem:mode short");
 }
