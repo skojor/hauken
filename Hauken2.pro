@@ -70,6 +70,7 @@ SOURCES += \
     traceanalyzer.cpp \
     tracebuffer.cpp \
     udpdatastream.cpp \
+    vifstream.cpp \
     waterfall.cpp
 
 HEADERS += \
@@ -134,6 +135,7 @@ HEADERS += \
     tracebuffer.h \
     typedefs.h \
     udpdatastream.h \
+    vifstream.h \
     waterfall.h
 
 # Default rules for deployment.

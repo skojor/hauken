@@ -323,12 +323,3 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
     }
 }
 
-bool DataStreamBaseClass::checkVifHeader()
-{
-    return true;
-}
-
-void DataStreamBaseClass::vifPacketReceived()
-{
-
-}

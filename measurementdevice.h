@@ -15,6 +15,7 @@
 #include "typedefs.h"
 #include "tcpdatastream.h"
 #include "udpdatastream.h"
+#include "vifstream.h"
 #include "config.h"
 
 using namespace Instrument;
@@ -148,6 +149,8 @@ private slots:
     void checkFfmFreq(const QByteArray buffer);
     void checkFfmSpan(const QByteArray buffer);
     void setIfMode();
+    void setupIfStream();
+    void deleteIfStream();
 
 private:
     bool connected = false;
@@ -184,6 +187,7 @@ private:
     QSharedPointer<Config> config;
     QSharedPointer<UdpDataStream> udpStream;
     QSharedPointer<TcpDataStream> tcpStream;
+    VifStream *vifStream = new VifStream;
 
     double tracesPerSecValue = 0;
 

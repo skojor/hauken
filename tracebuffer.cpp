@@ -90,6 +90,7 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
 
 void TraceBuffer::getAiData(int secs) // secs ignored ftm, just send all you have (2 min)
 {
+    (void)secs;
     emit aiData(normTraceBuffer);
 }
 

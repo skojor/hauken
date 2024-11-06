@@ -18,6 +18,7 @@
 #include <QSharedPointer>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QNetworkDatagram>
 #include "typedefs.h"
 
 
@@ -50,6 +51,7 @@ public:
     unsigned long startfreq = 0, stopfreq = 0;
     unsigned int resolution = 0;
     int traceCtr = 0;
+    QVector<QNetworkDatagram> ifBuffer;
 
 public slots:
     virtual void openListener() = 0;
@@ -75,8 +77,6 @@ public slots:
     int calcPscanPointsPerTrace();
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
-    bool checkVifHeader();
-    void vifPacketReceived();
 
 signals:
     void connectedState(bool);
@@ -94,6 +94,7 @@ private slots:
 protected:
 
 private:
+
 };
 
 #endif // DATASTREAMBASECLASS_H

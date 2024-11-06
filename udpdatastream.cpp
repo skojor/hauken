@@ -52,11 +52,6 @@ void UdpDataStream::newData()
             if (!headerIsRead and udpBuffer.size() > 15) {
                 if (!checkHeader(udpBuffer)) {
                     //qDebug() << "udp header fail" << header.dataSize;
-                    // Could be a VIF packet, check it
-                    if (!checkVifHeader())
-                        udpBuffer.clear();
-                    else
-                        vifPacketReceived();
                 }
                 else {
                     headerIsRead = true;

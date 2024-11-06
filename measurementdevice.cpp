@@ -40,6 +40,11 @@ void MeasurementDevice::instrConnect()
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
     if (!scpiReconnect) tcpTimeoutTimer->start(tcpTimeoutInMs);
+    QTimer::singleShot(5000, this, &MeasurementDevice::setupIfStream);
+    QTimer::singleShot(5010, this, &MeasurementDevice::deleteIfStream);
+    QTimer::singleShot(5500, this, [this] {
+        this->vifStream->processVifData();
+    });
 
 }
 
@@ -106,6 +111,7 @@ void MeasurementDevice::instrDisconnect()
         /*if (useUdpStream) delUdpStreams();
         else delTcpStreams();*/
         delTcpStreams();
+        delUdpStreams();
         scpiSocket->waitForBytesWritten(10);
     }
     updFrequencyData->stop();
@@ -614,7 +620,7 @@ void MeasurementDevice::startDevice()
 void MeasurementDevice::restartStream(bool withDisconnect)
 {
     if (connected) {
-        //delUdpStreams();
+        delUdpStreams();
         delTcpStreams();
         delOwnStream();
         if (withDisconnect) {
@@ -632,6 +638,10 @@ void MeasurementDevice::setupTcpStream()
 {
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
+
+    vifStream->setDeviceType(devicePtr);
+    vifStream->openListener(*scpiAddress, scpiPort + 10);
+
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
@@ -678,7 +688,7 @@ void MeasurementDevice::setupUdpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, cw, vif";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, cw";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -696,12 +706,6 @@ void MeasurementDevice::setupUdpStream()
               QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
     if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
     //askUser(true);
-
-    /*scpiWrite("trac:udp:tag:on \"" + // TEST, IQ data (short)
-              scpiSocket->localAddress().toString().toLocal8Bit() +
-              "\", " +
-              QByteArray::number(udpStream->getUdpPort() + 1) + ", " +
-              "vif");*/
 }
 
 /*void MeasurementDevice::forwardBytesPerSec(int val)
@@ -1056,4 +1060,14 @@ void MeasurementDevice::handleNetworkError()
 void MeasurementDevice::setIfMode()
 {
     scpiWrite("syst:if:rem:mode short");
+}
+
+void MeasurementDevice::setupIfStream()
+{
+    scpiWrite("trac:udp:tag:on \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", 5555, vif");
+}
+
+void MeasurementDevice::deleteIfStream()
+{
+    scpiWrite("trac:udp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", 5555");
 }
