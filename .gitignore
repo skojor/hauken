@@ -11,3 +11,4 @@ Makefile*
 object_script*
 Hauken_resource.rc
 torch/lib
+build/
