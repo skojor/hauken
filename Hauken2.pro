@@ -175,7 +175,7 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../opencv/debug \
     -lopencv_core490d -lopencv_highgui490d -lopencv_dnn490d -lopencv_imgproc490d \
     -lopencv_imgcodecs490d -lopencv_videoio490d \
     -L$$PWD/../quazip-1.4/debug -lquazip1-qt6d \
-    -llibfftw3-3
+    -L$$PWD -llibfftw3-3
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"
