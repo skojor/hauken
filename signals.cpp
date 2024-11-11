@@ -2,6 +2,10 @@
 
 void MainWindow::setSignals()
 {
+    // TCP/UDP datastreams
+    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, iqdataWaterfall, &Waterfall::receiveIqData);
+    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqdataWaterfall, &Waterfall::receiveIqData);
+
     connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);
     connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStopFreqChanged);
     connect(instrFfmCenterFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrFfmCenterFreqChanged); //Taken care of after init.
@@ -112,6 +116,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer3, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
+    connect(config.data(), &Config::settingsUpdated, iqdataWaterfall, &Waterfall::updSettings);
     //connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
@@ -122,6 +127,8 @@ void MainWindow::setSignals()
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
+
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceBuffer, &TraceBuffer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceAnalyzer, &TraceAnalyzer::recorderEnded);
@@ -161,6 +168,7 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
+    connect(iqdataWaterfallThread, &QThread::started, iqdataWaterfall, &Waterfall::start);
     //connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
@@ -258,10 +266,13 @@ void MainWindow::setSignals()
     });
 
     connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, &SdefRecorder::manualTriggeredRecording);
+    connect(btnTrigRecording, &QPushButton::clicked, measurementDevice, &MeasurementDevice::collectIqData);
+
     connect(btnPmrTable, &QPushButton::clicked, pmrTableWdg, &PmrTableWdg::start);
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
+    iqdataWaterfallThread->start();
     //cameraThread->start();
 
     connect(geoLimit, &GeoLimit::toIncidentLog, notifications, &Notifications::toIncidentLog);
@@ -400,6 +411,9 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &UdpDataStream::streamErrorResetConnection, measurementDevice, &MeasurementDevice::handleNetworkError);
 
     connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, aiPtr, &AI::setTrigCenterFrequency);
+    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, measurementDevice, &MeasurementDevice::setTrigCenterFrequency);
+    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqdataWaterfall, &Waterfall::setFfmFrequency);
+    connect(measurementDevice, &MeasurementDevice::iqFfmFreqChanged, iqdataWaterfall, &Waterfall::setFfmFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this] () {
         if (gnssDevice1->isValid()) cameraRecorder->updPosition(gnssDevice1->sendGnssData());

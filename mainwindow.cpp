@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
     waterfall = new Waterfall(config);
+    iqdataWaterfall = new Waterfall(config);
+
     //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
 
@@ -56,6 +58,10 @@ MainWindow::MainWindow(QWidget *parent)
     waterfallThread = new QThread;
     waterfallThread->setObjectName("waterfall");
     waterfall->moveToThread(waterfallThread);
+
+    iqdataWaterfallThread = new QThread;
+    iqdataWaterfallThread->setObjectName("iqdataWaterfall");
+    iqdataWaterfall->moveToThread(iqdataWaterfallThread);
 
     cameraRecorder = new CameraRecorder(config);
     cameraThread = new QThread;
@@ -93,6 +99,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     measurementDevice->setUdpStreamPtr(udpStream);
     measurementDevice->setTcpStreamPtr(tcpStream);
+    measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
+    measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -629,6 +637,7 @@ void MainWindow::instrFfmCenterFreqChanged()
         traceBuffer->restartCalcAvgLevel();
         waterfall->restartPlot();
     }
+    iqdataWaterfall->setFfmFrequency(instrFfmCenterFreq->value());
 }
 
 void MainWindow::instrFfmSpanChanged()

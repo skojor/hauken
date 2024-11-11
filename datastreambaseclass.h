@@ -19,8 +19,8 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QNetworkDatagram>
+#include <QFile>
 #include "typedefs.h"
-
 
 class DataStreamBaseClass : public QObject
 {
@@ -47,11 +47,12 @@ public:
     QElapsedTimer *traceTimer = new QElapsedTimer;
     int errorCtr = 0;
     bool errorHandleSent = false;
-    const int timeoutInMs = 4000;
+    const int timeoutInMs = 10000;
     unsigned long startfreq = 0, stopfreq = 0;
     unsigned int resolution = 0;
     int traceCtr = 0;
-    QVector<QNetworkDatagram> ifBuffer;
+    QVector<QNetworkDatagram> ifBufferUdp;
+    QVector<QByteArray> ifBufferTcp;
 
 public slots:
     virtual void openListener() = 0;
@@ -88,6 +89,7 @@ signals:
     void streamErrorResetConnection();
     void freqChanged(double, double);
     void resChanged(double);
+    void newIqData(QList<qint16>, QList<qint16>);
 
 private slots:
 

@@ -1,14 +1,14 @@
-#ifndef VIFSTREAM_H
-#define VIFSTREAM_H
+#ifndef VIFSTREAMUDP_H
+#define VIFSTREAMUDP_H
 
 #include "datastreambaseclass.h"
 
 
-class VifStream : public DataStreamBaseClass
+class VifStreamUdp : public DataStreamBaseClass
 {
     Q_OBJECT
 public:
-    VifStream();
+    VifStreamUdp();
     void openListener() {}
     void openListener(const QHostAddress host, const int port);
     void closeListener();
@@ -25,8 +25,8 @@ private slots:
 private:
     bool headerIsRead = false;
     int bytectr = 0;
-    QVector<qint16> i;
-    QVector<qint16> q;
+    QList<qint16> i;
+    QList<qint16> q;
 };
 
-#endif // VIFSTREAM_H
+#endif // VIFSTREAMUDP_H

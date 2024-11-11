@@ -40,12 +40,6 @@ void MeasurementDevice::instrConnect()
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");
     if (!scpiReconnect) tcpTimeoutTimer->start(tcpTimeoutInMs);
-    QTimer::singleShot(5000, this, &MeasurementDevice::setupIfStream);
-    QTimer::singleShot(5010, this, &MeasurementDevice::deleteIfStream);
-    QTimer::singleShot(5500, this, [this] {
-        this->vifStream->processVifData();
-    });
-
 }
 
 void MeasurementDevice::scpiConnected()
@@ -363,12 +357,12 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
         //for (auto&& ownIp : myOwnAddresses) {
-            //if (list.contains(ownIp.toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
-            if (list.contains(scpiSocket->localAddress().toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
-                break; // we are the users, continue
-            if (brokenList.size() > 2 && !list.contains("DEF")) {
-                inUse = true;
-            }
+        //if (list.contains(ownIp.toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
+        if (list.contains(scpiSocket->localAddress().toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
+            break; // we are the users, continue
+        if (brokenList.size() > 2 && !list.contains("DEF")) {
+            inUse = true;
+        }
         //}
     }
     if (!autoReconnectInProgress) {
@@ -599,7 +593,6 @@ void MeasurementDevice::runAfterConnected()
     setMode();
     //restartStream(false);
     setFftMode();
-    setIfMode();
     startDevice();
 }
 
@@ -639,8 +632,11 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
 
-    vifStream->setDeviceType(devicePtr);
-    vifStream->openListener(*scpiAddress, scpiPort + 10);
+    vifStreamUdp->setDeviceType(devicePtr);
+    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);
+
+    vifStreamTcp->setDeviceType(devicePtr);
+    vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
 
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
@@ -683,6 +679,12 @@ void MeasurementDevice::setupTcpStream()
 
 void MeasurementDevice::setupUdpStream()
 {
+    vifStreamUdp->setDeviceType(devicePtr);
+    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);
+
+    vifStreamTcp->setDeviceType(devicePtr);
+    vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
     QByteArray modeStr;
@@ -1059,15 +1061,69 @@ void MeasurementDevice::handleNetworkError()
 
 void MeasurementDevice::setIfMode()
 {
+    if (trigFrequency > 0) {
+        scpiWrite("freq " + QByteArray::number(trigFrequency));
+    }
+    else {
+        double f;
+        if (devicePtr->mode == Instrument::Mode::PSCAN)
+            f = devicePtr->pscanStartFrequency + (devicePtr->pscanStopFrequency - devicePtr->pscanStartFrequency) / 2;
+        else
+            f = devicePtr->ffmCenterFrequency;
+
+        scpiWrite("freq " + QByteArray::number(f));
+        emit iqFfmFreqChanged(f/1e6);
+    }
     scpiWrite("syst:if:rem:mode short");
+    scpiWrite("band " + QByteArray::number(config->getInstrFftPlotBw()) + " khz");
+    scpiWrite("init");
 }
 
 void MeasurementDevice::setupIfStream()
 {
-    scpiWrite("trac:udp:tag:on \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", 5555, vif");
+    scpiWrite("trac:udp:tag:on \"" +
+              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(vifStreamUdp->getUdpPort()) + ", vif");
+
+    scpiWrite("trac:udp:flag:on \"" +
+              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(vifStreamUdp->getUdpPort()) + ", 'ifpan1'");
+
+    /*scpiWrite("trac:tcp:tag:on \"" +
+              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");*/
+
 }
 
 void MeasurementDevice::deleteIfStream()
 {
-    scpiWrite("trac:udp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", 5555");
+    scpiWrite("trac:udp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(vifStreamUdp->getUdpPort()));
+
+    /*scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(vifStreamTcp->getTcpPort()));*/
+
+}
+
+void MeasurementDevice::collectIqData()
+{
+    if (config->getInstrCreateFftPlot()) {
+        bool modeChanged = false;
+        Instrument::Mode mode = devicePtr->mode;
+        if (mode != Instrument::Mode::FFM) {
+            modeChanged = true;
+            scpiWrite("freq:mode ffm"); // Temporary change mode
+        }
+        setIfMode();
+        QTimer::singleShot(1000, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+        QTimer::singleShot(2110, this, &MeasurementDevice::deleteIfStream);
+        QTimer::singleShot(3000, this, [this, modeChanged] {
+            this->vifStreamUdp->processVifData();
+            if (modeChanged) {
+                scpiWrite("freq:mode psc");
+                scpiWrite("init");
+            }
+        });
+        trigFrequency = 0; // Reset
+    }
 }

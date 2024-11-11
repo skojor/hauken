@@ -1,8 +1,8 @@
-#include "vifstream.h"
+#include "vifstreamudp.h"
 
-VifStream::VifStream() {}
+VifStreamUdp::VifStreamUdp() {}
 
-void VifStream::openListener(const QHostAddress host, const int port)
+void VifStreamUdp::openListener(const QHostAddress host, const int port)
 {
     udpSocket->close();
     udpPort = 5555;
@@ -13,23 +13,24 @@ void VifStream::openListener(const QHostAddress host, const int port)
         }
         else break;
     }
+    qDebug() << "VIF udp port:" << udpSocket->localPort();
     bytesPerSecTimer->start();
 }
 
-void VifStream::closeListener()
+void VifStreamUdp::closeListener()
 {
     timeoutTimer->stop();
     bytesPerSecTimer->stop();
     udpSocket->close();
 }
 
-void VifStream::connectionStateChanged(QAbstractSocket::SocketState state)
+void VifStreamUdp::connectionStateChanged(QAbstractSocket::SocketState state)
 {
     qDebug() << "VIF UDP stream state" << state;
 //    if (state == QAbstractSocket::UnconnectedState)
 }
 
-void VifStream::newData()
+void VifStreamUdp::newData()
 {
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
         QNetworkDatagram datagram = udpSocket->receiveDatagram();
@@ -37,12 +38,11 @@ void VifStream::newData()
         //rxData.fill(0, udpSocket->pendingDatagramSize());
         //udpSocket->readDatagram(rxData.data(), rxData.size());
         //qDebug() << "package size" << rxData.size();
-        ifBuffer.append(datagram);
+        ifBufferUdp.append(datagram);
     }
-    qDebug() << "VIF buffer" << ifBuffer.size();
 }
 
-bool VifStream::checkVifHeader(QNetworkDatagram datagram)
+bool VifStreamUdp::checkVifHeader(QNetworkDatagram datagram)
 {
     QByteArray data = datagram.data();
     QDataStream ds(data);
@@ -55,18 +55,19 @@ bool VifStream::checkVifHeader(QNetworkDatagram datagram)
         return false;
 }
 
-void VifStream::processVifData()
+void VifStreamUdp::processVifData()
 {
-    qDebug() <<"pjocess" << ifBuffer.size();
-    for (auto && buffer : ifBuffer) {
+    for (auto && buffer : ifBufferUdp) {
         if (checkVifHeader(buffer))
             readIqData(buffer);
-        else
-            qDebug() << "NOPY";
     }
+    emit newIqData(i, q);
+    i.clear();
+    q.clear();
+    ifBufferUdp.clear();
 }
 
-void VifStream::readIqData(QNetworkDatagram datagram)
+void VifStreamUdp::readIqData(QNetworkDatagram datagram)
 {
     QByteArray data = datagram.data();
     QDataStream ds(data);
@@ -78,5 +79,6 @@ void VifStream::readIqData(QNetworkDatagram datagram)
         i.append(rawI);
         q.append(rawQ);
     }
-    qDebug() << "got" << i.size() << q.size();
+    i.pop_back();
+    q.pop_back(); // Remove last value, trailing packet
 }

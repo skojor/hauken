@@ -53,10 +53,11 @@ int main(int argc, char *argv[])
     qRegisterMetaType<NOTIFY::TYPE>("NOTIFY::TYPE");
     qRegisterMetaType<QVector<double> >("QVector<double>");
     qRegisterMetaType<POSITIONSOURCE>("POSITIONSOURCE");
+    qRegisterMetaType<QList<qint16> >("QList<qint16>");
 
     if (qEnvironmentVariableIsEmpty("QTDIR"))   //  check if the app is ran in Qt Creator
          logToFile = true;
-    qInstallMessageHandler(customMessageOutput); // custom message handler for debugging
+    //qInstallMessageHandler(customMessageOutput); // custom message handler for debugging
     logFilePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) +
                   "/haukenDebug_" + QDateTime::currentDateTime().toString("yyyyMMdd") +".log";
     a.setApplicationVersion(ver);

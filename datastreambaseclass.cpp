@@ -322,4 +322,3 @@ void DataStreamBaseClass::readGpscompassData(const QByteArray &buf)
         //qDebug() << "GPS debug" << gpsValid << lat << lng;
     }
 }
-

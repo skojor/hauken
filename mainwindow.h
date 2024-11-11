@@ -65,6 +65,8 @@
 #include "gnssdisplay.h"
 #include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
 #include "udpdatastream.h"
+#include "vifstreamtcp.h"
+#include "vifstreamudp.h"
 
 class MainWindow : public QMainWindow
 {
@@ -264,6 +266,8 @@ private:
 
     Waterfall *waterfall;
     QThread *waterfallThread;
+    Waterfall *iqdataWaterfall;
+    QThread *iqdataWaterfallThread;
 
     CameraRecorder *cameraRecorder;
     QThread *cameraThread;
@@ -290,6 +294,9 @@ private:
 
     QSharedPointer<UdpDataStream> udpStream = QSharedPointer<UdpDataStream>(new UdpDataStream, &QObject::deleteLater);
     QSharedPointer<TcpDataStream> tcpStream = QSharedPointer<TcpDataStream>(new TcpDataStream, &QObject::deleteLater);
+    QSharedPointer<VifStreamUdp> vifStreamUdp = QSharedPointer<VifStreamUdp>(new VifStreamUdp, &QObject::deleteLater);
+    QSharedPointer<VifStreamTcp> vifStreamTcp = QSharedPointer<VifStreamTcp>(new VifStreamTcp, &QObject::deleteLater);
+
     double tracesPerSecond = 0;
 
 signals:

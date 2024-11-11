@@ -70,7 +70,8 @@ SOURCES += \
     traceanalyzer.cpp \
     tracebuffer.cpp \
     udpdatastream.cpp \
-    vifstream.cpp \
+    vifstreamtcp.cpp \
+    vifstreamudp.cpp \
     waterfall.cpp
 
 HEADERS += \
@@ -135,7 +136,8 @@ HEADERS += \
     tracebuffer.h \
     typedefs.h \
     udpdatastream.h \
-    vifstream.h \
+    vifstreamtcp.h \
+    vifstreamudp.h \
     waterfall.h
 
 # Default rules for deployment.
@@ -166,12 +168,14 @@ win32 {
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../opencv/release \
     -lopencv_core490 -lopencv_highgui490 -lopencv_dnn490 -lopencv_imgproc490 \
     -lopencv_imgcodecs490 -lopencv_videoio490 \
-    -L$$PWD/../quazip-1.4/release -lquazip1-qt6
+    -L$$PWD/../quazip-1.4/release -lquazip1-qt6 \
+    -L$$PWD/../fftw -llibfftw3-3
 
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../opencv/debug \
     -lopencv_core490d -lopencv_highgui490d -lopencv_dnn490d -lopencv_imgproc490d \
     -lopencv_imgcodecs490d -lopencv_videoio490d \
-    -L$$PWD/../quazip-1.4/debug -lquazip1-qt6d
+    -L$$PWD/../quazip-1.4/debug -lquazip1-qt6d \
+    -L$$PWD/../fftw -llibfftw3-3
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
 DEFINES += SW_VERSION=\\\"$$system(git describe --always)\\\"
@@ -181,16 +185,16 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.42.5.0
+VERSION = 2.43.2.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken
 QMAKE_TARGET_COPYRIGHT = GPL
 
 
+INCLUDEPATH += $$PWD/../opencv/lib \
+               $$PWD/../fftw
 
-
-INCLUDEPATH += $$PWD/../opencv/lib
 DEPENDPATH += $$PWD/../opencv/lib
 
 DISTFILES += \

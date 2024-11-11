@@ -15,7 +15,8 @@
 #include "typedefs.h"
 #include "tcpdatastream.h"
 #include "udpdatastream.h"
-#include "vifstream.h"
+#include "vifstreamudp.h"
+#include "vifstreamtcp.h"
 #include "config.h"
 
 using namespace Instrument;
@@ -53,6 +54,7 @@ signals:
     void resUsed(int);
     //void freqChanged(double, double);
     //void resChanged(double);
+    void iqFfmFreqChanged(double);
 
 public slots:
     void start();
@@ -103,10 +105,14 @@ public slots:
     void updateAntennaName(const int index, const QString name);
     void setUdpStreamPtr(QSharedPointer<UdpDataStream> ptr) { udpStream = ptr;}
     void setTcpStreamPtr(QSharedPointer<TcpDataStream> ptr) { tcpStream = ptr;}
+    void setVifStreamUdpPtr(QSharedPointer<VifStreamUdp> ptr) { vifStreamUdp = ptr;}
+    void setVifStreamTcpPtr(QSharedPointer<VifStreamTcp> ptr) { vifStreamTcp = ptr;}
     void handleStreamTimeout();
     void handleNetworkError();
     void autoReconnectCheckStatus();
     void resetFreqSettings();
+    void collectIqData();
+    void setTrigCenterFrequency(double d) {trigFrequency = d;}
 
 private slots:
     void scpiConnected();
@@ -187,7 +193,8 @@ private:
     QSharedPointer<Config> config;
     QSharedPointer<UdpDataStream> udpStream;
     QSharedPointer<TcpDataStream> tcpStream;
-    VifStream *vifStream = new VifStream;
+    QSharedPointer<VifStreamUdp> vifStreamUdp;
+    QSharedPointer<VifStreamTcp> vifStreamTcp;
 
     double tracesPerSecValue = 0;
 
@@ -205,6 +212,7 @@ private:
     const int tcpTimeoutInMs = 10000;
 
     bool modeChangeInProgress = false;
+    double trigFrequency = 0;
 };
 
 #endif // MEASUREMENTDEVICE_H

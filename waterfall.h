@@ -11,6 +11,9 @@
 #include <QMutex>
 #include <math.h>
 #include "config.h"
+#include <fftw3.h>
+
+#define FFT_SIZE 1024
 
 enum class COLORS
 {
@@ -35,12 +38,21 @@ public slots:
     void updSettings();
     void restartPlot();
     void stopPlot(bool b) { if (!b) updIntervalTimer->stop(); else updIntervalTimer->start(100);}
+    void receiveIqData(QList<qint16>, QList<qint16>);
+    void setFfmFrequency(double d) { ffmFrequency = d;}
 
 signals:
     void imageReady(QPixmap *);
 
 private slots:
     void updTimerCallback();
+    void findIqFftMinMax(double &min, double &max);
+    void storeIqTrace(QList<double>);
+    void createIqPlot();
+    void fillWindow();
+    void addLines(QPixmap *pixmap);
+    void addText(QPixmap *pixmap);
+    void saveImage(QPixmap *pixmap);
 
 private:
     QTimer *testDraw;
@@ -59,6 +71,12 @@ private:
     bool greyscale = false;
     QMutex mutex;
     bool timeout = true;
+    QList<QList<double> > iqFftResult;
+    QVector<double> window;
+    double ffmFrequency = 0;
+    double samplerate = 0;
+    double secsPerLine;
+    double secsToAnalyze = 500e-6;
 };
 
 #endif // WATERFALL_H

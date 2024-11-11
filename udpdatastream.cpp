@@ -15,6 +15,8 @@ void UdpDataStream::openListener()
         }
         else break;
     }
+    qDebug() << "Datastream udp port:" << udpSocket->localPort();
+
     bytesPerSecTimer->start();
 }
 

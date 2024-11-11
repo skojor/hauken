@@ -32,6 +32,21 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
                        "Default value is 250. The average calculation will slow down gradually when enough traces are gathered");
     sbOpt1->setRange(0, 1e9);
 
+    mainLayout->addRow(cbOpt5);
+    cbOpt5->setText("Create IQ high res. plot when triggered");
+    cbOpt5->setToolTip("If enabled, the receiver will be switched to FFM mode and collect a few ms of IQ data "\
+                       "when triggered. The data will be used to create a high resolution FFT plot and sent"\
+                       "via email.");
+
+    mainLayout->addRow(new QLabel(tr("IQ data plot length in microseconds")), sbOpt2);
+    sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 50 - 4000 microsconds.");
+    sbOpt2->setRange(50, 4000);
+
+    mainLayout->addRow(new QLabel(tr("IQ data bandwidth")), comboOpt1);
+    comboOpt1->setToolTip("Which bandwidth to use for the receiver. Receiver dependent, "\
+                          "must be set according to receiver specs!");
+    comboOpt1->addItems(QStringList() << "500" << "1000" << "5000" << "10000" << "20000" << "40000");
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -45,6 +60,9 @@ void ReceiverOptions::start()
     cbOpt3->setChecked(config->getInstrAutoReconnect());
     cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
     sbOpt1->setValue(config->getInstrTracesNeededForAverage());
+    cbOpt5->setChecked(config->getInstrCreateFftPlot());
+    sbOpt2->setValue(config->getInstrFftPlotLength());
+    comboOpt1->setCurrentText(QString::number(config->getInstrFftPlotBw()));
     dialog->exec();
 }
 
@@ -55,6 +73,10 @@ void ReceiverOptions::saveCurrentSettings()
     config->setInstrAutoReconnect(cbOpt3->isChecked());
     config->setInstrNormalizeSpectrum(cbOpt4->isChecked());
     config->setInstrTracesNeededForAverage(sbOpt1->value());
+    config->setInstrCreateFftPlot(cbOpt5->isChecked());
+    config->setInstrFftPlotLength(sbOpt2->value());
+    config->setInstrFftPlotBw(comboOpt1->currentText().toInt());
+
     emit updSettings();
 
     dialog->close();

@@ -126,6 +126,13 @@ public slots:
     void setInstrNormalizeSpectrum(bool b) { settings->setValue("instr/NormalizeSpectrum", b); emit settingsUpdated(); }
     int getInstrTracesNeededForAverage() { return settings->value("instr/tracesNeededForAverage", 250).toInt();}
     void setInstrTracesNeededForAverage(int i) { settings->setValue("instr/tracesNeededForAverage", i); emit settingsUpdated(); }
+    bool getInstrCreateFftPlot() { return settings->value("instr/createFftPlot", false).toBool();}
+    void setInstrCreateFftPlot(bool b) { settings->setValue("instr/createFftPlot", b); emit settingsUpdated();}
+    int getInstrFftPlotLength() { return settings->value("instr/fftPlotLength", 500).toInt();}
+    void setInstrFftPlotLength(int i) { settings->setValue("instr/fftPlotLength", i); emit settingsUpdated();}
+    int getInstrFftPlotBw() { return settings->value("instr/fftPlotBw", 10000).toInt();}
+    void setInstrFftPlotBw(int i) { settings->setValue("instr/fftPlotBw", i); emit settingsUpdated();}
+
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
