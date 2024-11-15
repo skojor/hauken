@@ -37,7 +37,7 @@ void VifStreamUdp::newData()
 
         //rxData.fill(0, udpSocket->pendingDatagramSize());
         //udpSocket->readDatagram(rxData.data(), rxData.size());
-        //qDebug() << "package size" << rxData.size();
+        qDebug() << "package size" << datagram.data().size();
         ifBufferUdp.append(datagram);
     }
 }

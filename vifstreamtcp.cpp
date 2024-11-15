@@ -1,6 +1,10 @@
 #include "vifstreamtcp.h"
 
-VifStreamTcp::VifStreamTcp() {}
+VifStreamTcp::VifStreamTcp()
+{
+    stopIqStreamTimer = new QTimer;
+    connect(stopIqStreamTimer, &QTimer::timeout, this, &VifStreamTcp::processVifData);
+}
 
 
 void VifStreamTcp::openListener(const QHostAddress host, const int port)
@@ -9,22 +13,17 @@ void VifStreamTcp::openListener(const QHostAddress host, const int port)
 
     tcpSocket->connectToHost(host, port);
     tcpSocket->waitForConnected(1000);
-    if (tcpSocket->isOpen()) {
-        tcpSocket->write("\n");
-        bytesPerSecTimer->start();
-    }
 }
 
 void VifStreamTcp::closeListener()
 {
     timeoutTimer->stop();
-    bytesPerSecTimer->stop();
-    udpSocket->close();
+    tcpSocket->close();
 }
 
 void VifStreamTcp::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    qDebug() << "VIF UDP stream state" << state;
+    qDebug() << "VIF TCP stream state" << state;
     //    if (state == QAbstractSocket::UnconnectedState)
     }
 
@@ -32,42 +31,78 @@ void VifStreamTcp::newData()
 {
     QByteArray data = tcpSocket->readAll();
     ifBufferTcp.append(data);
-    qDebug() << "VIF buffer" << ifBufferTcp.size();
+    //qDebug() << "VIF buffer" << ifBufferTcp.size() << data.size();
+    if (ifBufferTcp.size() > samplesNeeded * 4 && stopIqStreamTimer->isActive()) {
+        processVifData();
+    }
+    else if (!stopIqStreamTimer->isActive()) // Data came after we asked for stop, ignore
+        ifBufferTcp.clear();
 }
 
-bool VifStreamTcp::checkVifHeader(QByteArray data)
+void VifStreamTcp::parseVifData()
 {
-    QDataStream ds(data);
-    qint16 infClassCode, packetClassCode;
-    ds.skipRawData(12);
-    ds >> infClassCode >> packetClassCode;
-    if (infClassCode == 1 && packetClassCode == 1)
-        return true;
-    else
-        return false;
+    const quint32 streamIdentifier = calcStreamIdentifier();
+    QDataStream ds(ifBufferTcp);
+
+    while (!ds.atEnd()) {
+
+        qint16 nrOfWords = 0, infClassCode = 0, packetClassCode = 0;
+        quint32 readStreamId = 0;
+
+        ds.skipRawData(2);
+
+        ds >> nrOfWords >> readStreamId;
+        ds.skipRawData(4);
+        ds >> infClassCode >> packetClassCode;
+        ds.skipRawData(12);
+        int readWords = 7;
+
+        if (streamIdentifier == readStreamId && infClassCode == 0x0001 && packetClassCode == 0x0001) {
+            // we have identied receiver and the packet code is raw IQ, continue
+            while (readWords < nrOfWords) {
+                readWords++;
+                qint16 readI, readQ;
+                ds >> readI >> readQ;
+                i.append(readI);
+                q.append(readQ);
+            }
+            i.removeLast();
+            q.removeLast();
+        }
+        else if (streamIdentifier == readStreamId) {
+            // we have correct id, but wrong packet code, skip and continue
+            ds.skipRawData(nrOfWords * 4  - 28);
+        }
+        else
+            ds.skipRawData(1);
+    }
 }
 
 void VifStreamTcp::processVifData()
 {
-    qDebug() <<"pjocess" << ifBufferTcp.size();
-    for (auto && buffer : ifBufferTcp) {
-        if (checkVifHeader(buffer))
-            readIqData(buffer);
-        else
-            qDebug() << "NOPY";
-    }
+    emit stopIqStream();
+    stopIqStreamTimer->stop();
+    parseVifData();
+    qDebug() << "Received total lines IQ:" << i.size();
+
+    emit newIqData(i, q);
+    i.clear();
+    q.clear();
+    ifBufferTcp.clear();
 }
 
-void VifStreamTcp::readIqData(QByteArray data)
+quint32 VifStreamTcp::calcStreamIdentifier()
 {
-    QDataStream ds(data);
-    ds.skipRawData(28);
+    qDebug() << devicePtr->longId;
+    QStringList split = devicePtr->longId.split(',');
 
-    qint16 rawI, rawQ;
-    while (!ds.atEnd()) {
-        ds >> rawI >> rawQ;
-        i.append(rawI);
-        q.append(rawQ);
+    if (split.size() >= 3) {
+        QString serial = split[2];
+        serial.remove('.');
+        serial.remove('/');
+        serial.append('0');
+        return serial.toULong();
     }
-    qDebug() << "got" << i.size() << q.size();
+    else
+        qDebug() << "Cannot calculate stream identifier?";
 }

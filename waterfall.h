@@ -13,8 +13,6 @@
 #include "config.h"
 #include <fftw3.h>
 
-#define FFT_SIZE 1024
-
 enum class COLORS
 {
     OFF,
@@ -40,9 +38,12 @@ public slots:
     void stopPlot(bool b) { if (!b) updIntervalTimer->stop(); else updIntervalTimer->start(100);}
     void receiveIqData(QList<qint16>, QList<qint16>);
     void setFfmFrequency(double d) { ffmFrequency = d;}
+    void requestIqData();
+    void resetTimer() { lastIqRequestTimer.invalidate();}
 
 signals:
     void imageReady(QPixmap *);
+    void requestIq(int minSamplesNeeded);
 
 private slots:
     void updTimerCallback();
@@ -77,6 +78,10 @@ private:
     double samplerate = 0;
     double secsPerLine;
     double secsToAnalyze = 500e-6;
+    int fftSize = 512;
+    int imageYSize = 1024;
+    fftw_complex *in = new fftw_complex[fftSize], *out = new fftw_complex[fftSize];
+    QElapsedTimer lastIqRequestTimer;
 };
 
 #endif // WATERFALL_H

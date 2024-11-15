@@ -52,7 +52,7 @@ public:
     unsigned int resolution = 0;
     int traceCtr = 0;
     QVector<QNetworkDatagram> ifBufferUdp;
-    QVector<QByteArray> ifBufferTcp;
+    QByteArray ifBufferTcp;
 
 public slots:
     virtual void openListener() = 0;
@@ -90,6 +90,7 @@ signals:
     void freqChanged(double, double);
     void resChanged(double);
     void newIqData(QList<qint16>, QList<qint16>);
+    void stopIqStream();
 
 private slots:
 

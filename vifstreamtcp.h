@@ -14,20 +14,23 @@ public:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newData();
-    bool checkVifHeader(QByteArray data);
-    void readIqData(QByteArray data);
+    void parseVifData();
     void processVifData();
+    void setSamplesNeeded(int i) { samplesNeeded = i;}
+    void startIqDataTimeout() { stopIqStreamTimer->start(5000);}
 
 signals:
 
 private slots:
+    quint32 calcStreamIdentifier();
 
 private:
     bool headerIsRead = false;
     int bytectr = 0;
     QVector<qint16> i;
     QVector<qint16> q;
-
+    int samplesNeeded;
+    QTimer *stopIqStreamTimer;
 };
 
 #endif // VIFSTREAMTCP_H

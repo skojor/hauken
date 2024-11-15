@@ -39,8 +39,8 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
                        "via email.");
 
     mainLayout->addRow(new QLabel(tr("IQ data plot length in microseconds")), sbOpt2);
-    sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 50 - 4000 microsconds.");
-    sbOpt2->setRange(50, 4000);
+    sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 50 - 40000 microsconds.");
+    sbOpt2->setRange(50, 40000);
 
     mainLayout->addRow(new QLabel(tr("IQ data bandwidth")), comboOpt1);
     comboOpt1->setToolTip("Which bandwidth to use for the receiver. Receiver dependent, "\

@@ -111,8 +111,9 @@ public slots:
     void handleNetworkError();
     void autoReconnectCheckStatus();
     void resetFreqSettings();
-    void collectIqData();
+    void collectIqData(int nrOfSamplesNeeded);
     void setTrigCenterFrequency(double d) {trigFrequency = d;}
+    void deleteIfStream();
 
 private slots:
     void scpiConnected();
@@ -156,7 +157,6 @@ private slots:
     void checkFfmSpan(const QByteArray buffer);
     void setIfMode();
     void setupIfStream();
-    void deleteIfStream();
 
 private:
     bool connected = false;
@@ -213,6 +213,7 @@ private:
 
     bool modeChangeInProgress = false;
     double trigFrequency = 0;
+    bool modeChanged = false;
 };
 
 #endif // MEASUREMENTDEVICE_H

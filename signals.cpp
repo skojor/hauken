@@ -127,7 +127,12 @@ void MainWindow::setSignals()
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
+    //connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqdataWaterfall, &Waterfall::requestIqData); // New
+    connect(iqdataWaterfall, &Waterfall::requestIq, measurementDevice, &MeasurementDevice::collectIqData);
+    connect(vifStreamTcp.data(), &VifStreamTcp::stopIqStream, measurementDevice, &MeasurementDevice::deleteIfStream);
+    connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::resetTimer);
+    connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::requestIqData);
 
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceBuffer, &TraceBuffer::recorderStarted);
@@ -266,7 +271,6 @@ void MainWindow::setSignals()
     });
 
     connect(btnTrigRecording, &QPushButton::clicked, sdefRecorder, &SdefRecorder::manualTriggeredRecording);
-    connect(btnTrigRecording, &QPushButton::clicked, measurementDevice, &MeasurementDevice::collectIqData);
 
     connect(btnPmrTable, &QPushButton::clicked, pmrTableWdg, &PmrTableWdg::start);
     sdefRecorderThread->start();
