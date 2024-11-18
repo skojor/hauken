@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.43</td><td>IQ high res FFT plot added. Added millisecond save option to 1809 file</td></tr>"
        << "<tr><td>2.42</td><td>Datastream rebuild, various reconnect issues fixed</td></tr>"
        << "<tr><td>2.41</td><td>Jammertest version, unreleased</td></tr>"
        << "<tr><td>2.40</td><td>Camera support readded</td></tr>"
