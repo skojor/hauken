@@ -180,24 +180,24 @@ void Notifications::sendMail()
                     message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
             else {
-            for (auto &val : mailRecipients)
-                message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+                for (auto &val : mailRecipients)
+                    message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
 
             mimeHtml->setHtml("<table>" + mailtext +
                               (config->getSdefAddPosition() && positionValid ?
-                                                      tr("<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/") +
-                                                                                                  QString::number(latitude, 'f', 5) + "+" +
-                                                                                                  QString::number(longitude, 'f', 5) + "/@" +
-                                                                                                  QString::number(latitude, 'f', 5) + "," +
-                                                                                                  QString::number(longitude, 'f', 5) + ",10z\">" +
-                                                                           QString::number(latitude, 'f', 5) + " " +
-                                                                           QString::number(longitude, 'f', 5) +
-                                                                                                  tr("</a></td><td>") +
-                                                                                                  "<a href=\"https://nais.kystverket.no/point/" +
-                                                                                                  QString::number(longitude, 'f', 5) + "_" +
-                                                                                                  QString::number(latitude, 'f', 5)  +
-                                                                                                  tr("\">Link til Kystverket</td></tr>") : "") +
+                                   tr("<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/") +
+                                       QString::number(latitude, 'f', 5) + "+" +
+                                       QString::number(longitude, 'f', 5) + "/@" +
+                                       QString::number(latitude, 'f', 5) + "," +
+                                       QString::number(longitude, 'f', 5) + ",10z\">" +
+                                       QString::number(latitude, 'f', 5) + " " +
+                                       QString::number(longitude, 'f', 5) +
+                                       tr("</a></td><td>") +
+                                       "<a href=\"https://nais.kystverket.no/point/" +
+                                       QString::number(longitude, 'f', 5) + "_" +
+                                       QString::number(latitude, 'f', 5)  +
+                                       tr("\">Link til Kystverket</td></tr>") : "") +
                               /* + (predictionReceived ? "AI classification: " + prediction +
                                ", probability " + QString::number(probability) + " %" : "") +'/*/
                               "</table><hr><img src='cid:image1' />   ");
@@ -215,7 +215,18 @@ void Notifications::sendMail()
             image1->setContentType("image/png");
             //message.addPart(&image1);
             emailPictures.append(image1);
+            if (!iqPlotFilename.isEmpty()) {
+                auto image2 = new SimpleMail::MimeInlineFile(new QFile(iqPlotFilename));
+                image2->setContentId("image2");
+                image2->setContentType("image/jpg");
+                emailIqPlot.append(image2);
+            }
             message.addPart(emailPictures.last());
+            if (!iqPlotFilename.isEmpty()) {
+                message.addPart(emailIqPlot.last());
+                //iqPlotFilename.clear();
+            }
+
             //qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
             emailBacklog.append(message);
             mailtext.clear();
@@ -373,7 +384,7 @@ void Notifications::generateGraphEmail()
 {
     QJsonObject mail, message, body;
     QJsonArray toRecipients, attachments;
-    QJsonObject att;
+    QJsonObject att, att2;
     QStringList recipients;
 
     if (!notifyPriorityRecipients) recipients = config->getEmailRecipients().split(';');
@@ -404,6 +415,22 @@ void Notifications::generateGraphEmail()
         att.insert("contentBytes", QString(picture.readAll().toBase64()));
         att.insert("isInline", "true");
         attachments.append(att);
+    }
+    if (!iqPlotFilename.isEmpty()) {
+        QFile picture2(iqPlotFilename);
+        if (!picture2.open(QIODevice::ReadOnly)) {
+            qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
+        }
+        else {
+            att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
+            att2.insert("name", "iqplot.jpg");
+            att2.insert("contentType", "image/jpg");
+            att2.insert("contentId", "iqplot");
+            att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
+            att2.insert("isInline", "false");
+            attachments.append(att2);
+            iqPlotFilename.clear();
+        }
     }
 
     message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");

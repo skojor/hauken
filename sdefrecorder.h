@@ -45,6 +45,7 @@ public slots:
     void finishRecording();
     void recPrediction(QString pred, int prob);
     void loginRequest() {  askedForLogin = true; curlLogin(); }
+    void setModeUsed(QString s) { modeUsed = s;}
 
 private slots:
     QByteArray createHeader();
@@ -67,6 +68,7 @@ signals:
     void recordingEnabled();
     void recordingDisabled();
     void loginSuccessful();
+    void publishFilename(QString);
 
 private:
     //QSharedPointer<Config> config;
@@ -99,6 +101,8 @@ private:
     bool predictionReceived = false;
     bool askedForLogin = false;
     QSharedPointer<Config> config;
+    QString modeUsed = "pscan";
+    int datapoints = 0;
 
     // Config cache
     bool useNewMsFormat;

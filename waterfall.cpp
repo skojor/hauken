@@ -133,7 +133,7 @@ void Waterfall::updSettings()
 
 void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
 {
-    qDebug() << "Rec IQ bytes:" << cmpI.size() << cmpQ.size();
+    //qDebug() << "Rec IQ bytes:" << cmpI.size() << cmpQ.size();
     int samplesIterator = 0;
 
     fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
@@ -174,11 +174,25 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
         }
         fftw_destroy_plan(plan);
         createIqPlot();
+
+        if (!filename.isEmpty()) { // store IQ to file
+            QFile file(filename + ".iq");
+            if (!file.open(QIODevice::WriteOnly))
+                qDebug() << "Could not open" << filename + ".iq" << "for writing IQ data, aborting";
+            else {
+                QDataStream ds(&file);
+                for (int i = 0; i < cmpI.size(); i++)
+                    ds << cmpI[i] << cmpQ[i];
+                file.close();
+            }
+        }
+        else {
+            qDebug() << "No filename specified for IQ data storage";
+        }
     }
     else {
         qDebug() << "Not enough samples to create IQ FFT plot, giving up";
     }
-
 }
 
 void Waterfall::storeIqTrace(QList<double> res)
@@ -335,7 +349,15 @@ void Waterfall::addText(QPixmap *pixmap)
 
 void Waterfall::saveImage(QPixmap *pixmap)
 {
-    pixmap->save("c:/hauken/out.jpg");
+    if (!filename.isEmpty()) {
+        pixmap->save(filename + "_plot.jpg");
+        emit iqPlotReady(filename + "_plot.jpg");
+    }
+    else {
+        pixmap->save(config->getLogFolder() + "/noname_plot.jpg");
+        emit iqPlotReady(config->getLogFolder() + "/noname_plot.jpg");
+    }
+
 }
 
 void Waterfall::requestIqData()

@@ -120,17 +120,29 @@ QString SdefRecorder::createFilename()
             failed = true;
         }
     }
+    if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
+        ts << dir << "/" << config->getSdefStationInitals() << "_"
+           << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
+           << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << "_"
+           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+    }
+    else {
+        ts << dir << "/" << config->getSdefStationInitals() << "_"
+           << QString::number((config->getInstrFfmCenterFreq() - config->getInstrFfmSpan().toDouble() / 2e3) * 1e3, 'f', 0) << "-"
+           << QString::number((config->getInstrFfmCenterFreq() + config->getInstrFfmSpan().toDouble() / 2e3) * 1e3, 'f', 0) << "_"
+           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
 
-    ts << dir << "/" << config->getSdefStationInitals() << "_"
-       << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
-       << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << "_"
-       << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm")
-       << ".cef";
+    }
+    //<< ".cef";
+
+    emit publishFilename(filename);
+    ts << ".cef";
 
     return filename;
 }
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
+    datapoints = data.size();
     /*if (!historicDataSaved) {
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Trace history data not saved correctly");
         failed = true;
@@ -211,18 +223,29 @@ QByteArray SdefRecorder::createHeader()
 {
     QString buf;
     QTextStream stream(&buf, QIODevice::ReadWrite);
+    double startfreq, stopfreq, res;
+    if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
+        startfreq = config->getInstrStartFreq() * 1e3;
+        stopfreq = config->getInstrStopFreq() * 1e3;
+        res = config->getInstrResolution().toDouble();
+    }
+    else {
+        startfreq = (config->getInstrFfmCenterFreq() * 1e3) - (config->getInstrFfmSpan().toDouble() / 2);
+        stopfreq = config->getInstrFfmCenterFreq() * 1e3 + (config->getInstrFfmSpan().toDouble() / 2);
+        res = (stopfreq - startfreq) / (datapoints - 1);
+    }
 
     stream << (config->getSdefAddPosition()?"FileType MobileData":"FileType Standard Data exchange Format 2.0") << '\n'
            << "LocationName " << config->getStationName() << "\n"
            << "Latitude " << convertDdToddmmss((addPosition ? prevLat : config->getStnLatitude().toDouble())) << "\n"
            << "Longitude " << convertDdToddmmss((addPosition ? prevLng : config->getStnLongitude().toDouble()), false) << '\n'
-           << "FreqStart " << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << '\n'
-           << "FreqStop " << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << '\n'
+           << "FreqStart " << QString::number(startfreq, 'f', 0) << '\n'
+           << "FreqStop " << QString::number(stopfreq, 'f', 0) << '\n'
            << "AntennaType NoAntenna" << '\n'
-           << "FilterBandwidth " << QString::number(config->getInstrResolution().toDouble(), 'f', 3) << '\n'
+           << "FilterBandwidth " << QString::number(res, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n' \
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
-           << "DataPoints " << QString::number(1 + ((config->getInstrStopFreq() - config->getInstrStartFreq()) / (config->getInstrResolution().toDouble() / 1e3))) << '\n'
+           << "DataPoints " << datapoints << '\n'
            << "ScanTime " << QString::number((double)config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Detector FFM" << '\n'
            << "Note Instrument: " << config->getInstrId() << "; Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
@@ -290,9 +313,9 @@ bool SdefRecorder::curlLogin()
     // parameters check
     if (!askedForLogin) {
         if (config->getSdefStationInitals().isEmpty()
-                               or config->getSdefUsername().isEmpty()
-                               or config->getSdefPassword().isEmpty()
-                               or config->getStationName().isEmpty()) {
+            or config->getSdefUsername().isEmpty()
+            or config->getSdefPassword().isEmpty()
+            or config->getStationName().isEmpty()) {
             emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Upload requested, but some parameters are missing in the config. Check it out");
             return false;
         }

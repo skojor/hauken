@@ -60,6 +60,7 @@ public slots:
     void updSettings();
     void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
     void recTracePlot(const QPixmap *pic);
+    void recIqPlot(const QString filename) { iqPlotFilename = filename;}
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
     void recPrediction(QString pred, int prob);
@@ -92,6 +93,7 @@ private:
     QTimer *timeBetweenEmailsTimer;
     QTimer *retryEmailsTimer;
     QList<SimpleMail::MimeInlineFile *> emailPictures;
+    QList<SimpleMail::MimeInlineFile *> emailIqPlot;
     QList<SimpleMail::MimeMessage> emailBacklog;
     QString lastPicFilename;
     bool graphAuthenticated = false;
@@ -125,6 +127,7 @@ private:
     int probability = 0;
     bool predictionReceived = false;
     bool notifyPriorityRecipients = false;
+    QString iqPlotFilename;
 };
 
 #endif // NOTIFICATIONS_H

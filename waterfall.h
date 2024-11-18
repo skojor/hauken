@@ -40,9 +40,11 @@ public slots:
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void requestIqData();
     void resetTimer() { lastIqRequestTimer.invalidate();}
+    void setFilename(QString s) { filename = s;}
 
 signals:
     void imageReady(QPixmap *);
+    void iqPlotReady(QString filename);
     void requestIq(int minSamplesNeeded);
 
 private slots:
@@ -82,6 +84,7 @@ private:
     int imageYSize = 1024;
     fftw_complex *in = new fftw_complex[fftSize], *out = new fftw_complex[fftSize];
     QElapsedTimer lastIqRequestTimer;
+    QString filename;
 };
 
 #endif // WATERFALL_H

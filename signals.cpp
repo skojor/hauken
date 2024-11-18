@@ -133,6 +133,7 @@ void MainWindow::setSignals()
     connect(vifStreamTcp.data(), &VifStreamTcp::stopIqStream, measurementDevice, &MeasurementDevice::deleteIfStream);
     connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::resetTimer);
     connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::requestIqData);
+    connect(sdefRecorder, &SdefRecorder::publishFilename, iqdataWaterfall, &Waterfall::setFilename);
 
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceBuffer, &TraceBuffer::recorderStarted);
@@ -218,6 +219,7 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::deviceBusy, positionReport, &PositionReport::setInUse);
     connect(measurementDevice, &MeasurementDevice::ipOfUser, positionReport, &PositionReport::setInUseByIp);
     connect(measurementDevice, &MeasurementDevice::modeUsed, positionReport, &PositionReport::setModeUsed);
+    connect(measurementDevice, &MeasurementDevice::modeUsed, sdefRecorder, &SdefRecorder::setModeUsed);
     connect(measurementDevice, &MeasurementDevice::freqRangeUsed, positionReport, &PositionReport::setFreqUsed);
     connect(measurementDevice, &MeasurementDevice::resUsed, positionReport, &PositionReport::setResUsed);
     connect(measurementDevice, &MeasurementDevice::reconnected, positionReport, &PositionReport::setMeasurementDeviceReconnected);
@@ -257,6 +259,7 @@ void MainWindow::setSignals()
                     customPlot->replot();
                 }
             });
+    connect(iqdataWaterfall, &Waterfall::iqPlotReady, notifications, &Notifications::recIqPlot);
 
     connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
     connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
