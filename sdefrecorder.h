@@ -17,6 +17,8 @@
 #include "config.h"
 #include "typedefs.h"
 #include "quazip/JlCompress.h"
+#include <QNetworkAccessManager>
+
 
 /*
  * Class to take care of recording to file in sdef format.
@@ -46,6 +48,7 @@ public slots:
     void recPrediction(QString pred, int prob);
     void loginRequest() {  askedForLogin = true; curlLogin(); }
     void setModeUsed(QString s) { modeUsed = s;}
+    void dataPointsChanged(int d) { datapoints = d;}
 
 private slots:
     QByteArray createHeader();
@@ -69,6 +72,8 @@ signals:
     void recordingDisabled();
     void loginSuccessful();
     void publishFilename(QString);
+    void reqAuthentication();
+    void fileReadyForUpload(QString);
 
 private:
     //QSharedPointer<Config> config;
@@ -104,8 +109,12 @@ private:
     QString modeUsed = "pscan";
     int datapoints = 0;
 
+    QNetworkAccessManager *networkManager; // New for OAuth2/SSO
+
+
     // Config cache
     bool useNewMsFormat;
+    double startfreq, stopfreq, resolution;
 };
 
 #endif // SDEFRECORDER_H

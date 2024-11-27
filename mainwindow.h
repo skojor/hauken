@@ -67,6 +67,8 @@
 #include "udpdatastream.h"
 #include "vifstreamtcp.h"
 #include "vifstreamudp.h"
+#include "accesshandler.h"
+#include "oauthfileuploader.h"
 
 class MainWindow : public QMainWindow
 {
@@ -298,6 +300,8 @@ private:
     QSharedPointer<VifStreamTcp> vifStreamTcp = QSharedPointer<VifStreamTcp>(new VifStreamTcp, &QObject::deleteLater);
 
     double tracesPerSecond = 0;
+    AccessHandler *accessHandler = new AccessHandler(config);
+    OAuthFileUploader *oauthFileUploader = new OAuthFileUploader(config);
 
 signals:
     void stopPlot(bool);

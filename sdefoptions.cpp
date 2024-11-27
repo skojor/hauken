@@ -58,6 +58,31 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt5->setText("Use new ms format in 1809 file");
     cbOpt5->setToolTip("Enable this option to add date and millisecond timestamp in 1809 file");
 
+    QGroupBox *groupBox = new QGroupBox("OAuth2 authentication");
+    QFormLayout *layout = new QFormLayout;
+
+    layout->addRow(cbOpt6);
+    cbOpt6->setText("Use OAuth2 authentication for file uploads");
+    cbOpt6->setToolTip("Enable this option to prefer OAuth2 authentication. Ask your IT provider for these values");
+
+    layout->addRow(new QLabel("OAuth2 authentication URL"), leOpt5);
+    leOpt5->setToolTip("Set the URL to use for OAuth auth requests");
+
+    layout->addRow(new QLabel("Oauth2 access token URL"), leOpt6);
+    leOpt6->setToolTip("Set the URL to use for receiving the access token URL");
+
+    layout->addRow(new QLabel("OAuth2 application ID"), leOpt9);
+    leOpt9->setToolTip("Application ID to use for authentication");
+
+    layout->addRow(new QLabel("OAuth2 scope"), leOpt7);
+    leOpt7->setToolTip("Set the scope which this authentication should cover");
+
+    layout->addRow(new QLabel("File upload address"), leOpt8);
+    leOpt8->setToolTip("The address to use for uploading SDEF measurement files");
+
+    groupBox->setLayout(layout);
+    mainLayout->addRow(groupBox);
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
     connect(cbOpt3, &QCheckBox::toggled, this, [this] (bool b) {
@@ -82,6 +107,13 @@ void SdefOptions::start()
     comboOpt1->setCurrentText(config->getSdefGpsSource());
     sbOpt3->setValue(config->getSdefPreRecordTime());
     cbOpt5->setChecked(config->getSdefNewMsFormat());
+    cbOpt6->setChecked(config->getOauth2Enable());
+    leOpt5->setText(config->getOAuth2AuthUrl());
+    leOpt6->setText(config->getOAuth2AccessTokenUrl());
+    leOpt7->setText(config->getOAuth2Scope());
+    leOpt8->setText(config->getOauth2UploadAddress());
+    leOpt9->setText(config->getOAuth2ClientId());
+
     dialog->exec();
 }
 
@@ -100,5 +132,12 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());
     config->setSdefNewMsFormat(cbOpt5->isChecked());
+    config->setOAuth2Enable(cbOpt5->isChecked());
+    config->setOAuth2AuthUrl(leOpt5->text().trimmed());
+    config->setOAuth2AccessTokenUrl(leOpt6->text().trimmed());
+    config->setOAuth2Scope(leOpt7->text().trimmed());
+    config->setOAuth2UploadAddress(leOpt8->text().trimmed());
+    config->setOAuth2ClientId(leOpt9->text().trimmed());
+
     dialog->close();
 }

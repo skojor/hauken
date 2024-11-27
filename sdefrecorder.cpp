@@ -36,6 +36,8 @@ void SdefRecorder::start()
         process->setProgram("curl");
     }
     periodicCheckUploadsTimer->start(1800 * 1e3); // check if any files still waits for upload every half hour
+
+    networkManager = new QNetworkAccessManager;
 }
 
 void SdefRecorder::updSettings()
@@ -70,6 +72,18 @@ void SdefRecorder::updSettings()
         if (autorecorderTimer->isActive()) autorecorderTimer->stop();
     }
     useNewMsFormat = config->getSdefNewMsFormat();
+
+    if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
+        startfreq = config->getInstrStartFreq() * 1e6;
+        stopfreq = config->getInstrStopFreq() * 1e6;
+        resolution = config->getInstrResolution().toDouble() * 1e3;
+    }
+    else {
+        int span = config->getInstrFfmSpan().toInt() * 1e3;
+        startfreq = config->getInstrFfmCenterFreq() * 1e6 - span / 2;
+        stopfreq = startfreq + span;
+        resolution = (stopfreq - startfreq) / (datapoints - 1);
+    }
 }
 
 void SdefRecorder::triggerRecording()
@@ -142,7 +156,6 @@ QString SdefRecorder::createFilename()
 }
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
-    datapoints = data.size();
     /*if (!historicDataSaved) {
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Trace history data not saved correctly");
         failed = true;
@@ -223,26 +236,27 @@ QByteArray SdefRecorder::createHeader()
 {
     QString buf;
     QTextStream stream(&buf, QIODevice::ReadWrite);
-    double startfreq, stopfreq, res;
+    /*double startfreq, stopfreq, res;
     if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
         startfreq = config->getInstrStartFreq() * 1e3;
         stopfreq = config->getInstrStopFreq() * 1e3;
         res = config->getInstrResolution().toDouble();
+        //datapoints = 1 + ((config->getInstrStopFreq() - config->getInstrStartFreq()) / (config->getInstrResolution().toDouble() / 1e3));
     }
     else {
         startfreq = (config->getInstrFfmCenterFreq() * 1e3) - (config->getInstrFfmSpan().toDouble() / 2);
         stopfreq = config->getInstrFfmCenterFreq() * 1e3 + (config->getInstrFfmSpan().toDouble() / 2);
         res = (stopfreq - startfreq) / (datapoints - 1);
-    }
+    }*/
 
     stream << (config->getSdefAddPosition()?"FileType MobileData":"FileType Standard Data exchange Format 2.0") << '\n'
            << "LocationName " << config->getStationName() << "\n"
            << "Latitude " << convertDdToddmmss((addPosition ? prevLat : config->getStnLatitude().toDouble())) << "\n"
            << "Longitude " << convertDdToddmmss((addPosition ? prevLng : config->getStnLongitude().toDouble()), false) << '\n'
-           << "FreqStart " << QString::number(startfreq, 'f', 0) << '\n'
-           << "FreqStop " << QString::number(stopfreq, 'f', 0) << '\n'
+           << "FreqStart " << QString::number(startfreq / 1e3, 'f', 0) << '\n'
+           << "FreqStop " << QString::number(stopfreq / 1e3, 'f', 0) << '\n'
            << "AntennaType NoAntenna" << '\n'
-           << "FilterBandwidth " << QString::number(res, 'f', 3) << '\n'
+           << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n' \
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
            << "DataPoints " << datapoints << '\n'
@@ -286,10 +300,13 @@ void SdefRecorder::finishRecording()
 
     if (predictionReceived) updFileWithPrediction(file.fileName());
 
-    if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording)
+    if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) {
         QTimer::singleShot(10000, this, &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
-    else
+    }
+    else {
         if (config->getSdefZipFiles() && recording) zipit(); // Zip the file anyways, we don't shit storage space here
+    }
+    if (!finishedFilename.isEmpty()) emit fileReadyForUpload(finishedFilename); // Signal to oauth class
 
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();
@@ -458,3 +475,4 @@ void SdefRecorder::updFileWithPrediction(const QString filename)
     prediction.clear();
     probability = 0;
 }
+

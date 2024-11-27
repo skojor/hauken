@@ -23,7 +23,8 @@ enum class TYPE {
     GEOLIMITER,
     PLAYBACK,
     AI,
-    MQTT
+    MQTT,
+    OAUTHFILEUPLOAD
 };
 }
 

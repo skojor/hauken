@@ -38,6 +38,11 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
+    if (data.size() != nrOfDataPoints) {
+        emit nrOfDatapointsChanged(data.size());
+        nrOfDataPoints = data.size();
+    }
+
     emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
     
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time

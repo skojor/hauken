@@ -1,4 +1,4 @@
-QT       += core gui serialport network mqtt
+QT       += core gui serialport network mqtt networkauth
 greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
@@ -30,6 +30,7 @@ SOURCES += \
     SimpleMail/sender.cpp \
     SimpleMail/server.cpp \
     SimpleMail/serverreply.cpp \
+    accesshandler.cpp \
     ai.cpp \
     arduino.cpp \
     arduinooptions.cpp \
@@ -56,6 +57,7 @@ SOURCES += \
     mqtt.cpp \
     mqttoptions.cpp \
     notifications.cpp \
+    oauthfileuploader.cpp \
     optionsbaseclass.cpp \
     pmrtablewdg.cpp \
     positionreport.cpp \
@@ -98,6 +100,7 @@ HEADERS += \
     SimpleMail/serverreply.h \
     SimpleMail/serverreply_p.h \
     SimpleMail/smtpexports.h \
+    accesshandler.h \
     ai.h \
     arduino.h \
     arduinooptions.h \
@@ -122,6 +125,7 @@ HEADERS += \
     mqtt.h \
     mqttoptions.h \
     notifications.h \
+    oauthfileuploader.h \
     optionsbaseclass.h \
     pmrtablewdg.h \
     positionreport.h \
@@ -192,7 +196,7 @@ QMAKE_TARGET_DESCRIPTION = Hauken
 QMAKE_TARGET_COPYRIGHT = GPL
 
 
-INCLUDEPATH += $$PWD/../opencv/li
+INCLUDEPATH += $$PWD/../opencv/lib
 
 DEPENDPATH += $$PWD/../opencv/lib
 

@@ -81,7 +81,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        qDebug() << ">>" << data;
+        //qDebug() << ">>" << data;
     }
 }
 
@@ -314,7 +314,7 @@ void MeasurementDevice::checkId(const QByteArray buffer)
 void MeasurementDevice::scpiRead()
 {
     QByteArray buffer = scpiSocket->readAll();
-    qDebug() << "<<" << buffer;
+    //qDebug() << "<<" << buffer;
     if (instrumentState == InstrumentState::CHECK_INSTR_ID)
         checkId(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP)
@@ -632,8 +632,8 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
 
-    vifStreamUdp->setDeviceType(devicePtr);
-    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);
+    /*vifStreamUdp->setDeviceType(devicePtr);
+    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);*/
 
     vifStreamTcp->setDeviceType(devicePtr);
     vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
@@ -679,8 +679,8 @@ void MeasurementDevice::setupTcpStream()
 
 void MeasurementDevice::setupUdpStream()
 {
-    vifStreamUdp->setDeviceType(devicePtr);
-    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);
+    /*vifStreamUdp->setDeviceType(devicePtr);
+    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);*/
 
     vifStreamTcp->setDeviceType(devicePtr);
     vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);

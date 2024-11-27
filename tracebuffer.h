@@ -58,6 +58,7 @@ signals:
     void traceToAnalyzer(const QVector<qint16> &data);
     void traceToRecorder(const QVector<qint16> &data);
     void newDispMaxholdToWaterfall(const QVector<double> data);
+    void nrOfDatapointsChanged(int);
 
 private slots:
     void deleteOlderThan();
@@ -102,6 +103,7 @@ private:
     const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;
     bool useDbm = false;
+    int nrOfDataPoints = 0;
 };
 
 #endif // TRACEBUFFER_H

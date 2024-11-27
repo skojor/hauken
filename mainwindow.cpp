@@ -101,6 +101,11 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setTcpStreamPtr(tcpStream);
     measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
+
+    QTimer::singleShot(5000, accessHandler, &AccessHandler::reqAuthorization);
+    /*QTimer::singleShot(6000, this, [this] {
+        oauthFileUploader->fileUploadRequest("C:\\Hauken\\logs\\jsk_1556000-1596000_20241121_1213.cef");
+    });*/
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

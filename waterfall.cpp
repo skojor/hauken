@@ -114,15 +114,16 @@ void Waterfall::updSettings()
     secsToAnalyze = config->getInstrFftPlotLength() / 1e6;
     samplerate = (double)config->getInstrFftPlotBw() * 1.28 * 1e3; // TODO: Is this universal for all R&S instruments?
 
-    if (config->getInstrFftPlotBw() <= 5e3)
+    /*if (config->getInstrFftPlotBw() <= 5e3)
         fftSize = 256;
     else if (config->getInstrFftPlotBw() <= 10e3)
         fftSize = 512;
     else if (config->getInstrFftPlotBw() <= 20e3)
         fftSize = 1024;
-    else
-        fftSize = 2048;
-    imageYSize = fftSize * 2;
+    else*/
+
+    fftSize = 64;
+    imageYSize = fftSize * 40;
 
     fillWindow();
     delete in, out;
@@ -141,10 +142,11 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
     int ySize = (samplerate * secsToAnalyze) + samplesIterator; // This should give us x ms of samples to work with
     double secPerSample = 1.0 / samplerate;
     double samplesIteratorInc = (double)ySize / (double)imageYSize;
+    qDebug() << "samples inc:" << samplesIteratorInc;
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
 
     secsPerLine = secPerSample * samplesIteratorInc;
-    int removeSamples = 112 * fftSize / 1024;
+    int removeSamples = 7; //112 * fftSize / 1024;
 
     if (cmpI.size() > ySize && cmpQ.size() > ySize) {
         while (samplesIterator < ySize) {
@@ -152,25 +154,27 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
                 in[i][0] = cmpI[samplesIterator + i] * window[i];
                 in[i][1] = cmpQ[samplesIterator + i] * window[i];
             }
-            fftw_execute(plan);
 
-            for (int i = (fftSize / 2) + 1 + removeSamples; i < fftSize; i++) { // Find magnitude, normalize, reorder and cut edges
+            fftw_execute(plan);
+            for (int i = (fftSize / 2) + removeSamples; i < fftSize; i++) { // Find magnitude, normalize, reorder and cut edges
                 result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / fftSize) );
             }
-            for (int i = 0; i <= (fftSize / 2) - removeSamples; i++) {
+
+            for (int i = 0; i < (fftSize / 2) - removeSamples; i++) {
                 result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / fftSize) );
             }
-            /*for (int i = (FFT_SIZE / 2); i < FFT_SIZE; i++) { // Find magnitude, normalize, reorder and cut edges
-                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / FFT_SIZE) );
+            /*for (int i = (outSize / 2); i < outSize; i++) { // Find magnitude, normalize, reorder and cut edges
+                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / outSize) );
             }
-            for (int i = 0; i < (FFT_SIZE / 2); i++) {
-                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / FFT_SIZE) );
+            for (int i = 0; i < (outSize / 2); i++) {
+                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / outSize) );
             }*/
 
             storeIqTrace(result);
             result.clear();
 
             samplesIterator += (int)samplesIteratorInc;
+            //samplesIterator++;
         }
         fftw_destroy_plan(plan);
         createIqPlot();
@@ -208,17 +212,18 @@ void Waterfall::createIqPlot()
     if (max < 10) max = 10; // in case of no signal
     int hSize = iqFftResult.first().size();
 
-    QPixmap pixmap(QSize(hSize, iqFftResult.size()));
+    QPixmap pixmap(QSize(hSize * 20, iqFftResult.size()));
+    qDebug() << pixmap.size();
     QPainter painter(&pixmap);
     QColor color;
     QPen pen;
-    pen.setWidth(1);
+    pen.setWidth(20);
 
     double percent = 0;
     int x = 0, y = 0;
 
     for (auto && line : iqFftResult) {
-        x = 0;
+        x = 10;
         for (auto && val : line) {
             percent = ((double)val - min) / (max - min);
             percent *= 1.5;
@@ -228,7 +233,8 @@ void Waterfall::createIqPlot()
             color.setHsv(255 - (255 * percent), 255, 127);
             painter.setPen(pen);
             pen.setColor(color);
-            painter.drawPoint(x++, y);
+            painter.drawPoint(x, y);
+            x += 20;
         }
         y++;
     }
@@ -262,11 +268,17 @@ void Waterfall::fillWindow()
         f = 2 * M_PI * i / (fftSize - 1);
         window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f) + a4 * cos(4*f);   /// Flat-top window
     }
-    /*
-    a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168, f; // Blackman-Harris
-    for (int i = 0; i < FFT_SIZE; i++) {
-        f = 2 * M_PI * i / (FFT_SIZE - 1);
+
+    /*a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168, f; // Blackman-Harris
+    for (int i = 0; i < fftSize; i++) {
+        f = 2 * M_PI * i / (fftSize - 1);
         window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f);
+    }*/
+    /*for (int i = 0; i < fftSize; i++) {
+        window[i] = 0.5 * (1 - cos(2 * M_PI * i / fftSize));          // Hanning / Hann
+    }*/
+    /*for (int i = 0; i < fftSize; i++) {
+        window[i] = 0.54 - 0.46 * cos(2*M_PI * i / (fftSize -1));
     }*/
 }
 
@@ -363,7 +375,7 @@ void Waterfall::saveImage(QPixmap *pixmap)
 void Waterfall::requestIqData()
 {
     if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 900e3) {
-        int samplesNeeded = samplerate * secsToAnalyze * 10; // A little extra just in case
+        int samplesNeeded = samplerate * 0.1; // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
         emit requestIq(samplesNeeded);
         lastIqRequestTimer.restart();
     }

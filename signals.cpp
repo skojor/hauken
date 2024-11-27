@@ -124,6 +124,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, mqtt, &Mqtt::updSettings);
     connect(config.data(), &Config::settingsUpdated, instrumentList, &InstrumentList::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssDisplay, &GnssDisplay::updSettings);
+    connect(config.data(), &Config::settingsUpdated, accessHandler, &AccessHandler::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -139,6 +140,10 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceBuffer, &TraceBuffer::recorderStarted);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceAnalyzer, &TraceAnalyzer::recorderEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceBuffer, &TraceBuffer::recorderEnded);
+    connect(sdefRecorder, &SdefRecorder::fileReadyForUpload, oauthFileUploader, &OAuthFileUploader::fileUploadRequest);
+    connect(oauthFileUploader, &OAuthFileUploader::reqAuthToken, accessHandler, &AccessHandler::reqAuthorization);
+    connect(accessHandler, &AccessHandler::authorizationGranted, oauthFileUploader, &OAuthFileUploader::receiveAuthToken);
+
     connect(traceBuffer, &TraceBuffer::traceToRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
@@ -430,4 +435,6 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::maxLevelMeasured, cameraRecorder, &CameraRecorder::receivedSignalLevel);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, cameraRecorder, &CameraRecorder::startRecorder);
 
+    connect(oauthFileUploader, &OAuthFileUploader::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(traceBuffer, &TraceBuffer::nrOfDatapointsChanged, sdefRecorder, &SdefRecorder::dataPointsChanged);
 }
