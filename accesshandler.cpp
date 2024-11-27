@@ -21,10 +21,10 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c) {
     });
 
     //connect(replyHandler, &MyReplyHandler::callbackReceived, oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizationCallbackReceived);
-    connect(replyHandler, &MyReplyHandler::callbackReceived, this, [this] (const QVariantMap &data){
+    connect(replyHandler, &MyReplyHandler::callbackReceived, this, [] (const QVariantMap &data){
         qDebug() << "reply callback" << data;
     });
-    connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::error, this, [this] (const QString &error, const QString &errorDescription, const QUrl &uri) {
+    connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::error, this, [] (const QString &error, const QString &errorDescription, const QUrl &uri) {
         qDebug() << "authflow error" << error << errorDescription << uri.toString();
     });
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::requestFailed, this, [] (const QAbstractOAuth::Error error) {
