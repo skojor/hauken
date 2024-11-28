@@ -15,17 +15,6 @@
 
 #define REDIRECT_PORT 4343
 
-class MyReplyHandler : public QOAuthHttpServerReplyHandler
-{
-public:
-    MyReplyHandler() = default;
-    using MyReplyHandler::QOAuthHttpServerReplyHandler::QOAuthHttpServerReplyHandler;
-
-    ~MyReplyHandler() {}
-
-    QString callback() { return "http://localhost:4343/"; }
-};
-
 class AccessHandler : public QObject
 {
     Q_OBJECT
@@ -55,7 +44,6 @@ private:
     QSharedPointer<Config> config;
     bool authEnabled = false;
     QString token;
-    QString codeChallenge, codeVerifer;
 };
 
 #endif // ACCESSHANDLER_H
