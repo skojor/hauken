@@ -2,17 +2,12 @@
 
 AccessHandler::AccessHandler(QSharedPointer<Config> c) {
     config = c;
-    oauth2Flow = new QOAuth2AuthorizationCodeFlow;
+    oauth2Flow = new QOAuth2AuthorizationCodeFlow(this);
     replyHandler = new MyReplyHandler(REDIRECT_PORT, this);
+    oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
+    oauth2Flow->setReplyHandler(replyHandler);
 
-    //connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, this, &QDesktopServices::openUrl);
-    connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, [=](QUrl url) {
-        QUrlQuery query(url);
-        query.addQueryItem("prompt", "consent");      // Param required to get data everytime
-        query.addQueryItem("access_type", "offline"); // Needed for Refresh Token (as AccessToken expires shortly)
-        url.setQuery(query);
-        QDesktopServices::openUrl(url);
-    });
+    connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, this, &QDesktopServices::openUrl);
 
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::granted, this, [this] () {
         token = oauth2Flow->token();
@@ -20,10 +15,6 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c) {
         emit authorizationGranted(token);
     });
 
-    //connect(replyHandler, &MyReplyHandler::callbackReceived, oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizationCallbackReceived);
-    connect(replyHandler, &MyReplyHandler::callbackReceived, this, [] (const QVariantMap &data){
-        qDebug() << "reply callback" << data;
-    });
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::error, this, [] (const QString &error, const QString &errorDescription, const QUrl &uri) {
         qDebug() << "authflow error" << error << errorDescription << uri.toString();
     });
@@ -32,11 +23,6 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c) {
     });
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizationCallbackReceived, this, [] (const QVariantMap &data) {
         qDebug() << "authCallbackRec" << data;
-    });
-
-    oauth2Flow->setModifyParametersFunction([](QAbstractOAuth::Stage, QMultiMap<QString, QVariant>* parameters) {
-        parameters->remove("redirect_uri");
-        parameters->insert("redirect_uri", QUrl("http://localhost:4343/"));
     });
 }
 
@@ -48,28 +34,27 @@ AccessHandler::~AccessHandler()
 
 void AccessHandler::reqAuthorization()
 {
-    auto code_verifier = (QUuid::createUuid().toString(QUuid::WithoutBraces) +
-                          QUuid::createUuid().toString(QUuid::WithoutBraces)).toLatin1(); // 43 <= length <= 128
-    auto code_challenge = QCryptographicHash::hash(code_verifier, QCryptographicHash::Sha256).toBase64(
-        QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-
-    oauth2Flow->setReplyHandler(replyHandler);
     oauth2Flow->setModifyParametersFunction([=](QAbstractOAuth::Stage stage, QMultiMap<QString, QVariant>* params)
                                             {
                                                 switch (stage)
                                                 {
                                                 case QAbstractOAuth::Stage::RequestingAuthorization:
-                                                    params->insert("code_challenge", code_challenge);
-                                                    params->insert("code_challenge_method", "S256");
+                                                    //params->insert("code_challenge", code_challenge);
+                                                    //params->insert("code_challenge_method", "S256");
+                                                    //params->insert("sso_reload", "true");
+                                                    //params->replace("response_type", "code id_token");
+                                                    //params->replace("response_mode", "fragment");
                                                     break;
                                                 case QAbstractOAuth::Stage::RequestingAccessToken:
-                                                    params->insert("code_verifier", code_verifier);
+                                                    //params->insert("code_verifier", "Y-7bx5264Xsa_cq1Ut-DSwwQQS4l8NXjCGxTYo0_uAI");
+                                                    //params->insert("scope", "User.Read%20offline_access");
+                                                    //QByteArray code = params->value("code").toByteArray();
+                                                    //params->replace("code", QUrl::fromPercentEncoding(code));
                                                     break;
                                                 }
-                                                params->remove("redirect_uri");
-                                                params->insert("redirect_uri", QUrl("http://localhost:4343/"));
-                                            });
+                                                //params->replace("redirect_uri", QUrl::toPercentEncoding("http://localhost:4343/"));
 
+                                            });
     if (authEnabled && replyHandler->isListening())
         oauth2Flow->grant();
 }
@@ -82,3 +67,5 @@ void AccessHandler::updSettings()
     setScope(config->getOAuth2Scope());
     authEnabled = config->getOauth2Enable();
 }
+
+

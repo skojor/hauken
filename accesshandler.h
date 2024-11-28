@@ -44,17 +44,18 @@ public:
 public slots:
     void reqAuthorization();
 
-
+private slots:
 
 signals:
     void authorizationGranted(const QString &token);
 
 private:
     QOAuth2AuthorizationCodeFlow *oauth2Flow;
-    MyReplyHandler *replyHandler;
+    QOAuthHttpServerReplyHandler *replyHandler;
     QSharedPointer<Config> config;
     bool authEnabled = false;
     QString token;
+    QString codeChallenge, codeVerifer;
 };
 
 #endif // ACCESSHANDLER_H

@@ -45,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent)
     positionReportOptions = new PositionReportOptions(config);
     geoLimitOptions = new GeoLimitOptions(config);
     mqttOptions = new MqttOptions(config);
+    oAuthOptions = new OAuthOptions(config);
 
     arduinoPtr = new Arduino(config);
     aiPtr = new AI(config);
@@ -203,6 +204,10 @@ void MainWindow::createActions()
     optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT and webswitch"));
     connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start();});
 
+    optOAuth = new QAction(tr("&OAuth options"), this);
+    optOAuth->setStatusTip(tr("Setup authentication using OAuth2 schemes"));
+    connect(optOAuth, &QAction::triggered, this, [this] { this->oAuthOptions->start();});
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -277,6 +282,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optPositionReport);
     optionMenu->addAction(optGeoLimit);
     optionMenu->addAction(optMqtt);
+    optionMenu->addAction(optOAuth);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);

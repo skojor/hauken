@@ -58,6 +58,7 @@ SOURCES += \
     mqttoptions.cpp \
     notifications.cpp \
     oauthfileuploader.cpp \
+    oauthoptions.cpp \
     optionsbaseclass.cpp \
     pmrtablewdg.cpp \
     positionreport.cpp \
@@ -126,6 +127,7 @@ HEADERS += \
     mqttoptions.h \
     notifications.h \
     oauthfileuploader.h \
+    oauthoptions.h \
     optionsbaseclass.h \
     pmrtablewdg.h \
     positionreport.h \

@@ -69,6 +69,7 @@
 #include "vifstreamudp.h"
 #include "accesshandler.h"
 #include "oauthfileuploader.h"
+#include "oauthoptions.h"
 
 class MainWindow : public QMainWindow
 {
@@ -221,6 +222,7 @@ private:
     QAction *optPositionReport;
     QAction *optGeoLimit;
     QAction *optMqtt;
+    QAction *optOAuth;
     QAction *hideShowControls = new QAction("Hide/show receiver controls");
     QAction *hideShowTrigSettings = new QAction("Hide/show trigger settings");
     QAction *hideShowStatusIndicator = new QAction("Hide/show status indicators");
@@ -247,6 +249,7 @@ private:
     PositionReportOptions *positionReportOptions;
     GeoLimitOptions *geoLimitOptions;
     MqttOptions *mqttOptions;
+    OAuthOptions *oAuthOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 
