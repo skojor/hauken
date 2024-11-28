@@ -3,7 +3,7 @@
 AccessHandler::AccessHandler(QSharedPointer<Config> c) {
     config = c;
     oauth2Flow = new QOAuth2AuthorizationCodeFlow(this);
-    replyHandler = new MyReplyHandler(REDIRECT_PORT, this);
+    replyHandler = new QOAuthHttpServerReplyHandler(REDIRECT_PORT, this);
     oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
     oauth2Flow->setReplyHandler(replyHandler);
 
