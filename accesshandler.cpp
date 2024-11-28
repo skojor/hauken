@@ -39,21 +39,16 @@ void AccessHandler::reqAuthorization()
                                                 switch (stage)
                                                 {
                                                 case QAbstractOAuth::Stage::RequestingAuthorization:
-                                                    //params->insert("code_challenge", code_challenge);
-                                                    //params->insert("code_challenge_method", "S256");
                                                     //params->insert("sso_reload", "true");
                                                     //params->replace("response_type", "code id_token");
                                                     //params->replace("response_mode", "fragment");
                                                     break;
                                                 case QAbstractOAuth::Stage::RequestingAccessToken:
-                                                    //params->insert("code_verifier", "Y-7bx5264Xsa_cq1Ut-DSwwQQS4l8NXjCGxTYo0_uAI");
                                                     //params->insert("scope", "User.Read%20offline_access");
                                                     //QByteArray code = params->value("code").toByteArray();
                                                     //params->replace("code", QUrl::fromPercentEncoding(code));
                                                     break;
                                                 }
-                                                //params->replace("redirect_uri", QUrl::toPercentEncoding("http://localhost:4343/"));
-
                                             });
     if (authEnabled && replyHandler->isListening())
         oauth2Flow->grant();
