@@ -11,9 +11,11 @@
 #include <QDesktopServices>
 #include <QUuid>
 #include <QUrlQuery>
+#include <QTimer>
 #include "config.h"
 
 #define REDIRECT_PORT 4343
+
 
 class AccessHandler : public QObject
 {
@@ -43,7 +45,7 @@ private:
     QOAuthHttpServerReplyHandler *replyHandler;
     QSharedPointer<Config> config;
     bool authEnabled = false;
-    QString token;
+    QTimer *renewTokenTimer;
 };
 
 #endif // ACCESSHANDLER_H

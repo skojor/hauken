@@ -13,7 +13,7 @@ OAuthOptions::OAuthOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("OAuth2 authentication URL"), leOpt1);
     leOpt1->setToolTip("Set the URL to use for OAuth auth requests");
 
-    mainLayout->addRow(new QLabel("Oauth2 access token URL"), leOpt2);
+    mainLayout->addRow(new QLabel("OAuth2 access token URL"), leOpt2);
     leOpt2->setToolTip("Set the URL to use for receiving the access token URL");
 
     mainLayout->addRow(new QLabel("OAuth2 application ID"), leOpt3);
@@ -25,6 +25,9 @@ OAuthOptions::OAuthOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("File upload address"), leOpt5);
     leOpt5->setToolTip("The address to use for uploading SDEF measurement files");
 
+    mainLayout->addWidget(btnBox);
+    mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    dialog->setMinimumWidth(800);
     connect(btnBox, &QDialogButtonBox::accepted, this, &OAuthOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 }

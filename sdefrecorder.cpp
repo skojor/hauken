@@ -306,7 +306,10 @@ void SdefRecorder::finishRecording()
     else {
         if (config->getSdefZipFiles() && recording) zipit(); // Zip the file anyways, we don't shit storage space here
     }
-    if (!finishedFilename.isEmpty()) emit fileReadyForUpload(finishedFilename); // Signal to oauth class
+    if (!finishedFilename.isEmpty())
+        QTimer::singleShot(10000, this, [this] () {
+            emit fileReadyForUpload(finishedFilename); // Signal to oauth class
+        });
 
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();

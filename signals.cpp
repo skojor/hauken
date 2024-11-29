@@ -134,6 +134,7 @@ void MainWindow::setSignals()
     connect(vifStreamTcp.data(), &VifStreamTcp::stopIqStream, measurementDevice, &MeasurementDevice::deleteIfStream);
     connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::resetTimer);
     connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::requestIqData);
+
     connect(sdefRecorder, &SdefRecorder::publishFilename, iqdataWaterfall, &Waterfall::setFilename);
 
     connect(sdefRecorder, &SdefRecorder::recordingStarted, traceAnalyzer, &TraceAnalyzer::recorderStarted);
