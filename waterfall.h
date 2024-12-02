@@ -56,6 +56,7 @@ private slots:
     void addLines(QPixmap *pixmap);
     void addText(QPixmap *pixmap);
     void saveImage(QPixmap *pixmap);
+    int analyzeIqStart(const QList<qint16> cmpI, const QList<qint16> cmpQ);     // Find where sth happens in data, to not analyze only random noise. Return start point
 
 private:
     QTimer *testDraw;

@@ -114,14 +114,6 @@ void Waterfall::updSettings()
     secsToAnalyze = config->getInstrFftPlotLength() / 1e6;
     samplerate = (double)config->getInstrFftPlotBw() * 1.28 * 1e3; // TODO: Is this universal for all R&S instruments?
 
-    /*if (config->getInstrFftPlotBw() <= 5e3)
-        fftSize = 256;
-    else if (config->getInstrFftPlotBw() <= 10e3)
-        fftSize = 512;
-    else if (config->getInstrFftPlotBw() <= 20e3)
-        fftSize = 1024;
-    else*/
-
     fftSize = 64;
     imageYSize = fftSize * 40;
 
@@ -134,15 +126,20 @@ void Waterfall::updSettings()
 
 void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
 {
-    //qDebug() << "Rec IQ bytes:" << cmpI.size() << cmpQ.size();
-    int samplesIterator = 0;
+    int samplesIterator = analyzeIqStart(cmpI, cmpQ) - 1000; // Hopefully this is just before where sth interesting happens
+    if (samplesIterator < 0) samplesIterator = 0;
 
     fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
     QList<double> result;
-    int ySize = (samplerate * secsToAnalyze) + samplesIterator; // This should give us x ms of samples to work with
+
+    while (samplesIterator > 0 && samplesIterator + (samplerate * secsToAnalyze) > cmpI.size())
+        samplesIterator --;
+
+    int ySize = samplerate * secsToAnalyze + samplesIterator;
+
     double secPerSample = 1.0 / samplerate;
-    double samplesIteratorInc = (double)ySize / (double)imageYSize;
-    qDebug() << "samples inc:" << samplesIteratorInc;
+    double samplesIteratorInc = (double)(samplerate * secsToAnalyze) / (double)imageYSize;
+    //qDebug() << "samples inc:" << samplesIteratorInc << "iterator starts at" << samplesIterator << "ysize" << ySize << "total samples analyzed" << ySize - samplesIterator;
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
 
     secsPerLine = secPerSample * samplesIteratorInc;
@@ -176,6 +173,7 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
             samplesIterator += (int)samplesIteratorInc;
             //samplesIterator++;
         }
+        //qDebug() << "size" << iqFftResult.size();
         fftw_destroy_plan(plan);
         createIqPlot();
 
@@ -213,7 +211,7 @@ void Waterfall::createIqPlot()
     int hSize = iqFftResult.first().size();
 
     QPixmap pixmap(QSize(hSize * 20, iqFftResult.size()));
-    qDebug() << pixmap.size();
+    //qDebug() << pixmap.size();
     QPainter painter(&pixmap);
     QColor color;
     QPen pen;
@@ -375,8 +373,23 @@ void Waterfall::saveImage(QPixmap *pixmap)
 void Waterfall::requestIqData()
 {
     if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 900e3) {
-        int samplesNeeded = samplerate * 0.1; // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
+        int samplesNeeded = samplerate * 0.2; // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
         emit requestIq(samplesNeeded);
         lastIqRequestTimer.restart();
     }
+}
+
+int Waterfall::analyzeIqStart(const QList<qint16> cmpI, const QList<qint16> cmpQ)
+{
+    qint16 max = -32700;
+    int locMax = -1;
+    for (int i = 0; i < cmpI.size(); i++) {
+        int val = sqrt(cmpI[i] * cmpI[i] + cmpQ[i] * cmpQ[i]);
+        if (val > max) {
+            max = val;
+            locMax = i;
+        }
+    }
+    //qDebug() << "Max found at" << locMax << max;
+    return locMax;
 }
