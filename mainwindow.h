@@ -30,6 +30,7 @@
 #include <QtMultimedia/QMediaPlayer>
 #include <QtMultimedia/QAudioOutput>
 #include <QTimer>
+#include <QProgressBar>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 //#include "typedefs.h"
@@ -82,6 +83,7 @@ public:
 public slots:
     void resizeEvent(QResizeEvent *event) override; // override to save changes to win size
     void moveEvent(QMoveEvent *event) override; // override to save position
+    void uploadProgress(int percent);
 
 protected:
 #ifndef QT_NO_CONTEXTMENU
@@ -152,6 +154,7 @@ private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
     QWidget *centralWidget = new QWidget;
     QStatusBar *statusBar = new QStatusBar;
+    QProgressBar *progressBar = new QProgressBar;
     QCustomPlot *customPlot;
     QMenu *fileMenu, *optionMenu, *helpMenu;
     QDoubleSpinBox *instrStartFreq = new QDoubleSpinBox;

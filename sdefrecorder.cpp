@@ -13,6 +13,8 @@ void SdefRecorder::start()
     reqPositionTimer = new QTimer;
     periodicCheckUploadsTimer = new QTimer;
     autorecorderTimer = new QTimer;
+    finishedFileTimer = new QTimer;
+    finishedFileTimer->setSingleShot(true);
 
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
@@ -38,6 +40,10 @@ void SdefRecorder::start()
     periodicCheckUploadsTimer->start(1800 * 1e3); // check if any files still waits for upload every half hour
 
     networkManager = new QNetworkAccessManager;
+
+    connect(finishedFileTimer, &QTimer::timeout, this, [this] () {
+        emit fileReadyForUpload(finishedFilename);
+    });
 }
 
 void SdefRecorder::updSettings()
@@ -307,9 +313,7 @@ void SdefRecorder::finishRecording()
         if (config->getSdefZipFiles() && recording) zipit(); // Zip the file anyways, we don't shit storage space here
     }
     if (!finishedFilename.isEmpty())
-        QTimer::singleShot(10000, this, [this] () {
-            emit fileReadyForUpload(finishedFilename); // Signal to oauth class
-        });
+        finishedFileTimer->start(10000);
 
     recordingTimeoutTimer->stop();
     recordingStartedTimer->stop();

@@ -6,6 +6,10 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setStatusBar(statusBar);
+    statusBar->addWidget(progressBar);
+    progressBar->setMinimum(0);
+    progressBar->setMaximum(100);
+
     updWindowTitle();
     resize(1200, 680);
     setMinimumSize(1024, 680);
@@ -791,6 +795,11 @@ void MainWindow::generatePopup(const QString msg)
 void MainWindow::updateStatusLine(const QString msg)
 {
     statusBar->showMessage(msg);
+}
+
+void MainWindow::uploadProgress(int percent)
+{
+    progressBar->setValue(percent);
 }
 
 void MainWindow::updWindowTitle(const QString msg)

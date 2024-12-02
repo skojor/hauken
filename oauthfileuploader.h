@@ -30,6 +30,7 @@ public:
 signals:
     void reqAuthToken();
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
+    void uploadProgress(int);
 
 private slots:
     void networkReplyFinishedHandler();
@@ -43,11 +44,12 @@ private:
     QSharedPointer<Config> config;
     QNetworkAccessManager *networkAccessManager;
     QNetworkReply *networkReply = nullptr;
-    QString uploadFilename;
-    QFile *file = nullptr;
-    QHttpMultiPart *multipart = nullptr;
+    //QString uploadFilename;
+    //QFile *file = nullptr;
+    //QHttpMultiPart *multipart = nullptr;
     QTimer *authTimeoutTimer, *uploadTimeoutTimer;
     QString accessToken;
+    QStringList uploadBacklog;
 };
 
 #endif // OAUTHFILEUPLOADER_H

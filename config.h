@@ -163,18 +163,22 @@ public slots:
     void setSdefAuthAddress(QString s) { settings->setValue("sdef/AuthAddress", s); emit settingsUpdated();}
     bool getSdefNewMsFormat() { return settings->value("sdef/newMsFormat", false).toBool();}
     void setSdefNewMsFormat(bool b) { settings->setValue("sdef/newMsFormat", b); emit settingsUpdated();}
-    bool getOauth2Enable() { return settings->value("sdef/OAuth2").toBool();}
-    void setOAuth2Enable(bool b) { settings->setValue("sdef/OAuth2", b); emit settingsUpdated();}
-    QString getOAuth2AuthUrl() { return settings->value("sdef/OAuth2AuthUrl").toString();}
-    void setOAuth2AuthUrl(QString s) { settings->setValue("sdef/OAuth2AuthUrl", s); emit settingsUpdated();}
-    QString getOAuth2AccessTokenUrl() { return settings->value("sdef/OAuth2AccessTokenUrl").toString();}
-    void setOAuth2AccessTokenUrl(QString s) { settings->setValue("sdef/OAuth2AccessTokenUrl", s); emit settingsUpdated();}
-    QString getOAuth2ClientId() { return settings->value("sdef/OAuth2ClientId").toString();}
-    void setOAuth2ClientId(QString s) { settings->setValue("sdef/OAuth2ClientId", s); emit settingsUpdated();}
-    QString getOAuth2Scope() { return settings->value("sdef/OAuth2Scope").toString();}
-    void setOAuth2Scope(QString s) { settings->setValue("sdef/OAuth2Scope", s); emit settingsUpdated();}
-    QString getOauth2UploadAddress() { return settings->value("sdef/OAuth2UploadAddress").toString();}
-    void setOAuth2UploadAddress(QString s) { settings->setValue("sdef/OAuth2UploadAddress", s); emit settingsUpdated();}
+
+    // OAuth2 options
+    bool getOauth2Enable() { return settings->value("OAuth2/enable").toBool();}
+    void setOAuth2Enable(bool b) { settings->setValue("OAuth2/enable", b); emit settingsUpdated();}
+    QString getOAuth2AuthUrl() { return settings->value("OAuth2/AuthUrl").toString();}
+    void setOAuth2AuthUrl(QString s) { settings->setValue("OAuth2/AuthUrl", s); emit settingsUpdated();}
+    QString getOAuth2AccessTokenUrl() { return settings->value("OAuth2/AccessTokenUrl").toString();}
+    void setOAuth2AccessTokenUrl(QString s) { settings->setValue("OAuth2/AccessTokenUrl", s); emit settingsUpdated();}
+    QString getOAuth2ClientId() { return settings->value("OAuth2/ClientId").toString();}
+    void setOAuth2ClientId(QString s) { settings->setValue("OAuth2/ClientId", s); emit settingsUpdated();}
+    QString getOAuth2Scope() { return settings->value("OAuth2/Scope").toString();}
+    void setOAuth2Scope(QString s) { settings->setValue("OAuth2/Scope", s); emit settingsUpdated();}
+    QString getOauth2UploadAddress() { return settings->value("OAuth2/UploadAddress").toString();}
+    void setOAuth2UploadAddress(QString s) { settings->setValue("OAuth2/UploadAddress", s); emit settingsUpdated();}
+    QString getOauth2OperatorAddress() { return settings->value("OAuth2/OperatorAddress").toString();}
+    void setOAuth2OperatorAddress(QString s) { settings->setValue("OAuth2/OperatorAddress", s); emit settingsUpdated();}
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}

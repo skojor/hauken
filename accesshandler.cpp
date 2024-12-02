@@ -12,11 +12,11 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c) {
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, this, &QDesktopServices::openUrl);
 
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::granted, this, [this] () {
-        qDebug() << "We have a token, expires at" << oauth2Flow->expirationAt().toString() << oauth2Flow->refreshToken();
+        qDebug() << "We have a token, expires at" << oauth2Flow->expirationAt().toString();// << oauth2Flow->refreshToken();
         replyHandler->close();
         emit authorizationGranted(oauth2Flow->token());
-        //renewTokenTimer->start(QDateTime::currentDateTime().msecsTo(oauth2Flow->expirationAt().addSecs(-60))); // Set a renew timer for 1 min before expiry time
-        //qDebug() << "Adding exp. timer in" << renewTokenTimer->remainingTime() / 1e3 << "seconds";
+        renewTokenTimer->start(QDateTime::currentDateTime().msecsTo(oauth2Flow->expirationAt().addSecs(-60))); // Set a renew timer for 1 min before expiry time
+        qDebug() << "Adding exp. timer in" << renewTokenTimer->remainingTime() / 1e3 << "seconds";
     });
 
     connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::error, this, [] (const QString &error, const QString &errorDescription, const QUrl &uri) {
@@ -43,15 +43,16 @@ AccessHandler::~AccessHandler()
 
 void AccessHandler::reqAuthorization()
 {
-    replyHandler->listen(QHostAddress::Any, REDIRECT_PORT);
+    if (!replyHandler->isListening())
+        replyHandler->listen(QHostAddress::Any, REDIRECT_PORT);
 
-    if (authEnabled && replyHandler->isListening()) {
+    if (authEnabled && replyHandler->isListening() && oauth2Flow->token().isEmpty()) {
         oauth2Flow->grant();
     }
-    /*else if (authEnabled && replyHandler->isListening() && oauth2Flow->status() == QAbstractOAuth::Status::Granted) {
+    else if (authEnabled && replyHandler->isListening() && !oauth2Flow->refreshToken().isEmpty()) { // Should already be auth'ed
         qDebug() << "Auth: We are already granted access";
         emit authorizationGranted(oauth2Flow->token());
-    }*/
+    }
 }
 
 void AccessHandler::updSettings()
@@ -59,8 +60,15 @@ void AccessHandler::updSettings()
     setAuthorizationUrl(config->getOAuth2AuthUrl());
     setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
     setClientIdentifier(config->getOAuth2ClientId());
-    setScope(config->getOAuth2Scope());
+    setScope(config->getOAuth2Scope() + " offline_access");
     authEnabled = config->getOauth2Enable();
+
+    // Parameters check
+    if (authEnabled && (config->getOAuth2AuthUrl().isEmpty() || config->getOAuth2AccessTokenUrl().isEmpty() ||
+                        config->getOAuth2ClientId().isEmpty() || config->getOAuth2Scope().isEmpty())) {
+        qDebug() << "OAuth2: Missing one or more parameters, disabling";
+        authEnabled = false;
+    }
 }
 
 

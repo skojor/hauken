@@ -17,20 +17,22 @@ OAuthFileUploader::OAuthFileUploader(QSharedPointer<Config> c)
 
 void OAuthFileUploader::fileUploadRequest(const QString filename)
 {
-    qDebug() << "We are here" << filename;
-    QFile file (filename);
+    QString tmpFilename = filename;
+    //qDebug() << "We are here" << tmpFilename;
+    QFile file (tmpFilename);
     if (!file.exists()) {
-        qDebug() << "File not found:" << filename << ", checking if it has been zipped";
-        file.setFileName(filename + ".zip");
+        qDebug() << "File not found:" << tmpFilename << ", checking if it has been zipped";
+        tmpFilename = filename + ".zip";
     }
-    else if (!file.exists()) {
+
+    file.setFileName(tmpFilename);
+    if (!file.exists()) {
         qDebug() << "Nope, no zip either. Giving up.";
-        uploadFilename.clear();
     }
     else if (config->getOauth2Enable()) {
         authTimeoutTimer->start(AUTH_TIMEOUT);
+        uploadBacklog.append(tmpFilename); // In case upload fails, this list keeps filenames still to be uploaded
         emit reqAuthToken();
-        uploadFilename = filename;
     }
 }
 
@@ -39,21 +41,19 @@ void OAuthFileUploader::receiveAuthToken(const QString token) // OAuth upload re
     accessToken = token;
     authTimeoutTimer->stop();
     QHttpPart filePart;
-    if (file == nullptr) file = new QFile(uploadFilename);
-    else {
-        file->close();
-        file->setFileName(uploadFilename);
-    }
+    QFile *file = new QFile(uploadBacklog.last());
 
     if (!file->open(QIODevice::ReadOnly)) {
-        qDebug() << "Couldn't read from file" << uploadFilename <<", aborting";
+        qDebug() << "Couldn't read from file" << uploadBacklog.last() <<", aborting";
+        uploadBacklog.removeLast();
     }
     else {
-        if (multipart == nullptr) multipart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+        QHttpMultiPart *multipart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+        //if (multipart == nullptr) multipart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
 
         filePart.setBodyDevice(file);
         QString justFilename;
-        QStringList split = uploadFilename.split('/');
+        QStringList split = uploadBacklog.last().split('/');
         justFilename = split.last();
         filePart.setHeader(QNetworkRequest::ContentDispositionHeader, "form-data; name=\"files\"; filename=\"" + justFilename + "\"");
         filePart.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
@@ -68,11 +68,11 @@ void OAuthFileUploader::receiveAuthToken(const QString token) // OAuth upload re
         networkReply = networkAccessManager->post(request, multipart);
         uploadTimeoutTimer->start(UPLOAD_TIMEOUT);
 
-        connect(networkReply, &QNetworkReply::finished, this, &OAuthFileUploader::networkReplyFinishedHandler);
+        connect(networkReply, &QNetworkReply::finished, this, [this] () {
+            networkReplyFinishedHandler();
+        });
         connect(networkReply, &QNetworkReply::uploadProgress, this, &OAuthFileUploader::networkReplyProgressHandler);
     }
-
-    uploadFilename.clear();
 }
 
 void OAuthFileUploader::networkAccessManagerFinished()
@@ -82,7 +82,10 @@ void OAuthFileUploader::networkAccessManagerFinished()
 
 void OAuthFileUploader::networkReplyProgressHandler(qint64 up, qint64 total)
 {
-    if (total != 0) qDebug() << "upl progress" << 100 * up / total;
+    if (total != 0) {
+        emit uploadProgress(100 * up / total);
+        //qDebug() << "upl progress" << 100 * up / total;
+    }
 }
 
 void OAuthFileUploader::networkReplyFinishedHandler()
@@ -92,6 +95,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
     if (QString(reply).contains("uploaded", Qt::CaseInsensitive)) {
         qDebug() << "File uploaded successfully using OAuth!";
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File uploaded successfully");
+        uploadBacklog.removeLast();
 
         QStringList list = QString(reply).split(':');
         QString id;
@@ -101,22 +105,30 @@ void OAuthFileUploader::networkReplyFinishedHandler()
             id.remove('\"');
             id = id.split(',').first();
             //qDebug() << id << accessToken << list;
-            setOperator(id, accessToken);
+            if (!config->getOauth2OperatorAddress().isEmpty())
+                setOperator(id, accessToken);       // Add operator if url is specified
         }
     }
     else if (QString(reply).contains("filealreadyexists", Qt::CaseInsensitive)) {
         qDebug() << "OAuth file upload failed, already uploaded" << reply;
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File upload failed, already uploaded");
+        uploadBacklog.removeLast();
     }
 
     qDebug() << "Reply finished," << QDateTime::currentDateTime().toString() << networkReply->errorString() << reply;
+    if (!uploadBacklog.isEmpty()) {
+        QTimer::singleShot(UPLOAD_RETRY, this, [this] () { // Call uploader in x min if queue is not empty
+            fileUploadRequest(uploadBacklog.last());
+        });
+    }
+    //networkReply->deleteLater();
 }
 
 void OAuthFileUploader::authTimeoutHandler()
 {
     emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File upload failed, retrying later. Reason: Authorization timed out");
     QTimer::singleShot(UPLOAD_RETRY, this, [this] () {
-        fileUploadRequest(file->fileName());
+        fileUploadRequest(uploadBacklog.last());
     });
 }
 
@@ -124,13 +136,13 @@ void OAuthFileUploader::uploadTimeoutHandler()
 {
     emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File upload failed, retrying later. Reason: Upload timed out");
     QTimer::singleShot(UPLOAD_RETRY, this, [this] () {
-        fileUploadRequest(file->fileName());
+        fileUploadRequest(uploadBacklog.last());
     });
 }
 
 void OAuthFileUploader::setOperator(QString id, QString token)
 {
-    QUrl url("https://api.dev.intern.nkom.no/stoydata/api/files/operators");
+    QUrl url(config->getOauth2OperatorAddress());
     QNetworkRequest request;
     request.setUrl(url);
 
@@ -150,7 +162,7 @@ void OAuthFileUploader::setOperator(QString id, QString token)
     multip->append(part);
     QNetworkReply *reply = networkAccessManager->post(request, doc.toJson(QJsonDocument::Compact));
 
-    qDebug() << doc.toJson(QJsonDocument::Compact);
+    //qDebug() << doc.toJson(QJsonDocument::Compact);
 
     QObject::connect(reply, &QNetworkReply::finished, [=](){
         if(reply->error() == QNetworkReply::NoError) {

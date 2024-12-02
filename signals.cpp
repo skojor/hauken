@@ -438,4 +438,6 @@ void MainWindow::setSignals()
 
     connect(oauthFileUploader, &OAuthFileUploader::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(traceBuffer, &TraceBuffer::nrOfDatapointsChanged, sdefRecorder, &SdefRecorder::dataPointsChanged);
+
+    connect(oauthFileUploader, &OAuthFileUploader::uploadProgress, this, &MainWindow::uploadProgress);
 }
