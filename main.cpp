@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
     if (qEnvironmentVariableIsEmpty("QTDIR"))   //  check if the app is ran in Qt Creator
          logToFile = true;
-    //qInstallMessageHandler(customMessageOutput); // custom message handler for debugging
+    qInstallMessageHandler(customMessageOutput); // custom message handler for debugging
     logFilePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) +
                   "/haukenDebug_" + QDateTime::currentDateTime().toString("yyyyMMdd") +".log";
     a.setApplicationVersion(ver);

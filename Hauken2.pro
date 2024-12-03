@@ -73,6 +73,7 @@ SOURCES += \
     traceanalyzer.cpp \
     tracebuffer.cpp \
     udpdatastream.cpp \
+    versionupdater.cpp \
     vifstreamtcp.cpp \
     vifstreamudp.cpp \
     waterfall.cpp
@@ -142,6 +143,7 @@ HEADERS += \
     tracebuffer.h \
     typedefs.h \
     udpdatastream.h \
+    versionupdater.h \
     vifstreamtcp.h \
     vifstreamudp.h \
     waterfall.h
@@ -191,7 +193,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.44.10.0
+VERSION = 2.44.11.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

@@ -71,6 +71,7 @@
 #include "accesshandler.h"
 #include "oauthfileuploader.h"
 #include "oauthoptions.h"
+#include "versionupdater.h"
 
 class MainWindow : public QMainWindow
 {

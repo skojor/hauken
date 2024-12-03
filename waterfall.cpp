@@ -143,7 +143,7 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
 
     secsPerLine = secPerSample * samplesIteratorInc;
-    int removeSamples = 7; //112 * fftSize / 1024;
+    int removeSamples = 112.0 * (double)fftSize / 1024.0;
 
     if (cmpI.size() > ySize && cmpQ.size() > ySize) {
         while (samplesIterator < ySize) {
@@ -153,11 +153,11 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
             }
 
             fftw_execute(plan);
-            for (int i = (fftSize / 2) + removeSamples; i < fftSize; i++) { // Find magnitude, normalize, reorder and cut edges
+            for (int i = (fftSize / 2); i < fftSize - removeSamples; i++) { // Find magnitude, normalize, reorder and cut edges
                 result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / fftSize) );
             }
 
-            for (int i = 0; i < (fftSize / 2) - removeSamples; i++) {
+            for (int i = removeSamples; i < (fftSize / 2); i++) {
                 result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / fftSize) );
             }
             /*for (int i = (outSize / 2); i < outSize; i++) { // Find magnitude, normalize, reorder and cut edges
@@ -262,19 +262,19 @@ void Waterfall::fillWindow()
 
     double a0, a1, a2, a3, a4, f;
     a0 = 1, a1 = 1.93, a2 = 1.29, a3 = 0.388, a4 = 0.028, f;
-    for (int i = 0; i < fftSize; i++) {
+    /*for (int i = 0; i < fftSize; i++) {
         f = 2 * M_PI * i / (fftSize - 1);
         window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f) + a4 * cos(4*f);   /// Flat-top window
-    }
+    }*/
 
     /*a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168, f; // Blackman-Harris
     for (int i = 0; i < fftSize; i++) {
         f = 2 * M_PI * i / (fftSize - 1);
         window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f);
     }*/
-    /*for (int i = 0; i < fftSize; i++) {
+    for (int i = 0; i < fftSize; i++) {
         window[i] = 0.5 * (1 - cos(2 * M_PI * i / fftSize));          // Hanning / Hann
-    }*/
+    }
     /*for (int i = 0; i < fftSize; i++) {
         window[i] = 0.54 - 0.46 * cos(2*M_PI * i / (fftSize -1));
     }*/
@@ -373,7 +373,7 @@ void Waterfall::saveImage(QPixmap *pixmap)
 void Waterfall::requestIqData()
 {
     if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 900e3) {
-        int samplesNeeded = samplerate * 0.2; // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
+        int samplesNeeded = samplerate * 0.5; // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
         emit requestIq(samplesNeeded);
         lastIqRequestTimer.restart();
     }
@@ -390,6 +390,5 @@ int Waterfall::analyzeIqStart(const QList<qint16> cmpI, const QList<qint16> cmpQ
             locMax = i;
         }
     }
-    //qDebug() << "Max found at" << locMax << max;
     return locMax;
 }
