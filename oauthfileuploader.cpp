@@ -94,7 +94,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
     QByteArray reply = networkReply->readAll();
     if (QString(reply).contains("uploaded", Qt::CaseInsensitive)) {
         qDebug() << "File uploaded successfully using OAuth!";
-        emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File uploaded successfully");
+        emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File uploaded successfully");
         uploadBacklog.removeLast();
 
         QStringList list = QString(reply).split(':');
@@ -111,7 +111,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
     }
     else if (QString(reply).contains("filealreadyexists", Qt::CaseInsensitive)) {
         qDebug() << "OAuth file upload failed, already uploaded" << reply;
-        emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File upload failed, already uploaded");
+        emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File upload failed, already uploaded");
         uploadBacklog.removeLast();
     }
 
@@ -126,7 +126,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
 
 void OAuthFileUploader::authTimeoutHandler()
 {
-    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File upload failed, retrying later. Reason: Authorization timed out");
+    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File upload failed, retrying later. Reason: Authorization timed out");
     QTimer::singleShot(UPLOAD_RETRY, this, [this] () {
         fileUploadRequest(uploadBacklog.last());
     });
@@ -134,7 +134,7 @@ void OAuthFileUploader::authTimeoutHandler()
 
 void OAuthFileUploader::uploadTimeoutHandler()
 {
-    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "OAuth", "File upload failed, retrying later. Reason: Upload timed out");
+    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File upload failed, retrying later. Reason: Upload timed out");
     QTimer::singleShot(UPLOAD_RETRY, this, [this] () {
         fileUploadRequest(uploadBacklog.last());
     });

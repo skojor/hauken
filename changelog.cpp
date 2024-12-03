@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.44</td><td>OAuth authentication and file upload added. IQ plot now 'squelched' to locate signal level</td></tr>"
        << "<tr><td>2.43</td><td>IQ high res FFT plot added. Added millisecond save option to 1809 file</td></tr>"
        << "<tr><td>2.42</td><td>Datastream rebuild, various reconnect issues fixed</td></tr>"
        << "<tr><td>2.41</td><td>Jammertest version, unreleased</td></tr>"

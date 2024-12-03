@@ -5,6 +5,7 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c) {
     oauth2Flow = new QOAuth2AuthorizationCodeFlow(this);
     replyHandler = new QOAuthHttpServerReplyHandler(this);
     oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
+    replyHandler->listen(QHostAddress::Any, REDIRECT_PORT);
     oauth2Flow->setReplyHandler(replyHandler);
     renewTokenTimer = new QTimer();
     renewTokenTimer->setSingleShot(true);
