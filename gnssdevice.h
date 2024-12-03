@@ -70,12 +70,14 @@ private slots:
     void setupUbloxDevice();
     void askUbloxVersion();
     void decodeBinary0a04(const QByteArray &val);
+    void delayedReportHandler();
 
 private:
     QSerialPort *gnss = new QSerialPort;
     //QList<QSerialPortInfo> serialPortList;
     QByteArray gnssBuffer;
     QTimer *sendToAnalyzerTimer = new QTimer;
+    QTimer *delayedReportTimer = new QTimer;
     QList<QByteArray> gsvSentences;
     GnssData gnssData;
     int gsvNrOfSentences;

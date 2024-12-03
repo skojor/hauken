@@ -26,7 +26,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
     });
 
     connect(tcpSocket, &QTcpSocket::stateChanged, this, &GnssDevice::handleTcpStateChange);
-    //start();
+    connect(delayedReportTimer, &QTimer::timeout, this, &GnssDevice::delayedReportHandler);
 }
 
 void GnssDevice::start()
@@ -412,14 +412,12 @@ void GnssDevice::checkPosValid()
     ts.setRealNumberNotation(QTextStream::FixedNotation);
     ts.setRealNumberPrecision(1);
 
-    if (!gnssData.posValid && !posInvalidTriggered) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
+    if (!gnssData.posValid && !posInvalidTriggered && !delayedReportTimer->isActive()) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
         // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
-        ts << "Position invalid";
-        posInvalidTriggered = true;
+        delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
     }
-    else if (gnssData.posValid && posInvalidTriggered) {
-        ts << "Position valid";
-        posInvalidTriggered = false;
+    else if (gnssData.posValid && posInvalidTriggered && !delayedReportTimer->isActive()) {
+        delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
     }
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
 }
@@ -502,4 +500,24 @@ void GnssDevice::setupUbloxDevice()
         gnss->write(QByteArray::fromHex("b56206010800f00d0101010101011293")); // gns on
     }
     uBloxState = UBLOX::READY;
+}
+
+void GnssDevice::delayedReportHandler()
+{
+    delayedReportTimer->stop();
+
+    if (!posInvalidTriggered && gnssData.posValid) { // Position was invalid, but became valid while waiting the truncate time. Do nothing
+        //
+    }
+    else if (!posInvalidTriggered && !gnssData.posValid) { // Position invalid for more than truncate time, report
+        posInvalidTriggered = true;
+        if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), "Position invalid");
+    }
+    else if (posInvalidTriggered && !gnssData.posValid) { // Already reported invalid, do nothing
+        //
+    }
+    else if (posInvalidTriggered && gnssData.posValid) { // Pos. was invalid, now ok. Report.
+        posInvalidTriggered = false;
+        if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), "Position valid");
+    }
 }
