@@ -107,10 +107,6 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
     VersionUpdater versionUpdater(config); // Handles any config changes needed
-
-    /*QTimer::singleShot(1000, this, [this] () {
-        iqdataWaterfall->readAndAnalyzeFile("C:/Users/JSK/OneDrive - Nasjonal kommunikasjonsmyndighet/Skrivebord/LYR_1214000-1254000_20241211_1236.iq", true, 400e-6);
-    });*/
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
