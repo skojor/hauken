@@ -67,7 +67,7 @@ void AccessHandler::updSettings()
     // Parameters check
     if (authEnabled && (config->getOAuth2AuthUrl().isEmpty() || config->getOAuth2AccessTokenUrl().isEmpty() ||
                         config->getOAuth2ClientId().isEmpty() || config->getOAuth2Scope().isEmpty())) {
-        qDebug() << "OAuth2: Missing one or more parameters, disabling";
+        //qDebug() << "OAuth2: Missing one or more parameters, disabling";
         authEnabled = false;
     }
 }

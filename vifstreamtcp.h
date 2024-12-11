@@ -18,6 +18,7 @@ public:
     void processVifData();
     void setSamplesNeeded(int i) { samplesNeeded = i;}
     void startIqDataTimeout() { stopIqStreamTimer->start(5000);}
+    void restartTimeoutTimer() {}
 
 signals:
 

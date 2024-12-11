@@ -45,7 +45,7 @@ public slots:
     void setMeasurementDeviceReconnected() { qDebug() << "Pos.report signal: reconn."; measurementDeviceConnected = true; inUse = false;}
     void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
     void setInUse(QString s) { inUse = true; inUseBy = s; }
-    void setInUseByIp(QString s) { inUseByIp = s.simplified(); qDebug() << "rec" << inUseByIp; }
+    void setInUseByIp(QString s) { inUseByIp = s.simplified(); }
     void updMqttData(QString& name, double& val);
     void setModeUsed(QString s) { modeUsed = s; }
     void setFreqUsed(unsigned long a, unsigned long b) { startFreqUsed = a, stopFreqUsed = b; }

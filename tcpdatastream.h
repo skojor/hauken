@@ -15,6 +15,7 @@ public slots:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newData();
+    void restartTimeoutTimer() {  { if (tcpSocket->isOpen()) timeoutTimer->start(timeoutInMs);}}
 
 signals:
 

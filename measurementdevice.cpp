@@ -747,7 +747,7 @@ void MeasurementDevice::handleStreamTimeout()
 
 void MeasurementDevice::autoReconnectCheckStatus()
 {
-    qDebug() << "Auto reconnect check" << scpiReconnect << scpiSocket->isOpen();
+    //qDebug() << "Auto reconnect check" << scpiReconnect << scpiSocket->isOpen();
 
     if (scpiReconnect && !scpiSocket->isOpen()) {
         instrConnect();
@@ -1062,7 +1062,7 @@ void MeasurementDevice::handleNetworkError()
 void MeasurementDevice::setIfMode()
 {
     if (trigFrequency > 0) {
-        scpiWrite("freq " + QByteArray::number(trigFrequency));
+        scpiWrite("freq " + QByteArray::number(trigFrequency) + " MHz");
     }
     else {
         double f;
@@ -1120,7 +1120,7 @@ void MeasurementDevice::collectIqData(int nrOfSamplesNeeded)
             scpiWrite("freq:mode ffm"); // Temporary change mode
         }
         setIfMode();
-        QTimer::singleShot(1000, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+        QTimer::singleShot(200, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
 
         //QTimer::singleShot(1110, this, &MeasurementDevice::deleteIfStream);
         trigFrequency = 0; // Reset

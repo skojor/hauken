@@ -17,6 +17,7 @@ public:
     bool checkVifHeader(QNetworkDatagram datagram);
     void readIqData(QNetworkDatagram datagram);
     void processVifData();
+    void restartTimeoutTimer() {}
 
 signals:
 

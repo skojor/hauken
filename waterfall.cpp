@@ -115,13 +115,13 @@ void Waterfall::updSettings()
     samplerate = (double)config->getInstrFftPlotBw() * 1.28 * 1e3; // TODO: Is this universal for all R&S instruments?
 
     fftSize = 64;
-    imageYSize = fftSize * 40;
+    imageYSize = fftSize * 16;
 
     fillWindow();
-    delete in, out;
+    //delete in, out;
 
-    in = new fftw_complex[fftSize];
-    out = new fftw_complex[fftSize];
+    // Zero-padding/test
+
 }
 
 void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
@@ -129,7 +129,6 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
     int samplesIterator = analyzeIqStart(cmpI, cmpQ) - 1000; // Hopefully this is just before where sth interesting happens
     if (samplesIterator < 0) samplesIterator = 0;
 
-    fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
     QList<double> result;
 
     while (samplesIterator > 0 && samplesIterator + (samplerate * secsToAnalyze) > cmpI.size())
@@ -139,41 +138,48 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
 
     double secPerSample = 1.0 / samplerate;
     double samplesIteratorInc = (double)(samplerate * secsToAnalyze) / (double)imageYSize;
-    //qDebug() << "samples inc:" << samplesIteratorInc << "iterator starts at" << samplesIterator << "ysize" << ySize << "total samples analyzed" << ySize - samplesIterator;
+    qDebug() << "samples inc:" << samplesIteratorInc << "iterator starts at" << samplesIterator << "ysize" << ySize << "total samples analyzed" << ySize - samplesIterator;
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
 
     secsPerLine = secPerSample * samplesIteratorInc;
-    int removeSamples = 112.0 * (double)fftSize / 1024.0;
+    int newFftSize = fftSize * 16;
+    in = new fftw_complex[newFftSize];
+    out = new fftw_complex[newFftSize];
+    fftw_plan plan = fftw_plan_dft_1d(newFftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
+
+    for (int i = 0; i < newFftSize; i++) {
+        for (int j = 0; j < 4; j++) {
+            in[i][0] = 0;
+            in[i][1] = 0;
+        }
+    }
+
+    int removeSamples = 112.0 * (double)newFftSize / 1024.0;
+    //result.resize(newFftSize);
 
     if (cmpI.size() > ySize && cmpQ.size() > ySize) {
         while (samplesIterator < ySize) {
-            for (int i = 0; i < fftSize; i++) {
-                in[i][0] = cmpI[samplesIterator + i] * window[i];
-                in[i][1] = cmpQ[samplesIterator + i] * window[i];
+            for (int i = (newFftSize / 2) - (fftSize / 2), j = 0; i < (newFftSize / 2) + (fftSize / 2); i++, j++) {
+                in[i][0] = cmpI[samplesIterator + i];// * window[j];
+                in[i][1] = cmpQ[samplesIterator + i];// * window[j];
             }
 
             fftw_execute(plan);
-            for (int i = (fftSize / 2); i < fftSize - removeSamples; i++) { // Find magnitude, normalize, reorder and cut edges
-                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / fftSize) );
-            }
 
-            for (int i = removeSamples; i < (fftSize / 2); i++) {
-                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / fftSize) );
+            for (int i = (newFftSize / 2) + removeSamples; i < newFftSize; i++) { // Find magnitude, normalize, reorder and cut edges
+                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize) );
             }
-            /*for (int i = (outSize / 2); i < outSize; i++) { // Find magnitude, normalize, reorder and cut edges
-                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / outSize) );
+            for (int i = 0; i < (newFftSize / 2) - removeSamples; i++) {
+                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize) );
             }
-            for (int i = 0; i < (outSize / 2); i++) {
-                result.append( sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / outSize) );
-            }*/
 
             storeIqTrace(result);
             result.clear();
 
             samplesIterator += (int)samplesIteratorInc;
-            //samplesIterator++;
+            QApplication::processEvents();
         }
-        //qDebug() << "size" << iqFftResult.size();
+        //qDebug() << "size" << iqFftResult.size() << iqFftResult.last().size();
         fftw_destroy_plan(plan);
         createIqPlot();
 
@@ -189,7 +195,15 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
             }
         }
         else {
-            qDebug() << "No filename specified for IQ data storage";
+            QFile file(config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss") + "_iqRawInt16");
+            if (!file.open(QIODevice::WriteOnly))
+                qDebug() << "Could not open" << filename + ".iq" << "for writing IQ data, aborting";
+            else {
+                QDataStream ds(&file);
+                for (int i = 0; i < cmpI.size(); i++)
+                    ds << cmpI[i] << cmpQ[i];
+                file.close();
+            }
         }
     }
     else {
@@ -207,24 +221,24 @@ void Waterfall::createIqPlot()
 {
     double min, max;
     findIqFftMinMax(min, max);
-    if (max < 10) max = 10; // in case of no signal
+    //if (max < 10) max = 10; // in case of no signal
     int hSize = iqFftResult.first().size();
 
-    QPixmap pixmap(QSize(hSize * 20, iqFftResult.size()));
+    QPixmap pixmap(QSize(hSize, iqFftResult.size()));
     //qDebug() << pixmap.size();
     QPainter painter(&pixmap);
     QColor color;
     QPen pen;
-    pen.setWidth(20);
+    pen.setWidth(1);
 
     double percent = 0;
-    int x = 0, y = 0;
+    int x, y = 0;
 
     for (auto && line : iqFftResult) {
-        x = 10;
+        x = 0;
         for (auto && val : line) {
             percent = ((double)val - min) / (max - min);
-            percent *= 1.5;
+            percent *= 2;
             if (percent > 1) percent = 1;
             else if (percent < 0) percent = 0;
             //color.setHsv(180, 0, 255 - (255 * percent), 255);
@@ -232,9 +246,10 @@ void Waterfall::createIqPlot()
             painter.setPen(pen);
             pen.setColor(color);
             painter.drawPoint(x, y);
-            x += 20;
+            x++;
         }
         y++;
+        QApplication::processEvents();
     }
     painter.end();
     addLines(&pixmap);
@@ -262,19 +277,19 @@ void Waterfall::fillWindow()
 
     double a0, a1, a2, a3, a4, f;
     a0 = 1, a1 = 1.93, a2 = 1.29, a3 = 0.388, a4 = 0.028, f;
-    /*for (int i = 0; i < fftSize; i++) {
+    for (int i = 0; i < fftSize; i++) {
         f = 2 * M_PI * i / (fftSize - 1);
         window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f) + a4 * cos(4*f);   /// Flat-top window
-    }*/
+    }
 
     /*a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168, f; // Blackman-Harris
     for (int i = 0; i < fftSize; i++) {
         f = 2 * M_PI * i / (fftSize - 1);
         window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f);
     }*/
-    for (int i = 0; i < fftSize; i++) {
+    /*for (int i = 0; i < fftSize; i++) {
         window[i] = 0.5 * (1 - cos(2 * M_PI * i / fftSize));          // Hanning / Hann
-    }
+    }*/
     /*for (int i = 0; i < fftSize; i++) {
         window[i] = 0.54 - 0.46 * cos(2*M_PI * i / (fftSize -1));
     }*/
@@ -364,7 +379,7 @@ void Waterfall::saveImage(QPixmap *pixmap)
         emit iqPlotReady(filename + "_plot.jpg");
     }
     else {
-        pixmap->save(config->getLogFolder() + "/noname_plot.jpg");
+        pixmap->save(config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss") + "_plot.jpg");
         emit iqPlotReady(config->getLogFolder() + "/noname_plot.jpg");
     }
 
@@ -391,4 +406,52 @@ int Waterfall::analyzeIqStart(const QList<qint16> cmpI, const QList<qint16> cmpQ
         }
     }
     return locMax;
+}
+
+void Waterfall::readAndAnalyzeFile(QString fname, bool isInt16, double timeToAnalyze)
+{
+    QList<qint16>cmpI, cmpQ;
+
+    QFile file(fname);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "IQ plot: Cannot open file" << fname <<", giving up";
+    }
+    else {
+        qDebug() << "Reading IQ data from" << fname << "as" << (isInt16?"16 bit":"8 bit") << "integers";
+        int filesize = file.size();
+
+        QDataStream ds(&file);
+        if (isInt16) {
+            cmpI.resize(filesize / 4);
+            cmpQ.resize(filesize / 4);
+            int iter = 0;
+            qint16 i, q;
+
+            while (!ds.atEnd()) {
+                ds >> i >> q;
+                cmpI[iter] = i;
+                cmpQ[iter++] = q;
+                if (iter % 100 == 0) QApplication::processEvents();
+            }
+        }
+        else {
+            cmpI.resize(filesize / 2);
+            cmpQ.resize(filesize / 2);
+            int iter = 0;
+            qint8 i, q;
+
+            while (!ds.atEnd()) {
+                ds >> i >> q;
+                cmpI[iter] = i;
+                cmpQ[iter++] = q;
+                if (iter % 100 == 0) QApplication::processEvents();
+            }
+        }
+        //qDebug() << "We got" << cmpI.size() << "value pairs, going to work";
+        filename.clear();
+        file.close();
+
+        secsToAnalyze = timeToAnalyze;
+        receiveIqData(cmpI, cmpQ);
+    }
 }

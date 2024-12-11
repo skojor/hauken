@@ -229,6 +229,8 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::freqRangeUsed, positionReport, &PositionReport::setFreqUsed);
     connect(measurementDevice, &MeasurementDevice::resUsed, positionReport, &PositionReport::setResUsed);
     connect(measurementDevice, &MeasurementDevice::reconnected, positionReport, &PositionReport::setMeasurementDeviceReconnected);
+    connect(measurementDevice, &MeasurementDevice::reconnected, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
+    connect(measurementDevice, &MeasurementDevice::reconnected, tcpStream.data(), &TcpDataStream::restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
     connect(measurementDevice, &MeasurementDevice::newAntennaNames, this, &MainWindow::setDeviceAntPorts);
     //connect(instrAntPort, &QComboBox::editTextChanged, this, &MainWindow::changeAntennaPortName);
     connect(antPortLineEdit, &QLineEdit::returnPressed, this, &MainWindow::changeAntennaPortName);

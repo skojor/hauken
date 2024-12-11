@@ -75,6 +75,8 @@ void VifStreamTcp::parseVifData()
         }
         else
             ds.skipRawData(1);
+
+        QApplication::processEvents();
     }
 }
 
@@ -93,7 +95,7 @@ void VifStreamTcp::processVifData()
 
 quint32 VifStreamTcp::calcStreamIdentifier()
 {
-    qDebug() << devicePtr->longId;
+    //qDebug() << devicePtr->longId;
     QStringList split = devicePtr->longId.split(',');
 
     if (split.size() >= 3) {

@@ -20,6 +20,7 @@
 #include <QElapsedTimer>
 #include <QNetworkDatagram>
 #include <QFile>
+#include <QApplication>
 #include "typedefs.h"
 
 class DataStreamBaseClass : public QObject
@@ -78,6 +79,7 @@ public slots:
     int calcPscanPointsPerTrace();
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
+    virtual void restartTimeoutTimer() = 0;
 
 signals:
     void connectedState(bool);

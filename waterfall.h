@@ -9,7 +9,9 @@
 #include <QDateTime>
 #include <QTimer>
 #include <QMutex>
+#include <QFile>
 #include <math.h>
+#include <QApplication>
 #include "config.h"
 #include <fftw3.h>
 
@@ -41,6 +43,7 @@ public slots:
     void requestIqData();
     void resetTimer() { lastIqRequestTimer.invalidate();}
     void setFilename(QString s) { filename = s;}
+    void readAndAnalyzeFile(QString filename, bool isInt16 = true, double timeToAnalyze = 500e-6); // int16 or int8
 
 signals:
     void imageReady(QPixmap *);
