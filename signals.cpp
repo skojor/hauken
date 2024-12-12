@@ -1,10 +1,14 @@
 #include "mainwindow.h"
 
 void MainWindow::setSignals()
-{
+{    
     // TCP/UDP datastreams
-    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, iqdataWaterfall, &Waterfall::receiveIqData);
-    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqdataWaterfall, &Waterfall::receiveIqData);
+    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this] (const QList<qint16>& i, const QList<qint16>& q) {
+        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, i, q);
+    });
+    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this] (const QList<qint16>& i, const QList<qint16>& q) {
+        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, i, q);
+    });
 
     connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);
     connect(instrStopFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStopFreqChanged);
@@ -180,7 +184,6 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
-    connect(iqdataWaterfallThread, &QThread::started, iqdataWaterfall, &Waterfall::start);
     //connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
@@ -287,7 +290,6 @@ void MainWindow::setSignals()
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
-    iqdataWaterfallThread->start();
     //cameraThread->start();
 
     connect(geoLimit, &GeoLimit::toIncidentLog, notifications, &Notifications::toIncidentLog);

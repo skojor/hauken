@@ -31,6 +31,10 @@
 #include <QtMultimedia/QAudioOutput>
 #include <QTimer>
 #include <QProgressBar>
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
+#include <QFutureWatcher>
+#include <QPromise>
 #include "qcustomplot.h"
 #include "measurementdevice.h"
 //#include "typedefs.h"
@@ -276,7 +280,6 @@ private:
     Waterfall *waterfall;
     QThread *waterfallThread;
     Waterfall *iqdataWaterfall;
-    QThread *iqdataWaterfallThread;
 
     CameraRecorder *cameraRecorder;
     QThread *cameraThread;

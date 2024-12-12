@@ -91,7 +91,7 @@ signals:
     void streamErrorResetConnection();
     void freqChanged(double, double);
     void resChanged(double);
-    void newIqData(QList<qint16>, QList<qint16>);
+    void newIqData(const QList<qint16>&, const QList<qint16>&);
     void stopIqStream();
 
 private slots:

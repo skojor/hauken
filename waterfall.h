@@ -38,7 +38,7 @@ public slots:
     void updSettings();
     void restartPlot();
     void stopPlot(bool b) { if (!b) updIntervalTimer->stop(); else updIntervalTimer->start(100);}
-    void receiveIqData(QList<qint16>, QList<qint16>);
+    void receiveIqData(const QList<qint16> &, const QList<qint16> &);
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void requestIqData();
     void resetTimer() { lastIqRequestTimer.invalidate();}

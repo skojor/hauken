@@ -124,7 +124,7 @@ void Waterfall::updSettings()
 
 }
 
-void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
+void Waterfall::receiveIqData(const QList<qint16> &cmpI, const QList<qint16> &cmpQ)
 {
     int samplesIterator = analyzeIqStart(cmpI, cmpQ) - 1000; // Hopefully this is just before where sth interesting happens
     if (samplesIterator < 0) samplesIterator = 0;
@@ -177,7 +177,7 @@ void Waterfall::receiveIqData(QList<qint16> cmpI, QList<qint16> cmpQ)
             result.clear();
 
             samplesIterator += (int)samplesIteratorInc;
-            QApplication::processEvents();
+            //QApplication::processEvents();
         }
         //qDebug() << "size" << iqFftResult.size() << iqFftResult.last().size();
         fftw_destroy_plan(plan);
@@ -249,7 +249,7 @@ void Waterfall::createIqPlot()
             x++;
         }
         y++;
-        QApplication::processEvents();
+        //QApplication::processEvents();
     }
     painter.end();
     addLines(&pixmap);
@@ -431,7 +431,7 @@ void Waterfall::readAndAnalyzeFile(QString fname, bool isInt16, double timeToAna
                 ds >> i >> q;
                 cmpI[iter] = i;
                 cmpQ[iter++] = q;
-                if (iter % 100 == 0) QApplication::processEvents();
+                //if (iter % 100 == 0) QApplication::processEvents();
             }
         }
         else {
@@ -444,7 +444,7 @@ void Waterfall::readAndAnalyzeFile(QString fname, bool isInt16, double timeToAna
                 ds >> i >> q;
                 cmpI[iter] = i;
                 cmpQ[iter++] = q;
-                if (iter % 100 == 0) QApplication::processEvents();
+                //if (iter % 100 == 0) QApplication::processEvents();
             }
         }
         //qDebug() << "We got" << cmpI.size() << "value pairs, going to work";
