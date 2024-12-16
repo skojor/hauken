@@ -1,4 +1,4 @@
-QT       += core gui serialport network mqtt networkauth
+QT       += core gui serialport network mqtt networkauth concurrent
 greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning

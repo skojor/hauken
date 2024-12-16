@@ -3,11 +3,11 @@
 void MainWindow::setSignals()
 {    
     // TCP/UDP datastreams
-    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this] (const QList<qint16>& i, const QList<qint16>& q) {
-        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, i, q);
+    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this] (const QList<complexInt16> iq) {
+        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, iq);
     });
-    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this] (const QList<qint16>& i, const QList<qint16>& q) {
-        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, i, q);
+    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this] (const QList<complexInt16> iq) {
+        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, iq);
     });
 
     connect(instrStartFreq, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::instrStartFreqChanged);

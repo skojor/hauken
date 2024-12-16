@@ -106,6 +106,13 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
     VersionUpdater versionUpdater(config); // Handles any config changes needed
 
+    /*QTimer::singleShot(1000, this, [this] () {
+        QFuture<bool> future = QtConcurrent::run(&Waterfall::readAndAnalyzeFile, iqdataWaterfall, "C:/Hauken/logs/241216025654_JSK test_1850MHz_51.20Msps_8bit.iq", false, 1000e-6);
+    });*/
+
+     /*QTimer::singleShot(1000, this, [this] () {
+        QFuture<bool> future = QtConcurrent::run(&Waterfall::readAndAnalyzeFile, iqdataWaterfall, "C:/Users/JSK/OneDrive - Nasjonal kommunikasjonsmyndighet/Dokumenter/kode/jammerdata/Jammer.H.1.2.iqRawInt16", true, 1000e-6);
+    });*/
 
 }
 

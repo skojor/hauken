@@ -31,7 +31,6 @@ void VifStreamTcp::newData()
 {
     QByteArray data = tcpSocket->readAll();
     ifBufferTcp.append(data);
-    //qDebug() << "VIF buffer" << ifBufferTcp.size() << data.size();
     if (ifBufferTcp.size() > samplesNeeded * 4 && stopIqStreamTimer->isActive()) {
         processVifData();
     }
@@ -41,6 +40,7 @@ void VifStreamTcp::newData()
 
 void VifStreamTcp::parseVifData()
 {
+    QList<complexInt16> iq;
     const quint32 streamIdentifier = calcStreamIdentifier();
     QDataStream ds(ifBufferTcp);
 
@@ -61,13 +61,11 @@ void VifStreamTcp::parseVifData()
             // we have identied receiver and the packet code is raw IQ, continue
             while (readWords < nrOfWords) {
                 readWords++;
-                qint16 readI, readQ;
-                ds >> readI >> readQ;
-                i.append(readI);
-                q.append(readQ);
+                qint16 real, imag;
+                ds >> real >> imag;
+                iq.append({ real, imag });
             }
-            i.removeLast();
-            q.removeLast();
+            iq.removeLast();
         }
         else if (streamIdentifier == readStreamId) {
             // we have correct id, but wrong packet code, skip and continue
@@ -75,22 +73,18 @@ void VifStreamTcp::parseVifData()
         }
         else
             ds.skipRawData(1);
-
-        QApplication::processEvents();
     }
+    qInfo() << "Received total lines IQ:" << iq.size();
+
+    emit newIqData(iq);
+    ifBufferTcp.clear();
 }
 
 void VifStreamTcp::processVifData()
 {
     emit stopIqStream();
     stopIqStreamTimer->stop();
-    parseVifData();
-    qDebug() << "Received total lines IQ:" << i.size();
-
-    emit newIqData(i, q);
-    i.clear();
-    q.clear();
-    ifBufferTcp.clear();
+    QFuture<void> future = QtConcurrent::run(&VifStreamTcp::parseVifData, this);
 }
 
 quint32 VifStreamTcp::calcStreamIdentifier()

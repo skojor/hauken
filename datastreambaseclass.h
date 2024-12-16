@@ -21,6 +21,10 @@
 #include <QNetworkDatagram>
 #include <QFile>
 #include <QApplication>
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
+#include <QFutureWatcher>
+#include <QPromise>
 #include "typedefs.h"
 
 class DataStreamBaseClass : public QObject
@@ -54,6 +58,7 @@ public:
     int traceCtr = 0;
     QVector<QNetworkDatagram> ifBufferUdp;
     QByteArray ifBufferTcp;
+    QVector<complexInt16> iq;
 
 public slots:
     virtual void openListener() = 0;
@@ -91,7 +96,7 @@ signals:
     void streamErrorResetConnection();
     void freqChanged(double, double);
     void resChanged(double);
-    void newIqData(const QList<qint16>&, const QList<qint16>&);
+    void newIqData(const QList<complexInt16>&);
     void stopIqStream();
 
 private slots:

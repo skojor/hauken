@@ -610,5 +610,15 @@ public:
     QList<InstrumentInfo> instrumentInfo;
 };
 
+struct complexInt8 {
+    qint8 real;
+    qint8 imag;
+};
+
+struct complexInt16 {
+    qint16 real;
+    qint16 imag;
+};
+
 #endif // TYPEDEFS_H
 

@@ -61,9 +61,8 @@ void VifStreamUdp::processVifData()
         if (checkVifHeader(buffer))
             readIqData(buffer);
     }
-    emit newIqData(i, q);
-    i.clear();
-    q.clear();
+    emit newIqData(iq);
+    iq.clear();
     ifBufferUdp.clear();
 }
 
@@ -73,12 +72,10 @@ void VifStreamUdp::readIqData(QNetworkDatagram datagram)
     QDataStream ds(data);
     ds.skipRawData(28);
 
-    qint16 rawI, rawQ;
+    qint16 real, imag;
     while (!ds.atEnd()) {
-        ds >> rawI >> rawQ;
-        i.append(rawI);
-        q.append(rawQ);
+        ds >> real >> imag;
+        iq.append( { real, imag });
     }
-    i.pop_back();
-    q.pop_back(); // Remove last value, trailing packet
+    iq.removeLast(); // Remove last value, trailing packet
 }

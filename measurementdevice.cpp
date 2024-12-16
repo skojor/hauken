@@ -1120,7 +1120,7 @@ void MeasurementDevice::collectIqData(int nrOfSamplesNeeded)
             scpiWrite("freq:mode ffm"); // Temporary change mode
         }
         setIfMode();
-        QTimer::singleShot(200, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+        QTimer::singleShot(100, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
 
         //QTimer::singleShot(1110, this, &MeasurementDevice::deleteIfStream);
         trigFrequency = 0; // Reset

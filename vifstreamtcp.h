@@ -17,7 +17,7 @@ public:
     void parseVifData();
     void processVifData();
     void setSamplesNeeded(int i) { samplesNeeded = i;}
-    void startIqDataTimeout() { stopIqStreamTimer->start(5000);}
+    void startIqDataTimeout() { stopIqStreamTimer->start(10000);}
     void restartTimeoutTimer() {}
 
 signals:
@@ -28,8 +28,6 @@ private slots:
 private:
     bool headerIsRead = false;
     int bytectr = 0;
-    QVector<qint16> i;
-    QVector<qint16> q;
     int samplesNeeded;
     QTimer *stopIqStreamTimer;
 };
