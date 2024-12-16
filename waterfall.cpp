@@ -123,10 +123,12 @@ void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
                QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
                "8bit";
 
-    if (iq16.size())
+    if (!dataFromFile && iq16.size())
         saveIqData(iq16);
 
     QFuture<void> f1000 = QtConcurrent::run(&Waterfall::receiveIqDataWorker, this, iq16, config->getInstrFftPlotLength() / 1e6);
+    dataFromFile = false;
+    updSettings(); // Reread sample rate, frequencies, so on
 }
 
 void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze)
@@ -144,7 +146,9 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
 
     double secPerSample = 1.0 / samplerate;
     double samplesIteratorInc = (double)(samplerate * secondsToAnalyze) / (double)imageYSize;
-    qDebug() << "samples inc:" << samplesIteratorInc << "iterator starts at" << samplesIterator << "ysize" << ySize << "total samples analyzed" << ySize - samplesIterator;
+    qDebug() << "FFT plot debug: Samples inc." << samplesIteratorInc << ". Iterator starts at" << samplesIterator
+             << "and counts up to" << ySize << ". Total samples analyzed" << ySize - samplesIterator;
+
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
 
     double secondsPerLine = secPerSample * samplesIteratorInc;
@@ -385,22 +389,26 @@ int Waterfall::analyzeIqStart(const QList<complexInt16> &iq)
     return locMax;
 }
 
-bool Waterfall::readAndAnalyzeFile(const QString fname, const bool isInt16, const double timeToAnalyze)
+bool Waterfall::readAndAnalyzeFile(const QString fname)
 {
+    parseFilename(fname);
+
     QList<complexInt16> iq16;
+    bool int16;
+    if (fname.contains("8bit", Qt::CaseInsensitive)) int16 = false;
+    else int16 = true;
 
     QFile file(fname);
     if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "IQ plot: Cannot open file" << fname <<", giving up";
+        qWarning() << "IQ plot: Cannot open file" << fname <<", giving up";
         return false;
     }
     else {
-        qDebug() << "Reading IQ data from" << fname << "as" << (isInt16?"16 bit":"8 bit") << "integers";
+        qInfo() << "Reading IQ data from" << fname << "as" << (int16?"16 bit":"8 bit") << "integers";
 
         QDataStream ds(&file);
-        if (isInt16) {
+        if (int16) {
             qint16 real, imag;
-
             while (!ds.atEnd()) {
                 ds >> real >> imag;
                 iq16.append({ real, imag });
@@ -408,15 +416,13 @@ bool Waterfall::readAndAnalyzeFile(const QString fname, const bool isInt16, cons
         }
         else {
             qint8 real, imag;
-
             while (!ds.atEnd()) {
                 ds >> real >> imag;
                 iq16.append({ real, imag });
             }
         }
         file.close();
-
-        secsToAnalyze = timeToAnalyze;
+        dataFromFile = true;
         receiveIqData(iq16);
         return true;
     }
@@ -443,5 +449,23 @@ void Waterfall::findIqMaxValue(const QList<complexInt16> &input, qint16 &max)
         if (abs(val.real) > max) max = abs(val.real);
         if (abs(val.imag) > max) max = abs(val.imag);
     }
-    qDebug() << max;
+}
+
+void Waterfall::parseFilename(const QString file)
+{
+    QStringList split = file.split('_');
+    if (split.size() >= 5) {
+        for (const auto &val : split) {
+            if (val.contains("MHz", Qt::CaseInsensitive))
+                ffmFrequency = val.split("MHz").first().toDouble();
+            else if (val.contains("Msps", Qt::CaseInsensitive))
+                samplerate = val.split("Msps").first().toDouble() * 1e6;
+        }
+        qInfo() << "IQ file reader: Guessing frequency and sample rate from filename:" << ffmFrequency << samplerate;
+    }
+    else {
+        qWarning() << "IQ filename not parsed, setting standard frequency/samplerate values";
+        samplerate = 51.2e6;
+        ffmFrequency = 0;
+    }
 }

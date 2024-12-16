@@ -48,7 +48,7 @@ public slots:
     void requestIqData();
     void resetTimer() { lastIqRequestTimer.invalidate();}
     void setFilename(QString) {}
-    bool readAndAnalyzeFile(const QString filename, const bool isInt16 = true, const double timeToAnalyze = 500e-6); // int16 or int8
+    bool readAndAnalyzeFile(const QString filename);
 
 signals:
     void imageReady(QPixmap *);
@@ -68,6 +68,7 @@ private slots:
     void receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze = 500e-6);
     const QList<complexInt8> convertComplex16to8bit(const QList<complexInt16> &);
     void findIqMaxValue(const QList<complexInt16> &, qint16 &max);
+    void parseFilename(const QString file);
 
 private:
     QTimer *testDraw;
@@ -97,6 +98,7 @@ private:
     //fftw_complex *in = new fftw_complex[fftSize], *out = new fftw_complex[fftSize];
     QElapsedTimer lastIqRequestTimer;
     QString filename;
+    bool dataFromFile = false;
 };
 
 #endif // WATERFALL_H

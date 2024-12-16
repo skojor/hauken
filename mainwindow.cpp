@@ -158,6 +158,14 @@ void MainWindow::createActions()
         read1809Data->readFolder(QFileDialog::getExistingDirectory(this, tr("Open folder"), config->getLogFolder(), QFileDialog::ShowDirsOnly));
     });
 
+    openIqAct = new QAction(tr("Open &IQ data file..."), this);
+    openIqAct->setStatusTip(tr("Read and analyze a raw IQ data file from disk"));
+    connect(openIqAct, &QAction::triggered, this, [this] () {
+        QFuture<bool> future = QtConcurrent::run(&Waterfall::readAndAnalyzeFile,
+                                                 iqdataWaterfall,
+                                                 QFileDialog::getOpenFileName(this, "Open raw IQ data file", config->getLogFolder(), "IQ data (*.iq)"));
+    });
+
     optStation = new QAction(tr("&General setup"), this);
     optStation->setStatusTip(tr("Basic station setup (position, folders, etc.)"));
     connect(optStation, &QAction::triggered, this, &MainWindow::stnConfig);
@@ -265,6 +273,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(saveAct);
     fileMenu->addSeparator();
     fileMenu->addAction(open1809Act);
+    fileMenu->addAction(openIqAct);
     fileMenu->addAction(openFolderAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
