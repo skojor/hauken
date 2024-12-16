@@ -30,18 +30,17 @@ void Waterfall::updTimerCallback()
 {
     if (!traceCopy.isEmpty()) {
         timeout = true;
-        mutex.lock(); // this needs exclusive access to containers and pixmap pointer.
+        mutex.lock(); // this needs exclusive access to containers and pixmap
         pixmap->scroll(0, 1, pixmap->rect());
-        QPainter painter(pixmap);
+
+        QImage image = pixmap->toImage();
         QColor color;
-        QPen pen;
-        pen.setWidth(1);
 
-        int traceSize = traceCopy.size();
         int pixmapSize = pixmap->width();
-        double ratio = (double)traceSize / (double)pixmapSize;
+        double ratio = (double)traceCopy.size() / (double)pixmapSize;
         double percent = 0;
-
+        QElapsedTimer timer;
+        timer.start();
         for (int x = 0; x < pixmapSize; x++) {
             percent = (traceCopy.at((int)(ratio * x)) - scaleMin) / (scaleMax - scaleMin); // 0 - 1 range
 
@@ -49,20 +48,19 @@ void Waterfall::updTimerCallback()
             else if (percent > 1) percent = 1;
 
             if (colorset == COLORS::GREY)
-                color.setHsv(180, 0, 255 - (255 * percent), 255);
+                //color.setHsv(180, 0, 255 - (255 * percent), 255);
+                color.setHsv(255, 0, 255 - (255 * percent), 127);
             else if (colorset == COLORS::BLUE)
                 color.setHsv(240, (255 * percent), 255, 255);
             else if (colorset == COLORS::RED)
                 color.setHsv(0, (255 * percent), 255, 255);
             else
-                color.setHsv(190 - (190 * percent), 180, 255, 65);
+                //color.setHsv(190 - (190 * percent), 180, 255, 65);
+                color.setHsv(255 - (255 * percent), 255, 240);
 
-            painter.setPen(pen);
-            pen.setColor(color);
-            painter.drawPoint(x, 0);
-
+            image.setPixel(x, 0, color.rgba());
         }
-
+        *pixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
         emit imageReady(pixmap);
         mutex.unlock(); // done with the exclusive work here
         double interval = 1000.0 / ((double)pixmap->height() / waterfallTime);
@@ -226,7 +224,7 @@ void Waterfall::createIqPlot(const QList<QList <double>> &iqFftResult, const dou
     for (auto && line : iqFftResult) {
         x = 0;
         for (auto && val : line) {
-            percent = 1 * (val - min) / (max - min);
+            percent = (val - min) / (max - min);
             if (percent > 1) percent = 1;
             else if (percent < 0) percent = 0;
             imgColor.setHsv(255 - (255 * percent), 255, 127);
