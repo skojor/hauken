@@ -93,8 +93,8 @@ private:
     double samplerate = 0;
     double secsPerLine;
     double secsToAnalyze = 500e-6;
-    int fftSize = 512;
-    int imageYSize = 1024;
+    const int fftSize = 64;
+    const int imageYSize = fftSize * 16 * 2;
     //fftw_complex *in = new fftw_complex[fftSize], *out = new fftw_complex[fftSize];
     QElapsedTimer lastIqRequestTimer;
     QString filename;

@@ -109,9 +109,6 @@ void Waterfall::updSettings()
     }
     secsToAnalyze = config->getInstrFftPlotLength() / 1e6;
     samplerate = (double)config->getInstrFftPlotBw() * 1.28 * 1e3; // TODO: Is this universal for all R&S instruments?
-
-    fftSize = 64;
-    imageYSize = fftSize * 16 * 2;
 }
 
 void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
@@ -134,7 +131,7 @@ void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
 void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze)
 {
     const int fftSize = 64;
-    int imageYSize = fftSize * 16 * 2;
+    //int imageYSize = fftSize * 16 * 2;
 
     int samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
     if (samplesIterator < 0) samplesIterator = 0;
@@ -146,7 +143,7 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
 
     double secPerSample = 1.0 / samplerate;
     double samplesIteratorInc = (double)(samplerate * secondsToAnalyze) / (double)imageYSize;
-    qDebug() << "FFT plot debug: Samples inc." << samplesIteratorInc << ". Iterator starts at" << samplesIterator
+    qDebug() << "FFT plot debug: Samples inc." << (int)samplesIteratorInc << ". Iterator starts at" << samplesIterator
              << "and counts up to" << ySize << ". Total samples analyzed" << ySize - samplesIterator;
 
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
@@ -154,19 +151,16 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     double secondsPerLine = secPerSample * samplesIteratorInc;
     const int newFftSize = fftSize * 16;
     fftw_complex in[newFftSize], out[newFftSize];
-    fftw_plan plan = fftw_plan_dft_1d(newFftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
+    fftw_plan plan = fftw_plan_dft_1d(newFftSize, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    int removeSamples = 84.0 * (double)newFftSize / 1024.0; // Removing samples to have just above the original sample width visible in the plot
 
     QList<double> result;
     QList<QList<double> > iqFftResult;
 
-    for (int i = 0; i < newFftSize; i++) {
-        for (int j = 0; j < 4; j++) {
-            in[i][0] = 0;
-            in[i][1] = 0;
-        }
+    for (int i = 0; i < newFftSize; i++) { // Set all input values to 0 initially, used for zero padding
+        in[i][0] = 0;
+        in[i][1] = 0;
     }
-
-    int removeSamples = 84.0 * (double)newFftSize / 1024.0; // Removing samples to have just above the original sample width visible in the plot
 
     if (iq.size() > ySize) {
         while (samplesIterator < ySize) {
@@ -216,10 +210,9 @@ void Waterfall::createIqPlot(const QList<QList <double>> &iqFftResult, const dou
 {
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
-    min = avg;
-    int hSize = iqFftResult.first().size();
+    min = avg; // Minimum produces alot of "noise" in the plot
 
-    QImage image(QSize(hSize, iqFftResult.size()), QImage::Format_ARGB32);
+    QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
     QColor imgColor;
     double percent = 0;
     int x, y = 0;
@@ -247,40 +240,22 @@ void Waterfall::findIqFftMinMaxAvg(const QList<QList<double> >&iqFftResult, doub
     max = -99e9;
     avg = 0;
 
-    for (auto && line : iqFftResult) {
-        for (auto && val : line) {
+    for (const auto & line : iqFftResult) {
+        for (const auto & val : line) {
             if (val < min) min = val;
             else if (val > max) max = val;
             avg += val;
         }
     }
     avg /= iqFftResult.size() * iqFftResult.first().size();
-
-    //qDebug() << "IQ:" << min << max << avg;
 }
 
 void Waterfall::fillWindow()
 {
     window.resize(fftSize);
-
-    //double a0, a1, a2, a3, a4, f;
-    //a0 = 1, a1 = 1.93, a2 = 1.29, a3 = 0.388, a4 = 0.028, f;
-    /*for (int i = 0; i < fftSize; i++) {
-        f = 2 * M_PI * i / (fftSize - 1);
-        window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f) + a4 * cos(4*f);   /// Flat-top window
-    }*/
-
-    /*a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168; // Blackman-Harris
-    for (int i = 0; i < fftSize; i++) {
-        f = 2 * M_PI * i / (fftSize - 1);
-        window[i] = a0 - a1 * cos(f) + a2 * cos(2*f) - a3 * cos(3*f);
-    }*/
     for (int i = 0; i < fftSize; i++) {
         window[i] = 0.5 * (1 - cos(2 * M_PI * i / fftSize));          // Hanning / Hann
     }
-    /*for (int i = 0; i < fftSize; i++) {
-        window[i] = 0.54 - 0.46 * cos(2*M_PI * i / (fftSize -1));
-    }*/
 }
 
 void Waterfall::addLines(QImage *image, const double secondsAnalyzed, const double secondsPerLine)
@@ -312,26 +287,9 @@ void Waterfall::addText(QImage *image, const double secondsAnalyzed, const doubl
 {
     QPen pen;
     QPainter painter(image);
-
     pen.setWidth(10);
     pen.setColor(Qt::white);
     int fontSize = 14, xMinus = 60, yMinus = 25;
-
-    if (fftSize == 256) {
-        fontSize = 5;
-        xMinus = 0;
-        yMinus = 8;
-    }
-    else if (fftSize == 512) {
-        fontSize = 8;
-        xMinus = 15;
-        yMinus = 10;
-    }
-    else if (fftSize == 1024) {
-        fontSize = 10;
-        xMinus = 30;
-        yMinus = 12;
-    }
 
     painter.setFont(QFont("Arial", fontSize));
     painter.setPen(pen);
@@ -347,7 +305,6 @@ void Waterfall::addText(QImage *image, const double secondsAnalyzed, const doubl
             microsecCtr += 1e6 * secondsAnalyzed / 10;
         }
     }
-
     painter.end();
 }
 
@@ -361,7 +318,6 @@ void Waterfall::saveImage(const QImage *image, const double secondsAnalyzed)
         image->save(config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss") + "_" + QString::number(secondsAnalyzed * 1e6) + "us.jpg", "JPG", 75);
         emit iqPlotReady(config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss") + "_" + QString::number(secondsAnalyzed * 1e6) + "us.jpg");
     }
-
 }
 
 void Waterfall::requestIqData()
