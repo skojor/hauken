@@ -48,8 +48,7 @@ void Waterfall::updTimerCallback()
             else if (percent > 1) percent = 1;
 
             if (colorset == COLORS::GREY)
-                //color.setHsv(180, 0, 255 - (255 * percent), 255);
-                color.setHsv(255, 0, 255 - (255 * percent), 127);
+                color.setHsv(180, 0, 255 - (255 * percent), 255);
             else if (colorset == COLORS::BLUE)
                 color.setHsv(240, (255 * percent), 255, 255);
             else if (colorset == COLORS::RED)
