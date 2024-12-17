@@ -107,8 +107,8 @@ void Waterfall::updSettings()
         else if (mode == "Pride")
             colorset = COLORS::PRIDE;
     }
-    secsToAnalyze = config->getInstrFftPlotLength() / 1e6;
-    samplerate = (double)config->getInstrFftPlotBw() * 1.28 * 1e3; // TODO: Is this universal for all R&S instruments?
+    secsToAnalyze = config->getIqFftPlotLength() / 1e6;
+    samplerate = (double)config->getIqFftPlotBw() * 1.28 * 1e3; // TODO: Is this universal for all R&S instruments?
 }
 
 void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
@@ -119,10 +119,10 @@ void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
                QString::number(ffmFrequency, 'f', 0) + "MHz_" +
                QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
                "8bit";
-    if (!dataFromFile && iq16.size())
+    if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
         saveIqData(iq16);
 
-    QFuture<void> f1000 = QtConcurrent::run(&Waterfall::receiveIqDataWorker, this, iq16, config->getInstrFftPlotLength() / 1e6);
+    QFuture<void> f1000 = QtConcurrent::run(&Waterfall::receiveIqDataWorker, this, iq16, config->getIqFftPlotLength() / 1e6);
     dataFromFile = false;
     updSettings(); // Reread sample rate, frequencies, so on
 }
@@ -368,8 +368,13 @@ bool Waterfall::readAndAnalyzeFile(const QString fname)
             iq16.resize(file.size() / 4);
             if (file.read((char *)iq16.data(), file.size()) == -1)
                 qWarning() << "IQ16 read failed:" << file.errorString();
-            else
+            else {
+                for (auto & val : iq16) { // readRaw makes a mess out of byte order. Reorder manually
+                    val.real = qToBigEndian(val.real);
+                    val.imag = qToBigEndian(val.imag);
+                }
                 receiveIqData(iq16);
+            }
         }
         else {
             QList<complexInt8> iq8;

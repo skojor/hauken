@@ -50,6 +50,7 @@ SOURCES += \
     gnssdisplay.cpp \
     gnssoptions.cpp \
     instrumentlist.cpp \
+    iqoptions.cpp \
     led/ledindicator.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -121,6 +122,7 @@ HEADERS += \
     gnssdisplay.h \
     gnssoptions.h \
     instrumentlist.h \
+    iqoptions.h \
     led/ledindicator.h \
     mainwindow.h \
     measurementdevice.h \

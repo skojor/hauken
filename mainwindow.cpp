@@ -51,6 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     geoLimitOptions = new GeoLimitOptions(config);
     mqttOptions = new MqttOptions(config);
     oAuthOptions = new OAuthOptions(config);
+    iqOptions = new IqOptions(config);
 
     arduinoPtr = new Arduino(config);
     aiPtr = new AI(config);
@@ -214,6 +215,10 @@ void MainWindow::createActions()
     optOAuth->setStatusTip(tr("Setup authentication using OAuth2 schemes"));
     connect(optOAuth, &QAction::triggered, this, [this] { this->oAuthOptions->start();});
 
+    optIq = new QAction(tr("IQ data and plot options"), this);
+    optIq->setStatusTip(tr("Setup IQ plot and saving raw IQ data to file"));
+    connect(optIq, &QAction::triggered, this, [this] () { iqOptions->start();});
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -290,6 +295,7 @@ void MainWindow::createMenus()
     optionMenu->addAction(optGeoLimit);
     optionMenu->addAction(optMqtt);
     optionMenu->addAction(optOAuth);
+    optionMenu->addAction(optIq);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);

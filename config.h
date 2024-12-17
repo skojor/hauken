@@ -126,12 +126,16 @@ public slots:
     void setInstrNormalizeSpectrum(bool b) { settings->setValue("instr/NormalizeSpectrum", b); emit settingsUpdated(); }
     int getInstrTracesNeededForAverage() { return settings->value("instr/tracesNeededForAverage", 250).toInt();}
     void setInstrTracesNeededForAverage(int i) { settings->setValue("instr/tracesNeededForAverage", i); emit settingsUpdated(); }
-    bool getInstrCreateFftPlot() { return settings->value("instr/createFftPlot", false).toBool();}
-    void setInstrCreateFftPlot(bool b) { settings->setValue("instr/createFftPlot", b); emit settingsUpdated();}
-    int getInstrFftPlotLength() { return settings->value("instr/fftPlotLength", 500).toInt();}
-    void setInstrFftPlotLength(int i) { settings->setValue("instr/fftPlotLength", i); emit settingsUpdated();}
-    int getInstrFftPlotBw() { return settings->value("instr/fftPlotBw", 10000).toInt();}
-    void setInstrFftPlotBw(int i) { settings->setValue("instr/fftPlotBw", i); emit settingsUpdated();}
+
+    // IQ options
+    bool getIqSaveToFile() { return settings->value("iq/saveToFile", false).toBool();}
+    void setIqSaveToFile(bool b) { settings->setValue("iq/saveToFile", b);}
+    bool getIqCreateFftPlot() { return settings->value("iq/createFftPlot", true).toBool();}
+    void setIqCreateFftPlot(bool b) { settings->setValue("iq/createFftPlot", b); emit settingsUpdated();}
+    int getIqFftPlotLength() { return settings->value("iq/fftPlotLength", 1000).toInt();}
+    void setIqFftPlotLength(int i) { settings->setValue("iq/fftPlotLength", i); emit settingsUpdated();}
+    int getIqFftPlotBw() { return settings->value("iq/fftPlotBw", 40000).toInt();}
+    void setIqFftPlotBw(int i) { settings->setValue("iq/fftPlotBw", i); emit settingsUpdated();}
 
 
     // 1809 options

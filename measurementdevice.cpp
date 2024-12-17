@@ -1075,7 +1075,7 @@ void MeasurementDevice::setIfMode()
         emit iqFfmFreqChanged(f/1e6);
     }
     scpiWrite("syst:if:rem:mode short");
-    scpiWrite("band " + QByteArray::number(config->getInstrFftPlotBw()) + " khz");
+    scpiWrite("band " + QByteArray::number(config->getIqFftPlotBw()) + " khz");
     scpiWrite("init");
 }
 
@@ -1112,7 +1112,7 @@ void MeasurementDevice::collectIqData(int nrOfSamplesNeeded)
 {
     vifStreamTcp->setSamplesNeeded(nrOfSamplesNeeded);
 
-    if (config->getInstrCreateFftPlot()) {
+    if (config->getIqCreateFftPlot()) {
         modeChanged = false;
         Instrument::Mode mode = devicePtr->mode;
         if (mode != Instrument::Mode::FFM) {

@@ -76,6 +76,7 @@
 #include "oauthfileuploader.h"
 #include "oauthoptions.h"
 #include "versionupdater.h"
+#include "iqoptions.h"
 
 class MainWindow : public QMainWindow
 {
@@ -232,6 +233,7 @@ private:
     QAction *optGeoLimit;
     QAction *optMqtt;
     QAction *optOAuth;
+    QAction *optIq;
     QAction *hideShowControls = new QAction("Hide/show receiver controls");
     QAction *hideShowTrigSettings = new QAction("Hide/show trigger settings");
     QAction *hideShowStatusIndicator = new QAction("Hide/show status indicators");
@@ -259,6 +261,7 @@ private:
     GeoLimitOptions *geoLimitOptions;
     MqttOptions *mqttOptions;
     OAuthOptions *oAuthOptions;
+    IqOptions *iqOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 
