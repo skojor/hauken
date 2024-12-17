@@ -222,19 +222,30 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
     }
 
     else if (devicePtr->mode == Instrument::Mode::FFM && (attrHeader.tag == (int)Instrument::Tags::IFPAN || genAttrAdvHeader.tag == (int)Instrument::Tags::ADVIFP)) {
-        while (!ds.atEnd()) {
-            ds >> data;
-            fft.append(data);
+        QList<qint16> tmpBuffer;
+        int packetCtr;
+        if (devicePtr->advProtocol)
+            packetCtr = genAttrAdvHeader.numItems;
+        else
+            packetCtr = attrHeader.numItems;
+        tmpBuffer.resize(packetCtr);
+        int readBytes = ds.readRawData((char *)tmpBuffer.data(), packetCtr * 2);
+        if (readBytes != packetCtr * 2) {
+            qWarning() << "UDP data failed to copy, aborting" << tmpBuffer.size() << buf.size() << readBytes << attrHeader.numItems << genAttrAdvHeader.numItems;
         }
-        emit newFftData(fft);
-        fft.clear();
-        traceCtr++;
-        if (traceTimer->isValid() && traceCtr >= 100) {
-            emit tracesPerSecond(1e11 / traceTimer->nsecsElapsed());
-            traceCtr = 0;
-            traceTimer->start();
+        else {
+            for (auto & val : tmpBuffer)  // readRaw makes a mess out of byte order. Reorder manually
+                val = qToBigEndian(val);
+            emit newFftData(tmpBuffer);
+
+            traceCtr++;
+            if (traceTimer->isValid() && traceCtr >= 100) {
+                emit tracesPerSecond(1e11 / traceTimer->nsecsElapsed());
+                traceCtr = 0;
+                traceTimer->start();
+            }
+            if (!traceTimer->isValid()) traceTimer->start();
         }
-        if (!traceTimer->isValid()) traceTimer->start();
     }
 
     else if (devicePtr->mode == Instrument::Mode::PSCAN && attrHeader.tag == (int)Instrument::Tags::DSCAN) {
