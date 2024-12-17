@@ -119,7 +119,6 @@ void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
                QString::number(ffmFrequency, 'f', 0) + "MHz_" +
                QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
                "8bit";
-
     if (!dataFromFile && iq16.size())
         saveIqData(iq16);
 
@@ -131,12 +130,14 @@ void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
 void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze)
 {
     const int fftSize = 64;
+    const int newFftSize = fftSize * 16;
+
     //int imageYSize = fftSize * 16 * 2;
 
     int samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
     if (samplesIterator < 0) samplesIterator = 0;
 
-    while (samplesIterator > 0 && samplesIterator + (samplerate * secondsToAnalyze) >= iq.size() - 1)
+    while (samplesIterator > 0 && samplesIterator + (samplerate * secondsToAnalyze) + newFftSize >= iq.size())
         samplesIterator --;
 
     int ySize = samplerate * secondsToAnalyze + samplesIterator;
@@ -149,7 +150,6 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     if ((int)samplesIteratorInc == 0) samplesIteratorInc = 1;
 
     double secondsPerLine = secPerSample * samplesIteratorInc;
-    const int newFftSize = fftSize * 16;
     fftw_complex in[newFftSize], out[newFftSize];
     fftw_plan plan = fftw_plan_dft_1d(newFftSize, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
     int removeSamples = 84.0 * (double)newFftSize / 1024.0; // Removing samples to have just above the original sample width visible in the plot
@@ -165,16 +165,20 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     if (iq.size() > ySize) {
         while (samplesIterator < ySize) {
             for (int i = (newFftSize / 2) - (fftSize / 2), j = 0; i < (newFftSize / 2) + (fftSize / 2); i++, j++) {
-                in[i][0] = iq[samplesIterator + i].real * window[j];
-                in[i][1] = iq[samplesIterator + i].imag * window[j];
+                in[i][0] = (iq[samplesIterator + i].real * window[j]);
+                in[i][1] = (iq[samplesIterator + i].imag * window[j]);
             }
             fftw_execute(plan); // FFT is done here
 
             for (int i = (newFftSize / 2) + removeSamples; i < newFftSize; i++) { // Find magnitude, normalize, reorder and cut edges
-                result.append((10 * log10(sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize))));
+                double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize);
+                if (val == 0) val = 1e-9; // log10(0) = -inf
+                result.append(10 * log10(val));
             }
             for (int i = 0; i < (newFftSize / 2) - removeSamples; i++) {
-                result.append((10 * log10(sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize))));
+                double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize);
+                if (val == 0) val = 1e-9; // log10(0) = -inf
+                result.append(10 * log10(val));
             }
 
             iqFftResult.append(result);
@@ -190,7 +194,6 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     else {
         qWarning() << "Not enough samples to create IQ FFT plot, giving up";
     }
-    iqFftResult.clear();
 }
 
 void Waterfall::saveIqData(const QList<complexInt16> &iq16)
@@ -199,9 +202,7 @@ void Waterfall::saveIqData(const QList<complexInt16> &iq16)
     if (!file.open(QIODevice::WriteOnly))
         qWarning() << "Could not open" << filename + ".iq" << "for writing IQ data, aborting";
     else {
-        QDataStream ds(&file);
-        for (const auto & val : convertComplex16to8bit(iq16))
-            ds << val.real << val.imag;
+        file.write((const char *)convertComplex16to8bit(iq16).constData(), iq16.size() * 2);
         file.close();
     }
 }
@@ -349,7 +350,6 @@ bool Waterfall::readAndAnalyzeFile(const QString fname)
 {
     parseFilename(fname);
 
-    QList<complexInt16> iq16;
     bool int16;
     if (fname.contains("8bit", Qt::CaseInsensitive)) int16 = false;
     else int16 = true;
@@ -361,25 +361,25 @@ bool Waterfall::readAndAnalyzeFile(const QString fname)
     }
     else {
         qInfo() << "Reading IQ data from" << fname << "as" << (int16?"16 bit":"8 bit") << "integers";
+        dataFromFile = true;
 
-        QDataStream ds(&file);
         if (int16) {
-            qint16 real, imag;
-            while (!ds.atEnd()) {
-                ds >> real >> imag;
-                iq16.append({ real, imag });
-            }
+            QList<complexInt16> iq16;
+            iq16.resize(file.size() / 4);
+            if (file.read((char *)iq16.data(), file.size()) == -1)
+                qWarning() << "IQ16 read failed:" << file.errorString();
+            else
+                receiveIqData(iq16);
         }
         else {
-            qint8 real, imag;
-            while (!ds.atEnd()) {
-                ds >> real >> imag;
-                iq16.append({ real, imag });
-            }
+            QList<complexInt8> iq8;
+            iq8.resize(file.size() / 2);
+            if (file.read((char *)iq8.data(), file.size()) == -1)
+                qWarning() << "IQ8 read failed:" << file.errorString();
+            else
+                receiveIqData(convertComplex8to16bit(iq8));
         }
         file.close();
-        dataFromFile = true;
-        receiveIqData(iq16);
         return true;
     }
 }
@@ -394,6 +394,15 @@ const QList<complexInt8> Waterfall::convertComplex16to8bit(const QList<complexIn
     else factor = 127.0 / max; // Scaling max int16 value down to int8. Is this the correct way to do it?? TODO
     for (const auto & val : input)
         output.append(complexInt8{ (qint8)(factor * val.real), (qint8)(factor * val.imag) });
+
+    return output;
+}
+
+const QList<complexInt16> Waterfall::convertComplex8to16bit(const QList<complexInt8> &input)
+{
+    QList<complexInt16> output;
+    for (const auto & val : input)
+        output.append(complexInt16{ val.real, val.imag });
 
     return output;
 }

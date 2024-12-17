@@ -38,19 +38,17 @@ void VifStreamTcp::newData()
         ifBufferTcp.clear();
 }
 
-void VifStreamTcp::parseVifData()
+void VifStreamTcp::parseVifData(const QByteArray &data)
 {
     QList<complexInt16> iq;
     const quint32 streamIdentifier = calcStreamIdentifier();
-    QDataStream ds(ifBufferTcp);
+    QDataStream ds(data);
 
     while (!ds.atEnd()) {
-
         qint16 nrOfWords = 0, infClassCode = 0, packetClassCode = 0;
         quint32 readStreamId = 0;
 
         ds.skipRawData(2);
-
         ds >> nrOfWords >> readStreamId;
         ds.skipRawData(4);
         ds >> infClassCode >> packetClassCode;
@@ -58,14 +56,17 @@ void VifStreamTcp::parseVifData()
         int readWords = 7;
 
         if (streamIdentifier == readStreamId && infClassCode == 0x0001 && packetClassCode == 0x0001) {
-            // we have identied receiver and the packet code is raw IQ, continue
-            while (readWords < nrOfWords) {
-                readWords++;
-                qint16 real, imag;
-                ds >> real >> imag;
-                iq.append({ real, imag });
+            QList<complexInt16> buf;
+            buf.resize((nrOfWords - readWords));
+            int readBytes = ds.readRawData((char *)buf.data(), (nrOfWords - readWords) * 4);
+            if (readBytes == (nrOfWords - readWords) * 4) {
+                buf.removeLast();
+                for (auto & val : buf) { // readRaw makes a mess out of byte order. Reorder manually
+                    val.real = qToBigEndian(val.real);
+                    val.imag = qToBigEndian(val.imag);
+                }
+                iq += buf;
             }
-            iq.removeLast();
         }
         else if (streamIdentifier == readStreamId) {
             // we have correct id, but wrong packet code, skip and continue
@@ -84,7 +85,7 @@ void VifStreamTcp::processVifData()
 {
     emit stopIqStream();
     stopIqStreamTimer->stop();
-    QFuture<void> future = QtConcurrent::run(&VifStreamTcp::parseVifData, this);
+    QFuture<void> future = QtConcurrent::run(&VifStreamTcp::parseVifData, this, ifBufferTcp);
 }
 
 quint32 VifStreamTcp::calcStreamIdentifier()
@@ -101,4 +102,5 @@ quint32 VifStreamTcp::calcStreamIdentifier()
     }
     else
         qDebug() << "Cannot calculate stream identifier?";
+    return 0;
 }

@@ -25,6 +25,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QPromise>
+#include <QtEndian>
 #include "typedefs.h"
 
 class DataStreamBaseClass : public QObject

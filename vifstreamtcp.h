@@ -14,7 +14,7 @@ public:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newData();
-    void parseVifData();
+    void parseVifData(const QByteArray &data);
     void processVifData();
     void setSamplesNeeded(int i) { samplesNeeded = i;}
     void startIqDataTimeout() { stopIqStreamTimer->start(10000);}

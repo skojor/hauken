@@ -67,6 +67,7 @@ private slots:
     void saveIqData(const QList<complexInt16> &iq);
     void receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze = 500e-6);
     const QList<complexInt8> convertComplex16to8bit(const QList<complexInt16> &);
+    const QList<complexInt16> convertComplex8to16bit(const QList<complexInt8> &);
     void findIqMaxValue(const QList<complexInt16> &, qint16 &max);
     void parseFilename(const QString file);
 
