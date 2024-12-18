@@ -132,7 +132,7 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     const int fftSize = 64;
     const int newFftSize = fftSize * 16;
 
-    //int imageYSize = fftSize * 16 * 2;
+    //int imageYSize = samplerate * secondsToAnalyze;//fftSize * 16 * 2;
 
     int samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
     if (samplesIterator < 0) samplesIterator = 0;
@@ -211,7 +211,11 @@ void Waterfall::createIqPlot(const QList<QList <double>> &iqFftResult, const dou
 {
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
-    min = avg; // Minimum produces alot of "noise" in the plot
+    qDebug() << min << max << avg;
+    min = avg;
+    if (max > 10) min = 3;
+    //if (avg > 3) min = avg;
+    // Minimum from fft produces alot of "noise" in the plot, this works like a filter
 
     QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
     QColor imgColor;
@@ -324,7 +328,7 @@ void Waterfall::saveImage(const QImage *image, const double secondsAnalyzed)
 void Waterfall::requestIqData()
 {
     if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 900e3) {
-        int samplesNeeded = samplerate * 0.5; // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
+        int samplesNeeded = samplerate * config->getIqLogTime(); // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
         emit requestIq(samplesNeeded);
         lastIqRequestTimer.restart();
     }
@@ -407,7 +411,7 @@ const QList<complexInt16> Waterfall::convertComplex8to16bit(const QList<complexI
 {
     QList<complexInt16> output;
     for (const auto & val : input)
-        output.append(complexInt16{ val.real, val.imag });
+        output.append(complexInt16{ val.real * 128, val.imag * 128});
 
     return output;
 }

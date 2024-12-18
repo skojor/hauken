@@ -136,7 +136,8 @@ public slots:
     void setIqFftPlotLength(int i) { settings->setValue("iq/fftPlotLength", i); emit settingsUpdated();}
     int getIqFftPlotBw() { return settings->value("iq/fftPlotBw", 40000).toInt();}
     void setIqFftPlotBw(int i) { settings->setValue("iq/fftPlotBw", i); emit settingsUpdated();}
-
+    double getIqLogTime() { return settings->value("iq/logTime", 0.5).toDouble();}
+    void setIqLogTime(double d) { settings->setValue("iq/logTime", d);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}

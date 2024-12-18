@@ -21,10 +21,16 @@ void VersionUpdater::handleConfigUpdates()
         QTextStream ts(&file);
 
         while (!ts.atEnd()) {
-            QString key, value;
-            ts >> key >> value;
-            if (!key.isEmpty() && !value.isEmpty() && !settings.contains(key)) settings.setValue(key, value);
-            qDebug() << "Adding config key/value:" << key << value;
+            QString mode, key, value;
+            ts >> mode >> key >> value;
+            if (mode.contains("ifempty", Qt::CaseInsensitive) && !key.isEmpty() && !value.isEmpty() && !settings.value(key).isNull()) {
+                settings.setValue(key, value);
+                qInfo() << "Adding config key/value:" << key << value;
+            }
+            else if (mode.contains("overwrite", Qt::CaseInsensitive) && !key.isEmpty() && !value.isEmpty()) {
+                settings.setValue(key, value);
+                qInfo() << "Overwriting config value:" << key << value;
+            }
         }
         file.close();
         file.remove();
