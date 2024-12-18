@@ -31,6 +31,9 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                           "Too large, and the network buffers will saturate. 0.5 seconds is reasonable for a locally connected receiver." \
                           "All data gathered in this time will be saved to disk if enabled above."));
 
+    mainLayout->addRow(cbOpt2);
+    cbOpt2->setText(tr("Use dB scale for FFT values"));
+    cbOpt2->setToolTip(tr("Use dB if lower level signals should become more visible. Default off, useful for CW/chirp signals."));
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -47,6 +50,7 @@ void IqOptions::start()
     sbOpt2->setValue(config->getIqFftPlotLength());
     comboOpt1->setCurrentText(QString::number(config->getIqFftPlotBw()));
     leOpt1->setText(QString::number(config->getIqLogTime(), 'f', 3));
+    cbOpt2->setChecked(config->getIqUseDB());
 
     dialog->exec();
 }
@@ -58,6 +62,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqFftPlotLength(sbOpt2->value());
     config->setIqFftPlotBw(comboOpt1->currentText().toInt());
     config->setIqLogTime(leOpt1->text().toDouble());
+    config->setIqUseDB(cbOpt2->isChecked());
 
     emit updSettings();
     dialog->close();

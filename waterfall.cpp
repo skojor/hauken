@@ -163,6 +163,8 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     }
 
     if (iq.size() > ySize) {
+        bool useDB = config->getIqUseDB();
+
         while (samplesIterator < ySize) {
             for (int i = (newFftSize / 2) - (fftSize / 2), j = 0; i < (newFftSize / 2) + (fftSize / 2); i++, j++) {
                 in[i][0] = (iq[samplesIterator + i].real * window[j]);
@@ -173,12 +175,18 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
             for (int i = (newFftSize / 2) + removeSamples; i < newFftSize; i++) { // Find magnitude, normalize, reorder and cut edges
                 double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize);
                 if (val == 0) val = 1e-9; // log10(0) = -inf
-                result.append(10 * log10(val));
+                if (useDB)
+                    result.append(10 * log10(val));
+                else
+                    result.append(val);
             }
             for (int i = 0; i < (newFftSize / 2) - removeSamples; i++) {
                 double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * (1.0 / newFftSize);
                 if (val == 0) val = 1e-9; // log10(0) = -inf
-                result.append(10 * log10(val));
+                if (useDB)
+                    result.append(10 * log10(val));
+                else
+                    result.append(val);
             }
 
             iqFftResult.append(result);
