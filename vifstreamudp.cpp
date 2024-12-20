@@ -30,14 +30,10 @@ void VifStreamUdp::connectionStateChanged(QAbstractSocket::SocketState state)
 //    if (state == QAbstractSocket::UnconnectedState)
 }
 
-void VifStreamUdp::newData()
+void VifStreamUdp::newDataHandler()
 {
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
         QNetworkDatagram datagram = udpSocket->receiveDatagram();
-
-        //rxData.fill(0, udpSocket->pendingDatagramSize());
-        //udpSocket->readDatagram(rxData.data(), rxData.size());
-        qDebug() << "package size" << datagram.data().size();
         ifBufferUdp.append(datagram);
     }
 }

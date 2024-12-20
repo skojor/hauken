@@ -16,6 +16,10 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                        "when triggered. The data will be used to create a high resolution FFT plot and sent"\
                        "via email.");
 
+    mainLayout->addRow(cbOpt2);
+    cbOpt2->setText(tr("Use dB scale for FFT values"));
+    cbOpt2->setToolTip(tr("Use dB if lower level signals should become more visible. Default off, useful for CW/chirp signals."));
+
     mainLayout->addRow(new QLabel(tr("IQ data plot length in microseconds")), sbOpt2);
     sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 40 - 400000 microseconds.");
     sbOpt2->setRange(40, 400000);
@@ -30,10 +34,6 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                           "Settings this value too small will increase the chance of not spotting an intermittent signal." \
                           "Too large, and the network buffers will saturate. 0.5 seconds is reasonable for a locally connected receiver." \
                           "All data gathered in this time will be saved to disk if enabled above."));
-
-    mainLayout->addRow(cbOpt2);
-    cbOpt2->setText(tr("Use dB scale for FFT values"));
-    cbOpt2->setToolTip(tr("Use dB if lower level signals should become more visible. Default off, useful for CW/chirp signals."));
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);

@@ -13,7 +13,7 @@ public:
     void openListener(const QHostAddress host, const int port);
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
-    void newData();
+    void newDataHandler();
     void parseVifData(const QByteArray &data);
     void processVifData();
     void setSamplesNeeded(int i) { samplesNeeded = i;}

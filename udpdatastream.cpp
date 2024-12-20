@@ -34,12 +34,13 @@ void UdpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
         timeoutTimer->stop();
 }
 
-void UdpDataStream::newData()
+void UdpDataStream::newDataHandler()
 {
     timeoutTimer->start();
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
         QByteArray data = udpSocket->receiveDatagram().data();
-        if (checkHeader(data))
+        readHeader(data);
+        if (checkHeader())
             processData(data);
     }
 }

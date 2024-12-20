@@ -33,7 +33,7 @@ class DataStreamBaseClass : public QObject
     Q_OBJECT
 public:
     explicit DataStreamBaseClass(QObject *parent = nullptr);
-    QVector<qint16>fft;
+    QList<qint16> fft;
     QHostAddress ownAddress;
     quint16 port = 0, udpPort = 5559;
     QTcpSocket *tcpSocket = new QTcpSocket;
@@ -71,9 +71,10 @@ public slots:
     void setDeviceType(QSharedPointer<Device> p) { devicePtr = p; }
     quint16 getUdpPort() { return udpPort; }
     quint16 getTcpPort() { return tcpSocket->localPort(); }
-    virtual void newData() = 0;
+    virtual void newDataHandler() = 0;
     void processData(const QByteArray &);
-    bool checkHeader(const QByteArray &);
+    bool readHeader(const QByteArray &);
+    bool checkHeader();
     bool checkOptHeader(const QByteArray &);
     void readAttrHeader(QDataStream &ds);
     void readIfpanOptHeader(QDataStream &ds);

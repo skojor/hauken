@@ -14,7 +14,7 @@ public slots:
     void openListener(const QHostAddress, const int) {}
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState state);
-    void newData();
+    void newDataHandler();
     void restartTimeoutTimer() {  { if (udpSocket->isOpen()) timeoutTimer->start(timeoutInMs);}}
 
 signals:

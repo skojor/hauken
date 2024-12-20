@@ -14,7 +14,7 @@ public slots:
     void openListener(const QHostAddress host, const int port);
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
-    void newData();
+    void newDataHandler();
     void restartTimeoutTimer() {  { if (tcpSocket->isOpen()) timeoutTimer->start(timeoutInMs);}}
 
 signals:

@@ -143,7 +143,7 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
     int ySize = samplerate * secondsToAnalyze + samplesIterator;
 
     double secPerSample = 1.0 / samplerate;
-    double samplesIteratorInc = (double)(samplerate * secondsToAnalyze) / (double)imageYSize;
+    int samplesIteratorInc = (double)(samplerate * secondsToAnalyze) / (double)imageYSize;
     qDebug() << "FFT plot debug: Samples inc." << (int)samplesIteratorInc << ". Iterator starts at" << samplesIterator
              << "and counts up to" << ySize << ". Total samples analyzed" << ySize - samplesIterator;
 
@@ -192,7 +192,7 @@ void Waterfall::receiveIqDataWorker(const QList<complexInt16> iq, const double s
             iqFftResult.append(result);
             result.clear();
 
-            samplesIterator += (int)samplesIteratorInc;
+            samplesIterator += samplesIteratorInc;
         }
         fftw_destroy_plan(plan);
 
@@ -220,10 +220,7 @@ void Waterfall::createIqPlot(const QList<QList <double>> &iqFftResult, const dou
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
     qDebug() << min << max << avg;
-    min = avg;
-    if (max > 10) min = 3;
-    //if (avg > 3) min = avg;
-    // Minimum from fft produces alot of "noise" in the plot, this works like a filter
+    min = avg;    // Minimum from fft produces alot of "noise" in the plot, this works like a filter
 
     QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
     QColor imgColor;

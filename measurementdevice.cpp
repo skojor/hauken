@@ -36,6 +36,7 @@ void MeasurementDevice::start()
 void MeasurementDevice::instrConnect()
 {
     discPressed = false;
+    scpiSocket->abort();
     scpiSocket->connectToHost(*scpiAddress, scpiPort);
     instrumentState = InstrumentState::CONNECTING;
     emit status("Connecting to measurement device...");

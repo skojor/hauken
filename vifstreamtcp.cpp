@@ -27,7 +27,7 @@ void VifStreamTcp::connectionStateChanged(QAbstractSocket::SocketState state)
     //    if (state == QAbstractSocket::UnconnectedState)
     }
 
-void VifStreamTcp::newData()
+void VifStreamTcp::newDataHandler()
 {
     QByteArray data = tcpSocket->readAll();
     ifBufferTcp.append(data);

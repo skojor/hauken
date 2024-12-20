@@ -25,35 +25,22 @@ void TcpDataStream::closeListener()
 
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    //qDebug() << "TCP stream state" << state;
+    qDebug() << "TCP stream state" << state;
     if (state == QAbstractSocket::UnconnectedState)
         timeoutTimer->stop();
 }
 
-void TcpDataStream::newData()
+void TcpDataStream::newDataHandler()
 {
     timeoutTimer->start();
-    QByteArray data = tcpSocket->readAll();
-    QDataStream ds(data);
+    QByteArray buf = tcpSocket->readAll();
+    byteCtr += buf.size();
+    tcpBuffer.append(buf);
 
-    byteCtr += data.size();
-    while (!ds.atEnd()) {
-        uchar tmp;
-        ds >> tmp;
-        tcpBuffer.append(tmp);
-
-        if (!headerIsRead and tcpBuffer.size() > 35) {
-            if (!checkHeader(tcpBuffer)) { // out of sync here
-                tcpBuffer.removeFirst();
-                //tcpBuffer.clear();
-            }
-            else
-                headerIsRead = true;
-        }
-        else if (headerIsRead && tcpBuffer.size() == (int)header.dataSize) {
-            processData(tcpBuffer);
-            headerIsRead = false;
-            tcpBuffer.clear();
-        }
+    while (readHeader(tcpBuffer) && checkHeader() && tcpBuffer.size() >= (int)header.dataSize) {
+        processData(tcpBuffer.first(header.dataSize));
+        tcpBuffer = tcpBuffer.sliced(header.dataSize);
     }
+    while (readHeader(tcpBuffer) && !checkHeader()) // out of sync
+        tcpBuffer.removeFirst();
 }
