@@ -114,6 +114,8 @@ public slots:
     void collectIqData(int nrOfSamplesNeeded);
     void setTrigCenterFrequency(double d) {trigFrequency = d;}
     void deleteIfStream();
+    void setGainControl(int index);
+    bool deviceHasGainControl() { return devicePtr->hasGainControl; }
 
 private slots:
     void scpiConnected();

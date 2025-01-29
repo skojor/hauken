@@ -126,6 +126,7 @@ private slots:
     void instrAutoConnect();
     bool instrCheckSettings();
     void changeAntennaPortName();
+    void instrGainControlChanged(int index);
 
     void generatePopup(const QString msg);
     void updateStatusLine(const QString msg);
@@ -181,6 +182,7 @@ private:
     QComboBox *instrFftMode = new QComboBox;
     QComboBox *instrIpAddr = new QComboBox;
     QLineEdit *instrPort = new QLineEdit;
+    QComboBox *instrGainControl = new QComboBox;
     QGroupBox *rightBox = new QGroupBox("GNSS status");
 
     QPushButton *instrConnect = new QPushButton("Connect");

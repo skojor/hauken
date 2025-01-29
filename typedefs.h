@@ -240,6 +240,7 @@ public:
         hasAutoAtt = false;
         hasAttOnOff = false;
         hasAntNames = false;
+        hasGainControl = false;
     }
     void setType(Instrument::InstrumentType t)
     {
@@ -320,6 +321,7 @@ public:
             minFrequency = 8e3;
             maxFrequency = 8e9;
             hasAntNames = true;
+            hasGainControl = true;
         }
         else if (type == Instrument::InstrumentType::ESMW) {
             udpStream = true;
@@ -330,6 +332,7 @@ public:
             hasPscan = true;
             hasAvgType = true;
             hasAutoAtt = true;
+            hasGainControl = true;
 
             pscanResolutions.clear();
             ffmSpans.clear();
@@ -405,6 +408,7 @@ public:
             hasPscan = true;
             hasAvgType = true;
             hasAutoAtt = true;
+            hasGainControl = true;
 
             pscanResolutions.clear();
             ffmSpans.clear();
@@ -467,6 +471,7 @@ public:
     bool hasAutoAtt = false;
     bool hasAttOnOff = false;
     bool hasAntNames = false;
+    bool hasGainControl = false;
 
     Instrument::Mode mode = Instrument::Mode::UNKNOWN;
     quint64 pscanStartFrequency = 0, pscanStopFrequency = 0;

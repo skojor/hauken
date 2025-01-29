@@ -480,3 +480,11 @@ void CustomPlotController::resChanged(double a)
 {
     resolution = a / 1e6;
 }
+
+void CustomPlotController::reqTracePlot()
+{
+    mutex.lock();
+    *tracePlot = customPlotPtr->toPixmap();
+    mutex.unlock();
+    emit retTracePlot(tracePlot);
+}

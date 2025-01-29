@@ -1,16 +1,17 @@
 #ifndef CUSTOMPLOTCONTROLLER_H
 #define CUSTOMPLOTCONTROLLER_H
 
-#include <QPen>
-#include <QObject>
-#include <QVector>
-#include <QScrollBar>
 #include <QDebug>
-#include <QTimer>
-#include <QSharedPointer>
+#include <QMutex>
+#include <QObject>
+#include <QPen>
 #include <QPixmap>
-#include "qcustomplot.h"
+#include <QScrollBar>
+#include <QSharedPointer>
+#include <QTimer>
+#include <QVector>
 #include "config.h"
+#include "qcustomplot.h"
 #include "typedefs.h"
 
 /* This class controls all aspects regarding what is displayed on the plot widget
@@ -39,7 +40,7 @@ public slots:
     void flashTrigline();
     void stopFlashTrigline();
     void updDeviceConnected(bool b);
-    void reqTracePlot() { *tracePlot = customPlotPtr->toPixmap(); emit retTracePlot(tracePlot);}
+    void reqTracePlot();
     void freqChanged(double a, double b);
     void resChanged(double a);
 
@@ -90,6 +91,7 @@ private:
     QList<QCPItemText *> gnssTextLabels;
     QList<bool> gnssBandsSelectors;
     QList<QCPItemStraightLine *> gnssCenterLine;
+    QMutex mutex;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H

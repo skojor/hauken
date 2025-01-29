@@ -53,6 +53,12 @@ public slots:
     void setInstrId(QString s) { settings->setValue("instr/Id", s); emit settingsUpdated();}
     QString getMeasurementDeviceName() { return measurementDeviceName;}
     void setMeasurementDeviceName(QString s) { measurementDeviceName = s; emit settingsUpdated();}
+    int getInstrGainControl() { return settings->value("instr/gainControl", 1).toInt(); }
+    void setInstrGainControl(int i)
+    {
+        settings->setValue("instr/gainControl", i);
+        emit settingsUpdated();
+    }
 
     // spectrum criterias
     int getInstrTrigLevel() { return settings->value("instr/TrigLevel", 15.0).toInt(); }

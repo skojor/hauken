@@ -444,4 +444,9 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::nrOfDatapointsChanged, sdefRecorder, &SdefRecorder::dataPointsChanged);
 
     connect(oauthFileUploader, &OAuthFileUploader::uploadProgress, this, &MainWindow::uploadProgress);
+
+    connect(instrGainControl,
+            &QComboBox::currentIndexChanged,
+            this,
+            &MainWindow::instrGainControlChanged);
 }

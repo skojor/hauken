@@ -82,7 +82,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -1126,4 +1126,22 @@ void MeasurementDevice::collectIqData(int nrOfSamplesNeeded)
         //QTimer::singleShot(1110, this, &MeasurementDevice::deleteIfStream);
         trigFrequency = 0; // Reset
     }
+}
+
+void MeasurementDevice::setGainControl(int index)
+{
+    QByteArray mode;
+    switch (index) {
+    case 0:
+        mode = "lown";
+        break;
+    case 1:
+        mode = "norm";
+        break;
+    case 2:
+        mode = "lowd";
+        break;
+    }
+
+    scpiWrite("inp:att:mode " + mode);
 }

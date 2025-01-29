@@ -64,7 +64,6 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 
 void TraceAnalyzer::alarmTriggered()
 {
-    emit alarm();
     if (!alarmEmitted) {
         alarmEmitted = true;
         QString alarmText;
@@ -84,6 +83,7 @@ void TraceAnalyzer::alarmTriggered()
         }
         emit trigRegistered(singleTrigCenterFrequency);
     }
+    emit alarm();
 }
 
 void TraceAnalyzer::setAverageTrace(const QVector<qint16> &data)

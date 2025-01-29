@@ -328,6 +328,7 @@ void MainWindow::createLayout()
     instrForm->addRow(new QLabel("FFT mode"), instrFftMode);
     instrForm->addRow(new QLabel("IP address"), instrIpAddr);
     instrForm->addRow(new QLabel("Port"), instrPort);
+    instrForm->addRow(new QLabel("Gain control"), instrGainControl);
     instrForm->addRow(instrConnect, instrDisconnect);
 
     instrGroupBox->setLayout(instrForm);
@@ -457,6 +458,8 @@ void MainWindow::setToolTips()
                              "Max hold increases chances to record short burst signals.");
     instrIpAddr->setToolTip("Only ipv4 supported for now.");
     instrPort->setToolTip("SCPI port to connect to, default 5555");
+    instrGainControl->setToolTip(
+        "Gain mode for newer R&S instruments. Change according to RF environment");
 
     instrTrigLevel->setToolTip("Decides how much above the average noise floor in dB a signal must be "\
                                "to trigger an incident. 10 dB is a reasonable value. "\
@@ -519,6 +522,11 @@ void MainWindow::getConfigValues()
     instrAntPort->setEditable(true);
     instrAntPort->setLineEdit(antPortLineEdit);
     instrAntPort->setInsertPolicy(QComboBox::NoInsert);
+
+    instrGainControl->setEditable(false);
+    instrGainControl->addItems(QStringList() << "Low noise"
+                                             << "Normal"
+                                             << "Low distortion");
 
     /*if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
         instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));*/
@@ -741,6 +749,7 @@ void MainWindow::setInputsState(const bool state)
     instrIpAddr->setDisabled(state);
     instrPort->setDisabled(state);
     instrAntPort->setEnabled(state);
+    instrGainControl->setEnabled(state);
     btnTrigRecording->setEnabled(state);
 }
 
@@ -1107,3 +1116,16 @@ void MainWindow::restartWaterfall()
     });
 }
 
+void MainWindow::instrGainControlChanged(int index)
+{
+    qDebug() << "Gain control changed:" << index;
+    if (measurementDevice->deviceHasGainControl()) {
+        measurementDevice->setGainControl(index);
+        if (!instrGainControl->isEnabled())
+            instrGainControl->setEnabled(true);
+        traceBuffer->restartCalcAvgLevel();
+    } else {
+        if (instrGainControl->isEnabled())
+            instrGainControl->setEnabled(false);
+    }
+}
