@@ -39,6 +39,7 @@ void UdpDataStream::newDataHandler()
     timeoutTimer->start();
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
         QByteArray data = udpSocket->receiveDatagram().data();
+        byteCtr += data.size();
         readHeader(data);
         if (checkHeader())
             processData(data);

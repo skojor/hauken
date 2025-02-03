@@ -17,7 +17,7 @@ public:
     void parseVifData(const QByteArray &data);
     void processVifData();
     void setSamplesNeeded(int i) { samplesNeeded = i;}
-    void startIqDataTimeout() { stopIqStreamTimer->start(10000);}
+    void startIqDataTimeout() { stopIqStreamTimer->start(8000); }
     void restartTimeoutTimer() {}
 
 signals:

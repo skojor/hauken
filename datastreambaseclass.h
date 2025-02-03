@@ -53,7 +53,7 @@ public:
     QElapsedTimer *traceTimer = new QElapsedTimer;
     int errorCtr = 0;
     bool errorHandleSent = false;
-    const int timeoutInMs = 10000;
+    const int timeoutInMs = 12000;
     unsigned long startfreq = 0, stopfreq = 0;
     unsigned int resolution = 0;
     int traceCtr = 0;

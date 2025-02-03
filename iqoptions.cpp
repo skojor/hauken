@@ -20,6 +20,12 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt2->setText(tr("Use dB scale for FFT values"));
     cbOpt2->setToolTip(tr("Use dB if lower level signals should become more visible. Default off, useful for CW/chirp signals."));
 
+    mainLayout->addRow(cbOpt3);
+    cbOpt3->setText(tr("Apply Hann window on FFT plot"));
+    cbOpt3->setToolTip(tr("Using a window function on the I/Q data before FFT reduces imaging and "
+                          "echos in the plot,\ "
+                          "but will make the plotted signal look \"smeared\"."));
+
     mainLayout->addRow(new QLabel(tr("IQ data plot length in microseconds")), sbOpt2);
     sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 40 - 400000 microseconds.");
     sbOpt2->setRange(40, 400000);
@@ -51,6 +57,7 @@ void IqOptions::start()
     comboOpt1->setCurrentText(QString::number(config->getIqFftPlotBw()));
     leOpt1->setText(QString::number(config->getIqLogTime(), 'f', 3));
     cbOpt2->setChecked(config->getIqUseDB());
+    cbOpt3->setChecked(config->getIqUseWindow());
 
     dialog->exec();
 }
@@ -63,6 +70,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqFftPlotBw(comboOpt1->currentText().toInt());
     config->setIqLogTime(leOpt1->text().toDouble());
     config->setIqUseDB(cbOpt2->isChecked());
+    config->setIqUseWindow(cbOpt3->isChecked());
 
     emit updSettings();
     dialog->close();

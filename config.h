@@ -146,6 +146,12 @@ public slots:
     void setIqLogTime(double d) { settings->setValue("iq/logTime", d);}
     bool getIqUseDB() { return settings->value("iq/useDB", false).toBool();}
     void setIqUseDB(bool b) { settings->setValue("iq/useDB", b);}
+    bool getIqUseWindow() { return settings->value("iq/useWindow", true).toBool(); }
+    void setIqUseWindow(bool b)
+    {
+        settings->setValue("iq/useWindow", b);
+        emit settingsUpdated();
+    }
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
