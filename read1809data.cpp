@@ -477,7 +477,7 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
 
             if (jLast - jFirst <= 0) { // sth very wrong happened here
                 jFirst = 0;
-                jLast = array.front().size();
+                jLast = (int) array.front().size();
             }
 
             cv::Mat frame((int)array.size(), jLast - jFirst, CV_8UC3, cv::Scalar());

@@ -96,7 +96,7 @@ private:
     double secsPerLine;
     double secsToAnalyze = 500e-6;
     const int fftSize = 64;
-    const int imageYSize = fftSize * 16 * 10;
+    const int imageYSize = fftSize * 16 * 2;
     QElapsedTimer lastIqRequestTimer;
     QString filename;
     bool dataFromFile = false;

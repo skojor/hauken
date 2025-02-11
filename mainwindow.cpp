@@ -723,6 +723,7 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         setResolutionFunction();
         setDeviceAntPorts();
         setDeviceFftModes();
+        instrGainControlChanged();
         instrStartFreq->setMinimum(measurementDevice->deviceMinFreq() / 1e6);
         instrStopFreq->setMaximum(measurementDevice->deviceMaxFreq() / 1e6);
     }

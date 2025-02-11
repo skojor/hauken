@@ -44,19 +44,19 @@ void PmrTableWdg::start()
     selectReds->setChecked(config->getPmrUseReds());
     selectWhites->setChecked(config->getPmrUseWhites());
 
-    connect(selectGreens, &QCheckBox::stateChanged, this, [this](int state) {
+    connect(selectGreens, &QCheckBox::checkStateChanged, this, [this](int state) {
         config->setPmrUseGreens(state);
         updTableWdg();
     });
-    connect(selectYellows, &QCheckBox::stateChanged, this, [this](int state) {
+    connect(selectYellows, &QCheckBox::checkStateChanged, this, [this](int state) {
         config->setPmrUseYellows(state);
         updTableWdg();
     });
-    connect(selectReds, &QCheckBox::stateChanged, this, [this](int state) {
+    connect(selectReds, &QCheckBox::checkStateChanged, this, [this](int state) {
         config->setPmrUseReds(state);
         updTableWdg();
     });
-    connect(selectWhites, &QCheckBox::stateChanged, this, [this](int state) {
+    connect(selectWhites, &QCheckBox::checkStateChanged, this, [this](int state) {
         config->setPmrUseWhites(state);
         updTableWdg();
     });

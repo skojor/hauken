@@ -23,7 +23,7 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     mainLayout->addRow(cbOpt3);
     cbOpt3->setText(tr("Apply Hann window on FFT plot"));
     cbOpt3->setToolTip(tr("Using a window function on the I/Q data before FFT reduces imaging and "
-                          "echos in the plot,\ "
+                          "echos in the plot, "
                           "but will make the plotted signal look \"smeared\"."));
 
     mainLayout->addRow(new QLabel(tr("IQ data plot length in microseconds")), sbOpt2);

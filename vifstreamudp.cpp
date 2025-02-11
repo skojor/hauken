@@ -4,6 +4,7 @@ VifStreamUdp::VifStreamUdp() {}
 
 void VifStreamUdp::openListener(const QHostAddress host, const int port)
 {
+    (void) port;
     udpSocket->close();
     udpPort = 5555;
     for (int i=0; i<10; i++) {
