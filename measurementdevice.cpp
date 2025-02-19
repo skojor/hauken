@@ -166,7 +166,7 @@ void MeasurementDevice::setPscanResolution()
 void MeasurementDevice::setFfmCenterFrequency()
 {
     if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
-        scpiWrite("freq " + QByteArray::number(devicePtr->ffmCenterFrequency));
+        scpiWrite("sens:freq " + QByteArray::number(devicePtr->ffmCenterFrequency));
 }
 
 void MeasurementDevice::setFfmFrequencySpan()

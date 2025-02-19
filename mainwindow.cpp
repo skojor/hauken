@@ -1119,8 +1119,9 @@ void MainWindow::restartWaterfall()
 
 void MainWindow::instrGainControlChanged(int index)
 {
-    qDebug() << "Gain control changed:" << index;
+    //qDebug() << "Gain control changed:" << index;
     if (measurementDevice->deviceHasGainControl()) {
+        config->setInstrGainControl(index);
         measurementDevice->setGainControl(index);
         if (!instrGainControl->isEnabled())
             instrGainControl->setEnabled(true);

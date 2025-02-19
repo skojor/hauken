@@ -103,12 +103,6 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());
     config->setSdefNewMsFormat(cbOpt5->isChecked());
-    config->setOAuth2Enable(cbOpt5->isChecked());
-    config->setOAuth2AuthUrl(leOpt5->text().trimmed());
-    config->setOAuth2AccessTokenUrl(leOpt6->text().trimmed());
-    config->setOAuth2Scope(leOpt7->text().trimmed());
-    config->setOAuth2UploadAddress(leOpt8->text().trimmed());
-    config->setOAuth2ClientId(leOpt9->text().trimmed());
 
     dialog->close();
 }
