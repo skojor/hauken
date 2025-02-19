@@ -524,9 +524,17 @@ void MainWindow::getConfigValues()
     instrAntPort->setInsertPolicy(QComboBox::NoInsert);
 
     instrGainControl->setEditable(false);
+    disconnect(instrGainControl,
+               &QComboBox::currentIndexChanged,
+               this,
+               &MainWindow::instrGainControlChanged);
     instrGainControl->addItems(QStringList() << "Low noise"
                                              << "Normal"
                                              << "Low distortion");
+    connect(instrGainControl,
+            &QComboBox::currentIndexChanged,
+            this,
+            &MainWindow::instrGainControlChanged);
 
     /*if (instrResolution->findText(QString::number(config->getInstrResolution())) >= 0)
         instrResolution->setCurrentIndex(instrResolution->findText(QString::number(config->getInstrResolution())));*/
@@ -1119,9 +1127,15 @@ void MainWindow::restartWaterfall()
 
 void MainWindow::instrGainControlChanged(int index)
 {
-    //qDebug() << "Gain control changed:" << index;
-    if (measurementDevice->deviceHasGainControl()) {
+    if (index == -1)
+        index = config->getInstrGainControl();
+    else
         config->setInstrGainControl(index);
+
+    qDebug() << "Gain control changed:" << index;
+    instrGainControl->setCurrentIndex(index);
+
+    if (measurementDevice->deviceHasGainControl()) {
         measurementDevice->setGainControl(index);
         if (!instrGainControl->isEnabled())
             instrGainControl->setEnabled(true);

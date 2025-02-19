@@ -126,7 +126,7 @@ private slots:
     void instrAutoConnect();
     bool instrCheckSettings();
     void changeAntennaPortName();
-    void instrGainControlChanged(int index = 0);
+    void instrGainControlChanged(int index = -1);
 
     void generatePopup(const QString msg);
     void updateStatusLine(const QString msg);
