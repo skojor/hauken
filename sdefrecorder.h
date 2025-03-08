@@ -19,6 +19,7 @@
 #include "quazip/JlCompress.h"
 #include <QNetworkAccessManager>
 
+#define TEMPFILENAME "feed.cef"
 
 /*
  * Class to take care of recording to file in sdef format.
@@ -49,6 +50,9 @@ public slots:
     void loginRequest() {  askedForLogin = true; curlLogin(); }
     void setModeUsed(QString s) { modeUsed = s;}
     void dataPointsChanged(int d) { datapoints = d;}
+    void tempFileData(const QVector<qint16> data);
+    void saveDataToTempFile();
+    void closeTempFile();
 
 private slots:
     QByteArray createHeader();
@@ -60,6 +64,7 @@ private slots:
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
     void zipit();
     void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
+    void startTempFile();
 
 signals:
     void recordingStarted();
@@ -86,6 +91,8 @@ private:
     QTimer *periodicCheckUploadsTimer;
     QTimer *autorecorderTimer;
     QTimer *finishedFileTimer;
+    QTimer *tempFileTimer;
+    QTimer *tempFileCheckFilesize;
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
@@ -109,13 +116,16 @@ private:
     QSharedPointer<Config> config;
     QString modeUsed = "pscan";
     int datapoints = 0;
+    QFile tempFile;
 
     QNetworkAccessManager *networkManager; // New for OAuth2/SSO
 
+    QList<qint16> tempFileTracedata;
 
     // Config cache
     bool useNewMsFormat;
     double startfreq, stopfreq, resolution;
+    int tempFileMaxhold;
 };
 
 #endif // SDEFRECORDER_H

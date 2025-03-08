@@ -102,6 +102,10 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::resetBuffers, traceBuffer, &TraceBuffer::emptyBuffer);
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, traceAnalyzer, &TraceAnalyzer::resetAverageLevel);
+    connect(traceBuffer,
+            &TraceBuffer::averageLevelCalculating,
+            sdefRecorder,
+            &SdefRecorder::closeTempFile);
     connect(traceBuffer, &TraceBuffer::averageLevelReady, traceAnalyzer, &TraceAnalyzer::setAverageTrace);
     connect(traceBuffer, &TraceBuffer::traceToAnalyzer, traceAnalyzer, &TraceAnalyzer::setTrace);
 
@@ -150,6 +154,7 @@ void MainWindow::setSignals()
     connect(accessHandler, &AccessHandler::authorizationGranted, oauthFileUploader, &OAuthFileUploader::receiveAuthToken);
 
     connect(traceBuffer, &TraceBuffer::traceToRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
+    connect(traceBuffer, &TraceBuffer::traceData, sdefRecorder, &SdefRecorder::tempFileData);
     connect(sdefRecorder, &SdefRecorder::reqTraceHistory, traceBuffer, &TraceBuffer::getSecondsOfBuffer);
     connect(traceBuffer, &TraceBuffer::historicData, sdefRecorder, &SdefRecorder::receiveTraceBuffer);
     connect(sdefRecorder, &SdefRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);

@@ -317,6 +317,24 @@ public slots:
     // AutoRecorder options
     bool getAutoRecorderActivate() { return settings->value("autorecorder/activate", false).toBool();}
     void setAutoRecorderActivate(bool b) { settings->setValue("autorecorder/activate", b);emit settingsUpdated(); }
+    bool getSaveToTempFile()
+    {
+        return settings->value("autorecorder/saveToTempFile", false).toBool();
+    }
+    void setSaveToTempFile(bool b)
+    {
+        settings->setValue("autorecorder/saveToTempFile", b);
+        emit settingsUpdated();
+    }
+    int getSaveToTempFileMaxhold()
+    {
+        return settings->value("autorecorder/saveToTempFileMaxhold", 0).toInt();
+    }
+    void setSaveToTempFileMaxhold(int i)
+    {
+        settings->setValue("autorecorder/saveToTempFileMaxhold", i);
+        emit settingsUpdated();
+    }
 
     // Window specific settings
     int getPlotYMax() { return settings->value("plot/YMax", 50).toInt();}

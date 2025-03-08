@@ -60,7 +60,9 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 
     if (recording)
         emit traceToRecorder(traceBuffer.last());
-    
+
+    emit traceData(traceBuffer.last());
+
     datetimeBuffer.append(QDateTime::currentDateTime());
     
     if (!throttleTimer->isValid())
