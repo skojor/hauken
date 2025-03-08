@@ -13,7 +13,7 @@ AutoRecorderOptions::AutoRecorderOptions(QSharedPointer<Config> c)
     cbOpt2->setText("Enable continuous recording to temporary file");
     cbOpt2->setToolTip(
         tr("This file will be stored in the same folder as the other log files,\n"
-           "with the same filename. The file will be truncated every hour (HardKaare mode)"));
+           "with the same filename. The file will be truncated every hour if not done exernally"));
 
     mainLayout->addRow(new QLabel(tr("Maxhold record time (seconds)")), sbOpt1);
     sbOpt1->setToolTip("How often to save to temporary file. Set to 0 for AFAP mode.");

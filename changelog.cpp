@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.46</td><td>Added saving cef data to temporary file</td></tr>"
        << "<tr><td>2.45</td><td>Added preamp control for newer R&S instruments. Added option to "
           "switch FFT window function off</td></tr>"
        << "<tr><td>2.44</td><td>OAuth authentication and file upload added. IQ plot now "
