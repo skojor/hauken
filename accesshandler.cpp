@@ -16,7 +16,9 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c) {
         qDebug() << "We have a token, expires at" << oauth2Flow->expirationAt().toString();// << oauth2Flow->refreshToken();
         replyHandler->close();
         emit authorizationGranted(oauth2Flow->token());
-        renewTokenTimer->start(QDateTime::currentDateTime().msecsTo(oauth2Flow->expirationAt().addSecs(-60))); // Set a renew timer for 1 min before expiry time
+        renewTokenTimer->start(
+            QDateTime::currentDateTime().msecsTo(oauth2Flow->expirationAt().addSecs(
+                -60))); // Set a renew timer for 1 min before expiry time
         qDebug() << "Adding exp. timer in" << renewTokenTimer->remainingTime() / 1e3 << "seconds";
     });
 

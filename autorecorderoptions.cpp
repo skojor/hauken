@@ -17,7 +17,7 @@ AutoRecorderOptions::AutoRecorderOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(new QLabel(tr("Maxhold record time (seconds)")), sbOpt1);
     sbOpt1->setToolTip("How often to save to temporary file. Set to 0 for AFAP mode.");
-    sbOpt1->setRange(0, 86400);
+    sbOpt1->setRange(0, 3600);
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &AutoRecorderOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);

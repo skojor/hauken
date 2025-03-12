@@ -609,7 +609,7 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
     } else {
         if (tempFileTracedata.isEmpty())
             tempFileTracedata = data;
-        else {
+        else if (tempFileTracedata.size() == data.size()) {
             for (int i = 0; i < tempFileTracedata.size(); i++) {
                 if (data[i] > tempFileTracedata[i])
                     tempFileTracedata[i] = data[i];
