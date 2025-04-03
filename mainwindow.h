@@ -5,38 +5,39 @@
 #include "ai.h"
 #define slots Q_SLOTS*/
 
-#include "config.h"
-#include <QMainWindow>
-#include <QApplication>
-#include <QToolBar>
 #include <QAction>
-#include <QDebug>
-#include <QHostAddress>
-#include <QMessageBox>
-#include <QString>
-#include <QTextStream>
-#include <QStandardPaths>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QTableWidgetItem>
+#include <QApplication>
 #include <QDateTime>
-#include <QThread>
-#include <QSpinBox>
+#include <QDebug>
 #include <QDoubleSpinBox>
-#include <QSharedPointer>
 #include <QFile>
-#include <QRegularExpression>
-#include <QRegularExpressionValidator>
-#include <QtMultimedia/QMediaPlayer>
-#include <QtMultimedia/QAudioOutput>
-#include <QTimer>
-#include <QProgressBar>
-#include <QtConcurrent/QtConcurrent>
+#include <QFileDialog>
 #include <QFuture>
 #include <QFutureWatcher>
+#include <QHostAddress>
+#include <QMainWindow>
+#include <QMessageBox>
+#include <QProgressBar>
 #include <QPromise>
-#include "qcustomplot.h"
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QSharedPointer>
+#include <QSpinBox>
+#include <QStandardPaths>
+#include <QString>
+#include <QStyleHints>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QTextStream>
+#include <QThread>
+#include <QTimer>
+#include <QToolBar>
+#include <QtConcurrent/QtConcurrent>
+#include <QtMultimedia/QAudioOutput>
+#include <QtMultimedia/QMediaPlayer>
+#include "config.h"
 #include "measurementdevice.h"
+#include "qcustomplot.h"
 //#include "typedefs.h"
 #include "generaloptions.h"
 #include "gnssoptions.h"
@@ -241,6 +242,7 @@ private:
     QAction *hideShowStatusIndicator = new QAction("Hide/show status indicators");
     QAction *hideShowGnssWindow = new QAction("Hide/show GNSS status window");
     QAction *hideShowIncidentlog = new QAction("Hide/show incident log");
+    QAction *toggleDarkMode = new QAction("Toogle dark mode");
     QAction *aboutAct;
     QAction *aboutQtAct;
     QAction *changelogAct;

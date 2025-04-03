@@ -1,9 +1,10 @@
-#include "mainwindow.h"
 #include <QApplication>
 #include <QDebug>
+#include <QStandardPaths>
 #include <QString>
 #include <QStringList>
-#include <QStandardPaths>
+#include <QStyleHints>
+#include "mainwindow.h"
 
 QString logFilePath;
 bool logToFile = false;
@@ -42,6 +43,7 @@ int main(int argc, char *argv[])
     a.setApplicationName("Hauken");
     a.setOrganizationName("JSK");
     a.setOrganizationDomain("nkom.no");
+
     QString ver;
     QStringList split = QString(SW_VERSION).split('-');
     if (split.size() > 1) ver = split[0] + '-' + split[1];
@@ -61,8 +63,8 @@ int main(int argc, char *argv[])
     logFilePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) +
                   "/haukenDebug_" + QDateTime::currentDateTime().toString("yyyyMMdd") +".log";
     a.setApplicationVersion(ver);
-    a.setStyle(QLatin1String("windowsvista"));
-
+    //a.setStyle(QLatin1String("windowsvista"));
+    a.setStyle("fusion");
     MainWindow w;
     //w.setAttribute(Qt::WA_DeleteOnClose);
 

@@ -5,14 +5,15 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    qDebug() << QApplication::styleHints()->colorScheme();
     setStatusBar(statusBar);
     statusBar->addWidget(progressBar);
     progressBar->setMinimum(0);
     progressBar->setMaximum(100);
 
     updWindowTitle();
-    resize(1200, 680);
-    setMinimumSize(1024, 680);
+    resize(1200, 780);
+    setMinimumSize(1024, 780);
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
@@ -260,6 +261,9 @@ void MainWindow::createActions()
         incBox->setVisible(!incBox->isVisible());
         config->setShowIncidentLog(incBox->isVisible());
         restartWaterfall();
+    });
+    connect(toggleDarkMode, &QAction::triggered, this, [this] {
+        config->setDarkMode(!config->getDarkMode());
     });
 }
 
@@ -1114,6 +1118,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event)
     menu.addAction(hideShowStatusIndicator);
     menu.addAction(hideShowGnssWindow);
     menu.addAction(hideShowIncidentlog);
+    menu.addAction(toggleDarkMode);
     menu.exec(event->globalPos());
 }
 #endif // QT_NO_CONTEXTMENU

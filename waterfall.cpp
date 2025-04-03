@@ -378,7 +378,7 @@ void Waterfall::saveImage(const QImage *image, const double secondsAnalyzed)
 
 void Waterfall::requestIqData()
 {
-    if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 900e3) {
+    if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3) {
         int samplesNeeded
             = samplerate
               * config->getIqLogTime(); // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside

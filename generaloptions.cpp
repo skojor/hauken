@@ -58,8 +58,13 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     leOpt8->setToolTip("Address used to download instrument IP address lists. Blank to disable");
 
     mainLayout->addRow(cbOpt3);
-    cbOpt3->setText("Use dBm instead of dBμV");
+    cbOpt3->setText("Use dBm instead of dBμV (TODO)");
     cbOpt3->setToolTip("Change scale to dBm");
+    cbOpt3->setDisabled(true);
+
+    mainLayout->addRow(cbOpt4);
+    cbOpt4->setText("Dark mode");
+    cbOpt4->setToolTip("Force program to choose dark mode colors");
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -80,6 +85,7 @@ void GeneralOptions::start()
     leOpt7->setText(config->getSdefStationInitals());
     leOpt8->setText(config->getIpAddressServer());
     cbOpt3->setChecked(config->getUseDbm());
+    cbOpt4->setChecked(config->getDarkMode());
 
     dialog->exec();
 }
@@ -105,6 +111,7 @@ void GeneralOptions::saveCurrentSettings()
     config->setSdefStationInitials(leOpt7->text());
     config->setIpAddressServer(leOpt8->text());
     config->setUseDbm(cbOpt3->isChecked());
+    config->setDarkMode(cbOpt4->isChecked());
 
     dialog->close();
 }

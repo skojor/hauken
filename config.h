@@ -106,8 +106,14 @@ public slots:
 
     QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString();}
     void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
-    bool getUseDbm() { return settings->value("useDbm", false).toBool();}
+    bool getUseDbm() { return false; } //settings->value("useDbm", false).toBool();} // Deact, TODO!
     void setUseDbm(bool b) { settings->setValue("useDbm", b); emit settingsUpdated();}
+    bool getDarkMode() { return settings->value("darkMode", false).toBool(); }
+    void setDarkMode(bool b)
+    {
+        settings->setValue("darkMode", b);
+        emit settingsUpdated();
+    }
 
     // Window settings
     bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}
