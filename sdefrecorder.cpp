@@ -643,6 +643,6 @@ void SdefRecorder::saveDataToTempFile()
         byteArray += "\n";
         tempFile.write(byteArray);
         tempFileTracedata.clear();
+        tempFile.flush();
     }
-    tempFile.flush();
 }
