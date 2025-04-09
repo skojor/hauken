@@ -326,10 +326,14 @@ QByteArray SdefRecorder::createHeader()
            << "Detector FFM" << '\n'
            << "Note Instrument: " << config->getInstrId() << "; Hauken v."
            << QString(SW_VERSION).split('-').at(0) << "\n"
-           << "Note\nNote " << config->getSdefStationInitals()
+           << "Note\n"
+           << "Note " << config->getSdefStationInitals()
            << ", MaxHoldTime: " << QString::number(1 / tracePerSecond, 'f', 2) << ", Attenuator: "
-           << (config->getInstrAutoAtt() ? "Auto" : QString::number(config->getInstrManAtt()))
-           << "\n\n";
+           << (config->getInstrAutoAtt() ? "Auto"
+                                         : QString::number(config->getInstrManAtt()) + " dB")
+           << ", Detect: TBD"
+           << ", FFT: " << config->getInstrFftMode()
+           << ", Ant: " << (config->getInstrAntPort() ? "Ant.2" : "Ant.1") << "\n\n";
 
     return buf.toLocal8Bit();
 }

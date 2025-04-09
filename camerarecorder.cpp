@@ -7,8 +7,6 @@ CameraRecorder::CameraRecorder(QSharedPointer<Config> c)
 
 void CameraRecorder::start()
 {
-    //qDebug() << "Cam recorder thread started";
-    //updSettings();
     recordTimer = new QTimer();
     snapTimer = new QTimer();
     alarmTimer = new QTimer();

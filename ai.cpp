@@ -4,7 +4,7 @@ AI::AI(QSharedPointer<Config> c)
 {
     config = c;
 
-    QFile checkFile(config->getWorkFolder() +  "/model.onnx");
+    QFile checkFile(config->getWorkFolder() + "/model.onnx.disabled");
     if (checkFile.exists()) {
         qDebug() << "Using model found at" << config->getWorkFolder();
         net = cv::dnn::readNet(QString(config->getWorkFolder() +  "/model.onnx").toStdString());
