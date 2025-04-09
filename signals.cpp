@@ -819,4 +819,53 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
+
+    connect(restApi, &RestApi::pscanStartFreq, this, [this](double f) {
+        instrStartFreq->setValue(f);
+        instrStartFreqChanged();
+    });
+    connect(restApi, &RestApi::pscanStopFreq, this, [this](double f) {
+        instrStopFreq->setValue(f);
+        instrStopFreqChanged();
+    });
+    connect(restApi, &RestApi::pscanResolution, this, [this](QString res) {
+        config->setInstrResolution(res);
+        if (instrResolution->findText(config->getInstrResolution()) >= 0)
+            instrResolution->setCurrentIndex(
+                instrResolution->findText(config->getInstrResolution()));
+    });
+    connect(restApi, &RestApi::measurementTime, this, [this](int f) {
+        instrMeasurementTime->setValue(f);
+        instrMeasurementTimeChanged();
+    });
+    connect(restApi, &RestApi::manualAtt, this, [this](int f) {
+        if (instrAutoAtt->isChecked()) { // Switch to manual att before changing value
+            instrAutoAtt->setChecked(false);
+            //instrAutoAttChanged(); // Already signaled
+        }
+        instrAtt->setValue(f);
+        instrAttChanged();
+    });
+    connect(restApi, &RestApi::autoAtt, this, [this](bool b) {
+        instrAutoAtt->setChecked(b);
+        instrAutoAttChanged();
+    });
+    connect(restApi, &RestApi::antport, this, [this](int i) {
+        instrAntPort->setCurrentIndex(i - 1); // Ant.port 1 or 2 = index 0 or 1
+        emit antennaPortChanged();
+    });
+    connect(restApi, &RestApi::mode, this, [this](QString s) {
+        if (s.contains("pscan")) {
+            instrMode->setCurrentIndex(0);
+        } else {
+            instrMode->setCurrentIndex(1);
+        }
+        instrModeChanged();
+    });
+    connect(restApi, &RestApi::fftmode, this, [this](QString s) {
+        instrFftMode->setCurrentIndex(instrFftMode->findText(s));
+    });
+    connect(restApi, &RestApi::gaincontrol, this, [this](QString s) {
+        instrGainControl->setCurrentIndex(instrGainControl->findText(s));
+    });
 }

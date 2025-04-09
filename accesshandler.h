@@ -26,9 +26,9 @@ public:
     ~AccessHandler();
 
     void setAuthorizationUrl(QString s) { oauth2Flow->setAuthorizationUrl(QUrl(s));}
-    void setAccessTokenUrl(QString s) { oauth2Flow->setAccessTokenUrl(QUrl(s));}
+    void setAccessTokenUrl(QString s) { oauth2Flow->setTokenUrl(QUrl(s)); }
     void setClientIdentifier(QString s) { oauth2Flow->setClientIdentifier(s);}
-    void setScope(QString s) { oauth2Flow->setScope(s);}
+    void setScope(const QSet<QByteArray> s) { oauth2Flow->setRequestedScopeTokens(s); }
 
     void updSettings();
 
@@ -46,6 +46,7 @@ private:
     QSharedPointer<Config> config;
     bool authEnabled = false;
     QTimer *renewTokenTimer;
+    void rewriteHeader();
 };
 
 #endif // ACCESSHANDLER_H

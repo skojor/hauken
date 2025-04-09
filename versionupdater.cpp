@@ -23,13 +23,18 @@ void VersionUpdater::handleConfigUpdates()
         while (!ts.atEnd()) {
             QString mode, key, value;
             ts >> mode >> key >> value;
-            if (mode.contains("ifempty", Qt::CaseInsensitive) && !key.isEmpty() && !value.isEmpty() && !settings.value(key).isNull()) {
+            if (mode.contains("ifempty", Qt::CaseInsensitive) && !key.isEmpty() && !value.isEmpty()
+                && !settings.value(key).isValid()) {
                 settings.setValue(key, value);
                 qInfo() << "Adding config key/value:" << key << value;
-            }
-            else if (mode.contains("overwrite", Qt::CaseInsensitive) && !key.isEmpty() && !value.isEmpty()) {
+            } else if (mode.contains("overwrite", Qt::CaseInsensitive) && !key.isEmpty()
+                       && !value.isEmpty()) {
                 settings.setValue(key, value);
                 qInfo() << "Overwriting config value:" << key << value;
+
+            } else if (mode.contains("encr", Qt::CaseInsensitive) && !key.isEmpty()
+                       && !value.isEmpty() && !settings.value(key).isValid()) {
+                settings.setValue(key, config->simpleEncr(value.toLatin1()));
             }
         }
         file.close();

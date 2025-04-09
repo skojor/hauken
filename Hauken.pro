@@ -1,5 +1,5 @@
 QT       += core gui serialport network mqtt networkauth concurrent
-greaterThan(QT_MAJOR_VERSION,5): QT += core5compat
+greaterThan(QT_MAJOR_VERSION,5): QT += core5compat httpserver
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
@@ -67,6 +67,7 @@ SOURCES += \
     qcustomplot.cpp \
     read1809data.cpp \
     receiveroptions.cpp \
+    restapi.cpp \
     sdefoptions.cpp \
     sdefrecorder.cpp \
     signals.cpp \
@@ -138,6 +139,7 @@ HEADERS += \
     qcustomplot.h \
     read1809data.h \
     receiveroptions.h \
+    restapi.h \
     sdefoptions.h \
     sdefrecorder.h \
     tcpdatastream.h \

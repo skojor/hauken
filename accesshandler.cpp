@@ -5,8 +5,10 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
     config = c;
     oauth2Flow = new QOAuth2AuthorizationCodeFlow(this);
     replyHandler = new QOAuthHttpServerReplyHandler(this);
+    rewriteHeader();
+    qDebug() << "port" << replyHandler->port();
+
     oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
-    replyHandler->listen(QHostAddress::Any, REDIRECT_PORT);
     oauth2Flow->setReplyHandler(replyHandler);
     renewTokenTimer = new QTimer();
     renewTokenTimer->setSingleShot(true);
@@ -35,7 +37,7 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
     });
 
     connect(oauth2Flow,
-            &QOAuth2AuthorizationCodeFlow::error,
+            &QOAuth2AuthorizationCodeFlow::serverReportedErrorOccurred,
             this,
             [](const QString &error, const QString &errorDescription, const QUrl &uri) {
                 qDebug() << "authflow error" << error << errorDescription << uri.toString();
@@ -47,7 +49,7 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
 
     connect(renewTokenTimer, &QTimer::timeout, this, [this] {
         qDebug() << "Asking for new token";
-        oauth2Flow->refreshAccessToken();
+        oauth2Flow->refreshTokens();
     });
 }
 
@@ -59,8 +61,10 @@ AccessHandler::~AccessHandler()
 
 void AccessHandler::reqAuthorization()
 {
-    if (!replyHandler->isListening())
+    if (!replyHandler->isListening()) {
         replyHandler->listen(QHostAddress::Any, REDIRECT_PORT);
+        rewriteHeader(); // Change 127.0.0.1 to localhost, because Azure
+    }
 
     if (authEnabled && replyHandler->isListening() && oauth2Flow->token().isEmpty()) {
         oauth2Flow->grant();
@@ -76,7 +80,8 @@ void AccessHandler::updSettings()
     setAuthorizationUrl(config->getOAuth2AuthUrl());
     setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
     setClientIdentifier(config->getOAuth2ClientId());
-    setScope(config->getOAuth2Scope() + " offline_access");
+    setScope(QSet<QByteArray>() << config->getOAuth2Scope().toLatin1()
+                                << QByteArray("offline_access"));
     authEnabled = config->getOauth2Enable();
 
     // Parameters check
@@ -86,4 +91,15 @@ void AccessHandler::updSettings()
         //qDebug() << "OAuth2: Missing one or more parameters, disabling";
         authEnabled = false;
     }
+}
+
+void AccessHandler::rewriteHeader()
+{
+    oauth2Flow->setModifyParametersFunction(
+        [this](QAbstractOAuth::Stage, QMultiMap<QString, QVariant> *parameters) {
+            parameters->remove("redirect_uri");
+            parameters->insert("redirect_uri",
+                               QUrl("http://localhost:" + QByteArray::number(replyHandler->port())
+                                    + "/"));
+        });
 }

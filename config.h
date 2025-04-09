@@ -17,6 +17,7 @@ class Config : public QObject
     Q_OBJECT
 public:
     explicit Config(QObject *parent = nullptr);
+    QByteArray simpleEncr(QByteArray);
 
 signals:
     void settingsUpdated();
@@ -103,8 +104,10 @@ public slots:
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); }
     bool getPmrMode() { return settings->value("pmr/mode", false).toBool();}
     void setPmrMode(bool b) { settings->setValue("pmr/mode", b); emit settingsUpdated(); }
+    QByteArray getRestKey() { return simpleEncr(settings->value("restKey").toByteArray()); }
+    QByteArray getRestSecret() { return simpleEncr(settings->value("restSecret").toByteArray()); }
 
-    QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString();}
+    QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString(); }
     void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
     bool getUseDbm() { return false; } //settings->value("useDbm", false).toBool();} // Deact, TODO!
     void setUseDbm(bool b) { settings->setValue("useDbm", b); emit settingsUpdated();}
@@ -437,7 +440,6 @@ public slots:
     void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);emit settingsUpdated(); }
 
 private slots:
-    QByteArray simpleEncr(QByteArray);
 
 private:
     QSettings *basicSettings;
