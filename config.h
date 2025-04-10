@@ -18,6 +18,7 @@ class Config : public QObject
 public:
     explicit Config(QObject *parent = nullptr);
     QByteArray simpleEncr(QByteArray);
+    QSettings *settings;
 
 signals:
     void settingsUpdated();
@@ -444,7 +445,6 @@ private slots:
 private:
     QSettings *basicSettings;
     QString curFile;
-    QSettings *settings;
     bool ready = false;
     QString measurementDeviceName;
     const int plotResolution = 1200;

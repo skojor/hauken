@@ -39,6 +39,7 @@ private slots:
     void authTimeoutHandler();
     void uploadTimeoutHandler();
     void setOperator(QString id, QString token);
+    void cleanUploadBacklog();
 
 private:
     QSharedPointer<Config> config;

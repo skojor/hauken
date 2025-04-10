@@ -302,10 +302,19 @@ QByteArray SdefRecorder::createHeader()
         stopfreq = config->getInstrFfmCenterFreq() * 1e3 + (config->getInstrFfmSpan().toDouble() / 2);
         res = (stopfreq - startfreq) / (datapoints - 1);
     }*/
+    QString gain;
+    if (config->getInstrId().contains("em200", Qt::CaseInsensitive)
+        || config->getInstrId().contains("pr200", Qt::CaseInsensitive)) {
+        if (config->getInstrGainControl() == 0)
+            gain = "Low noise";
+        else if (config->getInstrGainControl() == 2)
+            gain = "Low distortion";
+        else
+            gain = "Normal";
+    }
 
-    stream << (config->getSdefAddPosition() ? "FileType MobileData"
-                                            : "FileType Standard Data exchange Format 2.0")
-           << '\n'
+    stream << (config->getSdefAddPosition() ? "FileType MobileData" : "FileType SDF 3.0") << '\n'
+           << "User " << config->getSdefStationInitals() << "\n"
            << "LocationName " << config->getStationName() << "\n"
            << "Latitude "
            << convertDdToddmmss((addPosition ? prevLat : config->getStnLatitude().toDouble()))
@@ -316,24 +325,38 @@ QByteArray SdefRecorder::createHeader()
            << '\n'
            << "FreqStart " << QString::number(startfreq / 1e3, 'f', 0) << '\n'
            << "FreqStop " << QString::number(stopfreq / 1e3, 'f', 0) << '\n'
-           << "AntennaType NoAntenna" << '\n'
+           << "AntennaType NoAntennaFactor" << '\n'
            << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n'
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
            << "DataPoints " << datapoints << '\n'
            << "ScanTime "
            << QString::number((double) config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
-           << "Detector FFM" << '\n'
-           << "Note Instrument: " << config->getInstrId() << "; Hauken v."
-           << QString(SW_VERSION).split('-').at(0) << "\n"
-           << "Note\n"
-           << "Note " << config->getSdefStationInitals()
-           << ", MaxHoldTime: " << QString::number(1 / tracePerSecond, 'f', 2) << ", Attenuator: "
+           << "Instrument " << config->getInstrId() << "\n"
+           << "MeasureApp Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
+           << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << "\n"
+           << "Attenuator "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
-           << ", Detect: TBD"
-           << ", FFT: " << config->getInstrFftMode()
-           << ", Ant: " << (config->getInstrAntPort() ? "Ant.2" : "Ant.1") << "\n\n";
+           << "\n"
+           << "FFT "
+           << (config->getInstrFftMode().contains("off", Qt::CaseInsensitive)
+                   ? "Clear/write"
+                   : config->getInstrFftMode())
+           << "\n"
+           << "AntennaPort " << QString::number(config->getInstrAntPort() + 1) << "\n"
+           << (!gain.isEmpty() ? "GainControl " + gain + "\n" : "") << "Note "
+           << config->getInstrId() << "; Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
+           << "Note\n"
+           << "Note " << config->getSdefStationInitals()
+           << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << ", Attenuator: "
+           << (config->getInstrAutoAtt() ? "Auto"
+                                         : QString::number(config->getInstrManAtt()) + " dB")
+           << ", AntennaPort: " << QString::number(config->getInstrAntPort() + 1) << ", FFT: "
+           << (config->getInstrFftMode().contains("off", Qt::CaseInsensitive)
+                   ? "Clear/write"
+                   : config->getInstrFftMode())
+           << (!gain.isEmpty() ? ", GainControl: " + gain : "") << "\n\n";
 
     return buf.toLocal8Bit();
 }

@@ -52,7 +52,6 @@ void RestApi::parseJson(QJsonObject object)
 {
     QJsonObject::const_iterator iterator = object.constBegin();
     while (iterator < object.constEnd()) {
-        qDebug() << iterator.key() << iterator.value();
         if (iterator.key().contains("pscanStartFreq", Qt::CaseInsensitive)) {
             double f = iterator.value().toDouble(-1);
             if (f > 0 && f < 10e3)
@@ -100,7 +99,15 @@ void RestApi::parseJson(QJsonObject object)
                 emit gaincontrol("Low noise");
             else if (iterator.value().toString().contains("lowdistortion", Qt::CaseInsensitive))
                 emit gaincontrol("Low distortion");
+
+            // Config settings changes happen here. WARNING, no error checks here, quite possible to destroy the whole config file...
+        } else if (iterator.key().contains("settings", Qt::CaseInsensitive)) {
+            QStringList split = iterator.value().toString().split(' ');
+            if (split.size() == 2) { // We should have a valid key/value pair now
+                config->settings->setValue(split[0], split[1]);
+            }
         }
+
         iterator++;
     }
 }

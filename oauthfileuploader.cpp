@@ -48,7 +48,7 @@ void OAuthFileUploader::receiveAuthToken(
 
         if (!file->open(QIODevice::ReadOnly)) {
             qDebug() << "Couldn't read from file" << uploadBacklog.last() << ", aborting";
-            uploadBacklog.removeLast();
+            cleanUploadBacklog();
         } else {
             QHttpMultiPart *multipart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
             //if (multipart == nullptr) multipart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
@@ -103,7 +103,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
     if (QString(reply).contains("uploaded", Qt::CaseInsensitive)) {
         qDebug() << "File uploaded successfully using OAuth!";
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File uploaded successfully");
-        uploadBacklog.removeLast();
+        cleanUploadBacklog();
 
         QStringList list = QString(reply).split(':');
         QString id;
@@ -121,7 +121,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD,
                            "",
                            "OAuth: File upload failed, already uploaded");
-        uploadBacklog.removeLast();
+        cleanUploadBacklog();
     }
 
     qDebug() << "Reply finished," << QDateTime::currentDateTime().toString()
@@ -194,4 +194,11 @@ void OAuthFileUploader::setOperator(QString id, QString token)
         }
         reply->deleteLater();
     });
+}
+
+void OAuthFileUploader::cleanUploadBacklog()
+{
+    if (!uploadBacklog.isEmpty())
+        qDebug() << "OAuth debug: Deleted" << uploadBacklog.removeAll(uploadBacklog.last())
+                 << "occurrences from the backlog";
 }
