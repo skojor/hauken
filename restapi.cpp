@@ -28,6 +28,7 @@ RestApi::~RestApi()
 
 bool RestApi::authorize(const QHttpServerRequest &request)
 {
+    //qDebug() << config->getRestKey() << config->getRestSecret();
     for (auto &&[key, value] : request.headers().toListOfPairs()) {
         if (!config->getRestKey().isEmpty() && !config->getRestSecret().isEmpty()
             && key.contains(config->getRestKey()) && value.contains(config->getRestSecret())) {
@@ -105,6 +106,11 @@ void RestApi::parseJson(QJsonObject object)
             QStringList split = iterator.value().toString().split(' ');
             if (split.size() == 2) { // We should have a valid key/value pair now
                 config->settings->setValue(split[0], split[1]);
+            }
+        } else if (iterator.key().contains("restart", Qt::CaseInsensitive)) {
+            if (iterator.value().toBool() == true) {
+                QApplication::quit();
+                QProcess::startDetached(QApplication::arguments()[0], QApplication::arguments());
             }
         }
 

@@ -1,10 +1,12 @@
 #ifndef RESTAPI_H
 #define RESTAPI_H
 
+#include <QApplication>
 #include <QHttpServer>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
+#include <QProcess>
 #include <QSharedPointer>
 #include <QTcpServer>
 #include "config.h"
