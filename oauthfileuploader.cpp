@@ -126,14 +126,14 @@ void OAuthFileUploader::networkReplyFinishedHandler()
 
     qDebug() << "Reply finished," << QDateTime::currentDateTime().toString()
              << networkReply->errorString() << reply;
-    if (!uploadBacklog.isEmpty()) {
+    /*if (!uploadBacklog.isEmpty()) {
         QTimer::singleShot(UPLOAD_RETRY,
                            this,
                            [this]() { // Call uploader in x min if queue is not empty
                                if (!uploadBacklog.isEmpty())
                                    fileUploadRequest(uploadBacklog.last());
                            });
-    }
+    }*/
     //networkReply->deleteLater();
 }
 
@@ -143,10 +143,10 @@ void OAuthFileUploader::authTimeoutHandler()
         toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD,
                       "",
                       "OAuth: File upload failed, retrying later. Reason: Authorization timed out");
-    QTimer::singleShot(UPLOAD_RETRY, this, [this]() {
+    /*QTimer::singleShot(UPLOAD_RETRY, this, [this]() {
         if (!uploadBacklog.isEmpty())
             fileUploadRequest(uploadBacklog.last());
-    });
+    });*/
 }
 
 void OAuthFileUploader::uploadTimeoutHandler()
@@ -154,10 +154,10 @@ void OAuthFileUploader::uploadTimeoutHandler()
     emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD,
                        "",
                        "OAuth: File upload failed, retrying later. Reason: Upload timed out");
-    QTimer::singleShot(UPLOAD_RETRY, this, [this]() {
+    /*QTimer::singleShot(UPLOAD_RETRY, this, [this]() {
         if (!uploadBacklog.isEmpty())
             fileUploadRequest(uploadBacklog.last());
-    });
+    });*/
 }
 
 void OAuthFileUploader::setOperator(QString id, QString token)

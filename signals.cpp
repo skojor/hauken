@@ -659,6 +659,16 @@ void MainWindow::setSignals()
                         &MainWindow::instrIpChanged);
             });
 
+    connect(instrIpAddr, &QComboBox::currentTextChanged, this, [this](const QString text) {
+        if (text.count('.') == 3) { // Don't do anything until text looks like a valid IP
+            if (instrIpAddr->itemText(instrIpAddr->count() - 1).count('.')
+                == 3) { // Already added a custom IP
+                instrIpAddr->removeItem(instrIpAddr->count() - 1);
+            }
+            instrIpAddr->addItem(text, text);
+        }
+    });
+
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)
             gnssDisplay->updGnssData(gnssDevice1->sendGnssData(), 1);

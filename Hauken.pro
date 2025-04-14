@@ -1,5 +1,5 @@
 QT       += core gui serialport network mqtt networkauth concurrent
-greaterThan(QT_MAJOR_VERSION,5): QT += core5compat httpserver
+greaterThan(QT_MAJOR_VERSION,5): QT += httpserver
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport multimedia positioning
 
@@ -172,7 +172,7 @@ unix: {
 }
 
 win32 {
-  INCLUDEPATH +=    $$PWD/../quazip-1.4 $$PWD/../quazip-1.4/quazip \
+  INCLUDEPATH +=    $$PWD/../quazip-1.5 $$PWD/../quazip-1.5/quazip \
                     $$PWD/../zlib-1.3 \
                     $$PWD/../opencv/include
 }
@@ -180,13 +180,13 @@ win32 {
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../opencv/release \
     -lopencv_core490 -lopencv_highgui490 -lopencv_dnn490 -lopencv_imgproc490 \
     -lopencv_imgcodecs490 -lopencv_videoio490 \
-    -L$$PWD/../quazip-1.4/release -lquazip1-qt6 \
+    -L$$PWD/../quazip-1.5/release -lquazip1-qt6 \
     -L$$PWD/../fftw -llibfftw3-3
 
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../opencv/debug \
     -lopencv_core490d -lopencv_highgui490d -lopencv_dnn490d -lopencv_imgproc490d \
     -lopencv_imgcodecs490d -lopencv_videoio490d \
-    -L$$PWD/../quazip-1.4/debug -lquazip1-qt6d \
+    -L$$PWD/../quazip-1.5/debug -lquazip1-qt6d \
     -L$$PWD -llibfftw3-3
 
 #DEFINES += QCUSTOMPLOT_USE_OPENGL
@@ -197,7 +197,7 @@ DEFINES += BUILD_DATE=\\\"$$system(git log -n 1 --format=%cd --date=short)\\\"
 #GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags  --abbrev=0) #$$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 #GIT_VERSION = \\\"$$GIT_VERSION\\\"
 
-VERSION = 2.47.4.0
+VERSION = 2.47.5.0
 QMAKE_TARGET_COMPANY = Nkom
 QMAKE_TARGET_PRODUCT = Hauken
 QMAKE_TARGET_DESCRIPTION = Hauken

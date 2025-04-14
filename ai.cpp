@@ -26,12 +26,12 @@ AI::AI(QSharedPointer<Config> c)
     classes << "jammer" << "other";
 
     reqTraceBufferTimer->setSingleShot(true);
-    connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
+    /*connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
         int wait = 120;
         //if (wait > 120) wait = 120;
         emit reqTraceBuffer(wait);
-    });
-/*
+    });*/
+    /*
     cv::Mat frame;
     frame = cv::imread("c:/hauken/other1.png", cv::ImreadModes::IMREAD_COLOR);
     cv::Mat3b conv;

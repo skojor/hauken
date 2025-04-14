@@ -51,6 +51,7 @@ private:
     QTimer *authTimeoutTimer, *uploadTimeoutTimer;
     QString accessToken;
     QStringList uploadBacklog;
+    int retries = 0;
 };
 
 #endif // OAUTHFILEUPLOADER_H

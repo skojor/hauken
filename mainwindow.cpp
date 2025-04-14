@@ -1,11 +1,10 @@
 #include "mainwindow.h"
-#include "signals.cpp"
 #include "changelog.cpp"
+#include "signals.cpp"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    qDebug() << QApplication::styleHints()->colorScheme();
     setStatusBar(statusBar);
     statusBar->addWidget(progressBar);
     progressBar->setMinimum(0);
@@ -67,7 +66,6 @@ MainWindow::MainWindow(QWidget *parent)
     waterfallThread->setObjectName("waterfall");
     waterfall->moveToThread(waterfallThread);
 
-
     cameraRecorder = new CameraRecorder(config);
     cameraThread = new QThread;
     cameraThread->setObjectName("camera");
@@ -79,9 +77,12 @@ MainWindow::MainWindow(QWidget *parent)
     incidentLog->setReadOnly(true);
 
 #ifdef _WIN32
-    player->setSource(QUrl::fromLocalFile(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
-    player->setAudioOutput(audioOutput);
-    audioOutput->setVolume(80);
+    if (QFile::exists(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav")) {
+        player->setSource(QUrl::fromLocalFile(
+            QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
+        player->setAudioOutput(audioOutput);
+        audioOutput->setVolume(80);
+    }
 #endif
 
     createActions();
@@ -95,7 +96,9 @@ MainWindow::MainWindow(QWidget *parent)
     instrAutoConnect();
     QTimer::singleShot(50, customPlotController, [this] {
         //customPlotController->updSettings();
-        waterfall->updSize(customPlot->axisRect()->rect()); // weird func, needed to set the size of the waterfall image delayed
+        waterfall->updSize(
+            customPlot->axisRect()
+                ->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
     notificationTimer->setSingleShot(true);
 
@@ -112,7 +115,8 @@ MainWindow::MainWindow(QWidget *parent)
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     gnssDisplay->close();
-    if (arduinoPtr->isWatchdogActive()) arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
+    if (arduinoPtr->isWatchdogActive())
+        arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
     read1809Data->close();
     measurementDevice->instrDisconnect();
@@ -148,24 +152,37 @@ void MainWindow::createActions()
     open1809Act->setStatusTip(tr("Open a previously recorded 1809 file for playback"));
     connect(open1809Act, &QAction::triggered, this, [this] {
         if (!measurementDevice->isConnected())
-            read1809Data->readFile(QFileDialog::getOpenFileName(this, "Open 1809 file", config->getLogFolder(), "1809 files (*.cef *.zip)"));
+            read1809Data->readFile(QFileDialog::getOpenFileName(this,
+                                                                "Open 1809 file",
+                                                                config->getLogFolder(),
+                                                                "1809 files (*.cef *.zip)"));
         else {
             qDebug() << "Trying to read an 1809 file while connected, bad idea";
-            QMessageBox::warning(this, "Hauken", "Disconnect the device before trying to read an 1809 file");
+            QMessageBox::warning(this,
+                                 "Hauken",
+                                 "Disconnect the device before trying to read an 1809 file");
         }
     });
     openFolderAct = new QAction(tr("Open f&older (DEBUG)"), this);
-    openFolderAct->setStatusTip(tr("Open a folder with 1809 data, for data conversion (INTERNAL, DON'T USE!"));
+    openFolderAct->setStatusTip(
+        tr("Open a folder with 1809 data, for data conversion (INTERNAL, DON'T USE!"));
     connect(openFolderAct, &QAction::triggered, this, [this] {
-        read1809Data->readFolder(QFileDialog::getExistingDirectory(this, tr("Open folder"), config->getLogFolder(), QFileDialog::ShowDirsOnly));
+        read1809Data->readFolder(QFileDialog::getExistingDirectory(this,
+                                                                   tr("Open folder"),
+                                                                   config->getLogFolder(),
+                                                                   QFileDialog::ShowDirsOnly));
     });
 
     openIqAct = new QAction(tr("Open &IQ data file..."), this);
     openIqAct->setStatusTip(tr("Read and analyze a raw IQ data file from disk"));
-    connect(openIqAct, &QAction::triggered, this, [this] () {
-        QFuture<bool> future = QtConcurrent::run(&Waterfall::readAndAnalyzeFile,
-                                                 iqdataWaterfall,
-                                                 QFileDialog::getOpenFileName(this, "Open raw IQ data file", config->getLogFolder(), "IQ data (*.iq)"));
+    connect(openIqAct, &QAction::triggered, this, [this]() {
+        QFuture<bool> future
+            = QtConcurrent::run(&Waterfall::readAndAnalyzeFile,
+                                iqdataWaterfall,
+                                QFileDialog::getOpenFileName(this,
+                                                             "Open raw IQ data file",
+                                                             config->getLogFolder(),
+                                                             "IQ data (*.iq)"));
     });
 
     optStation = new QAction(tr("&General setup"), this);
@@ -186,39 +203,43 @@ void MainWindow::createActions()
 
     optEmail = new QAction(tr("&Notifications"), this);
     optEmail->setStatusTip(tr("Setup of email server and notfications"));
-    connect(optEmail, &QAction::triggered, this, [this]{ this->emailOptions->start();});
+    connect(optEmail, &QAction::triggered, this, [this] { this->emailOptions->start(); });
 
     optCamera = new QAction(tr("&Camera"), this);
     optCamera->setStatusTip("Setup of camera recording");
-    connect(optCamera, &QAction::triggered, this, [this]{ this->cameraOptions->start();});
+    connect(optCamera, &QAction::triggered, this, [this] { this->cameraOptions->start(); });
 
     optArduino = new QAction(tr("&Arduino"), this);
     optArduino->setStatusTip("Setup of Arduino relay/temperature control");
-    connect(optArduino, &QAction::triggered, this, [this] { this->arduinoOptions->start();});
+    connect(optArduino, &QAction::triggered, this, [this] { this->arduinoOptions->start(); });
 
     optAutoRecorder = new QAction(tr("A&uto recorder"), this);
     optAutoRecorder->setStatusTip("Setup of Hauken autorecorder");
-    connect(optAutoRecorder, &QAction::triggered, this, [this] { this->autoRecorderOptions->start();});
+    connect(optAutoRecorder, &QAction::triggered, this, [this] {
+        this->autoRecorderOptions->start();
+    });
 
     optPositionReport = new QAction(tr("&Position report"), this);
     optPositionReport->setStatusTip("Setup of periodic report posts via http(s)");
-    connect(optPositionReport, &QAction::triggered, this, [this] { this->positionReportOptions->start();});
+    connect(optPositionReport, &QAction::triggered, this, [this] {
+        this->positionReportOptions->start();
+    });
 
     optGeoLimit = new QAction(tr("&Geographic blocking options"), this);
     optGeoLimit->setStatusTip(tr("Setup of geographic area where usage is allowed"));
-    connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start();});
+    connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start(); });
 
     optMqtt = new QAction(tr("&MQTT and webswitch sensor options"), this);
     optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT and webswitch"));
-    connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start();});
+    connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start(); });
 
     optOAuth = new QAction(tr("&OAuth options"), this);
     optOAuth->setStatusTip(tr("Setup authentication using OAuth2 schemes"));
-    connect(optOAuth, &QAction::triggered, this, [this] { this->oAuthOptions->start();});
+    connect(optOAuth, &QAction::triggered, this, [this] { this->oAuthOptions->start(); });
 
     optIq = new QAction(tr("IQ data and plot options"), this);
     optIq->setStatusTip(tr("Setup IQ plot and saving raw IQ data to file"));
-    connect(optIq, &QAction::triggered, this, [this] () { iqOptions->start();});
+    connect(optIq, &QAction::triggered, this, [this]() { iqOptions->start(); });
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -330,9 +351,9 @@ void MainWindow::createLayout()
     instrForm->addRow(new QLabel("Ant. port"), instrAntPort);
     instrForm->addRow(new QLabel("Instr. mode"), instrMode);
     instrForm->addRow(new QLabel("FFT mode"), instrFftMode);
+    instrForm->addRow(new QLabel("Gain control"), instrGainControl);
     instrForm->addRow(new QLabel("IP address"), instrIpAddr);
     instrForm->addRow(new QLabel("Port"), instrPort);
-    instrForm->addRow(new QLabel("Gain control"), instrGainControl);
     instrForm->addRow(instrConnect, instrDisconnect);
 
     instrGroupBox->setLayout(instrForm);
@@ -411,17 +432,18 @@ void MainWindow::createLayout()
     bottomPlotLayout->addWidget(showWaterfall);
     bottomPlotLayout->addWidget(new QLabel("Waterfall time"));
     bottomPlotLayout->addWidget(waterfallTime);
-    if (config->getPmrMode()) bottomPlotLayout->addWidget(btnPmrTable);
+    if (config->getPmrMode())
+        bottomPlotLayout->addWidget(btnPmrTable);
 
     plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
 
     //plotMaxScroll->setFixedSize(40, 30);
-    plotMaxScroll->setRange(-200,200);
+    plotMaxScroll->setRange(-200, 200);
     plotMinScroll->setFixedSize(40, 30);
     plotMinScroll->setRange(-200, 200);
     plotMaxScroll->setValue(config->getPlotYMax());
     plotMinScroll->setValue(config->getPlotYMin());
-    plotMaxholdTime->setFixedSize(40,20);
+    plotMaxholdTime->setFixedSize(40, 20);
     plotMaxholdTime->setRange(0, 120);
     waterfallTime->setRange(10, 86400);
 
@@ -451,54 +473,66 @@ void MainWindow::setToolTips()
     instrResolution->setToolTip("Frequency resolution (kHz per step)");
     instrMeasurementTime->setToolTip("Time spent per periodic measurement, default 18 ms");
     instrAtt->setToolTip("Manual attenuation setting, deactivate auto attenuator to use");
-    instrAutoAtt->setToolTip("Receiver controls attenuation based on input level. "\
+    instrAutoAtt->setToolTip("Receiver controls attenuation based on input level. "
                              "Only working on newer models.");
-    instrAntPort->setToolTip("For receivers with multiple antenna inputs.\n" \
-                             "To change name: Click and edit text, and press return when finished.\n" \
-                             "The new name will be stored on the device (EM200 / USRP only)");
-    instrMode->setToolTip("Use PScan to cover a wide frequency range. "\
+    instrAntPort->setToolTip(
+        "For receivers with multiple antenna inputs.\n"
+        "To change name: Click and edit text, and press return when finished.\n"
+        "The new name will be stored on the device (EM200 / USRP only)");
+    instrMode->setToolTip("Use PScan to cover a wide frequency range. "
                           "FFM gives much better time resolution.");
-    instrFftMode->setToolTip("FFT calculation method. Clear/write is the fastest method. "\
+    instrFftMode->setToolTip("FFT calculation method. Clear/write is the fastest method. "
                              "Max hold increases chances to record short burst signals.");
-    instrIpAddr->setToolTip("Only ipv4 supported for now.");
+    instrIpAddr->setToolTip("IP address or station name");
     instrPort->setToolTip("SCPI port to connect to, default 5555");
     instrGainControl->setToolTip(
         "Gain mode for newer R&S instruments. Change according to RF environment");
 
-    instrTrigLevel->setToolTip("Decides how much above the average noise floor in dB a signal must be "\
-                               "to trigger an incident. 10 dB is a reasonable value. "\
-                               "See also the other trigger settings below.");
-    instrTrigBandwidth->setToolTip("An incident is triggered if the continous bandwidth of a "\
-                                   "signal above the set trig level is higher than this setting."\
+    instrTrigLevel->setToolTip(
+        "Decides how much above the average noise floor in dB a signal must be "
+        "to trigger an incident. 10 dB is a reasonable value. "
+        "See also the other trigger settings below.");
+    instrTrigBandwidth->setToolTip("An incident is triggered if the continous bandwidth of a "
+                                   "signal above the set trig level is higher than this setting."
                                    " See also the total bandwidth setting.");
-    instrTrigTotalBandwidth->setToolTip("An incident is triggered if the total contribution of signals "\
-                                        "above the trig limit is higher than this setting.");
-    instrTrigTime->setToolTip("Decides how long an incident must be present before an incident is "\
-                              "triggered and a recording is started. "\
-                              "Previously the \"trace count before recording is triggered\" setting.");
+    instrTrigTotalBandwidth->setToolTip(
+        "An incident is triggered if the total contribution of signals "
+        "above the trig limit is higher than this setting.");
+    instrTrigTime->setToolTip(
+        "Decides how long an incident must be present before an incident is "
+        "triggered and a recording is started. "
+        "Previously the \"trace count before recording is triggered\" setting.");
 
-    gnssCNo->setToolTip("Carrier to noise level is averaged from the four best satellites in use. "\
+    gnssCNo->setToolTip("Carrier to noise level is averaged from the four best satellites in use. "
                         "If the difference between average and instant CNO is higher than \""
                         "this setting an incident will be triggered. Set to 0 to disable.");
-    gnssAgc->setToolTip("AGC detection only for supported GNSS models, currently only U-Blox. "\
-                        "If the difference between the instant and the average AGC level is higher "\
+    gnssAgc->setToolTip("AGC detection only for supported GNSS models, currently only U-Blox. "
+                        "If the difference between the instant and the average AGC level is higher "
                         "than this setting an incident will be triggered. Set to 0 to disable.");
-    gnssPosOffset->setToolTip("Compares the current position with the one set in general station setup. "\
-                              "If the offset is higher than this value an incident will be triggered. "\
-                              "Set to 0 to disable.");
-    gnssAltOffset->setToolTip("Compared the altitude with the value set in general station setup. "\
-                              "If the offset is higher than this value an incident will be triggered. "\
-                              "Set to 0 to disable.");
-    gnssTimeOffset->setToolTip("Can be used to detect GNSS time spoofing. This requires the computer "\
-                               "to be set up with NTP client software. The NTP time will then be "\
-                               "compared with this value, and triggers an incident if the offset "\
-                               "is higher than set value. Set to 0 to disable.");
+    gnssPosOffset->setToolTip(
+        "Compares the current position with the one set in general station setup. "
+        "If the offset is higher than this value an incident will be triggered. "
+        "Set to 0 to disable.");
+    gnssAltOffset->setToolTip(
+        "Compared the altitude with the value set in general station setup. "
+        "If the offset is higher than this value an incident will be triggered. "
+        "Set to 0 to disable.");
+    gnssTimeOffset->setToolTip(
+        "Can be used to detect GNSS time spoofing. This requires the computer "
+        "to be set up with NTP client software. The NTP time will then be "
+        "compared with this value, and triggers an incident if the offset "
+        "is higher than set value. Set to 0 to disable.");
     plotMaxScroll->setToolTip("Set the max. scale in dBuV");
     plotMinScroll->setToolTip("Set the min. scale in dBuV");
-    plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no maxhold.\nOnly affects displayed maxhold");
+    plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no "
+                                "maxhold.\nOnly affects displayed maxhold");
     showWaterfall->setToolTip("Select type of waterfall overlay");
-    waterfallTime->setToolTip("Select the time in seconds a signal will be visible in the waterfall");
-    btnTrigRecording->setToolTip("Starts a recording manually. The recording will end after the time specified in SDeF options: Recording time after incident,\nunless a real trig happens within this time, as this will extend the recording further.");
+    waterfallTime->setToolTip(
+        "Select the time in seconds a signal will be visible in the waterfall");
+    btnTrigRecording->setToolTip(
+        "Starts a recording manually. The recording will end after the time specified in SDeF "
+        "options: Recording time after incident,\nunless a real trig happens within this time, as "
+        "this will extend the recording further.");
     btnPmrTable->setToolTip("Edit the PMR table in the currently chosen frequency range");
 }
 
@@ -562,7 +596,6 @@ void MainWindow::getConfigValues()
     waterfallTime->setValue(config->getWaterfallTime());
 
     updConfigSettings();
-
 }
 
 void MainWindow::updInstrButtonsStatus()
@@ -584,7 +617,6 @@ void MainWindow::instrModeChanged()
 {
     if (instrMode->currentText().contains("pscan", Qt::CaseInsensitive)/* &&
         measurementDevice->currentMode() != Instrument::Mode::PSCAN*/) {
-
         startFreqLabel->setText("Start frequency (MHz)");
         stopFreqLabel->setHidden(false);
         instrStopFreq->setHidden(false);
@@ -648,7 +680,7 @@ void MainWindow::setValidators()
     instrTrigBandwidth->setDecimals(0);
     instrTrigTotalBandwidth->setRange(0, 9.99e9);
     instrTrigTotalBandwidth->setDecimals(0);
-    gnssCNo->setRange(0,1000);
+    gnssCNo->setRange(0, 1000);
     gnssAgc->setRange(0, 8000);
     gnssPosOffset->setRange(0, 48e6);
     gnssAltOffset->setRange(0, 10e3);
@@ -660,7 +692,8 @@ void MainWindow::instrStartFreqChanged()
     if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
         config->setInstrStartFreq(instrStartFreq->value());
     }
-    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected())
+        traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrStopFreqChanged()
@@ -669,7 +702,8 @@ void MainWindow::instrStopFreqChanged()
         config->setInstrStartFreq(instrStartFreq->value());
         config->setInstrStopFreq(instrStopFreq->value());
     }
-    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected())
+        traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrFfmCenterFreqChanged()
@@ -701,14 +735,16 @@ void MainWindow::instrMeasurementTimeChanged()
 void MainWindow::instrAttChanged()
 {
     config->setInstrManAtt(instrAtt->text().toInt());
-    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected())
+        traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrAutoAttChanged()
 {
     instrAtt->setDisabled(instrAutoAtt->isChecked());
     config->setInstrAutoAtt(instrAutoAtt->isChecked());
-    if (measurementDevice->isConnected()) traceBuffer->restartCalcAvgLevel();
+    if (measurementDevice->isConnected())
+        traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrIpChanged()
@@ -738,8 +774,7 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         instrGainControlChanged();
         instrStartFreq->setMinimum(measurementDevice->deviceMinFreq() / 1e6);
         instrStopFreq->setMaximum(measurementDevice->deviceMaxFreq() / 1e6);
-    }
-    else {
+    } else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
     }
 }
@@ -768,8 +803,14 @@ void MainWindow::setInputsState(const bool state)
 
 void MainWindow::setResolutionFunction()
 {
-    disconnect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
-    disconnect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
+    disconnect(instrResolution,
+               &QComboBox::currentIndexChanged,
+               this,
+               &MainWindow::instrResolutionChanged);
+    disconnect(instrFfmSpan,
+               &QComboBox::currentIndexChanged,
+               this,
+               &MainWindow::instrFfmSpanChanged);
 
     instrResolution->clear();
     instrResolution->addItems(measurementDevice->devicePscanResolutions());
@@ -783,7 +824,10 @@ void MainWindow::setResolutionFunction()
     if (instrFfmSpan->findText(config->getInstrFfmSpan()) >= 0)
         instrFfmSpan->setCurrentIndex(instrFfmSpan->findText(config->getInstrFfmSpan()));
 
-    connect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
+    connect(instrResolution,
+            &QComboBox::currentIndexChanged,
+            this,
+            &MainWindow::instrResolutionChanged);
     connect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
 }
 
@@ -836,10 +880,11 @@ void MainWindow::uploadProgress(int percent)
 void MainWindow::updWindowTitle(const QString msg)
 {
     QString extra;
-    if (!msg.isEmpty()) extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " (" +
-                instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra
-                   + " (" + config->getCurrentFilename().split('/').last() + ")");
+    if (!msg.isEmpty())
+        extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " ("
+                + instrIpAddr->currentData().toString() + ")";
+    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra + " ("
+                   + config->getCurrentFilename().split('/').last() + ")");
 }
 
 void MainWindow::about()
@@ -852,7 +897,9 @@ void MainWindow::about()
 
     ts << "<table><tr><td>Application version</td><td>" << SW_VERSION << "</td></tr>";
     ts << "<tr><td>Build date</td><td>" << BUILD_DATE << "</td></tr><tr></tr>";
-    ts << "<tr><td><a href='https://github.com/cutelyst/simple-mail'>SimpleMail Qt library SMTP mail client</a></td><td>LGPL 2.1 license" << "</td></tr>";
+    ts << "<tr><td><a href='https://github.com/cutelyst/simple-mail'>SimpleMail Qt library SMTP "
+          "mail client</a></td><td>LGPL 2.1 license"
+       << "</td></tr>";
     ts << "<tr><td>Questions/support? => JSK</td></tr></table>";
     box.setText(txt);
     box.exec();
@@ -886,10 +933,12 @@ void MainWindow::sdefConfig()
 void MainWindow::newFile()
 {
     qDebug() << config->getWorkFolder();
-    QString filename = QFileDialog::getSaveFileName(this, tr("New configuration file"),
+    QString filename = QFileDialog::getSaveFileName(this,
+                                                    tr("New configuration file"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));
-    if (!filename.isEmpty()) config->newFileName(filename);
+    if (!filename.isEmpty())
+        config->newFileName(filename);
     if (measurementDevice->isConnected())
         measurementDevice->instrDisconnect();
     getConfigValues();
@@ -898,21 +947,24 @@ void MainWindow::newFile()
 
 void MainWindow::open()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open configuraton file"),
+    QString fileName = QFileDialog::getOpenFileName(this,
+                                                    tr("Open configuraton file"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));
 
-    if (!fileName.isEmpty()) config->newFileName(fileName);
+    if (!fileName.isEmpty())
+        config->newFileName(fileName);
     getConfigValues();
     updWindowTitle();
 }
 
 void MainWindow::save()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save current configuration"),
+    QString fileName = QFileDialog::getSaveFileName(this,
+                                                    tr("Save current configuration"),
                                                     config->getWorkFolder(),
                                                     tr("Configuration files (*.ini)"));
-    if (!fileName.isEmpty()) {  //config->newFileName(fileName);
+    if (!fileName.isEmpty()) { //config->newFileName(fileName);
         QFile::copy(config->getCurrentFilename(), fileName);
         config->newFileName(fileName);
     }
@@ -922,32 +974,7 @@ void MainWindow::save()
 
 void MainWindow::saveConfigValues()
 {
-    /*   config->setInstrStartFreq(instrStartFreq->value());
-    config->setInstrStopFreq(instrStopFreq->value());
-    config->setInstrResolution(instrResolution->currentText());
-    config->setInstrMeasurementTime(instrMeasurementTime->value());
-    config->setInstrManAtt(instrAtt->text().toUInt());
-    config->setInstrAutoAtt(instrAutoAtt->isChecked());
-    config->setInstrAntPort(instrAntPort->currentIndex());
-    config->setInstrMode(instrMode->currentIndex());
-    config->setInstrFftMode(instrFftMode->currentText());
-    config->setInstrIpAddr(instrIpAddr->currentText());
-    config->setInstrPort(instrPort->text().toUInt());
-    config->setInstrTrigLevel(instrTrigLevel->value());
-    config->setInstrMinTrigBW(instrTrigBandwidth->value());
-    config->setInstrTotalTrigBW(instrTrigTotalBandwidth->value());
-    config->setInstrMinTrigTime(instrTrigTime->value());
-    config->setGnssCnoDeviation(gnssCNo->value());
-    config->setGnssAgcDeviation(gnssAgc->value());
-    config->setGnssPosOffset(gnssPosOffset->value());
-    config->setGnssAltOffset(gnssAltOffset->value());
-    config->setGnssTimeOffset(gnssTimeOffset->value());
-
-    generalOptions->saveCurrentSettings();
-    gnssOptions->saveCurrentSettings();
-    receiverOptions->saveCurrentSettings();
-    sdefOptions->saveCurrentSettings();
-    emailOptions->saveCurrentSettings();*/
+ 
 }
 
 void MainWindow::showBytesPerSec(int val)
@@ -959,7 +986,8 @@ void MainWindow::showBytesPerSec(int val)
         int khzAboveLimit = traceAnalyzer->getKhzAboveLimit();
         int khzAboveLimitTotal = traceAnalyzer->getKhzAboveLimitTotal();
         if (khzAboveLimit || khzAboveLimitTotal)
-            msg += ", single/total signal above limit: " + QString::number(khzAboveLimit) + " / " + QString::number(khzAboveLimitTotal) + " kHz";
+            msg += ", single/total signal above limit: " + QString::number(khzAboveLimit) + " / "
+                   + QString::number(khzAboveLimitTotal) + " kHz";
 
         statusBar->showMessage(msg, 2000);
     }
@@ -998,29 +1026,29 @@ void MainWindow::updConfigSettings()
     measurementDevice->setUseTcp(config->getInstrUseTcpDatastream());
 }
 
-void MainWindow::triggerSettingsUpdate()
-{
-
-}
+void MainWindow::triggerSettingsUpdate() {}
 
 void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
 {
     if (id == gnssLastDisplayedId) { // same as previous update, just show result
         gnssStatus->setText(txt);
-        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
-    }
-    else if (gnssLastDisplayedTime.secsTo(QDateTime::currentDateTime()) >= 5) {
+        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status ("
+                           + (valid ? "pos. valid" : "pos. invalid") + ")");
+    } else if (gnssLastDisplayedTime.secsTo(QDateTime::currentDateTime()) >= 5) {
         gnssLastDisplayedId = id;
         gnssLastDisplayedTime = QDateTime::currentDateTime();
-        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status (" + (valid ? "pos. valid":"pos. invalid") + ")");
+        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status ("
+                           + (valid ? "pos. valid" : "pos. invalid") + ")");
         gnssStatus->setText(txt);
     }
 }
 
 void MainWindow::setWaterfallOption(QString s)
 {
-    if (s == "Off") dispWaterfall = false;
-    else dispWaterfall = true;
+    if (s == "Off")
+        dispWaterfall = false;
+    else
+        dispWaterfall = true;
 
     if (!dispWaterfall) {
         customPlot->axisRect()->setBackground(QPixmap());
@@ -1031,7 +1059,6 @@ void MainWindow::setWaterfallOption(QString s)
     else
         customPlot->graph(0)->setPen(QPen(Qt::black));
 
-
     config->setShowWaterfall(s);
 }
 
@@ -1040,7 +1067,8 @@ void MainWindow::changeAntennaPortName()
     emit antennaNameEdited(instrAntPort->currentIndex(), instrAntPort->currentText());
 }
 
-void MainWindow::traceIncidentAlarm(bool state) {
+void MainWindow::traceIncidentAlarm(bool state)
+{
     if (state != traceAlarmRaised) {
         if (state) {
             ledTraceStatus->setState(false);
@@ -1048,11 +1076,11 @@ void MainWindow::traceIncidentAlarm(bool state) {
             qApp->alert(this->parentWidget());
             if (config->getSoundNotification() && !notificationTimer->isActive()) {
                 player->play();
-                notificationTimer->start(config->getNotifyTruncateTime() * 1000); // Mute for x secs to not annoy user
+                notificationTimer->start(config->getNotifyTruncateTime()
+                                         * 1000); // Mute for x secs to not annoy user
             }
             traceAlarmRaised = true;
-        }
-        else {
+        } else {
             ledTraceStatus->setState(true);
             labelTraceLedText->setText("Normal");
             traceAlarmRaised = false;
@@ -1060,15 +1088,14 @@ void MainWindow::traceIncidentAlarm(bool state) {
     }
 }
 
-void MainWindow::recordIncidentAlarm(bool state) {
+void MainWindow::recordIncidentAlarm(bool state)
+{
     if (state != recordAlarmRaised) {
         if (state) {
             ledRecordStatus->setState(false);
             labelRecordLedText->setText("Recording");
             recordAlarmRaised = true;
-        }
-        else {
-
+        } else {
             ledRecordStatus->setState(true);
             labelRecordLedText->setText("Ready to record");
             recordAlarmRaised = false;
@@ -1076,15 +1103,15 @@ void MainWindow::recordIncidentAlarm(bool state) {
     }
 }
 
-void MainWindow::gnssIncidentAlarm(bool state) {
+void MainWindow::gnssIncidentAlarm(bool state)
+{
     if (state != gnssAlarmRaised) {
         if (state) {
             ledGnssStatus->setState(false);
             labelGnssLedText->setText("GNSS alarm");
             gnssAlarmRaised = true;
             qApp->alert(this);
-        }
-        else {
+        } else {
             ledGnssStatus->setState(true);
             labelGnssLedText->setText("GNSS normal");
             gnssAlarmRaised = false;
@@ -1092,15 +1119,15 @@ void MainWindow::gnssIncidentAlarm(bool state) {
     }
 }
 
-void MainWindow::recordEnabled(bool state) {
+void MainWindow::recordEnabled(bool state)
+{
     if (state != !recordDisabledRaised) {
         if (!state) {
             ledRecordStatus->setOffColor(Qt::gray);
             ledRecordStatus->setState(false);
             labelRecordLedText->setText("Recording disabled");
             recordDisabledRaised = true;
-        }
-        else {
+        } else {
             ledRecordStatus->setState(true);
             ledRecordStatus->setOffColor(Qt::red);
             labelRecordLedText->setText("Ready to record");
@@ -1125,7 +1152,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event)
 
 void MainWindow::restartWaterfall()
 {
-    QTimer::singleShot(50, this, [this] {       // short delay to allow screen to update before restarting
+    QTimer::singleShot(50, this, [this] { // short delay to allow screen to update before restarting
         waterfall->updSize(customPlot->axisRect()->rect());
     });
 }

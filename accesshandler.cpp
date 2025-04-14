@@ -6,7 +6,7 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
     oauth2Flow = new QOAuth2AuthorizationCodeFlow(this);
     replyHandler = new QOAuthHttpServerReplyHandler(this);
     rewriteHeader();
-    qDebug() << "port" << replyHandler->port();
+    //qDebug() << "port" << replyHandler->port();
 
     oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
     oauth2Flow->setReplyHandler(replyHandler);

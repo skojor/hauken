@@ -483,13 +483,13 @@ void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
 {
     if (exitCode != 0 && !config->getSdefUsername().isEmpty()
         && !config->getSdefPassword().isEmpty()) {
-        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER,
+        /*emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER,
                            "",
-                           "Uploading of SDeF data failed, trying again later");
+                           "Uploading of SDeF data failed, trying again later");*/
         if (stateCurlAwaitingLogin)
             qDebug() << "Curl login failed:" << exitStatus << exitCode;
         else if (stateCurlAwaitingFileUpload) {
-            qDebug() << "Curl file upload failed:" << exitStatus << exitCode;
+            //qDebug() << "Curl file upload failed:" << exitStatus << exitCode;
             stateCurlAwaitingFileUpload = false;
         }
     } else if (stateCurlAwaitingLogin) { // curl has successfully logged in, continue

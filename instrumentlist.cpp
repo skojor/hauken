@@ -238,6 +238,7 @@ void InstrumentList::parseEquipmentList(const QByteArray &ba)
         }
     }
     updStationInfoWithEquipmentList(); // Finally we should have enough data to generate a complete equipment list per station
+    //emit instrumentListReady(usableStnIps, usableStnNames, usableStnTypes);
 }
 
 void InstrumentList::updStationInfoWithEquipmentList()
