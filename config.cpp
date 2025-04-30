@@ -16,7 +16,7 @@ void Config::newFileName(const QString file)
     basicSettings->setValue("lastFile", curFile);
     delete settings;
     settings = new QSettings(curFile, QSettings::IniFormat);
-    settings->setValue("SW_VERSION", SW_VERSION);
+    //settings->setValue("SW_VERSION", SW_VERSION);
 }
 
 QByteArray Config::simpleEncr(QByteArray toEncrypt)

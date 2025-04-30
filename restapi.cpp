@@ -31,7 +31,7 @@ bool RestApi::authorize(const QHttpServerRequest &request)
     //qDebug() << config->getRestKey() << config->getRestSecret();
     for (auto &&[key, value] : request.headers().toListOfPairs()) {
         if (!config->getRestKey().isEmpty() && !config->getRestSecret().isEmpty()
-            && key.contains(config->getRestKey()) && value.contains(config->getRestSecret())) {
+            && key == config->getRestKey() && value == config->getRestSecret()) {
             return true;
         }
     }

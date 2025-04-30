@@ -1,7 +1,7 @@
 #ifndef UDPDATASTREAM_H
 #define UDPDATASTREAM_H
 
-#include <datastreambaseclass.h>
+#include "datastreambaseclass.h"
 
 class UdpDataStream : public DataStreamBaseClass
 {

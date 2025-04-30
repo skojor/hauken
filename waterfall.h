@@ -1,24 +1,24 @@
 #ifndef WATERFALL_H
 #define WATERFALL_H
 
-#include <QObject>
-#include <QPainter>
-#include <QDebug>
-#include <QSharedPointer>
-#include <QPixmap>
-#include <QDateTime>
-#include <QTimer>
-#include <QMutex>
-#include <QFile>
-#include <math.h>
 #include <QApplication>
-#include <QtConcurrent/QtConcurrent>
+#include <QDateTime>
+#include <QDebug>
+#include <QFile>
 #include <QFuture>
 #include <QFutureWatcher>
+#include <QMutex>
+#include <QObject>
+#include <QPainter>
+#include <QPixmap>
 #include <QPromise>
+#include <QSharedPointer>
+#include <QTimer>
+#include <QtConcurrent/QtConcurrent>
 #include "config.h"
-#include <fftw3.h>
+#include "fftw3.h"
 #include "typedefs.h"
+#include <math.h>
 
 enum class COLORS
 {
