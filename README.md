@@ -1,20 +1,10 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# hauken
+
+Program used to monitor measurement receivers supporting the SCPI protocol and GNSS receivers for sudden spectrum or GNSS related changes, 
+and make a recording. Will also be able to notify mail recipients.
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
-
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+Created in Qt Creator. Compiles on Windows with Qt v.6.8 + MSVC compiler.
+Depends on several 3rd party libs, like OpenCV 4.9, QtMqtt, Quazip 1.4, FFTW 3.1 and ZLib x.x.
 
 # Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
-
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)

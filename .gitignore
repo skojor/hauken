@@ -1,0 +1,14 @@
+Hauken.pro.user
+Hauken.pro.user*
+Hauken
+*.o
+*.ini
+moc_*
+Makefile
+qrc*
+.qmake.stash
+Makefile*
+object_script*
+Hauken_resource.rc
+torch/lib
+build/
