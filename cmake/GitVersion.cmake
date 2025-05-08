@@ -36,7 +36,7 @@ function(get_version_from_git)
     )
 
     string(REGEX REPLACE "^v" "" CLEAN_TAG "${GIT_TAG}")
-    if(CLEAN_TAG MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-.*)?$")
+    if (CLEAN_TAG MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-.*)?$")
 
         set(PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1})
         set(PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1} PARENT_SCOPE)
