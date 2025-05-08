@@ -6,7 +6,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setStatusBar(statusBar);
-    statusBar->addWidget(progressBar);
+    //statusBar->addWidget(progressBar);
     progressBar->setMinimum(0);
     progressBar->setMaximum(100);
 
@@ -883,7 +883,7 @@ void MainWindow::updWindowTitle(const QString msg)
     if (!msg.isEmpty())
         extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " ("
                 + instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v. ") + qApp->applicationVersion() + extra + " ("
+    setWindowTitle(tr("Hauken v. ") + PROJECT_VERSION + extra + " ("
                    + config->getCurrentFilename().split('/').last() + ")");
 }
 
@@ -895,8 +895,9 @@ void MainWindow::about()
     box.setTextFormat(Qt::RichText);
     box.setStandardButtons(QMessageBox::Ok);
 
-    ts << "<table><tr><td>Application version</td><td>" << SW_VERSION << "</td></tr>";
-    ts << "<tr><td>Build date</td><td>" << BUILD_DATE << "</td></tr><tr></tr>";
+    ts << "<table><tr><td>Application version</td><td>" << QString(FULL_VERSION) << "</td></tr>";
+    ts << "<tr><td>Build date and time</td><td>" << __DATE__ << " / " << __TIME__
+       << "</td></tr><tr></tr>";
     ts << "<tr><td><a href='https://github.com/cutelyst/simple-mail'>SimpleMail Qt library SMTP "
           "mail client</a></td><td>LGPL 2.1 license"
        << "</td></tr>";

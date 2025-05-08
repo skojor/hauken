@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QStyleHints>
 #include "mainwindow.h"
+#include "version.h"
 
 QString logFilePath;
 bool logToFile = false;
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
     a.setOrganizationDomain("nkom.no");
 
     QString ver;
-    QStringList split = QString(SW_VERSION).split('-');
+    QStringList split = QString(FULL_VERSION).split('-');
     if (split.size() > 1) ver = split[0] + '-' + split[1];
 
     qRegisterMetaType<QVector<qint16> >("QVector<qint16>");

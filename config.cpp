@@ -1,4 +1,5 @@
 #include "config.h"
+#include "version.h"
 
 Config::Config(QObject *parent)
     : QObject(parent)
@@ -16,7 +17,7 @@ void Config::newFileName(const QString file)
     basicSettings->setValue("lastFile", curFile);
     delete settings;
     settings = new QSettings(curFile, QSettings::IniFormat);
-    settings->setValue("SW_VERSION", SW_VERSION);
+    settings->setValue("SW_VERSION", FULL_VERSION);
 }
 
 QByteArray Config::simpleEncr(QByteArray toEncrypt)

@@ -1,9 +1,9 @@
 #ifndef AI_H
 #define AI_H
 
-#include <opencv2/dnn.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include "opencv2/dnn.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <QString>
 #include <QDebug>
