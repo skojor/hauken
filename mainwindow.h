@@ -75,6 +75,7 @@
 #include "traceanalyzer.h"
 #include "tracebuffer.h"
 #include "udpdatastream.h"
+#include "version.h"
 #include "versionupdater.h"
 #include "vifstreamtcp.h"
 #include "vifstreamudp.h"

@@ -1,4 +1,5 @@
 #include "sdefrecorder.h"
+#include "version.h"
 
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
@@ -333,7 +334,7 @@ QByteArray SdefRecorder::createHeader()
            << "ScanTime "
            << QString::number((double) config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Instrument " << config->getInstrId() << "\n"
-           << "MeasureApp Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
+           << "MeasureApp Hauken v." << QString(PROJECT_VERSION) << "\n"
            << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << "\n"
            << "Attenuator "
            << (config->getInstrAutoAtt() ? "Auto"
@@ -346,7 +347,7 @@ QByteArray SdefRecorder::createHeader()
            << "\n"
            << "AntennaPort " << QString::number(config->getInstrAntPort() + 1) << "\n"
            << (!gain.isEmpty() ? "GainControl " + gain + "\n" : "") << "Note "
-           << config->getInstrId() << "; Hauken v." << QString(SW_VERSION).split('-').at(0) << "\n"
+           << config->getInstrId() << "; Hauken v." << QString(PROJECT_VERSION) << "\n"
            << "Note\n"
            << "Note " << config->getSdefStationInitals()
            << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << ", Attenuator: "
