@@ -9,7 +9,9 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth
 
 qt_standard_project_setup()
 
-qt_add_executable(Hauken WIN32 MACOSX_BUNDLE
+set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/icons/favicon.rc")
+
+qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows}
     SimpleMail/SimpleMail
     SimpleMail/emailaddress.cpp SimpleMail/emailaddress.h SimpleMail/emailaddress_p.h
     SimpleMail/mimeattachment.cpp SimpleMail/mimeattachment.h
@@ -91,35 +93,10 @@ target_link_libraries(Hauken PRIVATE
     Qt6::Mqtt
 )
 
-
-# Resources:
-set(icons_resource_files
-    "icons/icon.ico"
-    "icons/new.ico"
-)
-
-qt_add_resources(Hauken "icons"
-    PREFIX
-    "/"
-    FILES
-    ${icons_resource_files}
-)
-
 target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
-)
-
-target_link_libraries(Hauken PRIVATE debug
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
 )
 
 target_link_libraries(Hauken PRIVATE optimized
@@ -133,6 +110,17 @@ target_link_libraries(Hauken PRIVATE optimized
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
 )
 
+target_link_libraries(Hauken PRIVATE debug
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490d.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490d.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490d.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490d.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
+)
+
 install(TARGETS Hauken
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -141,13 +129,12 @@ install(TARGETS Hauken
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(GitVersion)
 get_version_from_git()
+project(Hauken VERSION ${PROJECT_VERSION})
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/version.h.in
     ${CMAKE_SOURCE_DIR}/version.h
 )
-
-project(Hauken VERSION ${PROJECT_VERSION})
 
 qt_generate_deploy_app_script(
     TARGET Hauken
@@ -156,4 +143,3 @@ qt_generate_deploy_app_script(
 )
 
 install(SCRIPT ${deploy_script})
-
