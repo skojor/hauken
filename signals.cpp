@@ -64,6 +64,8 @@ void MainWindow::setSignals()
             measurementDevice,
             &MeasurementDevice::instrDisconnect);
 
+    //connect(instrConnect, &QPushButton::clicked, measurementDevice, &MeasurementDevice::instrConnect); //TBR
+
     connect(instrTrigLevel,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             config.data(),
@@ -667,6 +669,16 @@ void MainWindow::setSignals()
             }
             instrIpAddr->addItem(text, text);
         }
+<<<<<<< HEAD
+=======
+        if (selIndex == -1) { // IP not found in list, assuming it is manually entered earlier
+            instrIpAddr->addItem(config->getInstrIpAddr(), config->getInstrIpAddr());
+            instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
+        }
+        else instrIpAddr->setCurrentIndex(selIndex);
+        connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
+        receiver->setIpAddress(instrIpAddr->currentData().toString());
+>>>>>>> 68fe6b7633b295b55c53d085848024f7a0dfe85c
     });
 
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {

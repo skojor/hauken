@@ -80,6 +80,7 @@
 #include "vifstreamtcp.h"
 #include "vifstreamudp.h"
 #include "waterfall.h"
+#include "receiver.h"
 
 class MainWindow : public QMainWindow
 {
@@ -316,8 +317,12 @@ private:
 
     QSharedPointer<UdpDataStream> udpStream = QSharedPointer<UdpDataStream>(new UdpDataStream, &QObject::deleteLater);
     QSharedPointer<TcpDataStream> tcpStream = QSharedPointer<TcpDataStream>(new TcpDataStream, &QObject::deleteLater);
+<<<<<<< HEAD
     QSharedPointer<VifStreamUdp> vifStreamUdp = QSharedPointer<VifStreamUdp>(new VifStreamUdp, &QObject::deleteLater);
     QSharedPointer<VifStreamTcp> vifStreamTcp = QSharedPointer<VifStreamTcp>(new VifStreamTcp, &QObject::deleteLater);
+=======
+    Receiver *receiver = new Receiver(config);
+>>>>>>> 68fe6b7633b295b55c53d085848024f7a0dfe85c
 
     double tracesPerSecond = 0;
     AccessHandler *accessHandler = new AccessHandler(config);

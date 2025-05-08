@@ -58,6 +58,27 @@ enum class Tags
     ADVPSC  =   11201
 };
 
+enum class ReceiverState {
+    Disconnected,
+    Connecting,
+    Connected,
+    Reconnecting
+};
+
+enum class ReceiverInitiateOrder {
+    None,
+    ReqReceiverId,
+    WaitForReceiverId,
+    ReceivedId,
+    ReqUdpState,
+    WaitForUdpState,
+    ReceivedUdpState,
+    ReqTcpState,
+    WaitForTcpState,
+    ReceivedTcpState,
+    Ready
+};
+
 enum class InstrumentState {
     DISCONNECTED,
     CONNECTING,
@@ -84,7 +105,7 @@ enum class InstrumentType
     EM100,
     EM200,
     ESMB,
-    USRP,
+    E310,
     ESMW,
     UNKNOWN
 };
@@ -425,11 +446,11 @@ public:
             maxFrequency = 8e9;
             hasAntNames = false;
         }
-        else if (type == Instrument::InstrumentType::USRP) {
+        else if (type == Instrument::InstrumentType::E310) {
             udpStream = true;
             tcpStream = true;
             systManLocName = true;
-            id = "USRP";
+            id = "E310";
             attrHeader = true;
             hasPscan = true;
             optHeaderEb500 = true;

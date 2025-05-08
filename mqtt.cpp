@@ -126,6 +126,7 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
 {
     if (state == QMqttClient::ClientState::Disconnected) {
         qDebug() << "MQTT disconnected";
+        reconnect();
     }
     else if (state == QMqttClient::ClientState::Connecting) {
         qDebug() << "MQTT connecting";
