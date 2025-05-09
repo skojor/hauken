@@ -10,8 +10,23 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth
 qt_standard_project_setup()
 
 set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/icons/favicon.rc")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(GitVersion)
+get_version_from_git()
+project(Hauken VERSION ${PROJECT_VERSION}.0)
 
-qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows}
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+  @ONLY)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/version.h.in
+    ${CMAKE_SOURCE_DIR}/version.h
+)
+
+qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+
     SimpleMail/SimpleMail
     SimpleMail/emailaddress.cpp SimpleMail/emailaddress.h SimpleMail/emailaddress_p.h
     SimpleMail/mimeattachment.cpp SimpleMail/mimeattachment.h
@@ -124,16 +139,7 @@ target_link_libraries(Hauken PRIVATE debug
 install(TARGETS Hauken
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-include(GitVersion)
-get_version_from_git()
-project(Hauken VERSION ${PROJECT_VERSION})
-
-configure_file(
-    ${CMAKE_SOURCE_DIR}/version.h.in
-    ${CMAKE_SOURCE_DIR}/version.h
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 qt_generate_deploy_app_script(

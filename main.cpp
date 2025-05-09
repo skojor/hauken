@@ -45,9 +45,7 @@ int main(int argc, char *argv[])
     a.setOrganizationName("JSK");
     a.setOrganizationDomain("nkom.no");
 
-    QString ver;
-    QStringList split = QString(FULL_VERSION).split('-');
-    if (split.size() > 1) ver = split[0] + '-' + split[1];
+    QString ver = QString(PROJECT_VERSION);
 
     qRegisterMetaType<QVector<qint16> >("QVector<qint16>");
     qRegisterMetaType<QList<QVector<qint16>> >("QList<QVector<qint16>>");
