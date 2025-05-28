@@ -5,7 +5,6 @@ project(Hauken LANGUAGES C CXX)
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
-#find_package(Qt6 REQUIRED Mqtt)
 
 qt_standard_project_setup()
 
@@ -114,26 +113,26 @@ target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
 )
 
-target_link_libraries(Hauken PRIVATE optimized
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
+target_link_libraries(Hauken PRIVATE
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
 )
 
-target_link_libraries(Hauken PRIVATE debug
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
+target_link_libraries(Hauken PRIVATE
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
 )
 
 install(TARGETS Hauken
