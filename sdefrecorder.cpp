@@ -605,11 +605,11 @@ void SdefRecorder::startTempFile()
         tempFile.setFileName(config->getLogFolder() + "/" + TEMPFILENAME);
 
         if (tempFile.exists()) {
-            qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
-            if (tempFile.remove())
-                qDebug() << "Deleted ok";
-            else
-                qDebug() << "Failed to delete" << tempFile.errorString();
+            //qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
+        tempFile.remove();
+                //qDebug() << "Deleted ok";
+            //else
+                //qDebug() << "Failed to delete" << tempFile.errorString();
         }
         if (!tempFile.open(QIODevice::WriteOnly))
             qDebug() << "Could not open file" << tempFile.fileName() << "for writing,"
@@ -648,10 +648,12 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
 
 void SdefRecorder::saveDataToTempFile()
 {
-    if (!tempFile.isOpen() && config->getSaveToTempFile())
+    if (!tempFile.isOpen() && config->getSaveToTempFile()) {
         startTempFile();
+        tempFile.flush();
+    }
 
-    if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
+    /*if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
         QByteArray byteArray;
         if (useNewMsFormat)
             byteArray
@@ -672,5 +674,5 @@ void SdefRecorder::saveDataToTempFile()
         tempFile.write(byteArray);
         tempFileTracedata.clear();
         tempFile.flush();
-    }
+    }*/
 }

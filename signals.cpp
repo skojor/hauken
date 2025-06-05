@@ -218,6 +218,8 @@ void MainWindow::setSignals()
     if (!config->getGeoLimitActive()) {
         connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
         connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+        connect(tcpStream.data(), &TcpDataStream::newFftData, ptrNetwork, &Network::newTraceline);
+        connect(udpStream.data(), &UdpDataStream::newFftData, ptrNetwork, &Network::newTraceline);
     }
 
     connect(measurementDevice,
@@ -275,6 +277,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, instrumentList, &InstrumentList::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssDisplay, &GnssDisplay::updSettings);
     connect(config.data(), &Config::settingsUpdated, accessHandler, &AccessHandler::updSettings);
+    connect(config.data(), &Config::settingsUpdated, ptrNetwork, &Network::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);

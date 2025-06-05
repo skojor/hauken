@@ -80,6 +80,7 @@
 #include "vifstreamtcp.h"
 #include "vifstreamudp.h"
 #include "waterfall.h"
+#include "network.h"
 
 class MainWindow : public QMainWindow
 {
@@ -323,6 +324,7 @@ private:
     AccessHandler *accessHandler = new AccessHandler(config);
     OAuthFileUploader *oauthFileUploader = new OAuthFileUploader(config);
     RestApi *restApi = new RestApi(config);
+    Network *ptrNetwork = new Network(config);
 
 signals:
     void stopPlot(bool);

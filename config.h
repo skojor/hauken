@@ -11,7 +11,6 @@
 #include <QFile>
 #include <QFileInfo>
 
-
 class Config : public QObject
 {
     Q_OBJECT
