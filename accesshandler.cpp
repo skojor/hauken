@@ -90,7 +90,7 @@ void AccessHandler::updSettings()
     setScope(QSet<QByteArray>() << config->getOAuth2Scope().toLatin1()
                                 << QByteArray("offline_access"));
 #else
-    setTokenUrl(config->getOAuth2AccessTokenUrl());
+    setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
     setScope(config->getOAuth2Scope() + "_" + QString("offline_access"));
 #endif
     setClientIdentifier(config->getOAuth2ClientId());
