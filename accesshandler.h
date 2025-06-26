@@ -31,7 +31,7 @@ public:
     void setScope(const QSet<QByteArray> s) { oauth2Flow->setRequestedScopeTokens(s); }
 #else
     void setAccessTokenUrl(QString s) { oauth2Flow->setToken(s.toLatin1()); }
-    void setScope(const QSet<QByteArray> s) { oauth2Flow->setScope(QString(s)); }
+    void setScope(const QString s) { oauth2Flow->setScope(s); }
 #endif
     void setClientIdentifier(QString s) { oauth2Flow->setClientIdentifier(s);}
 
