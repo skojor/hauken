@@ -26,9 +26,14 @@ public:
     ~AccessHandler();
 
     void setAuthorizationUrl(QString s) { oauth2Flow->setAuthorizationUrl(QUrl(s));}
+#ifdef Q_OS_WIN
     void setAccessTokenUrl(QString s) { oauth2Flow->setTokenUrl(QUrl(s)); }
-    void setClientIdentifier(QString s) { oauth2Flow->setClientIdentifier(s);}
     void setScope(const QSet<QByteArray> s) { oauth2Flow->setRequestedScopeTokens(s); }
+#else
+    void setAccessTokenUrl(QString s) { oauth2Flow->setToken(QUrl(s)); }
+    void setScope(const QSet<QByteArray> s) { oauth2Flow->setScope(s); }
+#endif
+    void setClientIdentifier(QString s) { oauth2Flow->setClientIdentifier(s);}
 
     void updSettings();
 
