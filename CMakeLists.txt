@@ -4,7 +4,7 @@ project(Hauken LANGUAGES C CXX)
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
 
 qt_standard_project_setup()
 
