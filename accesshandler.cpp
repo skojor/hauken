@@ -7,8 +7,9 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
     replyHandler = new QOAuthHttpServerReplyHandler(this);
     rewriteHeader();
     //qDebug() << "port" << replyHandler->port();
-
+#ifdef Q_OS_WIN
     oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
+#endif
     oauth2Flow->setReplyHandler(replyHandler);
     renewTokenTimer = new QTimer();
     renewTokenTimer->setSingleShot(true);
@@ -36,12 +37,14 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
         }
     });
 
+#ifdef Q_OS_WIN
     connect(oauth2Flow,
             &QOAuth2AuthorizationCodeFlow::serverReportedErrorOccurred,
             this,
             [](const QString &error, const QString &errorDescription, const QUrl &uri) {
                 qDebug() << "authflow error" << error << errorDescription << uri.toString();
             });
+#endif
     connect(oauth2Flow,
             &QOAuth2AuthorizationCodeFlow::requestFailed,
             this,
@@ -49,7 +52,11 @@ AccessHandler::AccessHandler(QSharedPointer<Config> c)
 
     connect(renewTokenTimer, &QTimer::timeout, this, [this] {
         qDebug() << "Asking for new token";
+#ifdef Q_OS_WIN
         oauth2Flow->refreshTokens();
+#else
+        oauth2Flow->refreshToken();
+#endif
     });
 }
 
