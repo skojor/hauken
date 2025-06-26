@@ -799,6 +799,7 @@ void MainWindow::setSignals()
             this,
             &MainWindow::instrGainControlChanged);
 
+#ifdef Q_OS_WIN
     connect(config.data(), &Config::settingsUpdated, this, [this]() {
         if (config->getDarkMode()
             && QApplication::styleHints()->colorScheme() != Qt::ColorScheme::Dark) {
@@ -832,6 +833,7 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
+#endif
 
     connect(restApi, &RestApi::pscanStartFreq, this, [this](double f) {
         instrStartFreq->setValue(f);
