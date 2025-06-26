@@ -78,7 +78,11 @@ void AccessHandler::reqAuthorization()
 void AccessHandler::updSettings()
 {
     setAuthorizationUrl(config->getOAuth2AuthUrl());
+#ifdef Q_OS_WIN
     setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
+#else
+    setTokenUrl(config->getOAuth2AccessTokenUrl());
+#endif
     setClientIdentifier(config->getOAuth2ClientId());
     setScope(QSet<QByteArray>() << config->getOAuth2Scope().toLatin1()
                                 << QByteArray("offline_access"));
