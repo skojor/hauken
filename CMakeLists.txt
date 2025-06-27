@@ -118,7 +118,7 @@ elseif(UNIX)
   target_include_directories(Hauken PRIVATE
       /usr/include/opencv4
       #${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
-      /usr/include/quazip5
+      /usr/include/QuaZip-Qt6-1.4/quazip
   )
 endif()
 
