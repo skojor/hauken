@@ -114,6 +114,7 @@ target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
 )
 
+if (WIN32)
 target_link_libraries(Hauken PRIVATE
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490.lib
@@ -135,6 +136,7 @@ target_link_libraries(Hauken PRIVATE
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
 )
+endif()
 
 install(TARGETS Hauken
     BUNDLE DESTINATION .
