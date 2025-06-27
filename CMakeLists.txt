@@ -116,7 +116,7 @@ target_include_directories(Hauken PRIVATE
 )
 elseif(UNIX)
   target_include_directories(Hauken PRIVATE
-      opencv4
+      /usr/include/opencv4
       ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
       ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
   )
