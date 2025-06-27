@@ -136,6 +136,28 @@ target_link_libraries(Hauken PRIVATE
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
 )
+elseif(UNIX)
+  target_link_libraries(Hauken PRIVATE
+      optimized fftw3
+      optimized opencv_core
+      optimized opencv_dnn
+      optimized opencv_highgui
+      optimized opencv_imgcodecs
+      optimized opencv_imgproc
+      optimized opencv_videoio
+      optimized quazip1-qt6
+  )
+
+  target_link_libraries(Hauken PRIVATE
+      debug fftw3
+      debug opencv_core
+      debug opencv_dnn
+      debug opencv_highgui
+      debug opencv_imgcodecs
+      debug opencv_imgproc490
+      debug opencv_videoio490
+      debug quazip1-qt6
+  )
 endif()
 
 install(TARGETS Hauken
