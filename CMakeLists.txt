@@ -108,11 +108,19 @@ target_link_libraries(Hauken PRIVATE
     Qt6::Mqtt
 )
 
+if (WIN32)
 target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
 )
+elseif(UNIX)
+  target_include_directories(Hauken PRIVATE
+      opencv4
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
+  )
+endif()
 
 if (WIN32)
 target_link_libraries(Hauken PRIVATE
@@ -154,8 +162,8 @@ elseif(UNIX)
       debug opencv_dnn
       debug opencv_highgui
       debug opencv_imgcodecs
-      debug opencv_imgproc490
-      debug opencv_videoio490
+      debug opencv_imgproc
+      debug opencv_videoio
       debug quazip1-qt6
   )
 endif()
