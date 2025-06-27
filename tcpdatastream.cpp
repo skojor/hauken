@@ -41,6 +41,10 @@ void TcpDataStream::newDataHandler()
         processData(tcpBuffer.first(header.dataSize));
         tcpBuffer = tcpBuffer.sliced(header.dataSize);
     }
+#ifdef Q_OS_WIN
     while (readHeader(tcpBuffer) && !checkHeader()) // out of sync
         tcpBuffer.removeFirst();
+#else
+    tcpBuffer.clear();
+#endif
 }
