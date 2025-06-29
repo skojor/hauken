@@ -16,7 +16,7 @@
 #include <QElapsedTimer>
 #include "config.h"
 #include "typedefs.h"
-#include "quazip/JlCompress.h"
+#include "JlCompress.h"
 #include <QNetworkAccessManager>
 
 #define TEMPFILENAME "feed.cef"
