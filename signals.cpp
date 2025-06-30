@@ -645,15 +645,16 @@ void MainWindow::setSignals()
 
                 int selIndex = -1;
                 for (int i = 0; i < ip.size(); i++) {
-                    instrIpAddr->addItem(name[i] + " (" + type[i] + ")", ip[i]);
+                    instrIpAddr->addItem(name[i] + " (" + type[i] + ")", QVariant(ip[i]));
                     if (ip[i] == config->getInstrIpAddr()) {
                         selIndex = i;
                     }
                 }
                 if (selIndex
                     == -1) { // IP not found in list, assuming it is manually entered earlier
-                    instrIpAddr->addItem(config->getInstrIpAddr(), config->getInstrIpAddr());
+                    instrIpAddr->addItem(config->getInstrIpAddr(), QVariant(config->getInstrIpAddr()));
                     instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
+
                 } else
                     instrIpAddr->setCurrentIndex(selIndex);
                 connect(instrIpAddr,
@@ -662,7 +663,7 @@ void MainWindow::setSignals()
                         &MainWindow::instrIpChanged);
             });
 
-    connect(instrIpAddr, &QComboBox::currentTextChanged, this, [this](const QString text) {
+    /*connect(instrIpAddr, &QComboBox::currentTextChanged, this, [this](const QString text) {
         if (text.count('.') == 3) { // Don't do anything until text looks like a valid IP
             if (instrIpAddr->itemText(instrIpAddr->count() - 1).count('.')
                 == 3) { // Already added a custom IP
@@ -670,7 +671,7 @@ void MainWindow::setSignals()
             }
             instrIpAddr->addItem(text, text);
         }
-    });
+    });*/
 
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)
