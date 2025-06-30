@@ -61,6 +61,7 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
     else if (state == QAbstractSocket::UnconnectedState && connected && !discPressed) { // happens if instrument restarts or SCPI conn. goes away otherwise
         if (autoReconnect)
             scpiReconnect = true;
+
         instrDisconnect();
         autoReconnectTimer->start(5000);
     }
