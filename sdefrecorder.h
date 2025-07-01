@@ -121,6 +121,7 @@ private:
     QNetworkAccessManager *networkManager; // New for OAuth2/SSO
 
     QList<qint16> tempFileTracedata;
+    bool startTempRecording = false;
 
     // Config cache
     bool useNewMsFormat;

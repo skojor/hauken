@@ -334,8 +334,8 @@ QByteArray SdefRecorder::createHeader()
            << "ScanTime "
            << QString::number((double) config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Instrument " << config->getInstrId() << "\n"
-           << "MeasureApp Hauken v." << QString(PROJECT_VERSION) << "\n"
-           << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << "\n"
+           << "MeasureApp Hauken v" << QString(PROJECT_VERSION) << "\n"
+           << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << " s\n"
            << "Attenuator "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
@@ -347,17 +347,18 @@ QByteArray SdefRecorder::createHeader()
            << "\n"
            << "AntennaPort " << QString::number(config->getInstrAntPort() + 1) << "\n"
            << (!gain.isEmpty() ? "GainControl " + gain + "\n" : "") << "Note "
-           << config->getInstrId() << "; Hauken v." << QString(PROJECT_VERSION) << "\n"
+           << config->getInstrId() << "\n"
            << "Note\n"
            << "Note " << config->getSdefStationInitals()
-           << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << ", Attenuator: "
+           << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << " s, Attenuator: "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
-           << ", AntennaPort: " << QString::number(config->getInstrAntPort() + 1) << ", FFT: "
+           /*<< ", AntennaPort: " << QString::number(config->getInstrAntPort() + 1) << ", FFT: "
            << (config->getInstrFftMode().contains("off", Qt::CaseInsensitive)
                    ? "Clear/write"
                    : config->getInstrFftMode())
-           << (!gain.isEmpty() ? ", GainControl: " + gain : "") << "\n\n";
+           << (!gain.isEmpty() ? ", GainControl: " + gain : "")*/
+           << "\n\n";
 
     return buf.toLocal8Bit();
 }
@@ -606,17 +607,17 @@ void SdefRecorder::startTempFile()
 
         if (tempFile.exists()) {
             //qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
-        tempFile.remove();
+            tempFile.remove();
                 //qDebug() << "Deleted ok";
             //else
-                //qDebug() << "Failed to delete" << tempFile.errorString();
+            //qDebug() << "Failed to delete" << tempFile.errorString();
         }
         if (!tempFile.open(QIODevice::WriteOnly))
             qDebug() << "Could not open file" << tempFile.fileName() << "for writing,"
                      << tempFile.errorString();
     } else {
         qDebug() << "Temp file" << tempFile.fileName()
-                 << "already opened, what did you try to do here?";
+        << "already opened, what did you try to do here?";
     }
     tempFile.write(createHeader());
 }
@@ -626,6 +627,7 @@ void SdefRecorder::closeTempFile()
     if (tempFile.isOpen()) {
         tempFile.close();
         qDebug() << "Temp file" << file.fileName() << "closed";
+        startTempRecording = false;
     }
 }
 
@@ -648,12 +650,17 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
 
 void SdefRecorder::saveDataToTempFile()
 {
-    if (!tempFile.isOpen() && config->getSaveToTempFile()) {
+    if (!startTempRecording && tempFileTracedata.size() > 0) {
+        QTimer::singleShot(3000, this, [this]() {
+            startTempRecording = true;
+        });
+    }
+    if (startTempRecording && !tempFile.isOpen() && config->getSaveToTempFile()) {
         startTempFile();
         tempFile.flush();
     }
 
-    /*if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
+    if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
         QByteArray byteArray;
         if (useNewMsFormat)
             byteArray
@@ -674,5 +681,5 @@ void SdefRecorder::saveDataToTempFile()
         tempFile.write(byteArray);
         tempFileTracedata.clear();
         tempFile.flush();
-    }*/
+    }
 }

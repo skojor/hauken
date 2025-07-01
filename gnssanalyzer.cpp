@@ -13,8 +13,10 @@ void GnssAnalyzer::getData(GnssData &data)
 
     mutex.lock();
     calcAvgs(data);
-    if (stateInstrumentGnss) analyze(data);
-    gnssData = data; // keep a local copy for display purposes
+    if (stateInstrumentGnss) {
+        analyze(data);
+        gnssData = data; // keep a local copy for display purposes
+    }
     mutex.unlock();
 }
 
