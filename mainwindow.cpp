@@ -110,6 +110,13 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
     VersionUpdater versionUpdater(config); // Handles any config changes needed
+
+    QSettings extras;
+    if (extras.value("incGeometry").isValid())
+        incidentLog->restoreGeometry(extras.value("incGeometry").toByteArray());
+    if (extras.value("plotGeometry").isValid())
+        customPlot->restoreGeometry(extras.value("plotGeometry").toByteArray());
+
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -127,6 +134,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 MainWindow::~MainWindow()
 {
+    QSettings extras;
+    extras.setValue("incGeometry", incidentLog->saveGeometry());
+    extras.setValue("plotGeometry", customPlot->saveGeometry());
     QApplication::exit();
 }
 
@@ -383,7 +393,9 @@ void MainWindow::createLayout()
 
     QHBoxLayout *incLayout = new QHBoxLayout;
     incBox = new QGroupBox("Incident log");
-    incLayout->addWidget(incidentLog);
+    //incLayout->addWidget(incidentLog);
+    incidentLog->show();
+    incidentLog->setWindowTitle("Incident log");
     incBox->setLayout(incLayout);
     incBox->setMaximumHeight(220);
 
@@ -422,7 +434,10 @@ void MainWindow::createLayout()
     QGridLayout *plotLayout = new QGridLayout;
     plotLayout->addWidget(plotMaxScroll, 0, 0, 1, 1);
     plotLayout->addWidget(plotMinScroll, 2, 0, 1, 1);
-    plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+    //plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+    customPlot->show();
+    customPlot->setWindowTitle("RF spectrum");
+
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnTrigRecording);
     btnTrigRecording->setFixedWidth(100);
