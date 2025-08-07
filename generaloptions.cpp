@@ -58,9 +58,9 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     leOpt8->setToolTip("Address used to download instrument IP address lists. Blank to disable");
 
     mainLayout->addRow(cbOpt3);
-    cbOpt3->setText("Use dBm instead of dBμV (TODO)");
+    cbOpt3->setText("Use dBm instead of dBμV");
     cbOpt3->setToolTip("Change scale to dBm");
-    cbOpt3->setDisabled(true);
+    //cbOpt3->setDisabled(true);
 
     mainLayout->addRow(cbOpt4);
     cbOpt4->setText("Dark mode");

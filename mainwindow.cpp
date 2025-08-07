@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
+    useDbm = config->getUseDbm();
+
     QFont font = QApplication::font("QMessageBox");
     font.setPixelSize(11);
     qApp->setFont(font);
@@ -74,7 +76,7 @@ MainWindow::MainWindow(QWidget *parent)
     cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(true);
+    incidentLog->setReadOnly(false);
 
 #ifdef _WIN32
     if (QFile::exists(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav")) {
@@ -537,8 +539,8 @@ void MainWindow::setToolTips()
         "to be set up with NTP client software. The NTP time will then be "
         "compared with this value, and triggers an incident if the offset "
         "is higher than set value. Set to 0 to disable.");
-    plotMaxScroll->setToolTip("Set the max. scale in dBuV");
-    plotMinScroll->setToolTip("Set the min. scale in dBuV");
+    plotMaxScroll->setToolTip("Set the max. scale");
+    plotMinScroll->setToolTip("Set the min. scale");
     plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no "
                                 "maxhold.\nOnly affects displayed maxhold");
     showWaterfall->setToolTip("Select type of waterfall overlay");
@@ -688,7 +690,7 @@ void MainWindow::setValidators()
     instrIpAddr->setInputMask("000.000.000.000");
     instrIpAddr->setCursorPosition(0);*/
 
-    instrTrigLevel->setRange(-50, 200);
+    instrTrigLevel->setRange(-200, 200);
     instrTrigLevel->setDecimals(0);
     instrTrigTime->setRange(0, 9e5);
     instrTrigBandwidth->setRange(0, 9.99e9);
@@ -898,7 +900,7 @@ void MainWindow::updWindowTitle(const QString msg)
     if (!msg.isEmpty())
         extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " ("
                 + instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v") + PROJECT_VERSION + extra + " ("
+    setWindowTitle(tr("Hauken v") + PROJECT_VERSION + " (Jammertest 2025 edition) " + extra + " ("
                    + config->getCurrentFilename().split('/').last() + ")");
 }
 

@@ -19,6 +19,7 @@ void MqttOptions::start()
     sbOpt1->setValue(config->getMqttPort());
     leOpt12->setText(config->getMqttKeepaliveTopic());
     leOpt15->setText(config->getMqttWebswitchAddress());
+    cbOpt2->setChecked(config->getMqttTestTriggersRecording());
 
     dialog->exec();
 }
@@ -27,6 +28,7 @@ void MqttOptions::saveCurrentSettings()
 {
     config->setMqttActivate(cbOpt1->isChecked());
     config->setMqttServer(leOpt1->text());
+    config->setMqttTestTriggersRecording(cbOpt2->isChecked());
 
     QStringList names, topics, toIncidentlog;
     for (auto &val : subNames) if (!val->text().isEmpty()) names.append(val->text());
@@ -104,6 +106,10 @@ void MqttOptions::setupWindow()
     cbOpt1->setToolTip("Enabling this option will subscribe for sensor data from an MQTT server. " \
                        "If set the sensor name will be included in the HTTP report together with" \
                        "the value reported from the MQTT server.");
+
+    subServerLayout->addRow(cbOpt2);
+    cbOpt2->setText("MQTT test start triggers recording");
+    cbOpt2->setToolTip("Special MQTT test start message will trigger SDEF recording");
 
     subServerLayout->addRow(new QLabel(tr("MQTT server IP/address")), leOpt1);
     leOpt1->setToolTip(tr("MQTT server to query for data"));

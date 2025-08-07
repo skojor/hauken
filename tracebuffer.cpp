@@ -12,7 +12,7 @@ void TraceBuffer::start()
     throttleTimer = new QElapsedTimer;
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
-    connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+    //connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
 
     connect(maintenanceRestartTimer, &QTimer::timeout, this, [this]() {
         maintenanceRestartTimer->stop();
@@ -286,7 +286,7 @@ void TraceBuffer::updSettings()
     averageDispLevelNormalized.clear();
     tracesNeededForAvg = config->getInstrTracesNeededForAverage();
     useDbm = config->getUseDbm();
-    maintainAvgLevel();
+    //maintainAvgLevel();
 }
 
 void TraceBuffer::deviceDisconnected()

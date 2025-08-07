@@ -35,8 +35,19 @@ public slots:
     void getAiData(int secs = 0);
     void restartCalcAvgLevel();
     void sendDispTrigline()
-    { if (normalizeSpectrum) emit newDispTriglevel(averageDispLevelNormalized);
-        else emit newDispTriglevel(averageDispLevel);}
+    {     if (normalizeSpectrum) {
+            if (averageDispLevelNormalized.isEmpty())
+                averageDispLevelNormalized.fill(trigLevel, plotResolution);
+            emit newDispTriglevel(averageDispLevelNormalized);
+        }
+        else {
+            QVector<double> copy = averageDispLevel;
+            for (auto &val : copy)
+                val += trigLevel;
+
+            emit newDispTriglevel(copy);
+        }
+    }
     void updSettings();
     void deviceDisconnected();
     void recorderStarted();

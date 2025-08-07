@@ -68,6 +68,10 @@ void MainWindow::setSignals()
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             config.data(),
             &Config::setInstrTrigLevel);
+    connect(instrTrigLevel,
+            QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            traceBuffer,
+            &TraceBuffer::sendDispTrigline);
     connect(instrTrigBandwidth,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             config.data(),
@@ -408,6 +412,8 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqtt, &Mqtt::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(mqtt, &Mqtt::triggerRecording, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(mqtt, &Mqtt::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
     connect(measurementDevice,
@@ -884,4 +890,20 @@ void MainWindow::setSignals()
     connect(restApi, &RestApi::gaincontrol, this, [this](QString s) {
         instrGainControl->setCurrentIndex(instrGainControl->findText(s));
     });
+
+    connect(config.data(), &Config::settingsUpdated, this, [this] () {
+        if (config->getUseDbm() != useDbm) {
+            useDbm = config->getUseDbm();
+            if (useDbm) {
+                plotMaxScroll->setValue(plotMaxScroll->value() - 107);
+                plotMinScroll->setValue(plotMinScroll->value() - 107);
+            }
+            else {
+                plotMaxScroll->setValue(plotMaxScroll->value() + 107);
+                plotMinScroll->setValue(plotMinScroll->value() + 107);
+            }
+            traceBuffer->sendDispTrigline();
+        }
+    });
 }
+

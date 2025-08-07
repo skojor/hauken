@@ -60,6 +60,7 @@ private:
     double startFreq, stopFreq, resolution;
     bool pmrMode;
     qint16 maxLevel;
+    bool useDbm = false;
     //QList<PmrTable> pmrTable;
 };
 

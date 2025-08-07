@@ -30,6 +30,8 @@ public slots:
 signals:
     void newData(QString& name, double& value);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
+    void triggerRecording();
+    void endRecording();
 
 private slots:
     void stateChanged(QMqttClient::ClientState state);

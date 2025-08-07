@@ -109,7 +109,7 @@ public slots:
 
     QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString(); }
     void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
-    bool getUseDbm() { return false; } //settings->value("useDbm", false).toBool();} // Deact, TODO!
+    bool getUseDbm() { return settings->value("useDbm", false).toBool();}
     void setUseDbm(bool b) { settings->setValue("useDbm", b); emit settingsUpdated();}
     bool getDarkMode() { return settings->value("darkMode", false).toBool(); }
     void setDarkMode(bool b)
@@ -438,6 +438,9 @@ public slots:
 
     QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString().trimmed();}
     void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);emit settingsUpdated(); }
+
+    bool getMqttTestTriggersRecording() { return settings->value("mqtt/testTriggersRecording", false).toBool();}
+    void setMqttTestTriggersRecording(bool b) { settings->setValue("mqtt/testTriggersRecording", b);}
 
 private slots:
 

@@ -325,6 +325,7 @@ private:
     OAuthFileUploader *oauthFileUploader = new OAuthFileUploader(config);
     RestApi *restApi = new RestApi(config);
     Network *ptrNetwork = new Network(config);
+    bool useDbm;
 
 signals:
     void stopPlot(bool);

@@ -381,7 +381,7 @@ void SdefRecorder::finishRecording()
     emit recordingEnded();
     if (config->getSdefSaveToFile()) {
         if (recordingTimeoutTimer->isActive()) {
-            emit toIncidentLog(
+            /*emit toIncidentLog(
                 NOTIFY::TYPE::SDEFRECORDER,
                 "",
                 "Recording ended after "
@@ -394,7 +394,7 @@ void SdefRecorder::finishRecording()
                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
                                             == 1
                                         ? " minute"
-                                        : " minutes")));
+                                        : " minutes")));*/
             if (autorecorderTimer->isActive())
                 autorecorderTimer->stop();
         }
