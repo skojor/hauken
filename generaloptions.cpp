@@ -66,6 +66,14 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt4->setText("Dark mode");
     cbOpt4->setToolTip("Force program to choose dark mode colors");
 
+    mainLayout->addRow(new QLabel("Signal level correction value (dB)"), leOpt9);
+    leOpt9->setToolTip("Value will be added to the trace values from the receiver");
+
+    mainLayout->addRow(cbOpt5);
+    cbOpt5->setText("Show RF spectrum and incident log in separate windows");
+    cbOpt5->setToolTip("Jammertest mode, restart after changing!");
+
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -86,6 +94,8 @@ void GeneralOptions::start()
     leOpt8->setText(config->getIpAddressServer());
     cbOpt3->setChecked(config->getUseDbm());
     cbOpt4->setChecked(config->getDarkMode());
+    leOpt9->setText(QString::number(config->getCorrValue(), 'f', 1));
+    cbOpt5->setChecked(config->getSeparatedWindows());
 
     dialog->exec();
 }
@@ -112,6 +122,8 @@ void GeneralOptions::saveCurrentSettings()
     config->setIpAddressServer(leOpt8->text());
     config->setUseDbm(cbOpt3->isChecked());
     config->setDarkMode(cbOpt4->isChecked());
+    config->setCorrValue(leOpt9->text().toDouble());
+    config->setSeparatedWindows(cbOpt5->isChecked());
 
     dialog->close();
 }

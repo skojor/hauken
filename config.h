@@ -117,6 +117,10 @@ public slots:
         settings->setValue("darkMode", b);
         emit settingsUpdated();
     }
+    int getCorrValue() { return settings->value("corrValue", 0).toDouble();}
+    void setCorrValue(double d) { settings->setValue("corrValue", d); emit settingsUpdated();}
+    bool getSeparatedWindows() { return settings->value("separatedWindows", false).toBool();}
+    void setSeparatedWindows(bool b) { settings->setValue("separatedWindows", b); emit settingsUpdated();}
 
     // Window settings
     bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}

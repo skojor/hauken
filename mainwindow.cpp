@@ -395,9 +395,13 @@ void MainWindow::createLayout()
 
     QHBoxLayout *incLayout = new QHBoxLayout;
     incBox = new QGroupBox("Incident log");
-    //incLayout->addWidget(incidentLog);
-    incidentLog->show();
-    incidentLog->setWindowTitle("Incident log");
+    if (config->getSeparatedWindows()) {
+        incidentLog->show();
+        incidentLog->setWindowTitle("Incident log");
+    }
+    else {
+        incLayout->addWidget(incidentLog);
+    }
     incBox->setLayout(incLayout);
     incBox->setMaximumHeight(220);
 
@@ -436,9 +440,14 @@ void MainWindow::createLayout()
     QGridLayout *plotLayout = new QGridLayout;
     plotLayout->addWidget(plotMaxScroll, 0, 0, 1, 1);
     plotLayout->addWidget(plotMinScroll, 2, 0, 1, 1);
-    //plotLayout->addWidget(customPlot, 0, 1, 3, 1);
-    customPlot->show();
-    customPlot->setWindowTitle("RF spectrum");
+
+    if (config->getSeparatedWindows()) {
+        customPlot->show();
+        customPlot->setWindowTitle("RF spectrum");
+    }
+    else {
+        plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+    }
 
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnTrigRecording);

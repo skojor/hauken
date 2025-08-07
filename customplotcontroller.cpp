@@ -157,6 +157,10 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
         if (config->getUseDbm()) {
             for (int i=0; i < copy.size(); i++) copy[i] -= 107;
         }
+        if ((int)config->getCorrValue() != 0) {
+            double corr = config->getCorrValue();
+            for (int i=0; i < copy.size(); i++) copy[i] += corr;
+        }
 
         for (int i=0; i<plotResolution; i++) {
             if (!freqSelection.at(i))
