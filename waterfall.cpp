@@ -120,7 +120,7 @@ void Waterfall::updSettings()
 void Waterfall::receiveIqData(const QList<complexInt16> &iq16)
 {
     filename = config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss_")
-               + config->getStationName() + "_" + QString::number(ffmFrequency, 'f', 0) + "MHz_"
+               + config->getStationName() + "_" + QString::number(ffmFrequency, 'f', 3) + "MHz_"
                + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
     if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
         saveIqData(iq16);
