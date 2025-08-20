@@ -14,7 +14,7 @@
 #include <QPromise>
 #include <QSharedPointer>
 #include <QTimer>
-#include <QtConcurrent/QtConcurrent>
+#include <QtConcurrent>
 #include "config.h"
 #include "fftw3.h"
 #include "typedefs.h"

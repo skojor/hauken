@@ -1,3 +1,7 @@
 #include "iqplot.h"
 
-IqPlot::IqPlot() {}
+IqPlot::IqPlot(QSharedPointer<Config> c)
+{
+    config = c;
+}
+
