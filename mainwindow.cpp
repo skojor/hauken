@@ -28,8 +28,6 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
     waterfall = new Waterfall(config);
-    iqdataWaterfall = new Waterfall(config);
-    iqdataWaterfall->start();
 
     //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
@@ -199,8 +197,8 @@ void MainWindow::createActions()
     openIqAct->setStatusTip(tr("Read and analyze a raw IQ data file from disk"));
     connect(openIqAct, &QAction::triggered, this, [this]() {
         QFuture<bool> future
-            = QtConcurrent::run(&Waterfall::readAndAnalyzeFile,
-                                iqdataWaterfall,
+            = QtConcurrent::run(&IqPlot::readAndAnalyzeFile,
+                                iqPlot,
                                 QFileDialog::getOpenFileName(this,
                                                              "Open raw IQ data file",
                                                              config->getLogFolder(),
@@ -753,7 +751,7 @@ void MainWindow::instrFfmCenterFreqChanged()
         traceBuffer->restartCalcAvgLevel();
         waterfall->restartPlot();
     }
-    iqdataWaterfall->setFfmFrequency(instrFfmCenterFreq->value());
+    iqPlot->setFfmFrequency(instrFfmCenterFreq->value());
 }
 
 void MainWindow::instrFfmSpanChanged()

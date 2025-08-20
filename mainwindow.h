@@ -32,7 +32,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QToolBar>
-#include <QtConcurrent/QtConcurrent>
+#include <QtConcurrent>
 #include <QtMultimedia/QAudioOutput>
 #include <QtMultimedia/QMediaPlayer>
 #include "config.h"
@@ -81,6 +81,7 @@
 #include "vifstreamudp.h"
 #include "waterfall.h"
 #include "network.h"
+#include "iqplot.h"
 
 class MainWindow : public QMainWindow
 {
@@ -285,12 +286,12 @@ private:
     Notifications *notifications = new Notifications(config);
     QThread *notificationsThread = new QThread;
 
+    IqPlot *iqPlot = new IqPlot(config);
     SdefRecorder *sdefRecorder = new SdefRecorder(config);
     QThread *sdefRecorderThread = new QThread;
 
     Waterfall *waterfall;
     QThread *waterfallThread;
-    Waterfall *iqdataWaterfall;
 
     CameraRecorder *cameraRecorder;
     QThread *cameraThread;

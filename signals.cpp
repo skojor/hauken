@@ -4,10 +4,10 @@ void MainWindow::setSignals()
 {
     // TCP/UDP datastreams
     connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this](const QList<complexInt16> iq) {
-        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, iq);
+        QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
     });
     connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this](const QList<complexInt16> iq) {
-        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, iq);
+        QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
     });
 
     connect(instrStartFreq,
@@ -272,7 +272,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer3, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
-    connect(config.data(), &Config::settingsUpdated, iqdataWaterfall, &Waterfall::updSettings);
+    connect(config.data(), &Config::settingsUpdated, iqPlot, &IqPlot::updSettings);
     //connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
@@ -286,19 +286,19 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     //connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqdataWaterfall, &Waterfall::requestIqData); // New
-    connect(iqdataWaterfall,
-            &Waterfall::requestIq,
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData); // New
+    connect(iqPlot,
+            &IqPlot::requestIq,
             measurementDevice,
             &MeasurementDevice::collectIqData);
     connect(vifStreamTcp.data(),
             &VifStreamTcp::stopIqStream,
             measurementDevice,
             &MeasurementDevice::deleteIfStream);
-    connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::resetTimer);
-    connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::requestIqData);
+    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
+    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
 
-    connect(sdefRecorder, &SdefRecorder::publishFilename, iqdataWaterfall, &Waterfall::setFilename);
+    connect(sdefRecorder, &SdefRecorder::publishFilename, iqPlot, &IqPlot::setFilename);
 
     connect(sdefRecorder,
             &SdefRecorder::recordingStarted,
@@ -528,7 +528,7 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
-    connect(iqdataWaterfall, &Waterfall::iqPlotReady, notifications, &Notifications::recIqPlot);
+    connect(iqPlot, &IqPlot::iqPlotReady, notifications, &Notifications::recIqPlot);
 
     connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
     connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
@@ -766,16 +766,16 @@ void MainWindow::setSignals()
             &MeasurementDevice::setTrigCenterFrequency);
     connect(traceAnalyzer,
             &TraceAnalyzer::trigRegistered,
-            iqdataWaterfall,
-            &Waterfall::setFfmFrequency);
+            iqPlot,
+            &IqPlot::setFfmFrequency);
     connect(measurementDevice,
             &MeasurementDevice::iqFfmFreqChanged,
-            iqdataWaterfall,
-            &Waterfall::setFfmFrequency);
+            iqPlot,
+            &IqPlot::setFfmFrequency);
     connect(vifStreamTcp.data(),
             &VifStreamTcp::newFfmCenterFrequency,
-            iqdataWaterfall,
-            &Waterfall::setFfmFrequency);
+            iqPlot,
+            &IqPlot::setFfmFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
         if (gnssDevice1->isValid())
