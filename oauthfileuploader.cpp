@@ -90,10 +90,10 @@ void OAuthFileUploader::networkAccessManagerFinished()
 
 void OAuthFileUploader::networkReplyProgressHandler(qint64 up, qint64 total)
 {
-    if (total != 0) {
+    /*if (total != 0) {
         emit uploadProgress(100 * up / total);
         //qDebug() << "upl progress" << 100 * up / total;
-    }
+    }*/
 }
 
 void OAuthFileUploader::networkReplyFinishedHandler()
@@ -113,7 +113,8 @@ void OAuthFileUploader::networkReplyFinishedHandler()
             id.remove('\"');
             id = id.split(',').first();
             //qDebug() << id << accessToken << list;
-            if (!config->getOauth2OperatorAddress().isEmpty())
+            if (!config->getOauth2OperatorAddress().isEmpty()
+                && !id.contains("null", Qt::CaseInsensitive))
                 setOperator(id, accessToken); // Add operator if url is specified
         }
     } else if (QString(reply).contains("filealreadyexists", Qt::CaseInsensitive)) {
@@ -187,10 +188,10 @@ void OAuthFileUploader::setOperator(QString id, QString token)
     QObject::connect(reply, &QNetworkReply::finished, [=]() {
         if (reply->error() == QNetworkReply::NoError) {
             QString contents = QString::fromUtf8(reply->readAll());
-            qDebug() << contents;
+            //qDebug() << contents;
         } else {
             QString err = reply->errorString();
-            qDebug() << err;
+           // qDebug() << err;
         }
         reply->deleteLater();
     });
