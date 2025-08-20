@@ -113,11 +113,17 @@ void Notifications::appendIncidentLog(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts /*<< "<tr><td style='font-size: 14pt'>" << dt.toString("dd.MM.yy") << "</td><td style='font-size: 14pt'>"*/
-        << "<tr><td style='font-size: 14pt' width=50>" << dt.toString("ddd") << "<td style='font-size: 14pt' width=80>" << dt.toString("hh:mm:ss")
-        << "</td>" << "<td style='font-size: 14pt'>" << string
+    if (config->getNotificationLargeFonts()) {
+        ts << "<tr><td style='font-size: 14pt' width=50>" << dt.toUTC().toString("ddd") << "<td style='font-size: 14pt' width=120>" << dt.toUTC().toString("hh:mm:ss")
+        << " UTC</td>" << "<td style='font-size: 14pt'>" << string
         << "</td></tr>";
+    }
+    else {
+        ts << "<tr><td>" << dt.toString("dd.MM.yy") << "</td><td>"
+           << dt.toString("hh:mm:ss") << "</td><td>" << string
+           << "</td></tr>";
 
+    }
     emit showIncident(text);
 }
 
@@ -288,10 +294,13 @@ bool Notifications::simpleParametersCheck()
 
 void Notifications::setupIncidentTable()
 {
-    emit showIncident("<table><tr><th width=50 align=left>Day</th><th width=80 align=left>Time</th><th align=left>Text</th></tr>");
-    //appendIncidentLog(QDateTime::currentDateTime(), "Application started");
-    //emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
-    //appendIncidentLog(QDateTime::currentDateTime(), "Application started");
+    if (config->getNotificationLargeFonts()) {
+        emit showIncident("<table><tr><th width=50 align=left>Day</th><th width=120 align=left>Time</th><th align=left>Text</th></tr>");
+    }
+    else {
+        emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
+        appendIncidentLog(QDateTime::currentDateTime(), "Application started");
+    }
 }
 
 void Notifications::recTracePlot(const QPixmap *pic)

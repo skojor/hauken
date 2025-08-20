@@ -295,6 +295,8 @@ public slots:
     void setEmailFilteredRecipients(QString s) { settings->setValue("email/filteredRecipients", s.trimmed()); emit settingsUpdated();}
     int getEmailJammerProbabilityFilter() { return settings->value("email/jammerProbabilityFilter", 60).toInt();}
     void setEmailJammerProbabilityFilter(int i) { settings->setValue("email/jammerProbabilityFilter", i); emit settingsUpdated();}
+    bool getNotificationLargeFonts() { return settings->value("notify/LargeFonts", false).toBool();}
+    void setNotificationLargeFonts(bool b) { settings->setValue("notify/LargeFonts", b); emit settingsUpdated();}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}

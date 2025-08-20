@@ -909,7 +909,7 @@ void MainWindow::updWindowTitle(const QString msg)
     if (!msg.isEmpty())
         extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " ("
                 + instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v") + PROJECT_VERSION + " (Jammertest 2025 edition) " + extra + " ("
+    setWindowTitle(tr("Hauken v") + PROJECT_VERSION + extra + " ("
                    + config->getCurrentFilename().split('/').last() + ")");
 }
 
