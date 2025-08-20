@@ -31,6 +31,7 @@
 
 class Arduino : public QObject
 {
+    Q_OBJECT
 public:
     Arduino(QSharedPointer<Config> c);
     void connectToPort();

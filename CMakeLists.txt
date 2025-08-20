@@ -91,6 +91,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     vifstreamudp.cpp vifstreamudp.h
     waterfall.cpp waterfall.h
     network.h network.cpp
+    iqplot.h iqplot.cpp
 )
 
 target_link_libraries(Hauken PRIVATE

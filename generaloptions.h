@@ -5,7 +5,6 @@
 
 class GeneralOptions : public OptionsBaseClass
 {
-    Q_OBJECT
 public:
     GeneralOptions(QSharedPointer<Config> c);
 

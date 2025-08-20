@@ -17,6 +17,11 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
         //qDebug() << "Sending MQTT keepalive";
     });
     connect(webswitchTimer, &QTimer::timeout, this, &Mqtt::webswitchRequestData);
+    connect(connectionTimer, &QTimer::timeout, this, [this]() {
+        qDebug() << "MQTT connection timed out, disconnecting";
+        mqttClient.disconnectFromHost();
+    });
+    connectionTimer->setSingleShot(true);
 
     connect(webswitchProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Mqtt::webswitchParseData);
     webswitchProcess->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
@@ -28,10 +33,8 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
     else if (QSysInfo::kernelType().contains("linux")) {
         webswitchProcess->setProgram("curl");
     }
-    QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy);
 
-
-    QTimer::singleShot(1000, this, [this] {
+   /* QTimer::singleShot(1000, this, [this] {
         QJsonObject json;
         json["siteid"] = 1;
         json["sitename"] = "Bleik";
@@ -118,7 +121,7 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
         json["utctime"] = "2023-09-07T12:27:39+02:00";
         QJsonDocument jsonDoc(json);
         parseMqtt("basic_status/site1", jsonDoc.toJson());
-    });
+    });*/
 }
 
 void Mqtt::stateChanged(QMqttClient::ClientState state)
@@ -128,8 +131,10 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
     }
     else if (state == QMqttClient::ClientState::Connecting) {
         qDebug() << "MQTT connecting";
+        connectionTimer->start(MQTT_CONN_TIMEOUT_MS);
     }
     else if (state == QMqttClient::ClientState::Connected) {
+        connectionTimer->stop();
         qDebug() << "MQTT connected to broker, requesting subscriptions";
         subscribe();
         if (!config->getMqttKeepaliveTopic().isEmpty()) mqttClient.publish(config->getMqttKeepaliveTopic(), QByteArray());
@@ -194,26 +199,29 @@ void Mqtt::updSettings()
             reconnect();
         }
     }
+    bool reconnectFlag = false;
     if (config->getMqttServer() != mqttClient.hostname()) {
         mqttClient.setHostname(config->getMqttServer());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
-        reconnect();
+        reconnectFlag = true;
     }
     if (config->getMqttUsername() != mqttClient.username()) {
         mqttClient.setUsername(config->getMqttUsername());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
-        reconnect();
+        reconnectFlag = true;
     }
     if (config->getMqttPassword() != mqttClient.password()) {
         mqttClient.setPassword(config->getMqttPassword());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
-        reconnect();
+        reconnectFlag = true;
     }
     if (config->getMqttPort() != mqttClient.port()) {
         mqttClient.setPort(config->getMqttPort());
         if (mqttClient.state() == QMqttClient::ClientState::Connected) mqttClient.disconnect();
-        reconnect();
+        reconnectFlag = true;
     }
+    if (reconnectFlag)
+        reconnect();
 
     if (config->getMqttKeepaliveTopic() != keepaliveTopic) {
         keepaliveTopic = config->getMqttKeepaliveTopic();

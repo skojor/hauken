@@ -84,16 +84,22 @@ void AccessHandler::reqAuthorization()
 
 void AccessHandler::updSettings()
 {
-    setAuthorizationUrl(config->getOAuth2AuthUrl());
+    if (!config->getOAuth2AccessTokenUrl().isEmpty() &&
+        !config->getOAuth2AuthUrl().isEmpty() &&
+        !config->getOAuth2Scope().isEmpty() &&
+        !config->getOAuth2ClientId().isEmpty())
+    {
+        setAuthorizationUrl(config->getOAuth2AuthUrl());
 #ifdef Q_OS_WIN
-    setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
-    setScope(QSet<QByteArray>() << config->getOAuth2Scope().toLatin1()
-                                << QByteArray("offline_access"));
+        setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
+        setScope(QSet<QByteArray>() << config->getOAuth2Scope().toLatin1()
+                                    << QByteArray("offline_access"));
 #else
-    setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
-    setScope(config->getOAuth2Scope() + "_" + QString("offline_access"));
+        setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
+        setScope(config->getOAuth2Scope() + "_" + QString("offline_access"));
 #endif
-    setClientIdentifier(config->getOAuth2ClientId());
+        setClientIdentifier(config->getOAuth2ClientId());
+    }
     authEnabled = config->getOauth2Enable();
 
     // Parameters check

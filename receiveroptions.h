@@ -5,7 +5,6 @@
 
 class ReceiverOptions : public OptionsBaseClass
 {
-    Q_OBJECT
 public:
     ReceiverOptions(QSharedPointer<Config> c);
 

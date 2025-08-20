@@ -79,11 +79,18 @@ MainWindow::MainWindow(QWidget *parent)
     incidentLog->setReadOnly(false);
 
 #ifdef _WIN32
-    if (QFile::exists(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav")) {
+    if (QFile::exists(config->getWorkFolder() + "/notify.wav")) {
+        player->setSource(QUrl::fromLocalFile(config->getWorkFolder() +  + "/notify.wav"));
+        player->setAudioOutput(audioOutput);
+        audioOutput->setVolume(80);
+        qDebug() << "Using notify from" << config->getWorkFolder();
+    }
+    else if (QFile::exists(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav")) {
         player->setSource(QUrl::fromLocalFile(
             QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
         player->setAudioOutput(audioOutput);
         audioOutput->setVolume(80);
+        qDebug() << "Using notify from" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
     }
 #endif
 
@@ -105,6 +112,7 @@ MainWindow::MainWindow(QWidget *parent)
     notificationTimer->setSingleShot(true);
 
     instrumentList->start(); // check if instrument server is available
+    gnssDisplay->setParent(this);
     gnssDisplay->start();
 
     measurementDevice->setUdpStreamPtr(udpStream);
@@ -131,6 +139,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
     measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
+    incidentLog->close();
+    customPlot->close();
     QMainWindow::closeEvent(event);
 }
 
@@ -398,6 +408,8 @@ void MainWindow::createLayout()
     if (config->getSeparatedWindows()) {
         incidentLog->show();
         incidentLog->setWindowTitle("Incident log");
+        incidentLog->setAttribute(Qt::WA_QuitOnClose);
+
     }
     else {
         incLayout->addWidget(incidentLog);

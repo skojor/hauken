@@ -35,7 +35,7 @@ void GnssDisplay::updGnssData(GnssData g, int id)
 
 void GnssDisplay::setupWidget()
 {
-    wdg->resize(640, 480);
+    //wdg->resize(640, 480);
     wdg->setWindowTitle("GNSS data");
     QGridLayout *mainLayout = new QGridLayout;
 
@@ -89,22 +89,22 @@ void GnssDisplay::setupWidget()
     mainLayout->addWidget(gnss2LeftGroupBox, 1, 0);
     mainLayout->addWidget(gnss2RightGroupBox, 1, 1);
     wdg->setLayout(mainLayout);
-    wdg->restoreGeometry(config->getGnssDisplayWindowState());
-    wdg->adjustSize();
+    //wdg->adjustSize();
 }
 
 void GnssDisplay::updSettings()
 {
     if (!isClosing && config->getGnssDisplayWidget() && !wdg->isVisible()) {
         wdg->show();
+        wdg->restoreGeometry(config->getGnssDisplayWindowState());
     }
     else if (!config->getGnssDisplayWidget() && wdg->isVisible()) wdg->close();
     gnss1Name = config->getGnss1Name();
     gnss2Name = config->getGnss2Name();
     if (gnss1Name.isEmpty()) gnss1RightGroupBox->setTitle("GNSS receiver 1 - info/calculations");
-    else gnss1RightGroupBox->setTitle(gnss1Name + " - info/calculations");
+    else gnss1RightGroupBox->setTitle(gnss1Name);
     if (gnss2Name.isEmpty()) gnss2RightGroupBox->setTitle("GNSS receiver 2 - info/calculations");
-    else gnss2RightGroupBox->setTitle(gnss2Name + " - info/calculations");
+    else gnss2RightGroupBox->setTitle(gnss2Name);
 }
 
 void GnssDisplay::updText()
