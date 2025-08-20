@@ -25,7 +25,7 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
             }
         }
     }
-    else {
+    /*else {
         qDebug() << "No bandplan file found, creating one";
         file.open(QIODevice::ReadWrite);
         file.write("G1,1593,1610,255,0,0,0,50\n");
@@ -49,7 +49,7 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
                 gnssBandCenterFreq.append(split[8].toDouble());
             }
         }
-    }
+    }*/
     file.close();
 }
 

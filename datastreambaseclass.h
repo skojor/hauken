@@ -59,6 +59,7 @@ public:
     int traceCtr = 0;
     QVector<QNetworkDatagram> ifBufferUdp;
     QByteArray ifBufferTcp;
+    QList<QByteArray> arrIfBufferTcp; // Multi recording buffer
     QVector<complexInt16> iq;
 
 public slots:

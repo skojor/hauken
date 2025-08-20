@@ -41,6 +41,10 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                           "Too large, and the network buffers will saturate. 0.5 seconds is reasonable for a locally connected receiver." \
                           "All data gathered in this time will be saved to disk if enabled above."));
 
+    mainLayout->addRow(cbOpt4);
+    cbOpt4->setText(tr("Record multiple bands when triggered (defined in IqGnssBands.csv)"));
+    cbOpt4->setToolTip(tr("Enable this option to make a recording on FFM center frequencies on multiple bands when triggered"));
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
@@ -58,6 +62,7 @@ void IqOptions::start()
     leOpt1->setText(QString::number(config->getIqLogTime(), 'f', 3));
     cbOpt2->setChecked(config->getIqUseDB());
     cbOpt3->setChecked(config->getIqUseWindow());
+    cbOpt4->setChecked(config->getIqRecordMultipleBands());
 
     dialog->exec();
 }
@@ -71,6 +76,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqLogTime(leOpt1->text().toDouble());
     config->setIqUseDB(cbOpt2->isChecked());
     config->setIqUseWindow(cbOpt3->isChecked());
+    config->setIqRecordMultipleBands(cbOpt4->isChecked());
 
     emit updSettings();
     dialog->close();

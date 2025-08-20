@@ -85,7 +85,27 @@ void VifStreamTcp::processVifData()
 {
     emit stopIqStream();
     stopIqStreamTimer->stop();
-    QFuture<void> future = QtConcurrent::run(&VifStreamTcp::parseVifData, this, ifBufferTcp);
+    if (!recordingMultipleBands)
+        QFuture<void> future = QtConcurrent::run(&VifStreamTcp::parseVifData, this, ifBufferTcp);
+    else {
+        arrIfBufferTcp.append(ifBufferTcp);
+        ifBufferTcp.clear();
+    }
+    if (arrIfBufferTcp.size() == multipleFfmCenterFreqs.size()) { // We are done, start processing
+        for (auto && iqdata : arrIfBufferTcp) {
+            emit newFfmCenterFrequency(multipleFfmCenterFreqs.first());
+            parseVifData(iqdata);
+            QElapsedTimer timer;
+            timer.start();
+
+            while (timer.elapsed() < 5 * 1000) {
+                QApplication::processEvents();      // Terrible, terrible, please do this correctly!
+                QThread::msleep(10);
+            }
+            multipleFfmCenterFreqs.removeFirst();
+
+        }
+    }
 }
 
 quint32 VifStreamTcp::calcStreamIdentifier()

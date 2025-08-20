@@ -772,6 +772,10 @@ void MainWindow::setSignals()
             &MeasurementDevice::iqFfmFreqChanged,
             iqdataWaterfall,
             &Waterfall::setFfmFrequency);
+    connect(vifStreamTcp.data(),
+            &VifStreamTcp::newFfmCenterFrequency,
+            iqdataWaterfall,
+            &Waterfall::setFfmFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
         if (gnssDevice1->isValid())

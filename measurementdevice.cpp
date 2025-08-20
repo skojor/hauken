@@ -1104,7 +1104,10 @@ void MeasurementDevice::deleteIfStream()
 
     scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()));
-    if (modeChanged) {
+    if (centerFrequencies.size() > 0 && config->getIqRecordMultipleBands()) {
+        doMultipleIqRecordings();
+    }
+    else if (modeChanged) {
         scpiWrite("freq:mode psc");
         scpiWrite("init");
     }
@@ -1121,8 +1124,19 @@ void MeasurementDevice::collectIqData(int nrOfSamplesNeeded)
             modeChanged = true;
             scpiWrite("freq:mode ffm"); // Temporary change mode
         }
-        setIfMode();
-        QTimer::singleShot(100, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+
+        centerFrequencies = config->getIqMultibandCenterFreqs();
+
+        if (!config->getIqRecordMultipleBands() || centerFrequencies.size() == 0) { // Use trig frequency, as before
+            setIfMode();
+            QTimer::singleShot(100, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+        }
+        else { // New, jump through list of center frequencies before creating images
+            vifStreamTcp->setMultipleFfmCenterFreqs(centerFrequencies); // To remember freqs later for storage/image prod.
+            vifStreamTcp->setRecordingMultipleBands(true);
+            doMultipleIqRecordings();
+        }
+
 
         //QTimer::singleShot(1110, this, &MeasurementDevice::deleteIfStream);
         trigFrequency = 0; // Reset
@@ -1145,4 +1159,12 @@ void MeasurementDevice::setGainControl(int index)
     }
 
     scpiWrite("inp:att:mode " + mode);
+}
+
+void MeasurementDevice::doMultipleIqRecordings()
+{
+    trigFrequency = centerFrequencies.first();
+    setIfMode();
+    QTimer::singleShot(10, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+    centerFrequencies.removeFirst();
 }

@@ -159,6 +159,7 @@ private slots:
     void checkFfmSpan(const QByteArray buffer);
     void setIfMode();
     void setupIfStream();
+    void doMultipleIqRecordings();
 
 private:
     bool connected = false;
@@ -216,6 +217,8 @@ private:
     bool modeChangeInProgress = false;
     double trigFrequency = 0;
     bool modeChanged = false;
+    QList<double> centerFrequencies;
+
 };
 
 #endif // MEASUREMENTDEVICE_H
