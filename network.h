@@ -13,7 +13,6 @@
 #include <QDebug>
 #include <QTimer>
 #include <QList>
-#include <QRandomGenerator64>
 #include "config.h"
 
 #define UDPPORT 5569
