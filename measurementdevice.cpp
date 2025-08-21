@@ -1165,6 +1165,6 @@ void MeasurementDevice::doMultipleIqRecordings()
 {
     trigFrequency = centerFrequencies.first();
     setIfMode();
-    QTimer::singleShot(10, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
+    QTimer::singleShot(250, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
     centerFrequencies.removeFirst();
 }

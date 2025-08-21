@@ -21,6 +21,7 @@ public:
     void restartTimeoutTimer() {}
     void setRecordingMultipleBands(bool b) { recordingMultipleBands = b;}
     void setMultipleFfmCenterFreqs(const QList<double> l) { multipleFfmCenterFreqs = l;}
+    void processMultipleIqData();
 
 signals:
     void newFfmCenterFrequency(double);

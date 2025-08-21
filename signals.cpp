@@ -909,5 +909,6 @@ void MainWindow::setSignals()
             traceBuffer->sendDispTrigline();
         }
     });
+    connect(iqPlot, &IqPlot::workerDone, vifStreamTcp.data(), &VifStreamTcp::processMultipleIqData);
 }
 

@@ -5,6 +5,7 @@
 #include <QAbstractSocket>
 #include <QTcpSocket>
 #include <QUdpSocket>
+#include <QTcpServer>
 #include <QHostAddress>
 #include <QSharedPointer>
 #include <QDateTime>
@@ -13,6 +14,7 @@
 #include "config.h"
 
 #define UDPPORT 5569
+#define TCPPORT 5569
 
 class Network : public QObject
 {
@@ -29,8 +31,8 @@ private slots:
 
 private:
     QSharedPointer<Config> config;
-    QUdpSocket *udpSocket = new QUdpSocket;
-    QUdpSocket *udpTestSocket = new QUdpSocket;
+    QTcpServer *tcpServer = new QTcpServer;
+    QTcpSocket *tcpTestSocket = new QTcpSocket;
     bool useUdp = false;
 
 signals:

@@ -92,19 +92,18 @@ void VifStreamTcp::processVifData()
         ifBufferTcp.clear();
     }
     if (arrIfBufferTcp.size() == multipleFfmCenterFreqs.size()) { // We are done, start processing
-        for (auto && iqdata : arrIfBufferTcp) {
-            emit newFfmCenterFrequency(multipleFfmCenterFreqs.first());
-            parseVifData(iqdata);
-            QElapsedTimer timer;
-            timer.start();
+        processMultipleIqData();
+    }
+}
 
-            while (timer.elapsed() < 5 * 1000) {
-                QApplication::processEvents();      // Terrible, terrible, please do this correctly!
-                QThread::msleep(10);
-            }
-            multipleFfmCenterFreqs.removeFirst();
+void VifStreamTcp::processMultipleIqData()
+{
+    if (!multipleFfmCenterFreqs.isEmpty() && !arrIfBufferTcp.isEmpty()) {
+        emit newFfmCenterFrequency(multipleFfmCenterFreqs.first());
+        parseVifData(arrIfBufferTcp.first());
 
-        }
+        multipleFfmCenterFreqs.removeFirst();
+        arrIfBufferTcp.removeFirst();
     }
 }
 

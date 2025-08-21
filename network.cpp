@@ -3,6 +3,8 @@
 Network::Network(QSharedPointer<Config> c)
 {
     config = c;
+    tcpServer->listen(QHostAddress::LocalHost, TCPPORT);
+
    /* udpTestSocket->bind(QHostAddress::LocalHost, UDPPORT);
 
     connect(udpTestSocket, &QUdpSocket::readyRead, this, [this] () {
@@ -22,7 +24,7 @@ Network::Network(QSharedPointer<Config> c)
 
 Network::~Network()
 {
-    udpSocket->deleteLater();
+    tcpServer->deleteLater();
 }
 
 void Network::updSettings()
@@ -45,6 +47,6 @@ void Network::newTraceline(const QList<qint16> data)
             ts << "," << (int)(val / 10);
         }
         ts << Qt::endl;
-        udpSocket->writeDatagram(ba.constData(), ba.size(), QHostAddress::LocalHost, UDPPORT);
+        //tcpServer-> writeDatagram(ba.constData(), ba.size(), QHostAddress::LocalHost, UDPPORT);
     }
 }

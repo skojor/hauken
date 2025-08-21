@@ -54,6 +54,7 @@ private slots:
 signals:
     void iqPlotReady(QString filename);
     void requestIq(int minSamplesNeeded);
+    void workerDone();
 
 private:
     QSharedPointer<Config> config;

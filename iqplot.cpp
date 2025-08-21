@@ -3,10 +3,21 @@
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
     config = c;
+    dataFromFile = false;
+    secsToAnalyze = config->getIqFftPlotLength() / 1e6;
+    samplerate = (double) config->getIqFftPlotBw() * 1.28
+                 * 1e3; // TODO: Is this universal for all R&S instruments?
+    fillWindow();
 }
 
 void IqPlot::receiveIqData(const QList<complexInt16> &iq16)
 {
+    dataFromFile = false;
+    secsToAnalyze = config->getIqFftPlotLength() / 1e6;
+    samplerate = (double) config->getIqFftPlotBw() * 1.28
+                 * 1e3; // TODO: Is this universal for all R&S instruments?
+    fillWindow();
+
     filename = config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss_")
     + config->getStationName() + "_" + QString::number(ffmFrequency, 'f', 3) + "MHz_"
         + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
@@ -17,10 +28,6 @@ void IqPlot::receiveIqData(const QList<complexInt16> &iq16)
                                             this,
                                             iq16,
                                             config->getIqFftPlotLength() / 1e6);
-    dataFromFile = false;
-    secsToAnalyze = config->getIqFftPlotLength() / 1e6;
-    samplerate = (double) config->getIqFftPlotBw() * 1.28
-                 * 1e3; // TODO: Is this universal for all R&S instruments?
 }
 
 void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze)
@@ -114,6 +121,7 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
     } else {
         qWarning() << "Not enough samples to create IQ FFT plot, giving up";
     }
+    emit workerDone();
 }
 
 void IqPlot::saveIqData(const QList<complexInt16> &iq16)
