@@ -3,23 +3,35 @@
 Network::Network(QSharedPointer<Config> c)
 {
     config = c;
-    tcpServer->listen(QHostAddress::LocalHost, TCPPORT);
+    if (!tcpServer->listen(QHostAddress::LocalHost, TCPPORT)) {
+        qWarning() << "Could not start TCP listener at port" << TCPPORT << ":" << tcpServer->errorString();
+    }
+    else {
+        qInfo() << "Opened TCP listener at port" << tcpServer->serverPort();
+    }
+    connect(tcpServer, &QTcpServer::newConnection, this, &Network::handleNewConnection);
 
-   /* udpTestSocket->bind(QHostAddress::LocalHost, UDPPORT);
+    /*tcpTestSocket->connectToHost(QHostAddress::LocalHost, TCPPORT);
 
-    connect(udpTestSocket, &QUdpSocket::readyRead, this, [this] () {
-        while (udpTestSocket->hasPendingDatagrams()) {
-            QByteArray datagram;
-            datagram.resize(udpTestSocket->pendingDatagramSize());
-            QHostAddress senderAddress;
-            quint16 senderPort;
-            udpTestSocket->readDatagram(datagram.data(), datagram.size(), &senderAddress, &senderPort);
-            qDebug() << "Client Received: " << datagram << " from " << senderAddress.toString() << ":" << senderPort;
+    connect(tcpTestSocket, &QTcpSocket::readyRead, this, [this] () {
+        QByteArray data = tcpTestSocket->readAll();
+        qDebug() << "Client Received: " << data.size() << "bytes";
+
+    });
+    connect(tcpTestSocket, &QTcpSocket::stateChanged, this, [] (QAbstractSocket::SocketState s) {
+        qDebug() << s;
+    });
+
+
+    connect(testTimer, &QTimer::timeout, this, [this]() {
+        QByteArray barr(128000, 'a');
+
+        for (auto && socket : tcpSockets) {
+            if (socket->isOpen())
+                socket->write(barr);
         }
     });
-    connect(udpTestSocket, &QUdpSocket::stateChanged, this, [] (QAbstractSocket::SocketState s) {
-        qDebug() << s;
-    });*/
+    testTimer->start(5000);*/
 }
 
 Network::~Network()
@@ -47,6 +59,16 @@ void Network::newTraceline(const QList<qint16> data)
             ts << "," << (int)(val / 10);
         }
         ts << Qt::endl;
-        //tcpServer-> writeDatagram(ba.constData(), ba.size(), QHostAddress::LocalHost, UDPPORT);
+        for (auto && socket : tcpSockets) {
+            if (socket->isOpen())
+                socket->write(ba);
+        }
     }
+}
+
+void Network::handleNewConnection()
+{
+    tcpSockets.append(tcpServer->nextPendingConnection());
+    qDebug() << "New connection on TCP:" << tcpSockets.last()->peerAddress() << tcpSockets.last()->peerPort();
+    //connect(tcpSockets.last(), &QTcpSocket::disconnected, tcpSockets.last(), &QTcpSocket::deleteLater);
 }

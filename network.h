@@ -11,6 +11,9 @@
 #include <QDateTime>
 #include <QTextStream>
 #include <QDebug>
+#include <QTimer>
+#include <QList>
+#include <QRandomGenerator64>
 #include "config.h"
 
 #define UDPPORT 5569
@@ -28,12 +31,15 @@ public slots:
     void updSettings();
 
 private slots:
+    void handleNewConnection();
 
 private:
     QSharedPointer<Config> config;
     QTcpServer *tcpServer = new QTcpServer;
+    QList<QTcpSocket *> tcpSockets;
     QTcpSocket *tcpTestSocket = new QTcpSocket;
     bool useUdp = false;
+    QTimer *testTimer = new QTimer;
 
 signals:
 
