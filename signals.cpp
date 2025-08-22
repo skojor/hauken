@@ -913,5 +913,7 @@ void MainWindow::setSignals()
 
     connect(iqPlot, &IqPlot::folderDateTimeSet, sdefRecorder, &SdefRecorder::setFolderDateTime);
     connect(sdefRecorder, &SdefRecorder::folderDateTimeSet, iqPlot, &IqPlot::setFolderDateTime);
+    connect(measurementDevice, &MeasurementDevice::busyRecordingIq, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
+    connect(measurementDevice, &MeasurementDevice::skipNextNTraces, sdefRecorder, &SdefRecorder::skipNextNTraces);
 }
 

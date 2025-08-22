@@ -54,6 +54,8 @@ public slots:
     void saveDataToTempFile();
     void closeTempFile();
     void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
+    void setIqRecordingInProgress(bool b) { iqRecordingInProgress = b;}
+    void skipNextNTraces(int i) { skipTraces = i;}
 
 private slots:
     QByteArray createHeader();
@@ -104,7 +106,7 @@ private:
     int maxRecordTime;
     bool addPosition;
     QProcess *process;
-    double prevLat, prevLng;
+    double prevLat = 0, prevLng = 0;
     POSITIONSOURCE positionSource;
     QList<QPair<double, double>> positionHistory;
     bool deviceConnected = false;
@@ -125,6 +127,8 @@ private:
 
     QList<qint16> tempFileTracedata;
     bool startTempRecording = false;
+    bool iqRecordingInProgress = false;
+    int skipTraces = 0;
 
     // Config cache
     bool useNewMsFormat;

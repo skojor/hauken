@@ -55,6 +55,8 @@ signals:
     //void freqChanged(double, double);
     //void resChanged(double);
     void iqFfmFreqChanged(double);
+    void busyRecordingIq(bool);
+    void skipNextNTraces(int);
 
 public slots:
     void start();

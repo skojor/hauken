@@ -1063,6 +1063,8 @@ void MeasurementDevice::handleNetworkError()
 
 void MeasurementDevice::setIfMode()
 {
+    emit busyRecordingIq(true); // Warning to sdefRecorder, don't record data now
+
     if (trigFrequency > 0) {
         scpiWrite("freq " + QByteArray::number(trigFrequency) + " MHz");
     }
@@ -1083,14 +1085,6 @@ void MeasurementDevice::setIfMode()
 
 void MeasurementDevice::setupIfStream()
 {
-    /*scpiWrite("trac:udp:tag:on \"" +
-              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamUdp->getUdpPort()) + ", vif");
-
-    scpiWrite("trac:udp:flag:on \"" +
-              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamUdp->getUdpPort()) + ", 'ifpan1'");*/
-
     scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");
@@ -1099,9 +1093,6 @@ void MeasurementDevice::setupIfStream()
 
 void MeasurementDevice::deleteIfStream()
 {
-    /*scpiWrite("trac:udp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamUdp->getUdpPort()));*/
-
     scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()));
     if (centerFrequencies.size() > 0 && config->getIqRecordMultipleBands()) {
@@ -1110,6 +1101,13 @@ void MeasurementDevice::deleteIfStream()
     else if (modeChanged) {
         scpiWrite("freq:mode psc");
         scpiWrite("init");
+        emit busyRecordingIq(false);
+    }
+    else {
+        setFfmCenterFrequency();
+        setFfmFrequencySpan();
+        emit skipNextNTraces(20); // Skip few FFM lines to not mix with old data ##FIXME!
+        emit busyRecordingIq(false);
     }
 }
 
