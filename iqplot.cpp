@@ -18,9 +18,19 @@ void IqPlot::receiveIqData(const QList<complexInt16> &iq16)
                  * 1e3; // TODO: Is this universal for all R&S instruments?
     fillWindow();
 
-    filename = config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyMMddhhmmss_")
-    + config->getStationName() + "_" + QString::number(ffmFrequency, 'f', 3) + "MHz_"
-        + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 60) // Don't change folder/filename timestamp too often
+        foldernameDateTime = QDateTime::currentDateTime();
+
+    QString dir = config->getLogFolder();
+    if (config->getNewLogFolder()) { // create new folder for incident
+        dir = config->getLogFolder() + "/" + foldernameDateTime.toString("yyyyMMdd_hhmmss_") + config->getStationName();
+        if (!QDir().exists(dir))
+            QDir().mkpath(dir);
+    }
+
+    filename = dir + "/" + foldernameDateTime.toString("yyyyMMddhhmmss_")
+               + config->getStationName() + "_" + QString::number(ffmFrequency, 'f', 3) + "MHz_"
+               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
     if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
         saveIqData(iq16);
 
@@ -137,8 +147,8 @@ void IqPlot::saveIqData(const QList<complexInt16> &iq16)
 }
 
 void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
-                             const double secondsAnalyzed,
-                             const double secondsPerLine)
+                          const double secondsAnalyzed,
+                          const double secondsPerLine)
 {
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
@@ -170,9 +180,9 @@ void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
 }
 
 void IqPlot::findIqFftMinMaxAvg(const QList<QList<double>> &iqFftResult,
-                                   double &min,
-                                   double &max,
-                                   double &avg)
+                                double &min,
+                                double &max,
+                                double &avg)
 {
     min = 99e9;
     max = -99e9;

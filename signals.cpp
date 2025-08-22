@@ -910,5 +910,8 @@ void MainWindow::setSignals()
         }
     });
     connect(iqPlot, &IqPlot::workerDone, vifStreamTcp.data(), &VifStreamTcp::processMultipleIqData);
+
+    connect(iqPlot, &IqPlot::folderDateTimeSet, sdefRecorder, &SdefRecorder::setFolderDateTime);
+    connect(sdefRecorder, &SdefRecorder::folderDateTimeSet, iqPlot, &IqPlot::setFolderDateTime);
 }
 

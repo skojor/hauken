@@ -35,6 +35,7 @@ public slots:
     void setFilename(QString) {}
     bool readAndAnalyzeFile(const QString filename);
     void updSettings();
+    void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
 
 private slots:
     void findIqFftMinMaxAvg(const QList<QList<double> > &iqFftResult, double &min, double &max, double &avg);
@@ -55,6 +56,7 @@ signals:
     void iqPlotReady(QString filename);
     void requestIq(int minSamplesNeeded);
     void workerDone();
+    void folderDateTimeSet();
 
 private:
     QSharedPointer<Config> config;
@@ -69,6 +71,7 @@ private:
     QElapsedTimer lastIqRequestTimer;
     QString filename;
     bool dataFromFile = false;
+    QDateTime foldernameDateTime = QDateTime::currentDateTime();
 
 };
 

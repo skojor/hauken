@@ -53,6 +53,7 @@ public slots:
     void tempFileData(const QVector<qint16> data);
     void saveDataToTempFile();
     void closeTempFile();
+    void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
 
 private slots:
     QByteArray createHeader();
@@ -79,6 +80,7 @@ signals:
     void publishFilename(QString);
     void reqAuthentication();
     void fileReadyForUpload(QString);
+    void folderDateTimeSet();
 
 private:
     //QSharedPointer<Config> config;
@@ -93,6 +95,7 @@ private:
     QTimer *finishedFileTimer;
     QTimer *tempFileTimer;
     QTimer *tempFileCheckFilesize;
+    QDateTime foldernameDateTime = QDateTime::currentDateTime();
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;

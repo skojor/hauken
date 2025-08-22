@@ -10,7 +10,7 @@ AutoRecorderOptions::AutoRecorderOptions(QSharedPointer<Config> c)
     cbOpt1->setToolTip("Enabling this options will set up Hauken to start recording at program startup. Enabling this option also enables connect instrument on startup, and auto reconnect.");
 
     mainLayout->addRow(cbOpt2);
-    cbOpt2->setText("Save CEF data to temp file and forward on UDP port 5569");
+    cbOpt2->setText("Save CEF data to temp file and forward on TCP port 5569");
     cbOpt2->setToolTip(
         tr("CEF data will be forwarded continuously on localhost, port 5569.\n"
            "The log file \"feed.cef\" will be updated with headers."));

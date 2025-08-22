@@ -160,24 +160,33 @@ void SdefRecorder::manualTriggeredRecording()
 
 QString SdefRecorder::createFilename()
 {
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 60) { // Don't change folder/filename timestamp too often
+        foldernameDateTime = QDateTime::currentDateTime();
+        emit folderDateTimeSet();
+    }
+
     QString dir = config->getLogFolder();
     QString filename;
     QTextStream ts(&filename);
 
     if (config->getNewLogFolder()) { // create new folder for incident
-        dir = config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
-        if (!QDir().mkpath(dir)) {
-            emit warning("Cannot create folder " + dir + ", check your settings!");
-            failed = true;
-        }
+        dir = config->getLogFolder() + "/" + foldernameDateTime.toString("yyyyMMdd_hhmmss_") + config->getStationName();
+        if (!QDir().exists(dir))
+            QDir().mkpath(dir);
     }
     if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
+        ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
+           << "_" << config->getStationName()
+           << "_" << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
+           << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0);
+        /*
         ts << dir << "/" << config->getSdefStationInitals() << "_"
            << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
            << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << "_"
-           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");*/
     } else {
-        ts << dir << "/" << config->getSdefStationInitals() << "_"
+        ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
+           << "_" << config->getStationName() << "_"
            << QString::number((config->getInstrFfmCenterFreq()
                                - config->getInstrFfmSpan().toDouble() / 2e3)
                                   * 1e3,
@@ -188,8 +197,7 @@ QString SdefRecorder::createFilename()
                                + config->getInstrFfmSpan().toDouble() / 2e3)
                                   * 1e3,
                               'f',
-                              0)
-           << "_" << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+                              0);
     }
     //<< ".cef";
 
