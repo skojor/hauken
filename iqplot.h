@@ -20,6 +20,7 @@
 #include "typedefs.h"
 #include <math.h>
 
+#define IQTRANSFERTIMEOUT_MS 15000
 
 class IqPlot : public QObject
 {
@@ -28,14 +29,20 @@ public:
     explicit IqPlot(QSharedPointer<Config> c);
 
 public slots:
-    void receiveIqData(const QList<complexInt16> &iq16);
+    void requestIqData(); // Function call to set up I/Q transfer
+    void getIqData(const QList<complexInt16> &iq16); // New, gather parts of data before doing sth with them
+    void parseIqData(const QList<complexInt16> &iq16, const double frequency); // Data from vifstream class
+    void validateHeader(qint64 freq, qint64 bw, qint64 samplerate);
     void setFfmFrequency(double d) { ffmFrequency = d;}
-    void requestIqData();
-    void resetTimer() { lastIqRequestTimer.invalidate();}
+    void resetTimer() { lastIqRequestTimer.invalidate();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
     void setFilename(QString) {}
     bool readAndAnalyzeFile(const QString filename);
     void updSettings();
     void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
+    void setCurrentMode(Instrument::Mode m) { instrMode = m;}
+    void setCurrentFfmCenterFrequency(quint64 f) { oldFfmCenterFrequency = f;}
+    void setCurrentFfmBandwidth(quint32 f) { oldFfmBandwidth = f;}
+    void setTrigFrequency(double f) { trigFrequency = (quint64)f;} // Set by trace analyzer class
 
 private slots:
     void findIqFftMinMaxAvg(const QList<QList<double> > &iqFftResult, double &min, double &max, double &avg);
@@ -51,12 +58,17 @@ private slots:
     const QList<complexInt16> convertComplex8to16bit(const QList<complexInt8> &);
     void findIqMaxValue(const QList<complexInt16> &, qint16 &max);
     void parseFilename(const QString file);
+    void receiverControl();
 
 signals:
+    void reqVifConnection(); // This signal goes to meas.device, to set up tcp link
+    void endVifConnection(); // To remove the TCP connection
+    void setFfmCenterFrequency(double);
     void iqPlotReady(QString filename);
-    void requestIq(int minSamplesNeeded);
     void workerDone();
     void folderDateTimeSet();
+    void busyRecording(bool);
+    void headerValidated(bool); // Approve I/Q header, start gathering data
 
 private:
     QSharedPointer<Config> config;
@@ -73,6 +85,16 @@ private:
     bool dataFromFile = false;
     QDateTime foldernameDateTime = QDateTime::currentDateTime();
 
+    Instrument::Mode instrMode;
+    quint64 oldFfmCenterFrequency;
+    quint32 oldFfmBandwidth;
+    quint64 trigFrequency = 0;
+    QList<double> listFreqs;
+    QList<complexInt16> iqSamples;
+    int samplesNeeded = 0;
+    bool flagRequestedEndVifConnection = false;
+    bool flagHeaderValidated = false;
+    QTimer *timeoutTimer = new QTimer;
 };
 
 #endif // IQPLOT_H

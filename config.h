@@ -168,6 +168,8 @@ public slots:
     bool getIqRecordMultipleBands() { return settings->value("iq/recordMultipleBands", false).toBool(); }
     void setIqRecordMultipleBands(bool b) { settings->setValue("iq/recordMultipleBands", b); emit settingsUpdated();}
     QList<double> getIqMultibandCenterFreqs();
+    bool getIqRecordAllTrigArea() { return settings->value("iq/recordAllTrigArea", false).toBool();}
+    void setIqRecordAllTrigArea(bool b) { settings->setValue("iq/recordAllTrigArea", b);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}

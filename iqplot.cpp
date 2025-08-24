@@ -4,14 +4,32 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 {
     config = c;
     dataFromFile = false;
-    secsToAnalyze = config->getIqFftPlotLength() / 1e6;
-    samplerate = (double) config->getIqFftPlotBw() * 1.28
-                 * 1e3; // TODO: Is this universal for all R&S instruments?
     fillWindow();
+
+    timeoutTimer->setSingleShot(true);
+
+    connect(timeoutTimer, &QTimer::timeout, this, [this]() {
+        qDebug() << "I/Q transfer timed out." << iqSamples.size() << flagRequestedEndVifConnection << flagHeaderValidated;
+        emit endVifConnection();
+        iqSamples.clear();
+        flagRequestedEndVifConnection = true;
+        flagHeaderValidated = false;
+    });
 }
 
-void IqPlot::receiveIqData(const QList<complexInt16> &iq16)
+void IqPlot::getIqData(const QList<complexInt16> &iq16)
 {
+    if (flagHeaderValidated) iqSamples += iq16;
+    if (iqSamples.size() >= samplesNeeded) {
+        parseIqData(iqSamples, listFreqs.first());
+        receiverControl(); // Change freq, or end datastream if we are done
+        iqSamples.clear();
+    }
+}
+
+void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency)
+{
+    ffmFrequency = frequency; //TODO: Why double storage?
     dataFromFile = false;
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
     samplerate = (double) config->getIqFftPlotBw() * 1.28
@@ -29,7 +47,7 @@ void IqPlot::receiveIqData(const QList<complexInt16> &iq16)
     }
 
     filename = dir + "/" + foldernameDateTime.toString("yyyyMMddhhmmss_")
-               + config->getStationName() + "_" + QString::number(ffmFrequency, 'f', 3) + "MHz_"
+               + config->getStationName() + "_" + QString::number(frequency, 'f', 3) + "MHz_"
                + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
     if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
         saveIqData(iq16);
@@ -286,12 +304,58 @@ void IqPlot::saveImage(const QImage *image, const double secondsAnalyzed)
 
 void IqPlot::requestIqData()
 {
-    if (!lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3) {
-        int samplesNeeded
-            = samplerate
-              * config->getIqLogTime(); // DL 0.x seconds of IQ data. This way we have sth to find intermittent signals inside
-        emit requestIq(samplesNeeded);
+    if (config->getIqCreateFftPlot()
+        && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 )) {
+        samplesNeeded = (int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
+
+        listFreqs.clear();
+        if (config->getIqRecordMultipleBands()) {
+            listFreqs = config->getIqMultibandCenterFreqs();
+        }
+
+        if (config->getIqRecordAllTrigArea() || listFreqs.isEmpty()) {
+            QStringList stringListTrigFreqs = config->getTrigFrequencies();
+            if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here?
+                listFreqs.append(config->getInstrFfmCenterFreq());
+            }
+            else {
+                for (int i=0; i < stringListTrigFreqs.size(); i++) {
+                    double start = stringListTrigFreqs[i].toDouble() * 1e6;
+                    double stop = stringListTrigFreqs[++i].toDouble() * 1e6;
+                    double range = stop - start;
+                    double currentBandwidth = config->getIqFftPlotBw() * 1e3;
+
+                    if (range > currentBandwidth) {
+
+                        double f = start + range / 2;
+                        listFreqs.append(f / 1e6);
+                        while (f > start) {
+                            f -= currentBandwidth;
+                            listFreqs.append(f / 1e6);
+
+                        }
+                        f = start + range / 2;
+                        while (f < stop) {
+                            f += currentBandwidth;
+                            listFreqs.append(f / 1e6);
+                        }
+                    }
+                    else {
+                        listFreqs.append((stop - range / 2) / 1e6);
+                    }
+                }
+            }
+        }
+        if (trigFrequency > 0 && listFreqs.isEmpty())
+            listFreqs.prepend(trigFrequency);
+
+
+        emit setFfmCenterFrequency(listFreqs.first());
+        emit reqVifConnection();
+        emit busyRecording(true);
         lastIqRequestTimer.restart();
+        flagRequestedEndVifConnection = false;
+        timeoutTimer->start(IQTRANSFERTIMEOUT_MS);
     }
 }
 
@@ -340,7 +404,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
                     val.real = qToBigEndian(val.real);
                     val.imag = qToBigEndian(val.imag);
                 }
-                receiveIqData(iq16);
+                parseIqData(iq16, ffmFrequency);
             }
         } else {
             QList<complexInt8> iq8;
@@ -348,7 +412,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
             if (file.read((char *) iq8.data(), file.size()) == -1)
                 qWarning() << "IQ8 read failed:" << file.errorString();
             else
-                receiveIqData(convertComplex8to16bit(iq8));
+                parseIqData(convertComplex8to16bit(iq8), ffmFrequency);
         }
         file.close();
         return true;
@@ -414,4 +478,40 @@ void IqPlot::parseFilename(const QString file)
 void IqPlot::updSettings()
 {
 
+}
+
+void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
+{
+    if (!listFreqs.isEmpty()
+        && freq == (quint64)(listFreqs.first() * 1e6)
+        && bw == (quint32)(config->getIqFftPlotBw() * 1e3))
+    {
+        QTimer::singleShot(150, this, [this]() {
+            flagHeaderValidated = true;
+            emit headerValidated(true);
+        });
+    }
+    else {
+        flagHeaderValidated = false;
+        emit headerValidated(false);
+    }
+}
+
+void IqPlot::receiverControl()
+{
+    flagHeaderValidated = false; // Assume future data to be invalid for now
+
+    if (listFreqs.size() > 1) {// we have more work to do
+        timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
+        listFreqs.removeFirst();
+        emit headerValidated(false);
+        emit setFfmCenterFrequency(listFreqs.first());
+    }
+    else { // We are done, stop I/Q stream
+        timeoutTimer->stop();
+        listFreqs.clear();
+        if (!flagRequestedEndVifConnection) emit endVifConnection();
+        flagRequestedEndVifConnection = true;
+        emit busyRecording(false);
+    }
 }

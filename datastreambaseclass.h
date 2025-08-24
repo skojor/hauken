@@ -100,7 +100,6 @@ signals:
     void freqChanged(double, double);
     void resChanged(double);
     void newIqData(const QList<complexInt16>&);
-    void stopIqStream();
 
 private slots:
 

@@ -2,8 +2,6 @@
 
 VifStreamTcp::VifStreamTcp()
 {
-    stopIqStreamTimer = new QTimer;
-    connect(stopIqStreamTimer, &QTimer::timeout, this, &VifStreamTcp::processVifData);
 }
 
 
@@ -17,7 +15,6 @@ void VifStreamTcp::openListener(const QHostAddress host, const int port)
 
 void VifStreamTcp::closeListener()
 {
-    timeoutTimer->stop();
     tcpSocket->close();
 }
 
@@ -31,80 +28,53 @@ void VifStreamTcp::newDataHandler()
 {
     QByteArray data = tcpSocket->readAll();
     ifBufferTcp.append(data);
-    if (ifBufferTcp.size() > samplesNeeded * 4 && stopIqStreamTimer->isActive()) {
-        processVifData();
-    }
-    else if (!stopIqStreamTimer->isActive()) // Data came after we asked for stop, ignore
-        ifBufferTcp.clear();
-}
+    if (ifBufferTcp.size() > 127) {
+        while (!readHeader(ifBufferTcp)
+               && ifBufferTcp.size() > 20)
+        {  // Remove one byte at a time until a valid header is found, or buffer is empty
+            ifBufferTcp.removeFirst();
+        }
 
-void VifStreamTcp::parseVifData(const QByteArray &data)
-{
-    QList<complexInt16> iq;
-    const quint32 streamIdentifier = calcStreamIdentifier();
-    QDataStream ds(data);
+        while (readHeader(ifBufferTcp)
+               && ifBufferTcp.size() >= nrOfWords * 4)
+        {
+            if (packetClassCode == 0x0001) {
+                int readbytes = parseDataPacket(ifBufferTcp);
+                if (readbytes > 0 && ifBufferTcp.size() >= readbytes)
+                    ifBufferTcp.remove(0, readbytes);
+                else
+                    qDebug() << "Read 0 bytes, check your code dude" << readbytes << ifBufferTcp.size();
+            }
+            else if (packetClassCode == 0x0002) {
+                int readbytes = parseContextPacket(ifBufferTcp);
 
-    while (!ds.atEnd()) {
-        qint16 nrOfWords = 0, infClassCode = 0, packetClassCode = 0;
-        quint32 readStreamId = 0;
-
-        ds.skipRawData(2);
-        ds >> nrOfWords >> readStreamId;
-        ds.skipRawData(4);
-        ds >> infClassCode >> packetClassCode;
-        ds.skipRawData(12);
-        int readWords = 7;
-
-        if (streamIdentifier == readStreamId && infClassCode == 0x0001 && packetClassCode == 0x0001) {
-            QList<complexInt16> buf;
-            buf.resize((nrOfWords - readWords));
-            int readBytes = ds.readRawData((char *)buf.data(), (nrOfWords - readWords) * 4);
-            if (readBytes == (nrOfWords - readWords) * 4) {
-                buf.removeLast();
-                for (auto & val : buf) { // readRaw makes a mess out of byte order. Reorder manually
-                    val.real = qToBigEndian(val.real);
-                    val.imag = qToBigEndian(val.imag);
-                }
-                iq += buf;
+                if (readbytes > 0 && ifBufferTcp.size() >= readbytes)
+                    ifBufferTcp.remove(0, readbytes);
+                else
+                    qDebug() << "Read 0 bytes, check your code dude"<< readbytes << ifBufferTcp.size();
             }
         }
-        else if (streamIdentifier == readStreamId) {
-            // we have correct id, but wrong packet code, skip and continue
-            ds.skipRawData(nrOfWords * 4  - 28);
+    }
+}
+
+int VifStreamTcp::parseDataPacket(const QByteArray &data)
+{
+    QDataStream ds(data);
+
+    ds.skipRawData(28); // Skip header of data packet, 28 bytes / 7 words
+    int readWords = 7;
+    QList<complexInt16> buf;
+    buf.resize((nrOfWords - readWords));
+    int readBytes = ds.readRawData((char *)buf.data(), (nrOfWords - readWords) * 4);
+    if (readBytes == (nrOfWords - readWords) * 4) {
+        buf.removeLast();
+        for (auto & val : buf) { // readRaw makes a mess out of byte order. Reorder manually
+            val.real = qToBigEndian(val.real);
+            val.imag = qToBigEndian(val.imag);
         }
-        else
-            ds.skipRawData(1);
+        if (headerValidated) emit newIqData(buf);
     }
-    qInfo() << "Received total lines IQ:" << iq.size();
-
-    emit newIqData(iq);
-    ifBufferTcp.clear();
-}
-
-void VifStreamTcp::processVifData()
-{
-    emit stopIqStream();
-    stopIqStreamTimer->stop();
-    if (!recordingMultipleBands)
-        QFuture<void> future = QtConcurrent::run(&VifStreamTcp::parseVifData, this, ifBufferTcp);
-    else {
-        arrIfBufferTcp.append(ifBufferTcp);
-        ifBufferTcp.clear();
-    }
-    if (arrIfBufferTcp.size() == multipleFfmCenterFreqs.size()) { // We are done, start processing
-        processMultipleIqData();
-    }
-}
-
-void VifStreamTcp::processMultipleIqData()
-{
-    if (!multipleFfmCenterFreqs.isEmpty() && !arrIfBufferTcp.isEmpty()) {
-        emit newFfmCenterFrequency(multipleFfmCenterFreqs.first());
-        parseVifData(arrIfBufferTcp.first());
-
-        multipleFfmCenterFreqs.removeFirst();
-        arrIfBufferTcp.removeFirst();
-    }
+    return nrOfWords * 4;
 }
 
 quint32 VifStreamTcp::calcStreamIdentifier()
@@ -122,4 +92,51 @@ quint32 VifStreamTcp::calcStreamIdentifier()
     else
         qDebug() << "Cannot calculate stream identifier?";
     return 0;
+}
+
+bool VifStreamTcp::readHeader(const QByteArray &data)
+{
+    QDataStream ds(data);
+    ds.skipRawData(2);
+    ds >> nrOfWords >> readStreamId;
+    ds.skipRawData(4);
+    ds >> infClassCode >> packetClassCode;
+    //qDebug() << "Header is read:" << nrOfWords << readStreamId << infClassCode << packetClassCode << ifBufferTcp.size();
+    if (calcStreamIdentifier() == readStreamId
+        && infClassCode == 0x0001
+        && (packetClassCode == 0x0001 || packetClassCode == 0x0002))
+        return true;
+    else
+        return false;
+}
+
+int VifStreamTcp::parseContextPacket(const QByteArray &data)
+{
+    headerValidated = false; // Always assume wrong data arrives
+
+    QDataStream ds(data);
+
+    quint32 intTimestamp;
+    quint64 fractTimestamp;
+    qint64 samplerate;
+    qint64 bandwidth, refFrequency;
+
+    ds.skipRawData(16); // Skip OUI and info class/packet class, already read
+    ds >> intTimestamp >> fractTimestamp;
+    ds.skipRawData(4);
+    ds >> bandwidth >> refFrequency;
+    ds.skipRawData(4);
+    ds >> samplerate;
+
+    samplerate = samplerate >> 20;
+    bandwidth = bandwidth >> 20;
+    refFrequency = refFrequency >> 20;
+
+    if (readStreamId == calcStreamIdentifier()) {
+        emit iqHeaderData(refFrequency, bandwidth, samplerate); // To validate freq/bw
+    }
+    else {
+        qWarning() << "I/Q stream identifier mismatch. This should never happen";
+    }
+    return nrOfWords * 4;
 }

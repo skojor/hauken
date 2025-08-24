@@ -3,12 +3,12 @@
 void MainWindow::setSignals()
 {
     // TCP/UDP datastreams
-    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this](const QList<complexInt16> iq) {
+    /*connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this](const QList<complexInt16> iq) {
         QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
     });
     connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this](const QList<complexInt16> iq) {
         QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
-    });
+    });*/
 
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -287,14 +287,7 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     //connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData); // New
-    connect(iqPlot,
-            &IqPlot::requestIq,
-            measurementDevice,
-            &MeasurementDevice::collectIqData);
-    connect(vifStreamTcp.data(),
-            &VifStreamTcp::stopIqStream,
-            measurementDevice,
-            &MeasurementDevice::deleteIfStream);
+
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
 
@@ -478,7 +471,7 @@ void MainWindow::setSignals()
             &MeasurementDevice::reconnected,
             tcpStream.data(),
             &TcpDataStream::
-                restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
+            restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
     connect(measurementDevice,
             &MeasurementDevice::newAntennaNames,
             this,
@@ -758,12 +751,6 @@ void MainWindow::setSignals()
             &UdpDataStream::streamErrorResetConnection,
             measurementDevice,
             &MeasurementDevice::handleNetworkError);
-
-    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, aiPtr, &AI::setTrigCenterFrequency);
-    connect(traceAnalyzer,
-            &TraceAnalyzer::trigRegistered,
-            measurementDevice,
-            &MeasurementDevice::setTrigCenterFrequency);
     connect(traceAnalyzer,
             &TraceAnalyzer::trigRegistered,
             iqPlot,
@@ -909,11 +896,20 @@ void MainWindow::setSignals()
             traceBuffer->sendDispTrigline();
         }
     });
-    connect(iqPlot, &IqPlot::workerDone, vifStreamTcp.data(), &VifStreamTcp::processMultipleIqData);
 
     connect(iqPlot, &IqPlot::folderDateTimeSet, sdefRecorder, &SdefRecorder::setFolderDateTime);
     connect(sdefRecorder, &SdefRecorder::folderDateTimeSet, iqPlot, &IqPlot::setFolderDateTime);
-    connect(measurementDevice, &MeasurementDevice::busyRecordingIq, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
     connect(measurementDevice, &MeasurementDevice::skipNextNTraces, sdefRecorder, &SdefRecorder::skipNextNTraces);
+
+    // Rebuilt I/Q functions
+    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setTrigFrequency);
+    connect(iqPlot, &IqPlot::reqVifConnection, measurementDevice, &MeasurementDevice::setupVifConnection);
+    connect(iqPlot, &IqPlot::setFfmCenterFrequency, measurementDevice, &MeasurementDevice::setVifFreqAndMode);
+    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
+    connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
+    connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
+    connect(iqPlot, &IqPlot::endVifConnection, measurementDevice, &MeasurementDevice::deleteIfStream);
+    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
 }
+
 

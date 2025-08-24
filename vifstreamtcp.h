@@ -14,28 +14,27 @@ public:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newDataHandler();
-    void parseVifData(const QByteArray &data);
-    void processVifData();
     void setSamplesNeeded(int i) { samplesNeeded = i;}
-    void startIqDataTimeout() { stopIqStreamTimer->start(8000); }
     void restartTimeoutTimer() {}
-    void setRecordingMultipleBands(bool b) { recordingMultipleBands = b;}
-    void setMultipleFfmCenterFreqs(const QList<double> l) { multipleFfmCenterFreqs = l;}
-    void processMultipleIqData();
+    void setHeaderValidated(bool b) { headerValidated = b;}
 
 signals:
     void newFfmCenterFrequency(double);
+    void iqHeaderData(qint64, qint64, qint64);
 
 private slots:
     quint32 calcStreamIdentifier();
+    bool readHeader(const QByteArray &data);
+    int parseDataPacket(const QByteArray &data);
+    int parseContextPacket(const QByteArray &data);
 
 private:
-    bool headerIsRead = false;
-    int bytectr = 0;
     int samplesNeeded;
-    QTimer *stopIqStreamTimer;
-    bool recordingMultipleBands = false;
-    QList<double> multipleFfmCenterFreqs;
+    qint16 nrOfWords = 0, infClassCode = 0, packetClassCode = 0;
+    quint32 readStreamId = 0;
+    QList<complexInt16> iqSamples;
+    bool headerValidated = false;
+
 };
 
 #endif // VIFSTREAMTCP_H
