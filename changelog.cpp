@@ -7,7 +7,8 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
-       << "<tr><td>2.49</td><td>Option for multiple I/Q recordings when triggered. Band overlay options added. Various jammertest mods.</td></tr>"
+       << "<tr><td>2.50</td><td>Option for I/Q recording over the whole trig area(s)</td></tr>"
+       << "<tr><td>2.49</td><td>Option for multiple I/Q recordings when triggered. Band overlay options added. Various jammertest mods</td></tr>"
        << "<tr><td>2.48</td><td>UDP cef data forwarder. Various bugfixes. </td></tr>"
        << "<tr><td>2.47</td><td>HTTP Rest API implementation. Changes to CEF header</td></tr>"
        << "<tr><td>2.46</td><td>Added saving cef data to temporary file</td></tr>"
