@@ -160,7 +160,7 @@ void SdefRecorder::manualTriggeredRecording()
 
 QString SdefRecorder::createFilename()
 {
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 20) { // Don't change folder/filename timestamp too often
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 40) { // Don't change folder/filename timestamp too often
         foldernameDateTime = QDateTime::currentDateTime();
         emit folderDateTimeSet();
     }

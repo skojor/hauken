@@ -428,22 +428,29 @@ void Notifications::generateGraphEmail()
         att.insert("isInline", "true");
         attachments.append(att);
     }
-    if (!iqPlotFilename.isEmpty()) {
-        QFile picture2(iqPlotFilename);
-        if (!picture2.open(QIODevice::ReadOnly)) {
-            qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
-        }
-        else {
-            att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att2.insert("name", "iqplot.jpg");
-            att2.insert("contentType", "image/jpg");
-            att2.insert("contentId", "iqplot");
-            att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
-            att2.insert("isInline", "false");
-            attachments.append(att2);
-            iqPlotFilename.clear();
+    int iter = 0;
+    for (auto && iqPlotFilename : iqPlotFilenames) {
+        iter++;
+        if (!iqPlotFilename.isEmpty()) {
+            QFile picture2(iqPlotFilename);
+            if (!picture2.open(QIODevice::ReadOnly)) {
+                qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
+            }
+            else {
+                QJsonObject att2;
+                QString filename = iqPlotFilename.split('/').last();
+                att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
+                att2.insert("name", filename);
+                att2.insert("contentType", "image/jpg");
+                att2.insert("contentId", "iqplot" + QString::number(iter));
+                att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
+                att2.insert("isInline", "false");
+                attachments.append(att2);
+                iqPlotFilename.clear();
+            }
         }
     }
+    iqPlotFilenames.clear();
 
     message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");
     message.insert("body", body);

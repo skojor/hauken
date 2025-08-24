@@ -60,7 +60,7 @@ public slots:
     void updSettings();
     void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
     void recTracePlot(const QPixmap *pic);
-    void recIqPlot(const QString filename) { iqPlotFilename = filename;}
+    void recIqPlot(const QString filename) { iqPlotFilenames.append(filename);}
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
     void recPrediction(QString pred, int prob);
@@ -128,6 +128,7 @@ private:
     bool predictionReceived = false;
     bool notifyPriorityRecipients = false;
     QString iqPlotFilename;
+    QStringList iqPlotFilenames;
 };
 
 #endif // NOTIFICATIONS_H

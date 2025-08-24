@@ -83,7 +83,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        qDebug() << ">>" << data;
+        //qDebug() << ">>" << data;
     }
 }
 

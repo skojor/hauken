@@ -36,7 +36,7 @@ void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency
                  * 1e3; // TODO: Is this universal for all R&S instruments?
     fillWindow();
 
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 20) // Don't change folder/filename timestamp too often
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 40) // Don't change folder/filename timestamp too often
         foldernameDateTime = QDateTime::currentDateTime();
 
     QString dir = config->getLogFolder();
@@ -80,9 +80,9 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
 
     double secPerSample = 1.0 / samplerate;
     int samplesIteratorInc = (double) (samplerate * secondsToAnalyze) / (double) imageYSize;
-    qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
+    /*qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
              << samplesIterator << "and counts up to" << ySize << ". Total samples analyzed"
-             << ySize - samplesIterator;
+             << ySize - samplesIterator;*/
 
     if ((int) samplesIteratorInc == 0)
         samplesIteratorInc = 1;
@@ -145,7 +145,7 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
         fftw_destroy_plan(plan);
 
         createIqPlot(iqFftResult, secondsToAnalyze, secondsPerLine);
-        qInfo() << "Plot worker finished";
+        //qInfo() << "Plot worker finished";
     } else {
         qWarning() << "Not enough samples to create IQ FFT plot, giving up";
     }
@@ -170,7 +170,7 @@ void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
 {
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
-    qDebug() << min << max << avg;
+    //qDebug() << min << max << avg;
     min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
 
     QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
@@ -313,6 +313,9 @@ void IqPlot::requestIqData()
             listFreqs = config->getIqMultibandCenterFreqs();
         }
 
+        if (trigFrequency > 0 && listFreqs.isEmpty())
+            listFreqs.append(trigFrequency);
+
         if (config->getIqRecordAllTrigArea() || listFreqs.isEmpty()) {
             QStringList stringListTrigFreqs = config->getTrigFrequencies();
             if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here?
@@ -345,9 +348,6 @@ void IqPlot::requestIqData()
                 }
             }
         }
-        if (trigFrequency > 0 && listFreqs.isEmpty())
-            listFreqs.prepend(trigFrequency);
-
 
         emit setFfmCenterFrequency(listFreqs.first());
         emit reqVifConnection();
