@@ -485,7 +485,7 @@ void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
         && freq == (quint64)(listFreqs.first() * 1e6)
         && bw == (quint32)(config->getIqFftPlotBw() * 1e3))
     {
-        QTimer::singleShot(150, this, [this]() {
+        QTimer::singleShot(250, this, [this]() {
             flagHeaderValidated = true;
             emit headerValidated(true);
         });

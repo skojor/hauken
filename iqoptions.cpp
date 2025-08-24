@@ -45,16 +45,16 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt4->setText(tr("Record multiple bands when triggered (defined in IqGnssBands.csv)"));
     cbOpt4->setToolTip(tr("Enable this option to make a recording on FFM center frequencies on multiple bands when triggered. Cannot be combined with trig area setting below."));
 
-    mainLayout->addRow(cbOpt5);
-    cbOpt5->setText(tr("Record I/Q samples over the whole trig area"));
-    cbOpt5->setToolTip(tr("If enabled the I/Q center frequencies will be decided by the trig area(s), so that all areas are covered by I/Q recordings. Cannot be combined with multiband rec. set above"));
+    mainLayout->addRow(cbOpt6);
+    cbOpt6->setText(tr("Record I/Q samples over the whole trig area"));
+    cbOpt6->setToolTip(tr("If enabled the I/Q center frequencies will be decided by the trig area(s), so that all areas are covered by I/Q recordings. Cannot be combined with multiband rec. set above"));
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
     connect(cbOpt4, &QCheckBox::clicked, this, [this](bool b) {
-        if (b) cbOpt5->setChecked(false);
+        if (b) cbOpt6->setChecked(false);
     });
-    connect(cbOpt5, &QCheckBox::clicked, this, [this](bool b) {
+    connect(cbOpt6, &QCheckBox::clicked, this, [this](bool b) {
         if (b) cbOpt4->setChecked(false);
     });
 
@@ -73,7 +73,7 @@ void IqOptions::start()
     cbOpt2->setChecked(config->getIqUseDB());
     cbOpt3->setChecked(config->getIqUseWindow());
     cbOpt4->setChecked(config->getIqRecordMultipleBands());
-    cbOpt5->setChecked(config->getIqRecordAllTrigArea());
+    cbOpt6->setChecked(config->getIqRecordAllTrigArea());
 
     dialog->exec();
 }
@@ -88,7 +88,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqUseDB(cbOpt2->isChecked());
     config->setIqUseWindow(cbOpt3->isChecked());
     config->setIqRecordMultipleBands(cbOpt4->isChecked());
-    config->setIqRecordAllTrigArea(cbOpt5->isChecked());
+    config->setIqRecordAllTrigArea(cbOpt6->isChecked());
 
     emit updSettings();
     dialog->close();
