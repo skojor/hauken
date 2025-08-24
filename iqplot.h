@@ -69,6 +69,7 @@ signals:
     void folderDateTimeSet();
     void busyRecording(bool);
     void headerValidated(bool); // Approve I/Q header, start gathering data
+    void resetTimeoutTimer(); // To hold TCP/UDP conn. up while gathering I/Q
 
 private:
     QSharedPointer<Config> config;

@@ -910,6 +910,9 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
     connect(iqPlot, &IqPlot::endVifConnection, measurementDevice, &MeasurementDevice::deleteIfStream);
     connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
+    connect(iqPlot, &IqPlot::resetTimeoutTimer, tcpStream.data(), &TcpDataStream::restartTimeoutTimer);
+    connect(iqPlot, &IqPlot::resetTimeoutTimer, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
+    connect(iqPlot, &IqPlot::resetTimeoutTimer, measurementDevice, &MeasurementDevice::restartTcpTimeoutTimer);
 }
 
 

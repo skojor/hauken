@@ -119,6 +119,7 @@ public slots:
     void setGainControl(int index);
     bool deviceHasGainControl() { return devicePtr->hasGainControl; }
     void setVifFreqAndMode(const double frequency);
+    void restartTcpTimeoutTimer() { if (tcpTimeoutTimer->isActive()) tcpTimeoutTimer->stop();}
 
 private slots:
     void scpiConnected();
@@ -213,7 +214,7 @@ private:
     QString inUseBy, inUseByIp, inUseMode;
     unsigned long inUseStart = 0, inUseStop = 0, inUseRes = 0;
     bool waitingForReply = false;
-    const int tcpTimeoutInMs = 10000;
+    const int tcpTimeoutInMs = 25000;
 
     bool modeChangeInProgress = false;
     bool modeChanged = false;

@@ -53,13 +53,13 @@ public:
     QElapsedTimer *traceTimer = new QElapsedTimer;
     int errorCtr = 0;
     bool errorHandleSent = false;
-    const int timeoutInMs = 12000;
+    const int timeoutInMs = 25000;
     unsigned long startfreq = 0, stopfreq = 0;
     unsigned int resolution = 0;
     int traceCtr = 0;
     QVector<QNetworkDatagram> ifBufferUdp;
     QByteArray ifBufferTcp;
-    QList<QByteArray> arrIfBufferTcp; // Multi recording buffer
+    //QList<QByteArray> arrIfBufferTcp; // Multi recording buffer
     QVector<complexInt16> iq;
 
 public slots:

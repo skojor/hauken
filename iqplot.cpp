@@ -36,7 +36,7 @@ void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency
                  * 1e3; // TODO: Is this universal for all R&S instruments?
     fillWindow();
 
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 60) // Don't change folder/filename timestamp too often
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 20) // Don't change folder/filename timestamp too often
         foldernameDateTime = QDateTime::currentDateTime();
 
     QString dir = config->getLogFolder();
@@ -329,13 +329,12 @@ void IqPlot::requestIqData()
 
                         double f = start + range / 2;
                         listFreqs.append(f / 1e6);
-                        while (f > start) {
+                        while (f > start + currentBandwidth / 2) {
                             f -= currentBandwidth;
                             listFreqs.append(f / 1e6);
-
                         }
                         f = start + range / 2;
-                        while (f < stop) {
+                        while (f < stop - currentBandwidth / 2) {
                             f += currentBandwidth;
                             listFreqs.append(f / 1e6);
                         }
@@ -500,6 +499,7 @@ void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
 void IqPlot::receiverControl()
 {
     flagHeaderValidated = false; // Assume future data to be invalid for now
+    emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq

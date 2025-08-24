@@ -160,7 +160,7 @@ void SdefRecorder::manualTriggeredRecording()
 
 QString SdefRecorder::createFilename()
 {
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 60) { // Don't change folder/filename timestamp too often
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 20) { // Don't change folder/filename timestamp too often
         foldernameDateTime = QDateTime::currentDateTime();
         emit folderDateTimeSet();
     }
@@ -243,7 +243,8 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
     QElapsedTimer timer;
     timer.start();
     QByteArray byteArray;
-    QDateTime startTime = datetime.last();
+    QDateTime startTime;
+    if (!datetime.isEmpty()) startTime = datetime.last();
     int dateIterator
         = positionHistory.size() - 1
           - config->getSdefPreRecordTime(); // to iterate through the pos. history. this one gets weird if recording is triggered before trace buffer is filled, but no worries
