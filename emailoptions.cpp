@@ -88,6 +88,10 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt5->setText("Play notification sound on incidents");
     cbOpt5->setToolTip("If checked a short message will play through default speakers when incident is triggered");
 
+    layout3->addRow(cbOpt6);
+    cbOpt6->setText("Use large fonts and UTC in incident log");
+    cbOpt6->setToolTip("Incident log font size is increased, and times are reported as UTC (Jammertest mode)");
+
     mainLayout->addWidget(groupBox1);
     mainLayout->addWidget(groupBox2);
     mainLayout->addWidget(groupBox3);
@@ -120,6 +124,8 @@ void EmailOptions::start()
     sbOpt3->setValue(config->getEmailDelayBeforeAddingImages());
     sbOpt2->setValue(config->getNotifyTruncateTime());
     sbOpt4->setValue(config->getEmailJammerProbabilityFilter());
+    cbOpt6->setChecked(config->getNotificationLargeFonts());
+
     dialog->exec();
 }
 
@@ -144,6 +150,7 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailGraphApplicationId(leOpt7->text());
     config->setEmailFilteredRecipients(leOpt10->text());
     config->setEmailJammerProbabilityFilter(sbOpt4->value());
+    config->setNotificationLargeFonts(cbOpt6->isChecked());
 
     dialog->close();
 }

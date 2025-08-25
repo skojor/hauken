@@ -2,6 +2,7 @@
 #define MQTT_H
 
 #include <QWidget>
+#include <QObject>
 #include <QtMqtt/QtMqtt>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -18,6 +19,8 @@ enum SITESTATUS {
     NORUNNING
 };
 
+#define MQTT_CONN_TIMEOUT_MS    30000
+
 class Mqtt : public QObject
 {
     Q_OBJECT
@@ -30,6 +33,8 @@ public slots:
 signals:
     void newData(QString& name, double& value);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
+    void triggerRecording();
+    void endRecording();
 
 private slots:
     void stateChanged(QMqttClient::ClientState state);
@@ -50,6 +55,7 @@ private:
     QMqttClient mqttClient;
     QTimer *keepaliveTimer = new QTimer;
     QTimer *webswitchTimer = new QTimer;
+    QTimer *connectionTimer = new QTimer;
     QList<double> subValues;
     QProcess *webswitchProcess = new QProcess;
     SITESTATUS siteStatus = UNKNOWN;

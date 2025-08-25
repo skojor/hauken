@@ -3,12 +3,12 @@
 void MainWindow::setSignals()
 {
     // TCP/UDP datastreams
-    connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this](const QList<complexInt16> iq) {
-        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, iq);
+    /*connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this](const QList<complexInt16> iq) {
+        QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
     });
     connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this](const QList<complexInt16> iq) {
-        QFuture<void> future = QtConcurrent::run(&Waterfall::receiveIqData, iqdataWaterfall, iq);
-    });
+        QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
+    });*/
 
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -68,6 +68,10 @@ void MainWindow::setSignals()
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             config.data(),
             &Config::setInstrTrigLevel);
+    connect(instrTrigLevel,
+            QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            traceBuffer,
+            &TraceBuffer::sendDispTrigline);
     connect(instrTrigBandwidth,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             config.data(),
@@ -218,6 +222,8 @@ void MainWindow::setSignals()
     if (!config->getGeoLimitActive()) {
         connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
         connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
+        connect(tcpStream.data(), &TcpDataStream::newFftData, ptrNetwork, &Network::newTraceline);
+        connect(udpStream.data(), &UdpDataStream::newFftData, ptrNetwork, &Network::newTraceline);
     }
 
     connect(measurementDevice,
@@ -266,7 +272,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, gnssAnalyzer3, &GnssAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
-    connect(config.data(), &Config::settingsUpdated, iqdataWaterfall, &Waterfall::updSettings);
+    connect(config.data(), &Config::settingsUpdated, iqPlot, &IqPlot::updSettings);
     //connect(config.data(), &Config::settingsUpdated, cameraRecorder, &CameraRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
@@ -275,23 +281,17 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, instrumentList, &InstrumentList::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssDisplay, &GnssDisplay::updSettings);
     connect(config.data(), &Config::settingsUpdated, accessHandler, &AccessHandler::updSettings);
+    connect(config.data(), &Config::settingsUpdated, ptrNetwork, &Network::updSettings);
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     //connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqdataWaterfall, &Waterfall::requestIqData); // New
-    connect(iqdataWaterfall,
-            &Waterfall::requestIq,
-            measurementDevice,
-            &MeasurementDevice::collectIqData);
-    connect(vifStreamTcp.data(),
-            &VifStreamTcp::stopIqStream,
-            measurementDevice,
-            &MeasurementDevice::deleteIfStream);
-    connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::resetTimer);
-    connect(btnTrigRecording, &QPushButton::clicked, iqdataWaterfall, &Waterfall::requestIqData);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData); // New
 
-    connect(sdefRecorder, &SdefRecorder::publishFilename, iqdataWaterfall, &Waterfall::setFilename);
+    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
+    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
+
+    connect(sdefRecorder, &SdefRecorder::publishFilename, iqPlot, &IqPlot::setFilename);
 
     connect(sdefRecorder,
             &SdefRecorder::recordingStarted,
@@ -405,6 +405,8 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqtt, &Mqtt::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(mqtt, &Mqtt::triggerRecording, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(mqtt, &Mqtt::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
     connect(measurementDevice,
@@ -469,7 +471,7 @@ void MainWindow::setSignals()
             &MeasurementDevice::reconnected,
             tcpStream.data(),
             &TcpDataStream::
-                restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
+            restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
     connect(measurementDevice,
             &MeasurementDevice::newAntennaNames,
             this,
@@ -519,7 +521,7 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
-    connect(iqdataWaterfall, &Waterfall::iqPlotReady, notifications, &Notifications::recIqPlot);
+    connect(iqPlot, &IqPlot::iqPlotReady, notifications, &Notifications::recIqPlot);
 
     connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
     connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
@@ -642,15 +644,16 @@ void MainWindow::setSignals()
 
                 int selIndex = -1;
                 for (int i = 0; i < ip.size(); i++) {
-                    instrIpAddr->addItem(name[i] + " (" + type[i] + ")", ip[i]);
+                    instrIpAddr->addItem(name[i] + " (" + type[i] + ")", QVariant(ip[i]));
                     if (ip[i] == config->getInstrIpAddr()) {
                         selIndex = i;
                     }
                 }
                 if (selIndex
                     == -1) { // IP not found in list, assuming it is manually entered earlier
-                    instrIpAddr->addItem(config->getInstrIpAddr(), config->getInstrIpAddr());
+                    instrIpAddr->addItem(config->getInstrIpAddr(), QVariant(config->getInstrIpAddr()));
                     instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
+
                 } else
                     instrIpAddr->setCurrentIndex(selIndex);
                 connect(instrIpAddr,
@@ -659,7 +662,7 @@ void MainWindow::setSignals()
                         &MainWindow::instrIpChanged);
             });
 
-    connect(instrIpAddr, &QComboBox::currentTextChanged, this, [this](const QString text) {
+    /*connect(instrIpAddr, &QComboBox::currentTextChanged, this, [this](const QString text) {
         if (text.count('.') == 3) { // Don't do anything until text looks like a valid IP
             if (instrIpAddr->itemText(instrIpAddr->count() - 1).count('.')
                 == 3) { // Already added a custom IP
@@ -667,7 +670,7 @@ void MainWindow::setSignals()
             }
             instrIpAddr->addItem(text, text);
         }
-    });
+    });*/
 
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)
@@ -748,20 +751,18 @@ void MainWindow::setSignals()
             &UdpDataStream::streamErrorResetConnection,
             measurementDevice,
             &MeasurementDevice::handleNetworkError);
-
-    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, aiPtr, &AI::setTrigCenterFrequency);
     connect(traceAnalyzer,
             &TraceAnalyzer::trigRegistered,
-            measurementDevice,
-            &MeasurementDevice::setTrigCenterFrequency);
-    connect(traceAnalyzer,
-            &TraceAnalyzer::trigRegistered,
-            iqdataWaterfall,
-            &Waterfall::setFfmFrequency);
+            iqPlot,
+            &IqPlot::setFfmFrequency);
     connect(measurementDevice,
             &MeasurementDevice::iqFfmFreqChanged,
-            iqdataWaterfall,
-            &Waterfall::setFfmFrequency);
+            iqPlot,
+            &IqPlot::setFfmFrequency);
+    connect(vifStreamTcp.data(),
+            &VifStreamTcp::newFfmCenterFrequency,
+            iqPlot,
+            &IqPlot::setFfmFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
         if (gnssDevice1->isValid())
@@ -796,6 +797,7 @@ void MainWindow::setSignals()
             this,
             &MainWindow::instrGainControlChanged);
 
+#ifdef Q_OS_WIN
     connect(config.data(), &Config::settingsUpdated, this, [this]() {
         if (config->getDarkMode()
             && QApplication::styleHints()->colorScheme() != Qt::ColorScheme::Dark) {
@@ -829,6 +831,7 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
+#endif
 
     connect(restApi, &RestApi::pscanStartFreq, this, [this](double f) {
         instrStartFreq->setValue(f);
@@ -878,4 +881,38 @@ void MainWindow::setSignals()
     connect(restApi, &RestApi::gaincontrol, this, [this](QString s) {
         instrGainControl->setCurrentIndex(instrGainControl->findText(s));
     });
+
+    connect(config.data(), &Config::settingsUpdated, this, [this] () {
+        if (config->getUseDbm() != useDbm) {
+            useDbm = config->getUseDbm();
+            if (useDbm) {
+                plotMaxScroll->setValue(plotMaxScroll->value() - 107);
+                plotMinScroll->setValue(plotMinScroll->value() - 107);
+            }
+            else {
+                plotMaxScroll->setValue(plotMaxScroll->value() + 107);
+                plotMinScroll->setValue(plotMinScroll->value() + 107);
+            }
+            traceBuffer->sendDispTrigline();
+        }
+    });
+
+    connect(iqPlot, &IqPlot::folderDateTimeSet, sdefRecorder, &SdefRecorder::setFolderDateTime);
+    connect(sdefRecorder, &SdefRecorder::folderDateTimeSet, iqPlot, &IqPlot::setFolderDateTime);
+    connect(measurementDevice, &MeasurementDevice::skipNextNTraces, sdefRecorder, &SdefRecorder::skipNextNTraces);
+
+    // Rebuilt I/Q functions
+    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setTrigFrequency);
+    connect(iqPlot, &IqPlot::reqVifConnection, measurementDevice, &MeasurementDevice::setupVifConnection);
+    connect(iqPlot, &IqPlot::setFfmCenterFrequency, measurementDevice, &MeasurementDevice::setVifFreqAndMode);
+    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
+    connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
+    connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
+    connect(iqPlot, &IqPlot::endVifConnection, measurementDevice, &MeasurementDevice::deleteIfStream);
+    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
+    connect(iqPlot, &IqPlot::resetTimeoutTimer, tcpStream.data(), &TcpDataStream::restartTimeoutTimer);
+    connect(iqPlot, &IqPlot::resetTimeoutTimer, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
+    connect(iqPlot, &IqPlot::resetTimeoutTimer, measurementDevice, &MeasurementDevice::restartTcpTimeoutTimer);
 }
+
+

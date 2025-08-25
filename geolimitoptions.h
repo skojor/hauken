@@ -9,7 +9,6 @@
 
 class GeoLimitOptions : public OptionsBaseClass
 {
-    Q_OBJECT
 public:
     GeoLimitOptions(QSharedPointer<Config> c);
 

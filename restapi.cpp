@@ -28,6 +28,7 @@ RestApi::~RestApi()
 
 bool RestApi::authorize(const QHttpServerRequest &request)
 {
+#ifdef Q_OS_WIN
     //qDebug() << config->getRestKey() << config->getRestSecret();
     for (auto &&[key, value] : request.headers().toListOfPairs()) {
         if (!config->getRestKey().isEmpty() && !config->getRestSecret().isEmpty()
@@ -35,11 +36,13 @@ bool RestApi::authorize(const QHttpServerRequest &request)
             return true;
         }
     }
+#endif
     return false;
 }
 
 QJsonObject RestApi::byteArrayToJsonObject(const QByteArray &arr)
 {
+#ifdef Q_OS_WIN
     QJsonParseError parseError;
     QJsonDocument json = QJsonDocument::fromJson(arr, &parseError);
     if (!json.isObject()) {
@@ -47,6 +50,7 @@ QJsonObject RestApi::byteArrayToJsonObject(const QByteArray &arr)
     }
 
     return json.object();
+#endif
 }
 
 void RestApi::parseJson(QJsonObject object)

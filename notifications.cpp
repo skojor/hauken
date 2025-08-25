@@ -78,7 +78,7 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
 void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QString string, QDateTime dt)
 {
     QString msg = string;
-    if (type == NOTIFY::TYPE::MEASUREMENTDEVICE) msg.prepend(name + ": ");
+    if (type == NOTIFY::TYPE::MEASUREMENTDEVICE);// msg.prepend(name + ": ");
     else if (type == NOTIFY::TYPE::GNSSDEVICE || type == NOTIFY::TYPE::GNSSANALYZER) msg.prepend("GNSS" + name + ": ");
     else if (type == NOTIFY::TYPE::GEOLIMITER) msg.prepend("Geoblocking: ");
 
@@ -113,10 +113,17 @@ void Notifications::appendIncidentLog(QDateTime dt, const QString string)
 {
     QString text;
     QTextStream ts(&text);
-    ts << "<tr><td>" << dt.toString("dd.MM.yy") << "</td><td>"
-       << dt.toString("hh:mm:ss") << "</td><td>" << string
-       << "</td></tr>";
+    if (config->getNotificationLargeFonts()) {
+        ts << "<tr><td style='font-size: 14pt' width=50>" << dt.toUTC().toString("ddd") << "<td style='font-size: 14pt' width=120>" << dt.toUTC().toString("hh:mm:ss")
+        << " UTC</td>" << "<td style='font-size: 14pt'>" << string
+        << "</td></tr>";
+    }
+    else {
+        ts << "<tr><td>" << dt.toString("dd.MM.yy") << "</td><td>"
+           << dt.toString("hh:mm:ss") << "</td><td>" << string
+           << "</td></tr>";
 
+    }
     emit showIncident(text);
 }
 
@@ -287,8 +294,13 @@ bool Notifications::simpleParametersCheck()
 
 void Notifications::setupIncidentTable()
 {
-    emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
-    appendIncidentLog(QDateTime::currentDateTime(), "Application started");
+    if (config->getNotificationLargeFonts()) {
+        emit showIncident("<table><tr><th width=50 align=left>Day</th><th width=120 align=left>Time</th><th align=left>Text</th></tr>");
+    }
+    else {
+        emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
+        appendIncidentLog(QDateTime::currentDateTime(), "Application started");
+    }
 }
 
 void Notifications::recTracePlot(const QPixmap *pic)
@@ -416,22 +428,29 @@ void Notifications::generateGraphEmail()
         att.insert("isInline", "true");
         attachments.append(att);
     }
-    if (!iqPlotFilename.isEmpty()) {
-        QFile picture2(iqPlotFilename);
-        if (!picture2.open(QIODevice::ReadOnly)) {
-            qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
-        }
-        else {
-            att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att2.insert("name", "iqplot.jpg");
-            att2.insert("contentType", "image/jpg");
-            att2.insert("contentId", "iqplot");
-            att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
-            att2.insert("isInline", "false");
-            attachments.append(att2);
-            iqPlotFilename.clear();
+    int iter = 0;
+    for (auto && iqPlotFilename : iqPlotFilenames) {
+        iter++;
+        if (!iqPlotFilename.isEmpty()) {
+            QFile picture2(iqPlotFilename);
+            if (!picture2.open(QIODevice::ReadOnly)) {
+                qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
+            }
+            else {
+                QJsonObject att2;
+                QString filename = iqPlotFilename.split('/').last();
+                att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
+                att2.insert("name", filename);
+                att2.insert("contentType", "image/jpg");
+                att2.insert("contentId", "iqplot" + QString::number(iter));
+                att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
+                att2.insert("isInline", "false");
+                attachments.append(att2);
+                iqPlotFilename.clear();
+            }
         }
     }
+    iqPlotFilenames.clear();
 
     message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");
     message.insert("body", body);

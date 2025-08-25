@@ -31,11 +31,40 @@ QByteArray Config::simpleEncr(QByteArray toEncrypt)
 
 QString Config::findWorkFolderName()
 {
-   if (QSysInfo::kernelType().contains("win")) {
+    if (QSysInfo::kernelType().contains("win")) {
         /*QFileInfo checkDir("D:/");
         if (checkDir.exists() && checkDir.isWritable()) return "D:/Hauken";
         else*/ return "C:/Hauken";
     }
     else
         return QString(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/Hauken");
+}
+
+QList<double> Config::getIqMultibandCenterFreqs()
+{
+    QList<double> iqGnssBands;
+
+    QFile file(getWorkFolder() + "/IqGnssBands.csv");
+    if (file.exists()) {
+        file.open(QIODevice::ReadOnly);
+        while (!file.atEnd()) {
+            QString line = file.readLine();
+            QStringList split = line.split(',');
+            if (!line.contains("#")) {
+                for (auto && val : split) {
+                    bool ok = false;
+                    double dbl = val.toDouble(&ok);
+                    if (ok) iqGnssBands.append(dbl);
+                }
+            }
+        }
+    }
+    file.close();
+
+    if (iqGnssBands.size() > 0)
+        qDebug() << "IQ GNSS bands successfully read from file \"IqGnssBands.csv\", found" << iqGnssBands.size() << "freqs";
+    else
+        qDebug() << "No IQ GNSS bands defined";
+
+    return iqGnssBands;
 }

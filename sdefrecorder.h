@@ -16,7 +16,7 @@
 #include <QElapsedTimer>
 #include "config.h"
 #include "typedefs.h"
-#include "quazip/JlCompress.h"
+#include "JlCompress.h"
 #include <QNetworkAccessManager>
 
 #define TEMPFILENAME "feed.cef"
@@ -53,6 +53,9 @@ public slots:
     void tempFileData(const QVector<qint16> data);
     void saveDataToTempFile();
     void closeTempFile();
+    void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
+    void setIqRecordingInProgress(bool b) { iqRecordingInProgress = b;}
+    void skipNextNTraces(int i) { skipTraces = i;}
 
 private slots:
     QByteArray createHeader();
@@ -79,6 +82,7 @@ signals:
     void publishFilename(QString);
     void reqAuthentication();
     void fileReadyForUpload(QString);
+    void folderDateTimeSet();
 
 private:
     //QSharedPointer<Config> config;
@@ -93,6 +97,7 @@ private:
     QTimer *finishedFileTimer;
     QTimer *tempFileTimer;
     QTimer *tempFileCheckFilesize;
+    QDateTime foldernameDateTime = QDateTime::currentDateTime();
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
@@ -101,7 +106,7 @@ private:
     int maxRecordTime;
     bool addPosition;
     QProcess *process;
-    double prevLat, prevLng;
+    double prevLat = 0, prevLng = 0;
     POSITIONSOURCE positionSource;
     QList<QPair<double, double>> positionHistory;
     bool deviceConnected = false;
@@ -121,6 +126,9 @@ private:
     QNetworkAccessManager *networkManager; // New for OAuth2/SSO
 
     QList<qint16> tempFileTracedata;
+    bool startTempRecording = false;
+    bool iqRecordingInProgress = false;
+    int skipTraces = 0;
 
     // Config cache
     bool useNewMsFormat;

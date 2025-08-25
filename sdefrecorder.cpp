@@ -160,24 +160,33 @@ void SdefRecorder::manualTriggeredRecording()
 
 QString SdefRecorder::createFilename()
 {
+    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 40) { // Don't change folder/filename timestamp too often
+        foldernameDateTime = QDateTime::currentDateTime();
+        emit folderDateTimeSet();
+    }
+
     QString dir = config->getLogFolder();
     QString filename;
     QTextStream ts(&filename);
 
     if (config->getNewLogFolder()) { // create new folder for incident
-        dir = config->getLogFolder() + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
-        if (!QDir().mkpath(dir)) {
-            emit warning("Cannot create folder " + dir + ", check your settings!");
-            failed = true;
-        }
+        dir = config->getLogFolder() + "/" + foldernameDateTime.toString("yyyyMMdd_hhmmss_") + config->getStationName();
+        if (!QDir().exists(dir))
+            QDir().mkpath(dir);
     }
     if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
+        ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
+           << "_" << config->getStationName()
+           << "_" << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
+           << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0);
+        /*
         ts << dir << "/" << config->getSdefStationInitals() << "_"
            << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
            << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << "_"
-           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");*/
     } else {
-        ts << dir << "/" << config->getSdefStationInitals() << "_"
+        ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
+           << "_" << config->getStationName() << "_"
            << QString::number((config->getInstrFfmCenterFreq()
                                - config->getInstrFfmSpan().toDouble() / 2e3)
                                   * 1e3,
@@ -188,8 +197,7 @@ QString SdefRecorder::createFilename()
                                + config->getInstrFfmSpan().toDouble() / 2e3)
                                   * 1e3,
                               'f',
-                              0)
-           << "_" << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+                              0);
     }
     //<< ".cef";
 
@@ -206,7 +214,7 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         file.close();
     }
     else*/
-    if (historicDataSaved) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
+    if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
         QByteArray byteArray;
         if (useNewMsFormat)
             byteArray
@@ -226,6 +234,7 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
         byteArray += "\n";
         file.write(byteArray);
     }
+    if (skipTraces) skipTraces--;
 }
 
 void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
@@ -234,7 +243,8 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
     QElapsedTimer timer;
     timer.start();
     QByteArray byteArray;
-    QDateTime startTime = datetime.last();
+    QDateTime startTime;
+    if (!datetime.isEmpty()) startTime = datetime.last();
     int dateIterator
         = positionHistory.size() - 1
           - config->getSdefPreRecordTime(); // to iterate through the pos. history. this one gets weird if recording is triggered before trace buffer is filled, but no worries
@@ -334,8 +344,8 @@ QByteArray SdefRecorder::createHeader()
            << "ScanTime "
            << QString::number((double) config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
            << "Instrument " << config->getInstrId() << "\n"
-           << "MeasureApp Hauken v." << QString(PROJECT_VERSION) << "\n"
-           << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << "\n"
+           << "MeasureApp Hauken v" << QString(PROJECT_VERSION) << "\n"
+           << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << " s\n"
            << "Attenuator "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
@@ -347,17 +357,18 @@ QByteArray SdefRecorder::createHeader()
            << "\n"
            << "AntennaPort " << QString::number(config->getInstrAntPort() + 1) << "\n"
            << (!gain.isEmpty() ? "GainControl " + gain + "\n" : "") << "Note "
-           << config->getInstrId() << "; Hauken v." << QString(PROJECT_VERSION) << "\n"
+           << config->getInstrId() << "\n"
            << "Note\n"
            << "Note " << config->getSdefStationInitals()
-           << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << ", Attenuator: "
+           << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << " s, Attenuator: "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
-           << ", AntennaPort: " << QString::number(config->getInstrAntPort() + 1) << ", FFT: "
+           /*<< ", AntennaPort: " << QString::number(config->getInstrAntPort() + 1) << ", FFT: "
            << (config->getInstrFftMode().contains("off", Qt::CaseInsensitive)
                    ? "Clear/write"
                    : config->getInstrFftMode())
-           << (!gain.isEmpty() ? ", GainControl: " + gain : "") << "\n\n";
+           << (!gain.isEmpty() ? ", GainControl: " + gain : "")*/
+           << "\n\n";
 
     return buf.toLocal8Bit();
 }
@@ -380,7 +391,7 @@ void SdefRecorder::finishRecording()
     emit recordingEnded();
     if (config->getSdefSaveToFile()) {
         if (recordingTimeoutTimer->isActive()) {
-            emit toIncidentLog(
+            /*emit toIncidentLog(
                 NOTIFY::TYPE::SDEFRECORDER,
                 "",
                 "Recording ended after "
@@ -393,7 +404,7 @@ void SdefRecorder::finishRecording()
                                  + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
                                             == 1
                                         ? " minute"
-                                        : " minutes")));
+                                        : " minutes")));*/
             if (autorecorderTimer->isActive())
                 autorecorderTimer->stop();
         }
@@ -605,18 +616,18 @@ void SdefRecorder::startTempFile()
         tempFile.setFileName(config->getLogFolder() + "/" + TEMPFILENAME);
 
         if (tempFile.exists()) {
-            qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
-            if (tempFile.remove())
-                qDebug() << "Deleted ok";
-            else
-                qDebug() << "Failed to delete" << tempFile.errorString();
+            //qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
+            tempFile.remove();
+                //qDebug() << "Deleted ok";
+            //else
+            //qDebug() << "Failed to delete" << tempFile.errorString();
         }
         if (!tempFile.open(QIODevice::WriteOnly))
             qDebug() << "Could not open file" << tempFile.fileName() << "for writing,"
                      << tempFile.errorString();
     } else {
         qDebug() << "Temp file" << tempFile.fileName()
-                 << "already opened, what did you try to do here?";
+        << "already opened, what did you try to do here?";
     }
     tempFile.write(createHeader());
 }
@@ -626,6 +637,7 @@ void SdefRecorder::closeTempFile()
     if (tempFile.isOpen()) {
         tempFile.close();
         qDebug() << "Temp file" << file.fileName() << "closed";
+        startTempRecording = false;
     }
 }
 
@@ -648,8 +660,15 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
 
 void SdefRecorder::saveDataToTempFile()
 {
-    if (!tempFile.isOpen() && config->getSaveToTempFile())
+    if (!startTempRecording && tempFileTracedata.size() > 0) {
+        QTimer::singleShot(3000, this, [this]() {
+            startTempRecording = true;
+        });
+    }
+    if (startTempRecording && !tempFile.isOpen() && config->getSaveToTempFile()) {
         startTempFile();
+        tempFile.flush();
+    }
 
     if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
         QByteArray byteArray;

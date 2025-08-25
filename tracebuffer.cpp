@@ -12,7 +12,7 @@ void TraceBuffer::start()
     throttleTimer = new QElapsedTimer;
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
-    connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+    //connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
 
     connect(maintenanceRestartTimer, &QTimer::timeout, this, [this]() {
         maintenanceRestartTimer->stop();
@@ -146,6 +146,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 {
     displayBuffer.clear();
     QVector<qint16> tmpNormTraceBuffer(plotResolution);
+    double corr = config->getCorrValue();
 
     if (data.size() > plotResolution) {
         double rate = (double)data.size() / plotResolution;
@@ -161,6 +162,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
             //val /= (int)rate + 1;
             //if (top > 150) val = top; // hack to boost display of small bw signals
             if (useDbm) top -= 1070;
+            top += corr * 10;
 
             displayBuffer.append(((double)top / 10.0)); // / (int)rate + 1);
             tmpNormTraceBuffer[i] = top;
@@ -286,7 +288,7 @@ void TraceBuffer::updSettings()
     averageDispLevelNormalized.clear();
     tracesNeededForAvg = config->getInstrTracesNeededForAverage();
     useDbm = config->getUseDbm();
-    maintainAvgLevel();
+    //maintainAvgLevel();
 }
 
 void TraceBuffer::deviceDisconnected()

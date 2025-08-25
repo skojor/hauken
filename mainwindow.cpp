@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
+    useDbm = config->getUseDbm();
+
     QFont font = QApplication::font("QMessageBox");
     font.setPixelSize(11);
     qApp->setFont(font);
@@ -26,8 +28,6 @@ MainWindow::MainWindow(QWidget *parent)
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
     waterfall = new Waterfall(config);
-    iqdataWaterfall = new Waterfall(config);
-    iqdataWaterfall->start();
 
     //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
@@ -74,14 +74,21 @@ MainWindow::MainWindow(QWidget *parent)
     cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(true);
+    incidentLog->setReadOnly(false);
 
 #ifdef _WIN32
-    if (QFile::exists(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav")) {
+    if (QFile::exists(config->getWorkFolder() + "/notify.wav")) {
+        player->setSource(QUrl::fromLocalFile(config->getWorkFolder() +  + "/notify.wav"));
+        player->setAudioOutput(audioOutput);
+        audioOutput->setVolume(80);
+        qDebug() << "Using notify from" << config->getWorkFolder();
+    }
+    else if (QFile::exists(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav")) {
         player->setSource(QUrl::fromLocalFile(
             QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/notify.wav"));
         player->setAudioOutput(audioOutput);
         audioOutput->setVolume(80);
+        qDebug() << "Using notify from" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
     }
 #endif
 
@@ -103,6 +110,7 @@ MainWindow::MainWindow(QWidget *parent)
     notificationTimer->setSingleShot(true);
 
     instrumentList->start(); // check if instrument server is available
+    gnssDisplay->setParent(this);
     gnssDisplay->start();
 
     measurementDevice->setUdpStreamPtr(udpStream);
@@ -110,6 +118,13 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
     VersionUpdater versionUpdater(config); // Handles any config changes needed
+
+    QSettings extras;
+    if (extras.value("incGeometry").isValid())
+        incidentLog->restoreGeometry(extras.value("incGeometry").toByteArray());
+    if (extras.value("plotGeometry").isValid())
+        customPlot->restoreGeometry(extras.value("plotGeometry").toByteArray());
+
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -122,11 +137,16 @@ void MainWindow::closeEvent(QCloseEvent *event)
     measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
+    incidentLog->close();
+    customPlot->close();
     QMainWindow::closeEvent(event);
 }
 
 MainWindow::~MainWindow()
 {
+    QSettings extras;
+    extras.setValue("incGeometry", incidentLog->saveGeometry());
+    extras.setValue("plotGeometry", customPlot->saveGeometry());
     QApplication::exit();
 }
 
@@ -177,8 +197,8 @@ void MainWindow::createActions()
     openIqAct->setStatusTip(tr("Read and analyze a raw IQ data file from disk"));
     connect(openIqAct, &QAction::triggered, this, [this]() {
         QFuture<bool> future
-            = QtConcurrent::run(&Waterfall::readAndAnalyzeFile,
-                                iqdataWaterfall,
+            = QtConcurrent::run(&IqPlot::readAndAnalyzeFile,
+                                iqPlot,
                                 QFileDialog::getOpenFileName(this,
                                                              "Open raw IQ data file",
                                                              config->getLogFolder(),
@@ -383,7 +403,15 @@ void MainWindow::createLayout()
 
     QHBoxLayout *incLayout = new QHBoxLayout;
     incBox = new QGroupBox("Incident log");
-    incLayout->addWidget(incidentLog);
+    if (config->getSeparatedWindows()) {
+        incidentLog->show();
+        incidentLog->setWindowTitle("Incident log");
+        incidentLog->setAttribute(Qt::WA_QuitOnClose);
+
+    }
+    else {
+        incLayout->addWidget(incidentLog);
+    }
     incBox->setLayout(incLayout);
     incBox->setMaximumHeight(220);
 
@@ -422,7 +450,15 @@ void MainWindow::createLayout()
     QGridLayout *plotLayout = new QGridLayout;
     plotLayout->addWidget(plotMaxScroll, 0, 0, 1, 1);
     plotLayout->addWidget(plotMinScroll, 2, 0, 1, 1);
-    plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+
+    if (config->getSeparatedWindows()) {
+        customPlot->show();
+        customPlot->setWindowTitle("RF spectrum");
+    }
+    else {
+        plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+    }
+
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnTrigRecording);
     btnTrigRecording->setFixedWidth(100);
@@ -483,7 +519,7 @@ void MainWindow::setToolTips()
                           "FFM gives much better time resolution.");
     instrFftMode->setToolTip("FFT calculation method. Clear/write is the fastest method. "
                              "Max hold increases chances to record short burst signals.");
-    instrIpAddr->setToolTip("IP address or station name");
+    instrIpAddr->setToolTip("IP address or station name. Press ENTER after writing IP manually");
     instrPort->setToolTip("SCPI port to connect to, default 5555");
     instrGainControl->setToolTip(
         "Gain mode for newer R&S instruments. Change according to RF environment");
@@ -522,8 +558,8 @@ void MainWindow::setToolTips()
         "to be set up with NTP client software. The NTP time will then be "
         "compared with this value, and triggers an incident if the offset "
         "is higher than set value. Set to 0 to disable.");
-    plotMaxScroll->setToolTip("Set the max. scale in dBuV");
-    plotMinScroll->setToolTip("Set the min. scale in dBuV");
+    plotMaxScroll->setToolTip("Set the max. scale");
+    plotMinScroll->setToolTip("Set the min. scale");
     plotMaxholdTime->setToolTip("Display maxhold time in seconds. Max 120 seconds. 0 for no "
                                 "maxhold.\nOnly affects displayed maxhold");
     showWaterfall->setToolTip("Select type of waterfall overlay");
@@ -673,7 +709,7 @@ void MainWindow::setValidators()
     instrIpAddr->setInputMask("000.000.000.000");
     instrIpAddr->setCursorPosition(0);*/
 
-    instrTrigLevel->setRange(-50, 200);
+    instrTrigLevel->setRange(-200, 200);
     instrTrigLevel->setDecimals(0);
     instrTrigTime->setRange(0, 9e5);
     instrTrigBandwidth->setRange(0, 9.99e9);
@@ -715,7 +751,7 @@ void MainWindow::instrFfmCenterFreqChanged()
         traceBuffer->restartCalcAvgLevel();
         waterfall->restartPlot();
     }
-    iqdataWaterfall->setFfmFrequency(instrFfmCenterFreq->value());
+    iqPlot->setFfmFrequency(instrFfmCenterFreq->value());
 }
 
 void MainWindow::instrFfmSpanChanged()
@@ -883,7 +919,7 @@ void MainWindow::updWindowTitle(const QString msg)
     if (!msg.isEmpty())
         extra = tr(" using ") + msg + " - " + instrIpAddr->currentText() + " ("
                 + instrIpAddr->currentData().toString() + ")";
-    setWindowTitle(tr("Hauken v. ") + PROJECT_VERSION + extra + " ("
+    setWindowTitle(tr("Hauken v") + PROJECT_VERSION + extra + " ("
                    + config->getCurrentFilename().split('/').last() + ")");
 }
 
@@ -894,6 +930,7 @@ void MainWindow::about()
     QMessageBox box;
     box.setTextFormat(Qt::RichText);
     box.setStandardButtons(QMessageBox::Ok);
+
 
     ts << "<table><tr><td>Application version</td><td>" << QString(FULL_VERSION) << "</td></tr>";
     ts << "<tr><td>Build date and time</td><td>" << __DATE__ << " / " << __TIME__

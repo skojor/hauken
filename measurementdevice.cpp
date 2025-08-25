@@ -62,6 +62,7 @@ void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
         if (autoReconnect)
             scpiReconnect = true;
         instrDisconnect();
+
         autoReconnectTimer->start(5000);
     }
     if (state == QAbstractSocket::UnconnectedState) {
@@ -1060,72 +1061,47 @@ void MeasurementDevice::handleNetworkError()
     qDebug() << "OBAbug detected, do sth smart here";
 }
 
-void MeasurementDevice::setIfMode()
+void MeasurementDevice::setVifFreqAndMode(const double frequency)
 {
-    if (trigFrequency > 0) {
-        scpiWrite("freq " + QByteArray::number(trigFrequency) + " MHz");
+    if (devicePtr->mode == Instrument::Mode::PSCAN) {
+        modeChanged = true;
+        scpiWrite("freq:mode ffm");
     }
-    else {
-        double f;
-        if (devicePtr->mode == Instrument::Mode::PSCAN)
-            f = devicePtr->pscanStartFrequency + (devicePtr->pscanStopFrequency - devicePtr->pscanStartFrequency) / 2;
-        else
-            f = devicePtr->ffmCenterFrequency;
-
-        scpiWrite("freq " + QByteArray::number(f));
-        emit iqFfmFreqChanged(f/1e6);
-    }
-    scpiWrite("syst:if:rem:mode short");
-    scpiWrite("band " + QByteArray::number(config->getIqFftPlotBw()) + " khz");
+    scpiWrite("freq " + QByteArray::number(frequency, 'f', 6) + " MHz");
     scpiWrite("init");
 }
 
 void MeasurementDevice::setupIfStream()
 {
-    /*scpiWrite("trac:udp:tag:on \"" +
-              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamUdp->getUdpPort()) + ", vif");
-
-    scpiWrite("trac:udp:flag:on \"" +
-              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamUdp->getUdpPort()) + ", 'ifpan1'");*/
-
     scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");
-    vifStreamTcp->startIqDataTimeout();
 }
 
 void MeasurementDevice::deleteIfStream()
 {
-    /*scpiWrite("trac:udp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamUdp->getUdpPort()));*/
-
     scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()));
-    if (modeChanged) {
+    if (centerFrequencies.size() > 0 && config->getIqRecordMultipleBands()) {
+    }
+    else if (modeChanged) {
         scpiWrite("freq:mode psc");
         scpiWrite("init");
     }
+    else {
+        setFfmCenterFrequency();
+        setFfmFrequencySpan();
+        emit skipNextNTraces(20); // Skip few FFM lines to not mix with old data ##FIXME!
+    }
 }
 
-void MeasurementDevice::collectIqData(int nrOfSamplesNeeded)
+void MeasurementDevice::setupVifConnection()
 {
-    vifStreamTcp->setSamplesNeeded(nrOfSamplesNeeded);
-
-    if (config->getIqCreateFftPlot()) {
-        modeChanged = false;
-        Instrument::Mode mode = devicePtr->mode;
-        if (mode != Instrument::Mode::FFM) {
-            modeChanged = true;
-            scpiWrite("freq:mode ffm"); // Temporary change mode
-        }
-        setIfMode();
-        QTimer::singleShot(100, this, &MeasurementDevice::setupIfStream); // Allow mode to be set before collecting
-
-        //QTimer::singleShot(1110, this, &MeasurementDevice::deleteIfStream);
-        trigFrequency = 0; // Reset
-    }
+    scpiWrite("trac:tcp:tag:on \"" +
+              scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+              QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");
+    scpiWrite("syst:if:rem:mode short");
+    scpiWrite("band " + QByteArray::number(config->getIqFftPlotBw()) + " khz");
 }
 
 void MeasurementDevice::setGainControl(int index)

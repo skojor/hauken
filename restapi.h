@@ -11,7 +11,7 @@
 #include <QTcpServer>
 #include "config.h"
 
-#define LISTEN_PORT 80
+#define LISTEN_PORT 5570
 
 class RestApi : public QObject
 {

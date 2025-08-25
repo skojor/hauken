@@ -7,7 +7,6 @@
 
 class GnssOptions : public OptionsBaseClass
 {
-    Q_OBJECT
 public:
     GnssOptions(QSharedPointer<Config> c);
 

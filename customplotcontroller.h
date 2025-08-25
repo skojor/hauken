@@ -18,7 +18,7 @@
  *
  */
 
-#define overlayTransparency 25
+#define overlayTransparency 50
 
 class CustomPlotController : public QObject
 {
@@ -85,13 +85,15 @@ private:
     QPixmap *tracePlot = new QPixmap;
     bool markGnss = false;
     int plotIterator = 0;
-    QStringList gnssBands;              // Hardcoded for now
+    QStringList gnssBands;
     QList<double> gnssBandfrequencies;
     QList<QColor> gnssBandColors;
     QList<QCPItemText *> gnssTextLabels;
     QList<bool> gnssBandsSelectors;
     QList<QCPItemStraightLine *> gnssCenterLine;
     QMutex mutex;
+    QList<int> gnssTextLabelPos;
+    QList<double> gnssBandCenterFreq;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H

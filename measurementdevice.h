@@ -55,6 +55,7 @@ signals:
     //void freqChanged(double, double);
     //void resChanged(double);
     void iqFfmFreqChanged(double);
+    void skipNextNTraces(int);
 
 public slots:
     void start();
@@ -96,6 +97,8 @@ public slots:
     QStringList deviceFftModes() { return devicePtr->fftModes;}
     quint64 deviceMinFreq() { return devicePtr->minFrequency;}
     quint64 deviceMaxFreq() { return devicePtr->maxFrequency;}
+    quint64 ffmCenterFrequency() { return devicePtr->ffmCenterFrequency;}
+    quint32 ffmBandwidth() { return devicePtr->ffmFrequencySpan;}
 
     void reqPosition() { emit positionUpdate(devicePtr->positionValid,
                                              devicePtr->latitude,
@@ -111,11 +114,12 @@ public slots:
     void handleNetworkError();
     void autoReconnectCheckStatus();
     void resetFreqSettings();
-    void collectIqData(int nrOfSamplesNeeded);
-    void setTrigCenterFrequency(double d) {trigFrequency = d;}
+    void setupVifConnection();
     void deleteIfStream();
     void setGainControl(int index);
     bool deviceHasGainControl() { return devicePtr->hasGainControl; }
+    void setVifFreqAndMode(const double frequency);
+    void restartTcpTimeoutTimer() { if (tcpTimeoutTimer->isActive()) tcpTimeoutTimer->stop();}
 
 private slots:
     void scpiConnected();
@@ -157,7 +161,6 @@ private slots:
     void checkPscanResolution(const QByteArray buffer);
     void checkFfmFreq(const QByteArray buffer);
     void checkFfmSpan(const QByteArray buffer);
-    void setIfMode();
     void setupIfStream();
 
 private:
@@ -211,11 +214,12 @@ private:
     QString inUseBy, inUseByIp, inUseMode;
     unsigned long inUseStart = 0, inUseStop = 0, inUseRes = 0;
     bool waitingForReply = false;
-    const int tcpTimeoutInMs = 10000;
+    const int tcpTimeoutInMs = 25000;
 
     bool modeChangeInProgress = false;
-    double trigFrequency = 0;
     bool modeChanged = false;
+    QList<double> centerFrequencies;
+
 };
 
 #endif // MEASUREMENTDEVICE_H

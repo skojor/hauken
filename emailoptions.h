@@ -6,7 +6,6 @@
 
 class EmailOptions : public OptionsBaseClass
 {
-    Q_OBJECT
 public:
     EmailOptions(QSharedPointer<Config> c);
 

@@ -35,7 +35,6 @@
 class InstrumentList : public QObject
 {
     Q_OBJECT
-
 public:
     explicit InstrumentList(QSharedPointer<Config>);
     void start();

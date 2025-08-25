@@ -117,8 +117,13 @@ bool TraceAnalyzer::checkIfFrequencyIsInTrigArea(double freq)
 }
 
 void TraceAnalyzer::updSettings()
-{
+{    
     trigLevel = config->getInstrTrigLevel();
+    /*if (config->getUseDbm() != useDbm) {
+        useDbm = config->getUseDbm();
+        if (useDbm) trigLevel += 107;
+        else trigLevel -= 107;
+    }*/
     singleTrigBandwidth = config->getInstrMinTrigBW();
     totalTrigBandwidth = config->getInstrTotalTrigBW();
     trigTime = config->getInstrMinTrigTime();

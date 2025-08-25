@@ -15,7 +15,7 @@ public slots:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState state);
     void newDataHandler();
-    void restartTimeoutTimer() {  { if (udpSocket->isOpen()) timeoutTimer->start(timeoutInMs);}}
+    void restartTimeoutTimer() { timeoutTimer->stop();}
 
 signals:
 

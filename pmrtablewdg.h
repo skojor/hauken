@@ -32,6 +32,7 @@
 
 class PmrTableWdg : public QObject
 {
+    Q_OBJECT
 public:
     PmrTableWdg(QSharedPointer<Config> c);
     ~PmrTableWdg();

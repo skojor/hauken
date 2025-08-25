@@ -15,37 +15,41 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
         while (!file.atEnd()) {
             QString line = file.readLine();
             QStringList split = line.split(',');
-            if (!line.contains("#") && split.size() == 6) {
+            if (!line.contains("#") && split.size() == 9) {
                 gnssBands.append(split[0]);
                 gnssBandfrequencies.append(split[1].toDouble());
                 gnssBandfrequencies.append(split[2].toDouble());
-                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), overlayTransparency));
+                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), split[7].toInt()));
+                gnssTextLabelPos.append(split[6].toInt());
+                gnssBandCenterFreq.append(split[8].toDouble());
             }
         }
     }
-    else {
+    /*else {
         qDebug() << "No bandplan file found, creating one";
         file.open(QIODevice::ReadWrite);
-        file.write("G1,1593,1610,255,0,0\n");
-        file.write("L1/E1,1559,1591,0,0,255\n");
-        file.write("E6,1260,1300,0,0,255\n");
-        file.write("G2,1237,1254,255,0,0\n");
-        file.write("L2,1215,1239.6,0,0,255\n");
-        file.write("G3/E5b,1189,1214,255,255,0\n");
-        file.write("L5/E5a,1164,1189,255,0,0\n");
+        file.write("G1,1593,1610,255,0,0,0,50\n");
+        file.write("L1/E1,1559,1591,0,0,255,0,50\n");
+        file.write("E6,1260,1300,0,0,255,0,50\n");
+        file.write("G2,1237,1254,255,0,0,0,50\n");
+        file.write("L2,1215,1239.6,0,0,255,0,50\n");
+        file.write("G3/E5b,1189,1214,255,255,0,0,50\n");
+        file.write("L5/E5a,1164,1189,255,0,0,0,50\n");
 
         file.seek(0); // start at top to read data to memory
         while (!file.atEnd()) {
             QString line = file.readLine();
             QStringList split = line.split(',');
-            if (!line.contains("#") && split.size() == 6) {
+            if (!line.contains("#") && split.size() == 9) {
                 gnssBands.append(split[0]);
                 gnssBandfrequencies.append(split[1].toDouble());
                 gnssBandfrequencies.append(split[2].toDouble());
-                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), overlayTransparency));
+                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), split[7].toInt()));
+                gnssTextLabelPos.append(split[6].toInt());
+                gnssBandCenterFreq.append(split[8].toDouble());
             }
         }
-    }
+    }*/
     file.close();
 }
 
@@ -64,7 +68,7 @@ void CustomPlotController::setupBasics()
     customPlotPtr->addGraph();
     customPlotPtr->addGraph();
 
-    customPlotPtr->yAxis->setLabel("dBμV");
+    customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm":"dBμV"));
     customPlotPtr->xAxis->setLabel("MHz");
     customPlotPtr->graph(0)->setPen(QPen(Qt::black));
     customPlotPtr->graph(1)->setPen(QPen(Qt::red));
@@ -110,9 +114,9 @@ void CustomPlotController::setupBasics()
 
         addOverlay(plotIterator, gnssBandfrequencies[j], gnssBandfrequencies[j+1]);
         QCPItemText *tmp = new QCPItemText(customPlotPtr);
-        //tmp->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), customPlotPtr->yAxis->range().upper);
+        //tmp->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), customPlotPtr->yAxis->range().upper - 40);
         tmp->setText(gnssBands[i]);
-        tmp->setFont(QFont(QFont().family(), 16));
+        tmp->setFont(QFont(QFont().family(), 14));
         //tmp->setPen(QPen(Qt::gray));
         gnssTextLabels.append(tmp);
         gnssBandsSelectors.append(true);
@@ -121,8 +125,10 @@ void CustomPlotController::setupBasics()
         pen.setStyle(Qt::DotLine);
         pen.setColor(Qt::gray);
         tmpLine->setPen(pen);
-        tmpLine->point1->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), 200);
-        tmpLine->point2->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), -200);
+        tmpLine->point1->setCoords( gnssBandCenterFreq[i], 200);
+        tmpLine->point2->setCoords( gnssBandCenterFreq[i], -200);
+        /*tmpLine->point1->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), 200);
+        tmpLine->point2->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), -200);*/
         gnssCenterLine.append(tmpLine);
     }
     toggleOverlay();
@@ -148,9 +154,17 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
 
     if (!data.isEmpty() && !freqSelection.isEmpty()) {
         copy = data;
+        if (config->getUseDbm()) {
+            for (int i=0; i < copy.size(); i++) copy[i] -= 107;
+        }
+        if ((int)config->getCorrValue() != 0) {
+            double corr = config->getCorrValue();
+            for (int i=0; i < copy.size(); i++) copy[i] += corr;
+        }
+
         for (int i=0; i<plotResolution; i++) {
             if (!freqSelection.at(i))
-                copy[i] = -100;
+                copy[i] = -200;
         }
     }
     customPlotPtr->graph(2)->setData(keyValues, copy);
@@ -187,7 +201,8 @@ void CustomPlotController::showToolTip(QMouseEvent *event)
     double y = customPlotPtr->yAxis->pixelToCoord(event->pos().y());
 
     QString text = QString::number(x, 'f', 3) + " MHz / " +
-                   QString::number(y, 'f', 1) + " dBuV";
+                   QString::number(y, 'f', 1) +
+                   (config->getUseDbm()?" dBm":" dBμV");
     customPlotPtr->setToolTip(text);
 }
 
@@ -373,20 +388,20 @@ void CustomPlotController::updSettings()
     }
 */
     if (config->getInstrNormalizeSpectrum())
-        customPlotPtr->yAxis->setLabel("dBμV (normalized)");
+        customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm (normalized)":"dBμV (normalized)"));
     else
-        customPlotPtr->yAxis->setLabel("dBμV");
+        customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm":"dBμV"));
     // qDebug() << customPlotPtr->axisRect()->rect();
     updTextLabelPositions();
 
-    if (config->getUseDbm()) {
+    /*if (config->getUseDbm()) {
         customPlotPtr->yAxis->setRangeLower(config->getPlotYMin() - 107);
         customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax() - 107);
     }
-    else {
+    else {*/
         customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
         customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-    }
+    //}
     reCalc();
     customPlotPtr->replot();
 }
@@ -445,9 +460,10 @@ void CustomPlotController::addOverlay(const int graph, const double startfreq, c
 void CustomPlotController::updTextLabelPositions()
 {
     for (int i=0, j=0; i < gnssTextLabels.size(); i++, j += 2) {
-        gnssTextLabels[i]->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2),
-                                               customPlotPtr->yAxis->range().upper - 5);
-
+        gnssTextLabels[i]->position->setCoords(gnssBandCenterFreq[i],
+                                               customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);
+        /*gnssTextLabels[i]->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2),
+                                               customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);*/
     }
 
 }

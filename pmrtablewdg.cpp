@@ -44,6 +44,7 @@ void PmrTableWdg::start()
     selectReds->setChecked(config->getPmrUseReds());
     selectWhites->setChecked(config->getPmrUseWhites());
 
+#ifdef Q_OS_WIN
     connect(selectGreens, &QCheckBox::checkStateChanged, this, [this](int state) {
         config->setPmrUseGreens(state);
         updTableWdg();
@@ -60,6 +61,7 @@ void PmrTableWdg::start()
         config->setPmrUseWhites(state);
         updTableWdg();
     });
+#endif
     wdg->show();
 }
 

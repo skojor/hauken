@@ -11,7 +11,6 @@
 #include <QFile>
 #include <QFileInfo>
 
-
 class Config : public QObject
 {
     Q_OBJECT
@@ -110,7 +109,7 @@ public slots:
 
     QString getIpAddressServer() { return settings->value("ipAddressServer", "").toString(); }
     void setIpAddressServer(QString s) { settings->setValue("ipAddressServer", s); emit settingsUpdated();}
-    bool getUseDbm() { return false; } //settings->value("useDbm", false).toBool();} // Deact, TODO!
+    bool getUseDbm() { return settings->value("useDbm", false).toBool();}
     void setUseDbm(bool b) { settings->setValue("useDbm", b); emit settingsUpdated();}
     bool getDarkMode() { return settings->value("darkMode", false).toBool(); }
     void setDarkMode(bool b)
@@ -118,6 +117,10 @@ public slots:
         settings->setValue("darkMode", b);
         emit settingsUpdated();
     }
+    int getCorrValue() { return settings->value("corrValue", 0).toDouble();}
+    void setCorrValue(double d) { settings->setValue("corrValue", d); emit settingsUpdated();}
+    bool getSeparatedWindows() { return settings->value("separatedWindows", false).toBool();}
+    void setSeparatedWindows(bool b) { settings->setValue("separatedWindows", b); emit settingsUpdated();}
 
     // Window settings
     bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}
@@ -162,6 +165,11 @@ public slots:
         settings->setValue("iq/useWindow", b);
         emit settingsUpdated();
     }
+    bool getIqRecordMultipleBands() { return settings->value("iq/recordMultipleBands", false).toBool(); }
+    void setIqRecordMultipleBands(bool b) { settings->setValue("iq/recordMultipleBands", b); emit settingsUpdated();}
+    QList<double> getIqMultibandCenterFreqs();
+    bool getIqRecordAllTrigArea() { return settings->value("iq/recordAllTrigArea", false).toBool();}
+    void setIqRecordAllTrigArea(bool b) { settings->setValue("iq/recordAllTrigArea", b);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
@@ -289,6 +297,8 @@ public slots:
     void setEmailFilteredRecipients(QString s) { settings->setValue("email/filteredRecipients", s.trimmed()); emit settingsUpdated();}
     int getEmailJammerProbabilityFilter() { return settings->value("email/jammerProbabilityFilter", 60).toInt();}
     void setEmailJammerProbabilityFilter(int i) { settings->setValue("email/jammerProbabilityFilter", i); emit settingsUpdated();}
+    bool getNotificationLargeFonts() { return settings->value("notify/LargeFonts", false).toBool();}
+    void setNotificationLargeFonts(bool b) { settings->setValue("notify/LargeFonts", b); emit settingsUpdated();}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
@@ -439,6 +449,9 @@ public slots:
 
     QString getMqttKeepaliveTopic() { return settings->value("mqtt/keepaliveTopic", "").toString().trimmed();}
     void setMqttKeepaliveTopic(QString s) { settings->setValue("mqtt/keepaliveTopic", s);emit settingsUpdated(); }
+
+    bool getMqttTestTriggersRecording() { return settings->value("mqtt/testTriggersRecording", false).toBool();}
+    void setMqttTestTriggersRecording(bool b) { settings->setValue("mqtt/testTriggersRecording", b);}
 
 private slots:
 

@@ -4,14 +4,28 @@ project(Hauken LANGUAGES C CXX)
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
-#find_package(Qt6 REQUIRED Mqtt)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
 
 qt_standard_project_setup()
 
 set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/icons/favicon.rc")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(GitVersion)
+get_version_from_git()
+project(Hauken VERSION ${PROJECT_VERSION}.0)
 
-qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows}
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+  @ONLY)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/version.h.in
+    ${CMAKE_SOURCE_DIR}/version.h
+)
+
+qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+
     SimpleMail/SimpleMail
     SimpleMail/emailaddress.cpp SimpleMail/emailaddress.h SimpleMail/emailaddress_p.h
     SimpleMail/mimeattachment.cpp SimpleMail/mimeattachment.h
@@ -76,6 +90,8 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows}
     vifstreamtcp.cpp vifstreamtcp.h
     vifstreamudp.cpp vifstreamudp.h
     waterfall.cpp waterfall.h
+    network.h network.cpp
+    iqplot.h iqplot.cpp
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -93,47 +109,70 @@ target_link_libraries(Hauken PRIVATE
     Qt6::Mqtt
 )
 
+if (WIN32)
 target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
 )
+elseif(UNIX)
+  target_include_directories(Hauken PRIVATE
+      /usr/include/opencv4
+      #${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
+      /usr/include/QuaZip-Qt6-1.4/quazip
+  )
+endif()
 
-target_link_libraries(Hauken PRIVATE optimized
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
+if (WIN32)
+target_link_libraries(Hauken PRIVATE
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
 )
 
-target_link_libraries(Hauken PRIVATE debug
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
+target_link_libraries(Hauken PRIVATE
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/libfftw3-3.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_core490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_dnn490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_highgui490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgcodecs490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
 )
+elseif(UNIX)
+  target_link_libraries(Hauken PRIVATE
+      optimized fftw3
+      optimized opencv_core
+      optimized opencv_dnn
+      optimized opencv_highgui
+      optimized opencv_imgcodecs
+      optimized opencv_imgproc
+      optimized opencv_videoio
+      optimized quazip1-qt6
+  )
+
+  target_link_libraries(Hauken PRIVATE
+      debug fftw3
+      debug opencv_core
+      debug opencv_dnn
+      debug opencv_highgui
+      debug opencv_imgcodecs
+      debug opencv_imgproc
+      debug opencv_videoio
+      debug quazip1-qt6
+  )
+endif()
 
 install(TARGETS Hauken
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-include(GitVersion)
-get_version_from_git()
-project(Hauken VERSION ${PROJECT_VERSION})
-
-configure_file(
-    ${CMAKE_SOURCE_DIR}/version.h.in
-    ${CMAKE_SOURCE_DIR}/version.h
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 qt_generate_deploy_app_script(
