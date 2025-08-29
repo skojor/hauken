@@ -83,7 +83,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -212,8 +212,9 @@ void MeasurementDevice::setAntPort()
 {
     if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default")) {
         if (!devicePtr->advProtocol && devicePtr->type != InstrumentType::USRP) scpiWrite("syst:ant:rx " + antPort);
-        else if (antPort.contains("1")) scpiWrite("route:vuhf:input (@0)");  // em200 specific
-        else if (antPort.contains("2")) scpiWrite("route:vuhf:input (@1)");  // em200 specific
+        else if (antPort.contains("1")) scpiWrite("route:vuhf:input (@0)");  // em200/esmw specific
+        else if (antPort.contains("2")) scpiWrite("route:vuhf:input (@1)");  // em200/esmw specific
+        else if (antPort.contains("3")) scpiWrite("route:vuhf:input (@2)");  // em200/esmw specific
     }
 }
 
