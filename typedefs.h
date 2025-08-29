@@ -338,7 +338,7 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
-            antPorts.clear(); // TODO << "Ant1" << "Ant2";
+            antPorts << "Ant1" << "Ant2" << "Ant3";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";

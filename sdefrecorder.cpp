@@ -1,5 +1,6 @@
 #include "sdefrecorder.h"
 #include "version.h"
+#include "asciitranslator.h"
 
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
@@ -176,7 +177,7 @@ QString SdefRecorder::createFilename()
     }
     if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
         ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
-           << "_" << config->getStationName()
+           << "_" << AsciiTranslator::toAscii(config->getStationName()) // New, don't use norwegian weird letters in filenames
            << "_" << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
            << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0);
         /*
@@ -186,7 +187,7 @@ QString SdefRecorder::createFilename()
            << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");*/
     } else {
         ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
-           << "_" << config->getStationName() << "_"
+           << "_" << AsciiTranslator::toAscii(config->getStationName()) << "_"
            << QString::number((config->getInstrFfmCenterFreq()
                                - config->getInstrFfmSpan().toDouble() / 2e3)
                                   * 1e3,

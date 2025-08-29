@@ -15,6 +15,7 @@
 #include "config.h"
 #include "typedefs.h"
 
+
 #define AUTH_TIMEOUT 10000 // millisecs
 #define UPLOAD_TIMEOUT 60000
 #define UPLOAD_RETRY 20 * 60 * 1e3 // millisecs

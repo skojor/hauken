@@ -1,4 +1,5 @@
 #include "iqplot.h"
+#include "asciitranslator.h"
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
@@ -47,7 +48,7 @@ void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency
     }
 
     filename = dir + "/" + foldernameDateTime.toString("yyyyMMddhhmmss_")
-               + config->getStationName() + "_" + QString::number(frequency, 'f', 3) + "MHz_"
+               + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
                + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
     if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
         saveIqData(iq16);

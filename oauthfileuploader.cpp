@@ -1,4 +1,6 @@
 #include "oauthfileuploader.h"
+#include "asciitranslator.h"
+
 
 OAuthFileUploader::OAuthFileUploader(QSharedPointer<Config> c)
 {
@@ -56,7 +58,8 @@ void OAuthFileUploader::receiveAuthToken(
             filePart.setBodyDevice(file);
             QString justFilename;
             QStringList split = uploadBacklog.last().split('/');
-            justFilename = split.last();
+            justFilename = AsciiTranslator::toAscii(split.last()); // New, don't send UTF-8 encoded filename in HttpMultiPart
+
             filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
                                "form-data; name=\"files\"; filename=\"" + justFilename + "\"");
             filePart.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
