@@ -1,4 +1,5 @@
 #include "measurementdevice.h"
+#include "asciitranslator.h"
 
 MeasurementDevice::MeasurementDevice(QSharedPointer<Config> c)
 {
@@ -488,13 +489,13 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
     QString msg = devicePtr->id + tr(" may be in use");
     if (!buffer.isEmpty()) {
         msg += tr(" by ") + QString(buffer).simplified();
-        inUseBy = QString(buffer).simplified();
+        inUseBy = AsciiTranslator::toAscii(QString(buffer).simplified());
     }
     else {
         inUseBy.clear();
     }
     msg += tr(". Press connect once more to override");
-    if (!firstConnection || buffer.contains(config->getStationName().toLocal8Bit())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
+    if (!firstConnection || buffer.contains(AsciiTranslator::toAscii(config->getStationName()).toLatin1())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
         //qDebug() << "In use by myself, how silly! Continuing..." << buffer << config->getStationName();
         deviceInUseWarningIssued = true;
         askUdp();
@@ -513,7 +514,7 @@ void MeasurementDevice::checkUserOnly(const QByteArray buffer)
 {
     waitingForReply = false;
     if (!buffer.isEmpty()) {
-        inUseBy = QString(buffer).simplified();
+        inUseBy = AsciiTranslator::toAscii(QString(buffer).simplified());
     }
     else {
         inUseBy.clear();
@@ -601,9 +602,9 @@ void MeasurementDevice::runAfterConnected()
 
 void MeasurementDevice::setUser()
 {
-    if (devicePtr->systManLocName) scpiWrite("syst:man:loc:name '" + config->getStationName().toLocal8Bit() + " (hauken)'");
-    else if (devicePtr->memLab999) scpiWrite("MEM:LAB 999, '" + config->getStationName().toLocal8Bit() + " (hauken)'");
-    else if (devicePtr->systKlocLab) scpiWrite("syst:kloc:lab '" + config->getStationName().toLocal8Bit() + " (hauken)'");
+    if (devicePtr->systManLocName) scpiWrite("syst:man:loc:name '" + AsciiTranslator::toAscii(config->getStationName()).toLatin1() + "(hauken)'");
+    else if (devicePtr->memLab999) scpiWrite("MEM:LAB 999, '" + AsciiTranslator::toAscii(config->getStationName()).toLatin1() + "(hauken)'");
+    else if (devicePtr->systKlocLab) scpiWrite("syst:kloc:lab '" + AsciiTranslator::toAscii(config->getStationName().toLocal8Bit()).toLatin1() + "(hauken)'");
 }
 
 void MeasurementDevice::startDevice()
@@ -1121,4 +1122,15 @@ void MeasurementDevice::setGainControl(int index)
     }
 
     scpiWrite("inp:att:mode " + mode);
+}
+
+double MeasurementDevice::retIqCenterFrequency()
+{
+    double f;
+    if (devicePtr->mode == Instrument::Mode::PSCAN)
+        f = devicePtr->pscanStartFrequency + (devicePtr->pscanStopFrequency - devicePtr->pscanStartFrequency) / 2;
+    else
+        f = devicePtr->ffmCenterFrequency;
+
+    return f;
 }

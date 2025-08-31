@@ -305,6 +305,8 @@ void IqPlot::saveImage(const QImage *image, const double secondsAnalyzed)
 
 void IqPlot::requestIqData()
 {
+    emit reqIqCenterFrequency();
+
     if (config->getIqCreateFftPlot()
         && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 )) {
         samplesNeeded = (int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
@@ -314,12 +316,16 @@ void IqPlot::requestIqData()
             listFreqs = config->getIqMultibandCenterFreqs();
         }
 
-        if (trigFrequency > 0 && listFreqs.isEmpty())
+        if (!config->getIqRecordAllTrigArea() && trigFrequency > 0 && listFreqs.isEmpty())
             listFreqs.append(trigFrequency);
+
+        if (!config->getIqRecordAllTrigArea() && listFreqs.isEmpty()) { // Still empty list? Probably due to manual triggered recording. Use previously req. center freq from meas.device
+            if ((int)centerFrequency != 0) listFreqs.append(centerFrequency / 1e6);
+        }
 
         if (config->getIqRecordAllTrigArea() || listFreqs.isEmpty()) {
             QStringList stringListTrigFreqs = config->getTrigFrequencies();
-            if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here?
+            if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here? Shouldn't happen, set center to FFM center for now
                 listFreqs.append(config->getInstrFfmCenterFreq());
             }
             else {
@@ -331,17 +337,18 @@ void IqPlot::requestIqData()
 
                     if (range > currentBandwidth) {
 
-                        double f = start + range / 2;
-                        listFreqs.append(f / 1e6);
-                        while (f > start + currentBandwidth / 2) {
-                            f -= currentBandwidth;
+                        double f = 1e6 * (int)((start + range / 2) / 1e6); // round to nearest MHz of center
+                        do {
                             listFreqs.append(f / 1e6);
-                        }
-                        f = start + range / 2;
-                        while (f < stop - currentBandwidth / 2) {
+                            f -= currentBandwidth;
+                        } while (f > start - currentBandwidth);
+
+                        f = 1e6 * (int)((start + range / 2) / 1e6);
+                        do {
                             f += currentBandwidth;
                             listFreqs.append(f / 1e6);
-                        }
+                        } while (f < stop);
+
                     }
                     else {
                         listFreqs.append((stop - range / 2) / 1e6);
