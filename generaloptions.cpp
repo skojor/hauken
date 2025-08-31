@@ -73,6 +73,9 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt5->setText("Show RF spectrum and incident log in separate windows");
     cbOpt5->setToolTip("Jammertest mode, restart after changing!");
 
+    mainLayout->addRow(new QLabel(tr("Overlay text font size")), sbOpt1);
+    sbOpt1->setToolTip(tr("Adjust overlay band text font size here"));
+    sbOpt1->setRange(6, 36);
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -96,6 +99,7 @@ void GeneralOptions::start()
     cbOpt4->setChecked(config->getDarkMode());
     leOpt9->setText(QString::number(config->getCorrValue(), 'f', 1));
     cbOpt5->setChecked(config->getSeparatedWindows());
+    sbOpt1->setValue(config->getOverlayFontSize());
 
     dialog->exec();
 }
@@ -124,6 +128,7 @@ void GeneralOptions::saveCurrentSettings()
     config->setDarkMode(cbOpt4->isChecked());
     config->setCorrValue(leOpt9->text().toDouble());
     config->setSeparatedWindows(cbOpt5->isChecked());
+    config->setOverlayFontSize(sbOpt1->value());
 
     dialog->close();
 }

@@ -112,15 +112,13 @@ public slots:
     bool getUseDbm() { return settings->value("useDbm", false).toBool();}
     void setUseDbm(bool b) { settings->setValue("useDbm", b); emit settingsUpdated();}
     bool getDarkMode() { return settings->value("darkMode", false).toBool(); }
-    void setDarkMode(bool b)
-    {
-        settings->setValue("darkMode", b);
-        emit settingsUpdated();
-    }
+    void setDarkMode(bool b) { settings->setValue("darkMode", b); emit settingsUpdated();}
     int getCorrValue() { return settings->value("corrValue", 0).toDouble();}
     void setCorrValue(double d) { settings->setValue("corrValue", d); emit settingsUpdated();}
     bool getSeparatedWindows() { return settings->value("separatedWindows", false).toBool();}
     void setSeparatedWindows(bool b) { settings->setValue("separatedWindows", b); emit settingsUpdated();}
+    int getOverlayFontSize() { return settings->value("overlayFontSize", 12).toInt();}
+    void setOverlayFontSize(int i) { settings->setValue("overlayFontSize", i); emit settingsUpdated();}
 
     // Window settings
     bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}
