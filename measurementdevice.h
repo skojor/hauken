@@ -120,6 +120,7 @@ public slots:
     bool deviceHasGainControl() { return devicePtr->hasGainControl; }
     void setVifFreqAndMode(const double frequency);
     void restartTcpTimeoutTimer() { if (tcpTimeoutTimer->isActive()) tcpTimeoutTimer->stop();}
+    double retIqCenterFrequency();
 
 private slots:
     void scpiConnected();

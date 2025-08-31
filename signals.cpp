@@ -2,14 +2,6 @@
 
 void MainWindow::setSignals()
 {
-    // TCP/UDP datastreams
-    /*connect(vifStreamUdp.data(), &VifStreamUdp::newIqData, this, [this](const QList<complexInt16> iq) {
-        QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
-    });
-    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, this, [this](const QList<complexInt16> iq) {
-        QFuture<void> future = QtConcurrent::run(&IqPlot::receiveIqData, iqPlot, iq);
-    });*/
-
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
@@ -26,8 +18,6 @@ void MainWindow::setSignals()
             &QComboBox::currentIndexChanged,
             this,
             &MainWindow::instrResolutionChanged);
-    //connect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged); // Taken care of after init.
-
     connect(instrMeasurementTime,
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),
@@ -913,6 +903,9 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::resetTimeoutTimer, tcpStream.data(), &TcpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, measurementDevice, &MeasurementDevice::restartTcpTimeoutTimer);
+    connect(iqPlot, &IqPlot::reqIqCenterFrequency, this, [this]() {
+        iqPlot->getIqCenterFrequency(measurementDevice->retIqCenterFrequency());
+    });
 }
 
 

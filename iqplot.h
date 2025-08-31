@@ -43,6 +43,7 @@ public slots:
     void setCurrentFfmCenterFrequency(quint64 f) { oldFfmCenterFrequency = f;}
     void setCurrentFfmBandwidth(quint32 f) { oldFfmBandwidth = f;}
     void setTrigFrequency(double f) { trigFrequency = (quint64)f;} // Set by trace analyzer class
+    void getIqCenterFrequency(double f) { centerFrequency = f; }
 
 private slots:
     void findIqFftMinMaxAvg(const QList<QList<double> > &iqFftResult, double &min, double &max, double &avg);
@@ -70,6 +71,7 @@ signals:
     void busyRecording(bool);
     void headerValidated(bool); // Approve I/Q header, start gathering data
     void resetTimeoutTimer(); // To hold TCP/UDP conn. up while gathering I/Q
+    void reqIqCenterFrequency();
 
 private:
     QSharedPointer<Config> config;
@@ -96,6 +98,7 @@ private:
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;
     QTimer *timeoutTimer = new QTimer;
+    double centerFrequency = 0;
 };
 
 #endif // IQPLOT_H
