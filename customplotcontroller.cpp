@@ -116,7 +116,7 @@ void CustomPlotController::setupBasics()
         QCPItemText *tmp = new QCPItemText(customPlotPtr);
         //tmp->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), customPlotPtr->yAxis->range().upper - 40);
         tmp->setText(gnssBands[i]);
-        tmp->setFont(QFont(QFont().family(), 14));
+        tmp->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
         //tmp->setPen(QPen(Qt::gray));
         gnssTextLabels.append(tmp);
         gnssBandsSelectors.append(true);
@@ -404,6 +404,7 @@ void CustomPlotController::updSettings()
     //}
     reCalc();
     customPlotPtr->replot();
+    updOverlayText();
 }
 
 void CustomPlotController::flashTrigline()
@@ -463,7 +464,7 @@ void CustomPlotController::updTextLabelPositions()
         gnssTextLabels[i]->position->setCoords(gnssBandCenterFreq[i],
                                                customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);
         /*gnssTextLabels[i]->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2),
-                                               customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);*/
+                                              customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);*/
     }
 
 }
@@ -503,4 +504,12 @@ void CustomPlotController::reqTracePlot()
     *tracePlot = customPlotPtr->toPixmap();
     mutex.unlock();
     emit retTracePlot(tracePlot);
+}
+
+void CustomPlotController::updOverlayText()
+{
+    for (auto && row : gnssTextLabels) {
+        row->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
+    }
+    customPlotPtr->replot();
 }

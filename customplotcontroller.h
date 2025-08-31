@@ -58,6 +58,7 @@ private slots:
     void addOverlay(const int graph, const double startfreq, const double stopfreq);
     void updTextLabelPositions();
     void updOverlay();
+    void updOverlayText();
 
 signals:
     void reqTrigline();
