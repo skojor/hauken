@@ -11,10 +11,14 @@ void GeoLimit::activate()
 {
     if (activated) {
         timer->start(1000); // check position validity every second
+        weAreInsidePolygon = false;
+        emit currentPositionOk(false);
     }
 
     else {
         timer->stop();
+        weAreInsidePolygon = true;
+        emit currentPositionOk(true);
     }
 }
 
