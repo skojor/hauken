@@ -351,7 +351,7 @@ void IqPlot::requestIqData()
 
                     }
                     else {
-                        listFreqs.append((stop - range / 2) / 1e6);
+                        listFreqs.append((int)((start + range / 2) / 1e6));
                     }
                 }
             }

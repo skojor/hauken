@@ -1103,6 +1103,7 @@ void MeasurementDevice::setupVifConnection()
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");
     scpiWrite("syst:if:rem:mode short");
+    scpiWrite("dem:mode IQ");
     scpiWrite("band " + QByteArray::number(config->getIqFftPlotBw()) + " khz");
 }
 
