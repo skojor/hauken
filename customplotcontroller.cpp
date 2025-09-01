@@ -157,7 +157,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
         if (config->getUseDbm()) {
             for (int i=0; i < copy.size(); i++) copy[i] -= 107;
         }
-        if ((int)config->getCorrValue() != 0) {
+        if ((int)(config->getCorrValue() * 10) != 0) {
             double corr = config->getCorrValue();
             for (int i=0; i < copy.size(); i++) copy[i] += corr;
         }
@@ -168,6 +168,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
         }
     }
     customPlotPtr->graph(2)->setData(keyValues, copy);
+    customPlotPtr->replot();
 }
 
 void CustomPlotController::doReplot()
@@ -405,6 +406,7 @@ void CustomPlotController::updSettings()
     reCalc();
     customPlotPtr->replot();
     updOverlayText();
+    emit reqTrigline(); // to update trig line drawing with new values
 }
 
 void CustomPlotController::flashTrigline()
