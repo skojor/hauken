@@ -35,8 +35,9 @@ public slots:
     void getAiData(int secs = 0);
     void restartCalcAvgLevel();
     void sendDispTrigline()
-    {     if (normalizeSpectrum) {
-            if (averageDispLevelNormalized.isEmpty())
+    {
+        if (normalizeSpectrum) {
+            if (averageDispLevelNormalized.isEmpty() && trigLevel)
                 averageDispLevelNormalized.fill(trigLevel, plotResolution);
             emit newDispTriglevel(averageDispLevelNormalized);
         }
@@ -100,7 +101,7 @@ private:
     QTimer *maintenanceRestartTimer = new QTimer;
     QElapsedTimer *throttleTimer;
     QMutex mutex;
-    int trigLevel;
+    int trigLevel = 0;
     double avgFactor = 40;
     QString fftMode, antPort;
     bool autoAtt;

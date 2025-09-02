@@ -34,6 +34,10 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
         webswitchProcess->setProgram("curl");
     }
 
+    /*
+     * 02.09 14:26:21:226 Debug: MQTT received QMqttTopicName("basic_status/testevent") "{\"siteid\":1,\"sitename\":\"Test Area 1\",\"name\":\"1.6.1\",\"description\":\"Jammer F8.1: 0.2 \xC2\xB5W (-37dBm) to 50 W (47dBm) with 2 dB increments PRN: L1\",\"comment\":\"Intergration test 2\",\"status\":\"start\",\"localtime\":\"2025-09-02T14:26:21+02:00\",\"utctime\":\"2025-09-02T12:26:21Z\"}"
+     */
+
    /* QTimer::singleShot(1000, this, [this] {
         QJsonObject json;
         json["siteid"] = 1;
@@ -168,7 +172,7 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
     QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonValue value = jsonObject.value("value");
-    //qDebug() << "MQTT received" << topic << msg;
+    qDebug() << "MQTT received" << topic << msg;
     if (subValues.size() != subs.size()) {
         subValues.clear();
         for (int i=0; i<subs.size();i++) subValues.append(0);
@@ -303,7 +307,10 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
         QString msg;
         QTextStream ts(&msg);
 
-        if (siteStatus == RUNNING && status.toString().contains("stop", Qt::CaseInsensitive)) { // test ended
+        if (config->getMqttSiteFilter() > 0 &&
+                config->getMqttSiteFilter() == siteid.toInt() &&
+                siteStatus == RUNNING && status.toString().contains("stop", Qt::CaseInsensitive))
+        { // test ended
             ts << sitename.toString() << ": " << "Test " << name.toString() << " ended";
             siteStatus = STOP;
             if (config->getMqttTestTriggersRecording())
@@ -311,15 +318,25 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
                     emit endRecording();
                 });
         }
-        else if (siteStatus == UNKNOWN && status.toString().contains("no running test", Qt::CaseInsensitive)) { // no test
+        else if (config->getMqttSiteFilter() > 0 &&
+                   config->getMqttSiteFilter() == siteid.toInt() &&
+                   siteStatus == UNKNOWN && status.toString().contains("no running test", Qt::CaseInsensitive))
+        { // no test
             ts << sitename.toString() << ": " << "No test running";
             siteStatus = NORUNNING;
         }
-        else if (siteStatus == RUNNING && status.toString().contains("no running test", Qt::CaseInsensitive)) { // from running to no running test, we missed sth
+        else if (config->getMqttSiteFilter() > 0 &&
+                   config->getMqttSiteFilter() == siteid.toInt() &&
+                   siteStatus == RUNNING && status.toString().contains("no running test", Qt::CaseInsensitive))
+        { // from running to no running test, we missed sth
             ts << sitename.toString() << ": " << "No test running";
             siteStatus = NORUNNING;
         }
-        else if (siteStatus != RUNNING  && status.toString() == "running") { // from sth to running test
+        else if (config->getMqttSiteFilter() > 0 &&
+                   config->getMqttSiteFilter() == siteid.toInt() &&
+                   siteStatus != RUNNING  &&
+                   (status.toString() == "running" || status.toString() == "start"))
+        { // from sth to running test
             ts << sitename.toString() << ": " << "Test " << name.toString() << " " << description.toString() << " started"
                 << (config->getMqttTestTriggersRecording()?" (recording)":"");
             siteStatus = RUNNING;

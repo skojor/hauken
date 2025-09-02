@@ -883,6 +883,7 @@ void MainWindow::setSignals()
                 plotMaxScroll->setValue(plotMaxScroll->value() + 107);
                 plotMinScroll->setValue(plotMinScroll->value() + 107);
             }
+            traceBuffer->emptyBuffer();
             traceBuffer->sendDispTrigline();
         }
     });

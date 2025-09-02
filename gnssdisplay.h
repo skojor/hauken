@@ -62,6 +62,7 @@ private:
     QLabel *gnss1Agc = new QLabel, *gnss2Agc = new QLabel;
     QLabel *gnss1Sats = new QLabel, *gnss2Sats = new QLabel;
 
+    QLabel *gnss1PosValid = new QLabel, *gnss2PosValid = new QLabel;
     QLabel *gnss1PosOffset = new QLabel, *gnss2PosOffset = new QLabel;
     QLabel *gnss1AltOffset = new QLabel, *gnss2AltOffset = new QLabel;
     QLabel *gnss1TimeOffset = new QLabel, *gnss2TimeOffset = new QLabel;
