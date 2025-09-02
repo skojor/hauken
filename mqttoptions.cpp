@@ -20,6 +20,7 @@ void MqttOptions::start()
     leOpt12->setText(config->getMqttKeepaliveTopic());
     leOpt15->setText(config->getMqttWebswitchAddress());
     cbOpt2->setChecked(config->getMqttTestTriggersRecording());
+    sbOpt2->setValue(config->getMqttSiteFilter());
 
     dialog->exec();
 }
@@ -44,6 +45,7 @@ void MqttOptions::saveCurrentSettings()
     config->setMqttPassword(leOpt14->text());
     config->setMqttPort(sbOpt1->value());
     config->setMqttWebswitchAddress(leOpt15->text());
+    config->setMqttSiteFilter(sbOpt2->value());
 
     dialog->close();
 }
@@ -121,6 +123,7 @@ void MqttOptions::setupWindow()
     subServerLayout->addRow(new QLabel(tr("Server port")), sbOpt1);
     sbOpt1->setToolTip(tr("Port number used to connect to server (default 1883)"));
     sbOpt1->setRange(1,65536);
+
     QGroupBox *keepAliveGroupBox = new QGroupBox("Keepalive topic");
     QFormLayout *keepAliveLayout = new QFormLayout;
     keepAliveGroupBox->setLayout(keepAliveLayout);
@@ -128,6 +131,13 @@ void MqttOptions::setupWindow()
     leOpt12->setToolTip(tr("If set this topic will be sent to the MQTT server periodically "\
                            "to keep the connection alive (needed for some MQTT servers). " \
                            "Only topic will be sent, no data"));
+
+    QGroupBox *filterGroupBox = new QGroupBox("Site filter");
+    QFormLayout *filterLayout = new QFormLayout;
+    filterGroupBox->setLayout(filterLayout);
+    filterLayout->addRow(new QLabel(tr("Site filter")), sbOpt2);
+    sbOpt2->setToolTip(tr("Jammertest specific - enter site id here (1/2/3). 0 to disable"));
+    sbOpt2->setRange(0,3);
 
     QGroupBox *webswitchGroupBox = new QGroupBox("HTTP webswitch options");
     QFormLayout *webswitchLayout = new QFormLayout;
@@ -150,6 +160,7 @@ void MqttOptions::setupWindow()
     mainLayout->addWidget(webswitchGroupBox);
     mainLayout->addWidget(subServerGroupBox);
     mainLayout->addWidget(keepAliveGroupBox);
+    mainLayout->addWidget(filterGroupBox);
     for (auto &val : subGroupBoxes) mainLayout->addWidget(val);
     mainLayout->addWidget(btnBox);
 }

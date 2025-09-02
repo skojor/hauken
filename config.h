@@ -450,6 +450,8 @@ public slots:
 
     bool getMqttTestTriggersRecording() { return settings->value("mqtt/testTriggersRecording", false).toBool();}
     void setMqttTestTriggersRecording(bool b) { settings->setValue("mqtt/testTriggersRecording", b);}
+    int getMqttSiteFilter() { return settings->value("mqtt/siteFilter", 0).toInt();}
+    void setMqttSiteFilter(int i) { settings->setValue("mqtt/siteFilter", i); emit settingsUpdated();}
 
 private slots:
 
