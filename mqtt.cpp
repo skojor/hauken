@@ -172,7 +172,7 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
     QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonValue value = jsonObject.value("value");
-    qDebug() << "MQTT received" << topic << msg;
+    //qDebug() << "MQTT received" << topic << msg;
     if (subValues.size() != subs.size()) {
         subValues.clear();
         for (int i=0; i<subs.size();i++) subValues.append(0);
@@ -322,14 +322,14 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
                    config->getMqttSiteFilter() == siteid.toInt() &&
                    siteStatus == UNKNOWN && status.toString().contains("no running test", Qt::CaseInsensitive))
         { // no test
-            ts << sitename.toString() << ": " << "No test running";
+            ts << ": " << "No test running";
             siteStatus = NORUNNING;
         }
         else if (config->getMqttSiteFilter() > 0 &&
                    config->getMqttSiteFilter() == siteid.toInt() &&
                    siteStatus == RUNNING && status.toString().contains("no running test", Qt::CaseInsensitive))
         { // from running to no running test, we missed sth
-            ts << sitename.toString() << ": " << "No test running";
+            ts << "No test running";
             siteStatus = NORUNNING;
         }
         else if (config->getMqttSiteFilter() > 0 &&
@@ -337,10 +337,16 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
                    siteStatus != RUNNING  &&
                    (status.toString() == "running" || status.toString() == "start"))
         { // from sth to running test
-            ts << sitename.toString() << ": " << "Test " << name.toString() << " " << description.toString() << " started"
+            ts << "Test " << name.toString() << " " << description.toString() << " started"
                 << (config->getMqttTestTriggersRecording()?" (recording)":"");
             siteStatus = RUNNING;
-            if (config->getMqttTestTriggersRecording()) emit triggerRecording();
+            if (config->getMqttTestTriggersRecording()) emit triggerRecording(); // Recording triggered here, kept alive below
+        }
+        else if ( config->getMqttSiteFilter() == siteid.toInt() &&
+            siteStatus == RUNNING &&
+                   status.toString().contains("running") &&
+                   config->getMqttTestTriggersRecording()) {
+            emit triggerRecording(); // Keep triggering recording until no test running
         }
 
         if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
