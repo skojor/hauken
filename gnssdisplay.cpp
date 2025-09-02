@@ -4,7 +4,6 @@ GnssDisplay::GnssDisplay(QSharedPointer<Config> c)
 {
     config = c;
     wdg->setAttribute(Qt::WA_QuitOnClose);
-    //wdg->setWindowFlag(Qt::WindowStaysOnTopHint);
 
     connect(updateGnssDataTimer, &QTimer::timeout, this, &GnssDisplay::reqGnssData);
 }
@@ -28,8 +27,8 @@ void GnssDisplay::close()
 
 void GnssDisplay::updGnssData(GnssData g, int id)
 {
-    /*if (id == 1) gnss1 = g;
-    else gnss2 = g;*/
+    if (id == 1) gnss1 = g;
+    else gnss2 = g;
 
     updText();
 }
