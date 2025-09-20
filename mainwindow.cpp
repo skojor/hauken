@@ -690,11 +690,11 @@ void MainWindow::instrModeChanged()
 
 void MainWindow::setValidators()
 {
-    instrStartFreq->setRange(20, 6e3);
+    instrStartFreq->setRange(20, 600e3);
     instrStartFreq->setDecimals(0);
-    instrFfmCenterFreq->setRange(0.1, 8e3);
+    instrFfmCenterFreq->setRange(0.1, 600e3);
     instrFfmCenterFreq->setDecimals(0);
-    instrStopFreq->setRange(20, 6e3);
+    instrStopFreq->setRange(20, 600e3);
     instrStopFreq->setDecimals(0);
     instrMeasurementTime->setRange(1, 5000);
     instrAtt->setRange(-40, 40);

@@ -228,7 +228,7 @@ void AI::findTrigRange()
 }
 
 std::vector<float> AI::sigmoid(const std::vector<float>& m1) {
-    const unsigned long vectorSize = m1.size();
+    const quint64 vectorSize = m1.size();
     std::vector<float> output(vectorSize);
     for (unsigned i = 0; i != vectorSize; ++i) {
         output[i] = 1 / (1 + exp(-m1[i]));

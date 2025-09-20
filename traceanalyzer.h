@@ -41,7 +41,7 @@ signals:
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
     void alarmTriggered();
-    void pmrCheckUptime(const unsigned long frequency, const bool active);
+    void pmrCheckUptime(const quint64 frequency, const bool active);
 
 private:
     QSharedPointer<Config> config;

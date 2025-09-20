@@ -86,6 +86,7 @@ enum class InstrumentType
     ESMB,
     USRP,
     ESMW,
+    DDF255,
     UNKNOWN
 };
 
@@ -348,7 +349,35 @@ public:
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
             minFrequency = 8e3;
             maxFrequency = 8e9;
-            hasAntNames = false;
+            hasAntNames = true;
+        }
+        else if (type == Instrument::InstrumentType::DDF255) {
+            udpStream = true;
+            tcpStream = true;
+            systManLocName = true;
+            advProtocol = false;
+            id = "DDF255";
+            hasPscan = true;
+            attrHeader = true;
+            hasAvgType = true;
+            optHeaderEb500 = true;
+            hasAutoAtt = true;
+            hasGainControl = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts << "Ant1" << "Ant2" << "Ant3";
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "80000";
+            fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            minFrequency = 8e3;
+            maxFrequency = 26.5e9;
+            hasAntNames = true;
         }
         else if (type == Instrument::InstrumentType::ESMB) {
             udpStream = true;
@@ -399,7 +428,7 @@ public:
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
-        else if (type == Instrument::InstrumentType::PR200) {
+        else if (type == Instrument::InstrumentType::PR200) { //TODO: Kan PR200 lagre antennenavn?
             udpStream = true;
             tcpStream = true;
             systManLocName = true;
@@ -528,7 +557,7 @@ public:
     int  avgJammingIndicator = 0;
     double posOffset;
     double altOffset;
-    unsigned long timeOffset = 0;
+    quint64 timeOffset = 0;
     int cnoOffset = 0;
     int agcOffset = 0;
     int jammingIndicatorOffset = 0;
@@ -546,14 +575,14 @@ public:
 class Pmr
 {
 public:
-    Pmr(unsigned long freq = 0, unsigned int spacing = 0) { centerFrequency = freq; channelSpacing = spacing; }
+    Pmr(quint64 freq = 0, unsigned int spacing = 0) { centerFrequency = freq; channelSpacing = spacing; }
     QChar           type = static_cast<QChar>(0);
-    unsigned long   centerFrequency;
+    quint64         centerFrequency;
     unsigned int    channelSpacing = 0;
     unsigned int    ifBandwidth = 0;
     QDateTime       startTime;
     QDateTime       endTime;
-    unsigned long   totalDurationInMilliseconds = 0;
+    quint64         totalDurationInMilliseconds = 0;
     QString         comment;
     QString         demod;
     QString         casperComment;
@@ -610,7 +639,7 @@ public:
     double longitude = 0;
     QString status;
     StationType type = StationType::UNKNOWN;
-    unsigned long mmsi = 0;
+    quint32 mmsi = 0;
     bool active = false;
     QList<InstrumentInfo> instrumentInfo;
 };

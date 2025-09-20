@@ -109,7 +109,7 @@ void Read1809Data::readFile(QString filename)
             }
             else if (line.contains("freqstart", Qt::CaseInsensitive) || line.contains("freqstop", Qt::CaseInsensitive)) {
                 bool ok = false;
-                unsigned long tmp;
+                quint64 tmp;
                 QStringList list = line.split(' ');
                 if (list.size() == 2) tmp = list[1].toULong(&ok);
                 if (ok && line.contains("freqstart", Qt::CaseInsensitive)) freqStart = tmp;
@@ -141,7 +141,7 @@ void Read1809Data::readFile(QString filename)
             }
             else if (line.contains("datapoints", Qt::CaseInsensitive)) {
                 bool ok = false;
-                unsigned long tmp;
+                quint64 tmp;
                 QStringList list = line.split(' ');
                 if (list.size() == 2) tmp = list[1].toUInt(&ok);
                 if (ok) datapoints = tmp;
@@ -388,7 +388,7 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                 }
                 else if (line.contains("datapoints", Qt::CaseInsensitive)) {
                     bool ok = false;
-                    unsigned long tmp;
+                    quint64 tmp;
                     QStringList list = line.split(' ');
                     if (list.size() == 2) tmp = list[1].toUInt(&ok);
                     if (ok) datapoints = tmp;
@@ -402,7 +402,7 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                 }
                 else if (line.contains("freqstart", Qt::CaseInsensitive) || line.contains("freqstop", Qt::CaseInsensitive)) {
                     bool ok = false;
-                    unsigned long tmp;
+                    quint64 tmp;
                     QStringList list = line.split(' ');
                     if (list.size() == 2) tmp = list[1].toULong(&ok);
                     if (ok && line.contains("freqstart", Qt::CaseInsensitive)) freqStart = tmp;

@@ -84,7 +84,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -212,7 +212,7 @@ void MeasurementDevice::setAutoAttenuator()
 void MeasurementDevice::setAntPort()
 {
     if (connected && !antPort.isEmpty() && !antPort.toLower().contains("default")) {
-        if (!devicePtr->advProtocol && devicePtr->type != InstrumentType::USRP) scpiWrite("syst:ant:rx " + antPort);
+        if (!devicePtr->advProtocol && devicePtr->type != InstrumentType::USRP && devicePtr->type != InstrumentType::DDF255) scpiWrite("syst:ant:rx " + antPort);
         else if (antPort.contains("1")) scpiWrite("route:vuhf:input (@0)");  // em200/esmw specific
         else if (antPort.contains("2")) scpiWrite("route:vuhf:input (@1)");  // em200/esmw specific
         else if (antPort.contains("3")) scpiWrite("route:vuhf:input (@2)");  // em200/esmw specific
@@ -293,6 +293,8 @@ void MeasurementDevice::checkId(const QByteArray buffer)
         devicePtr->setType(InstrumentType::USRP);
     else if (buffer.contains("ESMW"))
         devicePtr->setType(InstrumentType::ESMW);
+    else if (buffer.contains("DDF255"))
+        devicePtr->setType(InstrumentType::DDF255);
 
     else devicePtr->setType(InstrumentType::UNKNOWN);
 
@@ -969,7 +971,7 @@ void MeasurementDevice::askFrequencies()
 void MeasurementDevice::checkPscanStartFreq(const QByteArray buffer)
 {
     waitingForReply = false;
-    unsigned long s = buffer.simplified().toULong();
+    quint64 s = buffer.simplified().toULongLong();
     if (s > 0 && s < 9e9) inUseStart = s;
     askPscanStopFreq();
 }
@@ -977,7 +979,7 @@ void MeasurementDevice::checkPscanStartFreq(const QByteArray buffer)
 void MeasurementDevice::checkPscanStopFreq(const QByteArray buffer)
 {
     waitingForReply = false;
-    unsigned long s = buffer.simplified().toULong();
+    quint64 s = buffer.simplified().toULongLong();
     if (s > 0 && s < 9e9) inUseStop = s;
     askPscanResolution();
 }
@@ -985,7 +987,7 @@ void MeasurementDevice::checkPscanStopFreq(const QByteArray buffer)
 void MeasurementDevice::checkPscanResolution(const QByteArray buffer)
 {
     waitingForReply = false;
-    unsigned long s = buffer.simplified().toULong();
+    quint32 s = buffer.simplified().toULong();
     if (s > 0 && s < 9e9) inUseRes = s;
     instrumentState = InstrumentState::CONNECTED; // Done
     if (inUseStart > 0 && inUseStop > 0 && inUseStop > inUseStart) {
@@ -1032,7 +1034,7 @@ void MeasurementDevice::askFfmSpan()
 void MeasurementDevice::checkFfmFreq(const QByteArray buffer)
 {
     waitingForReply = false;
-    unsigned long s = buffer.simplified().toULong();
+    quint64 s = buffer.simplified().toULongLong();
     if (s > 0 && s < 9e9) inUseStart = s;
     askFfmSpan();
 }
@@ -1040,7 +1042,7 @@ void MeasurementDevice::checkFfmFreq(const QByteArray buffer)
 void MeasurementDevice::checkFfmSpan(const QByteArray buffer)
 {
     waitingForReply = false;
-    unsigned long s = buffer.simplified().toULong();
+    quint32 s = buffer.simplified().toULong();
     if (s > 0 && s < 400e6) {
         inUseStart -= s / 2;
         inUseStop = inUseStart + s;

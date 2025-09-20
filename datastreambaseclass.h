@@ -54,7 +54,7 @@ public:
     int errorCtr = 0;
     bool errorHandleSent = false;
     const int timeoutInMs = 25000;
-    unsigned long startfreq = 0, stopfreq = 0;
+    quint64 startfreq = 0, stopfreq = 0;
     unsigned int resolution = 0;
     int traceCtr = 0;
     QVector<QNetworkDatagram> ifBufferUdp;

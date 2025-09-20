@@ -48,7 +48,7 @@ public slots:
     void setInUseByIp(QString s) { inUseByIp = s.simplified(); }
     void updMqttData(QString& name, double& val);
     void setModeUsed(QString s) { modeUsed = s; }
-    void setFreqUsed(unsigned long a, unsigned long b) { startFreqUsed = a, stopFreqUsed = b; }
+    void setFreqUsed(quint64 a, quint64 b) { startFreqUsed = a, stopFreqUsed = b; }
     void setResUsed(int a) { resUsed = a; }
 
 private:
@@ -59,7 +59,7 @@ private:
     QProcess *curlProcess = new QProcess;
     bool measurementDeviceConnected = false, inUse = false;
     QString inUseBy, inUseByIp, modeUsed;
-    unsigned long startFreqUsed, stopFreqUsed, resUsed;
+    quint64 startFreqUsed, stopFreqUsed, resUsed;
 
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
     QSharedPointer<Config> config;
