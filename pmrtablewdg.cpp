@@ -81,7 +81,7 @@ void PmrTableWdg::fillPmrChannels()
         while (!xmlfile.atEnd()) {
             Pmr pmr;
             QList<QByteArray> list = xmlfile.readLine().split(';');
-            unsigned long val = list[2].simplified().replace(" ", "").toULong();
+            quint64 val = list[2].simplified().replace(" ", "").toULongLong();
             if (val > 0 && val >= config->getInstrStartFreq() * 1e6 && val <= config->getInstrStopFreq() * 1e6 && \
                     (pmrTable.isEmpty() || (pmrTable.last().centerFrequency != val))) {
 
@@ -104,7 +104,7 @@ void PmrTableWdg::fillPmrChannels()
         while (!xmlfile.atEnd()) {
             Pmr pmr;
             QList<QByteArray> list = xmlfile.readLine().split(';');
-            unsigned long val = list[2].simplified().replace(" ", "").toULong();
+            quint64 val = list[2].simplified().replace(" ", "").toULongLong();
             if (val > 0 && val >= config->getInstrStartFreq() * 1e6 && val <= config->getInstrStopFreq() * 1e6 && \
                     (pmrTable.isEmpty() || (pmrTable.last().centerFrequency != val))) {
 
@@ -303,7 +303,7 @@ void PmrTableWdg::loadTable()
         while (!tableFile.atEnd()) {
             Pmr pmr;
             QList<QByteArray> list = tableFile.readLine().split(';');
-            unsigned long val = list[1].simplified().replace(" ", "").toULong();
+            quint64 val = list[1].simplified().replace(" ", "").toULongLong();
             if (val > 0 && val >= config->getInstrStartFreq() * 1e6 && val <= config->getInstrStopFreq() * 1e6 && \
                     (pmrTable.isEmpty() || (pmrTable.last().centerFrequency != val))) {
                 pmr.active = list[0].toUInt();

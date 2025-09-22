@@ -50,7 +50,7 @@ signals:
     void reconnected();
     void newAntennaNames();
     void modeUsed(QString);
-    void freqRangeUsed(unsigned long, unsigned long);
+    void freqRangeUsed(quint64, quint64);
     void resUsed(int);
     //void freqChanged(double, double);
     //void resChanged(double);
@@ -213,7 +213,7 @@ private:
     QTimer *updGnssDisplayTimer = new QTimer, *updFrequencyData = new QTimer, *updStreamsTimer = new QTimer;
     bool firstConnection = true;
     QString inUseBy, inUseByIp, inUseMode;
-    unsigned long inUseStart = 0, inUseStop = 0, inUseRes = 0;
+    quint64 inUseStart = 0, inUseStop = 0, inUseRes = 0;
     bool waitingForReply = false;
     const int tcpTimeoutInMs = 25000;
 

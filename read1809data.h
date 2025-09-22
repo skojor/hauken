@@ -55,7 +55,7 @@ signals:
     void displayGnssData(QString, int, bool);
     void updGnssData(GnssData &);
     void modeUsed(QString);
-    void freqRangeUsed(unsigned long, unsigned long);
+    void freqRangeUsed(quint64, quint64);
     void resUsed(int);
     void freqChanged(double, double);
     void resChanged(double);
@@ -67,11 +67,11 @@ private:
     bool isMobile;
     QString locationName;
     QString latitude = 0, longitude = 0;
-    unsigned long freqStart = 0, freqStop = 0; // kHz
+    quint64 freqStart = 0, freqStop = 0; // kHz
     float filterBW = 0; // kHz
     bool isDBuV = true;
     QDate date;
-    unsigned long datapoints = 0;
+    quint64 datapoints = 0;
     float scanTime = 0;
     float maxHoldTime = 0;
     QString note;

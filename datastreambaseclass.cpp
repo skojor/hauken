@@ -146,9 +146,9 @@ void DataStreamBaseClass::readIfpanOptHeader(QDataStream &ds)
         >> optHeaderIfPanEb500.freqHigh >> optHeaderIfPanEb500.demodFreqChannel
         >> optHeaderIfPanEb500.demodFreqLow >> optHeaderIfPanEb500.demodFreqHigh
         >> optHeaderIfPanEb500.outputTimestamp;
-    unsigned long tmpStart = (quint64) optHeaderIfPanEb500.freqHigh << 32
+    quint64 tmpStart = (quint64) optHeaderIfPanEb500.freqHigh << 32
                              | optHeaderIfPanEb500.freqLow - optHeaderIfPanEb500.freqSpan / 2;
-    unsigned long tmpStop = tmpStart + optHeaderIfPanEb500.freqSpan;
+    quint64 tmpStop = tmpStart + optHeaderIfPanEb500.freqSpan;
     if (startfreq != tmpStart || stopfreq != tmpStop) {
         startfreq = tmpStart;
         stopfreq = tmpStop;

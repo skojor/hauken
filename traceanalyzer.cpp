@@ -133,7 +133,7 @@ void TraceAnalyzer::updSettings()
     pmrMode = config->getPmrMode();
 }
 
-void TraceAnalyzer::pmrCheckUptime(const unsigned long frequency, const bool active)
+void TraceAnalyzer::pmrCheckUptime(const quint64 frequency, const bool active)
 {
     (void)frequency;
     (void)active;

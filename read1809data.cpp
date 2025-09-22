@@ -95,7 +95,7 @@ void Read1809Data::readFile(QString filename)
             // Header
             QString line = QString::fromLatin1(file.readLine());
             if (line.contains("filetype", Qt::CaseInsensitive)) {
-                if (line.contains("standard data exchange", Qt::CaseInsensitive)) isMobile = false;
+                if (line.contains("sdf", Qt::CaseInsensitive)) isMobile = false;
                 else isMobile = true;
             }
             else if (line.contains("locationname", Qt::CaseInsensitive)) {
@@ -109,7 +109,7 @@ void Read1809Data::readFile(QString filename)
             }
             else if (line.contains("freqstart", Qt::CaseInsensitive) || line.contains("freqstop", Qt::CaseInsensitive)) {
                 bool ok = false;
-                unsigned long tmp;
+                quint64 tmp;
                 QStringList list = line.split(' ');
                 if (list.size() == 2) tmp = list[1].toULong(&ok);
                 if (ok && line.contains("freqstart", Qt::CaseInsensitive)) freqStart = tmp;
@@ -141,7 +141,7 @@ void Read1809Data::readFile(QString filename)
             }
             else if (line.contains("datapoints", Qt::CaseInsensitive)) {
                 bool ok = false;
-                unsigned long tmp;
+                quint64 tmp;
                 QStringList list = line.split(' ');
                 if (list.size() == 2) tmp = list[1].toUInt(&ok);
                 if (ok) datapoints = tmp;
@@ -153,16 +153,11 @@ void Read1809Data::readFile(QString filename)
                 if (list.size() == 2) tmp = list[1].toFloat(&ok);
                 if (ok) scanTime = tmp;
             }
-            else if (line.contains("maxholdtime", Qt::CaseInsensitive)) {
-                QStringList commaSep = line.split(',');
-                int a;
-                for (a = 0; a < commaSep.size(); a++) {
-                    if (commaSep[a].contains("maxholdtime", Qt::CaseInsensitive)) break; // found correct part
-                }
+            else if (line.contains("saveinterval", Qt::CaseInsensitive)) {
+                QStringList commaSep = line.split(' ');
                 bool ok = false;
                 float tmp;
-                QStringList list = commaSep[a].trimmed().split(' ');
-                if (list.size() >= 2) tmp = list[1].toFloat(&ok);
+                if (commaSep.size() >= 2) tmp = commaSep[1].toFloat(&ok);
                 if (ok) maxHoldTime = tmp;
                 isHeaderRead = true;
             }
@@ -388,7 +383,7 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                 }
                 else if (line.contains("datapoints", Qt::CaseInsensitive)) {
                     bool ok = false;
-                    unsigned long tmp;
+                    quint64 tmp;
                     QStringList list = line.split(' ');
                     if (list.size() == 2) tmp = list[1].toUInt(&ok);
                     if (ok) datapoints = tmp;
@@ -402,7 +397,7 @@ void Read1809Data::readAndConvert(QString folder, QString filename)
                 }
                 else if (line.contains("freqstart", Qt::CaseInsensitive) || line.contains("freqstop", Qt::CaseInsensitive)) {
                     bool ok = false;
-                    unsigned long tmp;
+                    quint64 tmp;
                     QStringList list = line.split(' ');
                     if (list.size() == 2) tmp = list[1].toULong(&ok);
                     if (ok && line.contains("freqstart", Qt::CaseInsensitive)) freqStart = tmp;
