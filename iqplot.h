@@ -14,9 +14,8 @@
 #include <QPromise>
 #include <QSharedPointer>
 #include <QTimer>
-#include <QtConcurrent>
+#include <QtConcurrent/QtConcurrentRun>
 #include "config.h"
-#include "fftw3.h"
 #include "typedefs.h"
 #include <math.h>
 
@@ -52,7 +51,7 @@ private slots:
     void addLines(QImage *image, const double secondsAnalyzed, const double secondsPerLine);
     void addText(QImage *image, const double secondsAnalyzed, const double secondsPerLine);
     void saveImage(const QImage *image, const double secondsAnalyzed);
-    int analyzeIqStart(const QList<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
+    quint64 analyzeIqStart(const QList<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
     void saveIqData(const QList<complexInt16> &iq);
     void receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze = 500e-6);
     const QList<complexInt8> convertComplex16to8bit(const QList<complexInt16> &);
@@ -94,7 +93,7 @@ private:
     quint64 trigFrequency = 0;
     QList<double> listFreqs;
     QList<complexInt16> iqSamples;
-    int samplesNeeded = 0;
+    quint64 samplesNeeded = 0;
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;
     QTimer *timeoutTimer = new QTimer;

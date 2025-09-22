@@ -1,16 +1,16 @@
 #include "iqplot.h"
 #include "asciitranslator.h"
+#include "fftw3.h"
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
     config = c;
-    dataFromFile = false;
     fillWindow();
 
     timeoutTimer->setSingleShot(true);
 
     connect(timeoutTimer, &QTimer::timeout, this, [this]() {
-        qDebug() << "I/Q transfer timed out." << iqSamples.size() << flagRequestedEndVifConnection << flagHeaderValidated;
+        qWarning() << "I/Q transfer timed out." << iqSamples.size() << flagRequestedEndVifConnection << flagHeaderValidated;
         emit endVifConnection();
         iqSamples.clear();
         flagRequestedEndVifConnection = true;
@@ -20,6 +20,9 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 
 void IqPlot::getIqData(const QList<complexInt16> &iq16)
 {
+    dataFromFile = false;
+
+    timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing
     if (flagHeaderValidated) iqSamples += iq16;
     if (iqSamples.size() >= samplesNeeded) {
         parseIqData(iqSamples, listFreqs.first());
@@ -30,8 +33,6 @@ void IqPlot::getIqData(const QList<complexInt16> &iq16)
 
 void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency)
 {
-    ffmFrequency = frequency; //TODO: Why double storage?
-    dataFromFile = false;
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
     samplerate = (double) config->getIqFftPlotBw() * 1.28
                  * 1e3; // TODO: Is this universal for all R&S instruments?
@@ -366,11 +367,11 @@ void IqPlot::requestIqData()
     }
 }
 
-int IqPlot::analyzeIqStart(const QList<complexInt16> &iq)
+quint64 IqPlot::analyzeIqStart(const QList<complexInt16> &iq)
 {
     qint16 max = -32768;
-    int locMax = 0;
-    int iter = 0;
+    quint64 locMax = 0;
+    quint64 iter = 0;
     for (const auto &val : iq) {
         int mag = sqrt(val.real * val.real + val.imag * val.imag);
         if (mag > max) {
@@ -465,7 +466,7 @@ void IqPlot::findIqMaxValue(const QList<complexInt16> &input, qint16 &max)
 
 void IqPlot::parseFilename(const QString file)
 {
-    QStringList split = file.split('_');
+    const QStringList split = file.split('_');
     if (split.size() >= 5) {
         for (const auto &val : split) {
             if (val.contains("MHz", Qt::CaseInsensitive))

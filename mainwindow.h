@@ -32,7 +32,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QToolBar>
-#include <QtConcurrent>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QtMultimedia/QAudioOutput>
 #include <QtMultimedia/QMediaPlayer>
 #include "config.h"

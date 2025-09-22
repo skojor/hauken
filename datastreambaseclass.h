@@ -21,7 +21,7 @@
 #include <QNetworkDatagram>
 #include <QFile>
 #include <QApplication>
-#include <QtConcurrent/QtConcurrent>
+//#include <QtConcurrent/QtConcurrent>
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QPromise>
