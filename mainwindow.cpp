@@ -574,8 +574,8 @@ void MainWindow::setToolTips()
 
 void MainWindow::getConfigValues()
 {
-    instrStartFreq->setValue(config->getInstrStartFreq());
-    instrStopFreq->setValue(config->getInstrStopFreq());
+    instrStartFreq->setValue(1e-6 * config->getInstrStartFreq());
+    instrStopFreq->setValue(1e-6 * config->getInstrStopFreq());
     instrMeasurementTime->setValue(config->getInstrMeasurementTime());
     instrAtt->setValue(config->getInstrManAtt());
     instrAutoAtt->setChecked(config->getInstrAutoAtt());
@@ -683,19 +683,20 @@ void MainWindow::instrModeChanged()
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
     }
-    instrStartFreqChanged();
-    instrStopFreqChanged();
+    instrPscanFreqChanged();
     setResolutionFunction();
 }
 
 void MainWindow::setValidators()
 {
-    instrStartFreq->setRange(20, 600e3);
-    instrStartFreq->setDecimals(0);
-    instrFfmCenterFreq->setRange(0.1, 600e3);
+    instrStartFreq->setRange(0, 600e3);
+    instrStartFreq->setDecimals(6);
+    instrStartFreq->setSingleStep(1);
+    instrFfmCenterFreq->setRange(1, 600e3);
     instrFfmCenterFreq->setDecimals(0);
-    instrStopFreq->setRange(20, 600e3);
-    instrStopFreq->setDecimals(0);
+    instrStopFreq->setRange(0, 600e3);
+    instrStopFreq->setDecimals(6);
+    instrStopFreq->setSingleStep(1);
     instrMeasurementTime->setRange(1, 5000);
     instrAtt->setRange(-40, 40);
 
@@ -723,23 +724,18 @@ void MainWindow::setValidators()
     gnssTimeOffset->setRange(0, 10e6);
 }
 
-void MainWindow::instrStartFreqChanged()
+void MainWindow::instrPscanFreqChanged()
 {
-    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
-        config->setInstrStartFreq(instrStartFreq->value());
-    }
-    if (measurementDevice->isConnected())
-        traceBuffer->restartCalcAvgLevel();
-}
-
-void MainWindow::instrStopFreqChanged()
-{
-    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
+    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN &&
+        instrStartFreq->value() < instrStopFreq->value()) {
+        measurementDevice->setPscanFrequency(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
         config->setInstrStartFreq(instrStartFreq->value());
         config->setInstrStopFreq(instrStopFreq->value());
+        ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
     }
     if (measurementDevice->isConnected())
         traceBuffer->restartCalcAvgLevel();
+
 }
 
 void MainWindow::instrFfmCenterFreqChanged()

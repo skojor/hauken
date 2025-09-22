@@ -133,23 +133,42 @@ void MeasurementDevice::scpiError(QAbstractSocket::SocketError error)
     emit popup(msg);
 }
 
-void MeasurementDevice::setPscanFrequency()
+void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 stopf)
 {
-    if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
-        abor();
-        scpiWrite("freq:psc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
-        scpiWrite("freq:psc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
-        initImm();
-        emit resetBuffers();
-    }
-    else if (connected && devicePtr->hasDscan && devicePtr->mode == Instrument::Mode::PSCAN) { // esmb mode
-        abor();
-        scpiWrite("freq:dsc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
-        scpiWrite("freq:dsc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
-        initImm();
-        emit resetBuffers();
+    quint64 startfreq = startf;
+    quint64 stopfreq = stopf;
+
+    if (startf == 0 && stopf == 0) {
+        startfreq = devicePtr->pscanStartFrequency;
+        stopfreq = devicePtr->pscanStopFrequency;
     }
 
+    if (connected &&
+        devicePtr->hasPscan &&
+        devicePtr->mode == Instrument::Mode::PSCAN &&
+        startfreq < stopfreq)
+    {
+        abor();
+        scpiWrite("freq:psc:stop " + QByteArray::number(stopfreq));
+        scpiWrite("freq:psc:start " + QByteArray::number(startfreq));
+        devicePtr->pscanStartFrequency = startfreq;
+        devicePtr->pscanStopFrequency = stopfreq;
+        initImm();
+        emit resetBuffers();        
+    }
+    else if (connected &&
+               devicePtr->hasDscan &&
+               devicePtr->mode == Instrument::Mode::PSCAN &&
+               startf < stopf)
+    { // esmb mode
+        abor();
+        scpiWrite("freq:dsc:stop " + QByteArray::number(stopfreq));
+        scpiWrite("freq:dsc:start " + QByteArray::number(startfreq));
+        devicePtr->pscanStartFrequency = startfreq;
+        devicePtr->pscanStopFrequency = stopfreq;
+        initImm();
+        emit resetBuffers();
+    }
 }
 
 void MeasurementDevice::setPscanResolution()
@@ -767,12 +786,12 @@ void MeasurementDevice::autoReconnectCheckStatus()
 
 void MeasurementDevice::updSettings()
 {
-    if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
+    /*if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
          devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) && config->getInstrStopFreq() > config->getInstrStartFreq()) {
         devicePtr->pscanStartFrequency = config->getInstrStartFreq() * 1e6;
         devicePtr->pscanStopFrequency = config->getInstrStopFreq() * 1e6;
         setPscanFrequency();
-    }
+    }*/
     if (devicePtr->pscanResolution != config->getInstrResolution().toDouble() * 1e3) {
         devicePtr->pscanResolution = config->getInstrResolution().toDouble() * 1e3;
         setPscanResolution();

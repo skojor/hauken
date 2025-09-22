@@ -59,7 +59,7 @@ signals:
 
 public slots:
     void start();
-    void setPscanFrequency();
+    void setPscanFrequency(const quint64 startf = 0, const quint64 stopf = 0);
     void setPscanResolution();
     void setFfmCenterFrequency();
     void setFfmFrequencySpan();

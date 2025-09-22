@@ -5,11 +5,11 @@ void MainWindow::setSignals()
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
-            &MainWindow::instrStartFreqChanged);
+            &MainWindow::instrPscanFreqChanged);
     connect(instrStopFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
-            &MainWindow::instrStopFreqChanged);
+            &MainWindow::instrPscanFreqChanged);
     connect(instrFfmCenterFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
@@ -825,11 +825,11 @@ void MainWindow::setSignals()
 
     connect(restApi, &RestApi::pscanStartFreq, this, [this](double f) {
         instrStartFreq->setValue(f);
-        instrStartFreqChanged();
+        instrPscanFreqChanged();
     });
     connect(restApi, &RestApi::pscanStopFreq, this, [this](double f) {
         instrStopFreq->setValue(f);
-        instrStopFreqChanged();
+        instrPscanFreqChanged();
     });
     connect(restApi, &RestApi::pscanResolution, this, [this](QString res) {
         config->setInstrResolution(res);

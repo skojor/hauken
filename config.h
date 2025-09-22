@@ -24,10 +24,10 @@ signals:
 
 public slots:
     // meas. device data
-    double getInstrStartFreq() { return settings->value("instr/StartFreq", 1560).toDouble();}
-    void setInstrStartFreq(double val) { settings->setValue("instr/StartFreq", val); emit settingsUpdated();}
-    double getInstrStopFreq() { return settings->value("instr/StopFreq", 1610).toDouble();}
-    void setInstrStopFreq(double val) { settings->setValue("instr/StopFreq", val); emit settingsUpdated();}
+    quint64 getInstrStartFreq() { return settings->value("instr/StartFreq", 1.56e9).toULongLong();}
+    void setInstrStartFreq(quint64 val) { settings->setValue("instr/StartFreq", val);}
+    quint64 getInstrStopFreq() { return settings->value("instr/StopFreq", 1.61e9).toULongLong();}
+    void setInstrStopFreq(quint64 val) { settings->setValue("instr/StopFreq", val);}
     QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
     void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
     double getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toDouble();}

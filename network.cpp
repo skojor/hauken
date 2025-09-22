@@ -50,8 +50,8 @@ void Network::newTraceline(const QList<qint16> data)
         QByteArray ba;
         QTextStream ts(&ba);
         ts << QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toLocal8Bit() << ","
-           << QByteArray::number(config->getInstrStartFreq() * 1e6, 'f', 0) << ","
-           << QByteArray::number(config->getInstrStopFreq() * 1e6, 'f', 0)  << ","
+           << QByteArray::number(startFreq) << ","
+           << QByteArray::number(stopFreq)  << ","
            << QByteArray::number(config->getInstrResolution().toDouble() * 1e3, 'f' ,0) << ","
            << config->getStnLatitude() << "," << config->getStnLongitude();
 

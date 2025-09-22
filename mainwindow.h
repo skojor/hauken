@@ -121,8 +121,7 @@ private slots:
     void setDeviceAntPorts();
     void setDeviceFftModes();
 
-    void instrStartFreqChanged();
-    void instrStopFreqChanged();
+    void instrPscanFreqChanged();
     void instrMeasurementTimeChanged();
     void instrAttChanged();
     void instrIpChanged();
