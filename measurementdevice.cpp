@@ -32,6 +32,14 @@ void MeasurementDevice::start()
     updGnssDisplayTimer->start(1000);
 
     connect(updFrequencyData, &QTimer::timeout, this, &MeasurementDevice::askFrequencies);
+
+    initializeDevicePtr();
+}
+
+void MeasurementDevice::initializeDevicePtr()
+{
+    devicePtr->pscanStartFrequency = config->getInstrStartFreq();
+    devicePtr->pscanStopFrequency = config->getInstrStopFreq();
 }
 
 void MeasurementDevice::instrConnect()

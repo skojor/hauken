@@ -7,6 +7,12 @@ VersionUpdater::VersionUpdater(QSharedPointer<Config> c)
     QFile file(config->getWorkFolder() + "/" + ConfigFile);
     if (file.exists())
         handleConfigUpdates();
+
+    // One time conversion from old MHz freq storage (< v.2.50.13)
+    if (config->getInstrStartFreq() < 6e3)
+        config->setInstrStartFreq(config->getInstrStartFreq() * 1e6);
+    if (config->getInstrStopFreq() < 6e3)
+        config->setInstrStopFreq(config->getInstrStopFreq() * 1e6);
 }
 
 void VersionUpdater::handleConfigUpdates()

@@ -163,6 +163,7 @@ private slots:
     void checkFfmFreq(const QByteArray buffer);
     void checkFfmSpan(const QByteArray buffer);
     void setupIfStream();
+    void initializeDevicePtr();
 
 private:
     bool connected = false;

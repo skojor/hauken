@@ -16,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
+    VersionUpdater versionUpdater(config); // Handles any config changes needed
     useDbm = config->getUseDbm();
 
     QFont font = QApplication::font("QMessageBox");
@@ -117,7 +118,6 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setTcpStreamPtr(tcpStream);
     measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
-    VersionUpdater versionUpdater(config); // Handles any config changes needed
 
     QSettings extras;
     if (extras.value("incGeometry").isValid())
@@ -729,8 +729,8 @@ void MainWindow::instrPscanFreqChanged()
     if (measurementDevice->currentMode() == Instrument::Mode::PSCAN &&
         instrStartFreq->value() < instrStopFreq->value()) {
         measurementDevice->setPscanFrequency(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
-        config->setInstrStartFreq(instrStartFreq->value());
-        config->setInstrStopFreq(instrStopFreq->value());
+        config->setInstrStartFreq(instrStartFreq->value() * 1e6);
+        config->setInstrStopFreq(instrStopFreq->value() * 1e6);
         ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
     }
     if (measurementDevice->isConnected())

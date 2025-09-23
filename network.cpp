@@ -48,17 +48,19 @@ void Network::newTraceline(const QList<qint16> data)
 {
     if (useUdp) {
         QByteArray ba;
-        QTextStream ts(&ba);
-        ts << QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toLocal8Bit() << ","
-           << QByteArray::number(startFreq) << ","
-           << QByteArray::number(stopFreq)  << ","
-           << QByteArray::number(config->getInstrResolution().toDouble() * 1e3, 'f' ,0) << ","
-           << config->getStnLatitude() << "," << config->getStnLongitude();
+        ba.reserve(data.size() * 6);
+
+        ba.append(QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toLocal8Bit()).append(",")
+            .append(QByteArray::number(startFreq)).append(",")
+            .append(QByteArray::number(stopFreq)).append(",")
+            .append(QByteArray::number(config->getInstrResolution().toDouble() * 1e3, 'f', 0)).append(",")
+            .append(config->getStnLatitude().toLocal8Bit()).append(",")
+            .append(config->getStnLongitude().toLocal8Bit());
 
         for (auto && val : data) {
-            ts << "," << (int)(val / 10);
+            ba.append(",").append(QByteArray::number( val / 10));
         }
-        ts << Qt::endl;
+
         for (auto && socket : tcpSockets) {
             if (socket->isOpen())
                 socket->write(ba);
