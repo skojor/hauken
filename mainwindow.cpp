@@ -591,7 +591,7 @@ void MainWindow::getConfigValues()
     instrAttChanged();
     //instrIpChanged();
     instrPortChanged();
-    instrFfmCenterFreq->setValue(config->getInstrFfmCenterFreq());
+    instrFfmCenterFreq->setValue(1e-6 * config->getInstrFfmCenterFreq());
 
     instrAntPort->setEditable(true);
     instrAntPort->setLineEdit(antPortLineEdit);
@@ -693,7 +693,7 @@ void MainWindow::setValidators()
     instrStartFreq->setDecimals(6);
     instrStartFreq->setSingleStep(1);
     instrFfmCenterFreq->setRange(1, 600e3);
-    instrFfmCenterFreq->setDecimals(0);
+    instrFfmCenterFreq->setDecimals(6);
     instrStopFreq->setRange(0, 600e3);
     instrStopFreq->setDecimals(6);
     instrStopFreq->setSingleStep(1);
@@ -741,13 +741,17 @@ void MainWindow::instrPscanFreqChanged()
 void MainWindow::instrFfmCenterFreqChanged()
 {
     if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
-        config->setInstrFfmCenterFreq(instrFfmCenterFreq->value());
+        config->setInstrFfmCenterFreq(1e6 * instrFfmCenterFreq->value());
+        measurementDevice->setFfmCenterFrequency(1e6 * instrFfmCenterFreq->value());
+        ptrNetwork->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
+                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
     }
+
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
         waterfall->restartPlot();
     }
-    iqPlot->setFfmFrequency(instrFfmCenterFreq->value());
+    iqPlot->setFfmFrequency(instrFfmCenterFreq->value()); // Sent as MHz, used for image text
 }
 
 void MainWindow::instrFfmSpanChanged()

@@ -13,6 +13,8 @@ VersionUpdater::VersionUpdater(QSharedPointer<Config> c)
         config->setInstrStartFreq(config->getInstrStartFreq() * 1e6);
     if (config->getInstrStopFreq() < 6e3)
         config->setInstrStopFreq(config->getInstrStopFreq() * 1e6);
+    if (config->getInstrFfmCenterFreq() < 6e3)
+        config->setInstrFfmCenterFreq(config->getInstrFfmCenterFreq() * 1e6);
 }
 
 void VersionUpdater::handleConfigUpdates()

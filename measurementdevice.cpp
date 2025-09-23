@@ -40,6 +40,7 @@ void MeasurementDevice::initializeDevicePtr()
 {
     devicePtr->pscanStartFrequency = config->getInstrStartFreq();
     devicePtr->pscanStopFrequency = config->getInstrStopFreq();
+    devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq();
 }
 
 void MeasurementDevice::instrConnect()
@@ -192,10 +193,15 @@ void MeasurementDevice::setPscanResolution()
     }
 }
 
-void MeasurementDevice::setFfmCenterFrequency()
+void MeasurementDevice::setFfmCenterFrequency(const quint64 freq)
 {
+    quint64 f = freq;
+
+    if (f == 0)
+        f = devicePtr->ffmCenterFrequency;
+
     if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
-        scpiWrite("sens:freq " + QByteArray::number(devicePtr->ffmCenterFrequency));
+        scpiWrite("sens:freq " + QByteArray::number(f));
 }
 
 void MeasurementDevice::setFfmFrequencySpan()
@@ -804,10 +810,10 @@ void MeasurementDevice::updSettings()
         devicePtr->pscanResolution = config->getInstrResolution().toDouble() * 1e3;
         setPscanResolution();
     }
-    if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {
+   /* if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {
         devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq() * 1e6;
         setFfmCenterFrequency();
-    }
+    }*/
     if (devicePtr->ffmFrequencySpan != config->getInstrFfmSpan().toDouble() * 1e3) {
         devicePtr->ffmFrequencySpan = config->getInstrFfmSpan().toDouble() * 1e3;
         setFfmFrequencySpan();

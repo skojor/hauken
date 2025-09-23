@@ -21,10 +21,10 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 void IqPlot::getIqData(const QList<complexInt16> &iq16)
 {
     dataFromFile = false;
-
     timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing
     if (flagHeaderValidated) iqSamples += iq16;
     if (iqSamples.size() >= samplesNeeded) {
+        ffmFrequency = listFreqs.first(); // Silly, but blame the coder
         parseIqData(iqSamples, listFreqs.first());
         receiverControl(); // Change freq, or end datastream if we are done
         iqSamples.clear();
@@ -327,7 +327,7 @@ void IqPlot::requestIqData()
         if (config->getIqRecordAllTrigArea() || listFreqs.isEmpty()) {
             QStringList stringListTrigFreqs = config->getTrigFrequencies();
             if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here? Shouldn't happen, set center to FFM center for now
-                listFreqs.append(config->getInstrFfmCenterFreq());
+                listFreqs.append(1e-6 * config->getInstrFfmCenterFreq());
             }
             else {
                 for (int i=0; i < stringListTrigFreqs.size(); i++) {

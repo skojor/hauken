@@ -30,8 +30,8 @@ public slots:
     void setInstrStopFreq(quint64 val) { settings->setValue("instr/StopFreq", val);}
     QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
     void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
-    double getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toDouble();}
-    void setInstrFfmCenterFreq(double f) { settings->setValue("instr/FfmCenterFreq", f); emit settingsUpdated();}
+    quint64 getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toULongLong();}
+    void setInstrFfmCenterFreq(quint64 f) { settings->setValue("instr/FfmCenterFreq", f);}
     QString getInstrFfmSpan() { return settings->value("instr/FfmSpan", "2000").toString();}
     void setInstrFfmSpan(QString s) { settings->setValue("instr/FfmSpan", s); emit settingsUpdated(); emit settingsUpdated();}
     int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt();}

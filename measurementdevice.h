@@ -61,7 +61,7 @@ public slots:
     void start();
     void setPscanFrequency(const quint64 startf = 0, const quint64 stopf = 0);
     void setPscanResolution();
-    void setFfmCenterFrequency();
+    void setFfmCenterFrequency(const quint64 freq = 0);
     void setFfmFrequencySpan();
     void setMeasurementTime();
     void setAttenuator();

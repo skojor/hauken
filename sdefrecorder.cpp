@@ -106,12 +106,12 @@ void SdefRecorder::updSettings()
     useNewMsFormat = config->getSdefNewMsFormat();
 
     if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
-        startfreq = config->getInstrStartFreq() * 1e6;
-        stopfreq = config->getInstrStopFreq() * 1e6;
+        startfreq = config->getInstrStartFreq();
+        stopfreq = config->getInstrStopFreq();
         resolution = config->getInstrResolution().toDouble() * 1e3;
     } else {
         int span = config->getInstrFfmSpan().toInt() * 1e3;
-        startfreq = config->getInstrFfmCenterFreq() * 1e6 - span / 2;
+        startfreq = config->getInstrFfmCenterFreq() - span / 2;
         stopfreq = startfreq + span;
         resolution = (stopfreq - startfreq) / (datapoints - 1);
     }
