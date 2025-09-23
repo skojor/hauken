@@ -64,7 +64,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     iqoptions.cpp iqoptions.h
     led/ledindicator.cpp led/ledindicator.h
     main.cpp
-    mainwindow.cpp mainwindow.h
+    mainwindow.cpp mainwindow.h mainw_signals.cpp mainw_changelog.cpp mainw_device.cpp
     measurementdevice.cpp measurementdevice.h
     mqtt.cpp mqtt.h
     mqttoptions.cpp mqttoptions.h
