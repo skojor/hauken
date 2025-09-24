@@ -139,6 +139,7 @@ void CustomPlotController::plotTrace(const QVector<double> &data)
 {
     if (keyValues.isEmpty()) reCalc();
     customPlotPtr->graph(0)->setData(keyValues, data);
+    customPlotPtr->layer("liveGraph")->replot();
 }
 
 void CustomPlotController::plotMaxhold(const QVector<double> &data)
@@ -168,7 +169,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
         }
     }
     customPlotPtr->graph(2)->setData(keyValues, copy);
-    customPlotPtr->replot();
+    //customPlotPtr->replot();
 }
 
 void CustomPlotController::doReplot()
