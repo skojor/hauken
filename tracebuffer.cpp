@@ -38,13 +38,14 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
+    QElapsedTimer timer; timer.start();
     if (data.size() != nrOfDataPoints) {
         emit nrOfDatapointsChanged(data.size());
         nrOfDataPoints = data.size();
     }
 
     emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
-    
+    qDebug() << "TT1" << timer.elapsed();
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
@@ -57,11 +58,13 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     }
     else
         traceBuffer.append(data);
+    qDebug() << "TT2" << timer.elapsed();
 
     if (recording)
         emit traceToRecorder(traceBuffer.last());
 
     emit traceData(traceBuffer.last());
+    qDebug() << "TT3" << timer.elapsed();
 
     datetimeBuffer.append(QDateTime::currentDateTime());
     
@@ -70,16 +73,19 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 
     addDisplayBufferTrace(data);
     calcMaxhold();
-
+    qDebug() << "TT4" << timer.elapsed();
     if (throttleTimer->elapsed() > throttleTime) {
         throttleTimer->start();
         emit newDispTrace(displayBuffer);
         emit reqReplot();
+        qDebug() << "throttle nope" << timer.elapsed();
     }
+    qDebug() << "TT5" << timer.elapsed();
     mutex.unlock();
     
     if (tracesUsedInAvg <= tracesNeededForAvg)
         calcAvgLevel(data);
+    qDebug() << "TT6" << timer.elapsed();
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
