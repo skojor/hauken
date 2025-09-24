@@ -177,9 +177,9 @@ QString SdefRecorder::createFilename()
     }
     if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
         ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
-           << "_" << AsciiTranslator::toAscii(config->getStationName()) // New, don't use norwegian weird letters in filenames
-           << "_" << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
-           << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0);
+        << "_" << AsciiTranslator::toAscii(config->getStationName()) // New, don't use norwegian weird letters in filenames
+        << "_" << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
+        << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0);
         /*
         ts << dir << "/" << config->getSdefStationInitals() << "_"
            << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
@@ -187,18 +187,18 @@ QString SdefRecorder::createFilename()
            << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");*/
     } else {
         ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
-           << "_" << AsciiTranslator::toAscii(config->getStationName()) << "_"
-           << QString::number((config->getInstrFfmCenterFreq()
-                               - config->getInstrFfmSpan().toDouble() / 2e3)
-                                  * 1e3,
-                              'f',
-                              0)
-           << "-"
-           << QString::number((config->getInstrFfmCenterFreq()
-                               + config->getInstrFfmSpan().toDouble() / 2e3)
-                                  * 1e3,
-                              'f',
-                              0);
+        << "_" << AsciiTranslator::toAscii(config->getStationName()) << "_"
+        << QString::number((config->getInstrFfmCenterFreq()
+                            - config->getInstrFfmSpan().toDouble() / 2e3)
+                               * 1e3,
+                           'f',
+                           0)
+        << "-"
+        << QString::number((config->getInstrFfmCenterFreq()
+                            + config->getInstrFfmSpan().toDouble() / 2e3)
+                               * 1e3,
+                           'f',
+                           0);
     }
     //<< ".cef";
 
@@ -619,7 +619,7 @@ void SdefRecorder::startTempFile()
         if (tempFile.exists()) {
             //qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
             tempFile.remove();
-                //qDebug() << "Deleted ok";
+            //qDebug() << "Deleted ok";
             //else
             //qDebug() << "Failed to delete" << tempFile.errorString();
         }
@@ -637,7 +637,7 @@ void SdefRecorder::closeTempFile()
 {
     if (tempFile.isOpen()) {
         tempFile.close();
-        qDebug() << "Temp file" << file.fileName() << "closed";
+        qDebug() << "Temp file" << tempFile.fileName() << "closed";
         startTempRecording = false;
     }
 }
@@ -674,21 +674,19 @@ void SdefRecorder::saveDataToTempFile()
     if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
         QByteArray byteArray;
         if (useNewMsFormat)
-            byteArray
-                += QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit();
+            byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit());
         else
-            byteArray += QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
+            byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit());
 
         if (addPosition) {
-            byteArray += QByteArray::number(positionHistory.last().first, 'f', 6) + ","
-                         + QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
+            byteArray.append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
+            .append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }
 
         for (auto &&val : tempFileTracedata) {
-            byteArray += QByteArray::number((int) (val / 10)) + ',';
+            byteArray.append(",").append(QByteArray::number(val / 10));
         }
-        byteArray.remove(byteArray.size() - 1, 1); // remove last comma
-        byteArray += "\n";
+        byteArray.append("\n");
         tempFile.write(byteArray);
         tempFileTracedata.clear();
         tempFile.flush();

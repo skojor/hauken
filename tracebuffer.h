@@ -112,7 +112,7 @@ private:
     int plotResolution;
     QElapsedTimer *maxholdBufferElapsedTimer = new QElapsedTimer;
     QVector<double> maxholdBufferAggregate;
-    const int throttleTime = 25; // min time in ms between screen updates
+    const int throttleTime = 40; // min time in ms between screen updates
     const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;

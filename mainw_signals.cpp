@@ -47,12 +47,12 @@ void MainWindow::setSignals()
 
     connect(instrConnect,
             &QPushButton::clicked,
-            measurementDevice,
-            &MeasurementDevice::instrConnect);
+            this,
+            &MainWindow::btnConnectPressed);
     connect(instrDisconnect,
             &QPushButton::clicked,
-            measurementDevice,
-            &MeasurementDevice::instrDisconnect);
+            this,
+            &MainWindow::btnDisconnectPressed);
 
     connect(instrTrigLevel,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -626,41 +626,20 @@ void MainWindow::setSignals()
             &InstrumentList::instrumentListReady,
             this,
             [this](QStringList ip, QStringList name, QStringList type) {
-                disconnect(instrIpAddr,
-                           &QComboBox::currentTextChanged,
-                           this,
-                           &MainWindow::instrIpChanged);
+                disconnect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
                 instrIpAddr->clear();
 
-                int selIndex = -1;
-                for (int i = 0; i < ip.size(); i++) {
+
+                for (int i = 0; i < ip.size(); i++)
                     instrIpAddr->addItem(name[i] + " (" + type[i] + ")", QVariant(ip[i]));
-                    if (ip[i] == config->getInstrIpAddr()) {
-                        selIndex = i;
-                    }
-                }
-                if (selIndex
-                    == -1) { // IP not found in list, assuming it is manually entered earlier
-                    instrIpAddr->addItem(config->getInstrIpAddr(), QVariant(config->getInstrIpAddr()));
-                    instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
+                if (!config->getInstrCustomEntry().isEmpty())
+                    instrIpAddr->addItem(config->getInstrCustomEntry());
 
-                } else
-                    instrIpAddr->setCurrentIndex(selIndex);
-                connect(instrIpAddr,
-                        &QComboBox::currentIndexChanged,
-                        this,
-                        &MainWindow::instrIpChanged);
+                int index = instrIpAddr->findText(config->getInstrIpAddr());
+                if (index != -1)
+                    instrIpAddr->setCurrentIndex(index);
+                connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
             });
-
-    /*connect(instrIpAddr, &QComboBox::currentTextChanged, this, [this](const QString text) {
-        if (text.count('.') == 3) { // Don't do anything until text looks like a valid IP
-            if (instrIpAddr->itemText(instrIpAddr->count() - 1).count('.')
-                == 3) { // Already added a custom IP
-                instrIpAddr->removeItem(instrIpAddr->count() - 1);
-            }
-            instrIpAddr->addItem(text, text);
-        }
-    });*/
 
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)

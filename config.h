@@ -60,6 +60,8 @@ public slots:
         settings->setValue("instr/gainControl", i);
         emit settingsUpdated();
     }
+    QString getInstrCustomEntry() { return settings->value("instr/customEntry", "").toString();}
+    void setInstrCustomEntry(QString s) { settings->setValue("instr/customEntry", s);}
 
     // spectrum criterias
     int getInstrTrigLevel() { return settings->value("instr/TrigLevel", 15.0).toInt(); }

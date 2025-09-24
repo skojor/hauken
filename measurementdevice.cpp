@@ -199,6 +199,8 @@ void MeasurementDevice::setFfmCenterFrequency(const quint64 freq)
 
     if (f == 0)
         f = devicePtr->ffmCenterFrequency;
+    else
+        devicePtr->ffmCenterFrequency = f;
 
     if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
         scpiWrite("sens:freq " + QByteArray::number(f));
@@ -854,7 +856,7 @@ void MeasurementDevice::updSettings()
         fftMode = config->getInstrFftMode().toLocal8Bit();
         setFftMode();
     }
-    scpiAddress = new QHostAddress(config->getInstrIpAddr());
+    //scpiAddress = new QHostAddress(config->getInstrIpAddr());
     scpiPort = config->getInstrPort();
 
     if (useUdpStream != !config->getInstrUseTcpDatastream())

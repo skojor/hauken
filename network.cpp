@@ -46,7 +46,13 @@ void Network::updSettings()
 
 void Network::newTraceline(const QList<qint16> data)
 {
-    if (useUdp) {
+    bool isConnected = false;
+    for (auto && socket : tcpSockets) {
+        if (socket->isOpen())
+            isConnected = true;
+    }
+
+    if (isConnected && useUdp) {
         QByteArray ba;
         ba.reserve(data.size() * 6);
 

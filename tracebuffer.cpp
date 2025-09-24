@@ -44,7 +44,6 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     }
 
     emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
-    
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
@@ -65,16 +64,13 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 
     datetimeBuffer.append(QDateTime::currentDateTime());
     
-    if (!throttleTimer->isValid())
-        throttleTimer->start();
-
     addDisplayBufferTrace(data);
     calcMaxhold();
 
-    if (throttleTimer->elapsed() > throttleTime) {
+    if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
         throttleTimer->start();
         emit newDispTrace(displayBuffer);
-        emit reqReplot();
+        //emit reqReplot(); // Why this one? Not needed really?
     }
     mutex.unlock();
     
@@ -115,31 +111,34 @@ void TraceBuffer::calcMaxhold()
         maxholdBufferAggregate = displayBuffer;
     }
 
-    else if (!maxholdBufferAggregate.isEmpty() && maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold every second, then updates the maxhold container
+    else if (!maxholdBufferAggregate.isEmpty() && maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold
         for (int i=0; i<plotResolution; i++) {
             if (maxholdBufferAggregate.at(i) < displayBuffer.at(i)) maxholdBufferAggregate[i] = displayBuffer.at(i);
         }
-        maxhold = maxholdBufferAggregate;
     }
     else if (maxholdBufferElapsedTimer->elapsed() >= 1000) {
         maxholdBufferElapsedTimer->start();
-        maxhold = maxholdBufferAggregate;
         maxholdBuffer.prepend(maxholdBufferAggregate);
         emit newDispMaxholdToWaterfall(maxholdBufferAggregate); // for waterfall calc.
         maxholdBufferAggregate.clear();
     }
 
-    if (!maxholdBufferAggregate.isEmpty()) {
-        if (!maxholdBuffer.isEmpty()) {
-            int size = maxholdBuffer.size();
-            for (int seconds = 0; seconds < maxholdTime - 1 && seconds < size; seconds++) {
-                for (int i=0; i<plotResolution; i++) {
-                    if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
-                }
+    if (!maxholdBuffer.isEmpty()) {
+        for (int seconds = 0; seconds < maxholdTime - 1 && seconds < maxholdBuffer.size(); seconds++) {
+            for (int i=0; i<plotResolution; i++) {
+                if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
             }
         }
-        if (maxholdTime > 0) emit newDispMaxhold(maxhold);
     }
+    if (!maxholdBufferAggregate.isEmpty()) { // Comparing maxhold to changes which happened < 1 second ago
+        for (int i=0; i<plotResolution; i++) {
+            if (maxhold[i] < maxholdBufferAggregate[i])
+                maxhold[i] = maxholdBufferAggregate[i];
+        }
+    }
+
+    if ( maxholdTime > 0)
+        emit newDispMaxhold(maxhold);
 }
 
 void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points
@@ -217,7 +216,6 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10.0;
                 }
             }
-            
         }
     }
     
@@ -230,9 +228,10 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
         QVector<double> copy = averageDispLevel;
         for (auto &val : copy)
             val += trigLevel;
-        
-        emit newDispTriglevel(copy);
+
+        emit newDispTriglevel(copy); // Time consuming, why?
     }
+
     tracesUsedInAvg++;
     if (tracesUsedInAvg >= tracesNeededForAvg) finishAvgLevelCalc();
 }
@@ -266,6 +265,8 @@ void TraceBuffer::restartCalcAvgLevel()
     averageDispLevelNormalized.clear();
     emit averageLevelCalculating();
     avgFactor = 40;
+    maxholdBuffer.clear();
+    maxholdBufferAggregate.clear();
 }
 
 void TraceBuffer::updSettings()
@@ -277,7 +278,7 @@ void TraceBuffer::updSettings()
     maxholdTime = config->getPlotMaxholdTime();
     emit showMaxhold((bool)maxholdTime);
     if (fftMode != config->getInstrFftMode() || antPort != QString::number(config->getInstrAntPort()) || // any of these changes should invalidate average level
-            autoAtt != config->getInstrAutoAtt() || att != config->getInstrManAtt()) {
+        autoAtt != config->getInstrAutoAtt() || att != config->getInstrManAtt()) {
         fftMode = config->getInstrFftMode();
         antPort = QString::number(config->getInstrAntPort());
         autoAtt = config->getInstrAutoAtt();
