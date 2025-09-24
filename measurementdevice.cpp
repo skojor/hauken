@@ -32,6 +32,15 @@ void MeasurementDevice::start()
     updGnssDisplayTimer->start(1000);
 
     connect(updFrequencyData, &QTimer::timeout, this, &MeasurementDevice::askFrequencies);
+
+    initializeDevicePtr();
+}
+
+void MeasurementDevice::initializeDevicePtr()
+{
+    devicePtr->pscanStartFrequency = config->getInstrStartFreq();
+    devicePtr->pscanStopFrequency = config->getInstrStopFreq();
+    devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq();
 }
 
 void MeasurementDevice::instrConnect()
@@ -133,23 +142,42 @@ void MeasurementDevice::scpiError(QAbstractSocket::SocketError error)
     emit popup(msg);
 }
 
-void MeasurementDevice::setPscanFrequency()
+void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 stopf)
 {
-    if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
-        abor();
-        scpiWrite("freq:psc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
-        scpiWrite("freq:psc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
-        initImm();
-        emit resetBuffers();
-    }
-    else if (connected && devicePtr->hasDscan && devicePtr->mode == Instrument::Mode::PSCAN) { // esmb mode
-        abor();
-        scpiWrite("freq:dsc:stop " + QByteArray::number(devicePtr->pscanStopFrequency));
-        scpiWrite("freq:dsc:start " + QByteArray::number(devicePtr->pscanStartFrequency));
-        initImm();
-        emit resetBuffers();
+    quint64 startfreq = startf;
+    quint64 stopfreq = stopf;
+
+    if (startf == 0 && stopf == 0) {
+        startfreq = devicePtr->pscanStartFrequency;
+        stopfreq = devicePtr->pscanStopFrequency;
     }
 
+    if (connected &&
+        devicePtr->hasPscan &&
+        devicePtr->mode == Instrument::Mode::PSCAN &&
+        startfreq < stopfreq)
+    {
+        abor();
+        scpiWrite("freq:psc:stop " + QByteArray::number(stopfreq));
+        scpiWrite("freq:psc:start " + QByteArray::number(startfreq));
+        devicePtr->pscanStartFrequency = startfreq;
+        devicePtr->pscanStopFrequency = stopfreq;
+        initImm();
+        emit resetBuffers();        
+    }
+    else if (connected &&
+               devicePtr->hasDscan &&
+               devicePtr->mode == Instrument::Mode::PSCAN &&
+               startf < stopf)
+    { // esmb mode
+        abor();
+        scpiWrite("freq:dsc:stop " + QByteArray::number(stopfreq));
+        scpiWrite("freq:dsc:start " + QByteArray::number(startfreq));
+        devicePtr->pscanStartFrequency = startfreq;
+        devicePtr->pscanStopFrequency = stopfreq;
+        initImm();
+        emit resetBuffers();
+    }
 }
 
 void MeasurementDevice::setPscanResolution()
@@ -165,10 +193,15 @@ void MeasurementDevice::setPscanResolution()
     }
 }
 
-void MeasurementDevice::setFfmCenterFrequency()
+void MeasurementDevice::setFfmCenterFrequency(const quint64 freq)
 {
+    quint64 f = freq;
+
+    if (f == 0)
+        f = devicePtr->ffmCenterFrequency;
+
     if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
-        scpiWrite("sens:freq " + QByteArray::number(devicePtr->ffmCenterFrequency));
+        scpiWrite("sens:freq " + QByteArray::number(f));
 }
 
 void MeasurementDevice::setFfmFrequencySpan()
@@ -767,20 +800,20 @@ void MeasurementDevice::autoReconnectCheckStatus()
 
 void MeasurementDevice::updSettings()
 {
-    if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
+    /*if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
          devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) && config->getInstrStopFreq() > config->getInstrStartFreq()) {
         devicePtr->pscanStartFrequency = config->getInstrStartFreq() * 1e6;
         devicePtr->pscanStopFrequency = config->getInstrStopFreq() * 1e6;
         setPscanFrequency();
-    }
+    }*/
     if (devicePtr->pscanResolution != config->getInstrResolution().toDouble() * 1e3) {
         devicePtr->pscanResolution = config->getInstrResolution().toDouble() * 1e3;
         setPscanResolution();
     }
-    if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {
+   /* if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {
         devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq() * 1e6;
         setFfmCenterFrequency();
-    }
+    }*/
     if (devicePtr->ffmFrequencySpan != config->getInstrFfmSpan().toDouble() * 1e3) {
         devicePtr->ffmFrequencySpan = config->getInstrFfmSpan().toDouble() * 1e3;
         setFfmFrequencySpan();

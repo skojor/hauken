@@ -28,6 +28,7 @@ public:
 public slots:
     void newTraceline(const QList<qint16>);
     void updSettings();
+    void updFrequencies(const quint64 startf, const quint64 stopf) { startFreq = startf; stopFreq = stopf;}
 
 private slots:
     void handleNewConnection();
@@ -39,6 +40,7 @@ private:
     QTcpSocket *tcpTestSocket = new QTcpSocket;
     bool useUdp = false;
     QTimer *testTimer = new QTimer;
+    quint64 startFreq, stopFreq;
 
 signals:
 

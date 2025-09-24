@@ -32,7 +32,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QToolBar>
-#include <QtConcurrent>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QtMultimedia/QAudioOutput>
 #include <QtMultimedia/QMediaPlayer>
 #include "config.h"
@@ -121,8 +121,7 @@ private slots:
     void setDeviceAntPorts();
     void setDeviceFftModes();
 
-    void instrStartFreqChanged();
-    void instrStopFreqChanged();
+    void instrPscanFreqChanged();
     void instrMeasurementTimeChanged();
     void instrAttChanged();
     void instrIpChanged();

@@ -351,58 +351,16 @@ void CustomPlotController::updSettings()
     if (plotResolution == 0) plotResolution = config->getPlotResolution();
     fill.fill(-200, plotResolution);
 
-    /*if (true) { // (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
-        if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrStartFreq()
-            || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrStopFreq()
-            || (int)(resolution * 1000) != (int)(config->getInstrResolution().toDouble() * 1000)
-            || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
-            || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
-            startFreq = config->getInstrStartFreq();
-            stopFreq = config->getInstrStopFreq();
-            if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) resolution = config->getInstrResolution().toDouble();
-            else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive))
-                resolution = config->getInstrFfmSpan().toDouble() / 1600; // FIXME
-            customPlotPtr->xAxis->setRangeLower(startFreq);
-            customPlotPtr->xAxis->setRangeUpper(stopFreq);
-            customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
-            customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-            reCalc();
-            customPlotPtr->replot();
-        }
-    }
-    else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive)) {
-        if ((int)customPlotPtr->xAxis->range().lower != (int)config->getInstrFfmCenterFreq() - (int)(config->getInstrFfmSpan().toDouble() / 2000)
-            || (int)customPlotPtr->xAxis->range().upper != (int)config->getInstrFfmCenterFreq() + (int)(config->getInstrFfmSpan().toDouble() / 2000)
-            || (int)(resolution) != (config->getInstrFfmSpan().toDouble() / 1600.0)
-            || customPlotPtr->yAxis->range().lower != config->getPlotYMin()
-            || customPlotPtr->yAxis->range().upper != config->getPlotYMax()) {
-            startFreq = (int)config->getInstrFfmCenterFreq() - (int)(config->getInstrFfmSpan().toDouble() / 2000);
-            stopFreq = (int)config->getInstrFfmCenterFreq() + (int)(config->getInstrFfmSpan().toDouble() / 2000);
-            resolution = config->getInstrFfmSpan().toDouble() / 1600; // FIXME
-            customPlotPtr->xAxis->setRangeLower(startFreq);
-            customPlotPtr->xAxis->setRangeUpper(stopFreq);
-            customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
-            customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-            reCalc();
-            customPlotPtr->replot();
-        }
-    }
-*/
     if (config->getInstrNormalizeSpectrum())
         customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm (normalized)":"dBμV (normalized)"));
     else
         customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm":"dBμV"));
-    // qDebug() << customPlotPtr->axisRect()->rect();
+
     updTextLabelPositions();
 
-    /*if (config->getUseDbm()) {
-        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin() - 107);
-        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax() - 107);
-    }
-    else {*/
-        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
-        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-    //}
+    customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+    customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+
     reCalc();
     customPlotPtr->replot();
     updOverlayText();
@@ -465,8 +423,6 @@ void CustomPlotController::updTextLabelPositions()
     for (int i=0, j=0; i < gnssTextLabels.size(); i++, j += 2) {
         gnssTextLabels[i]->position->setCoords(gnssBandCenterFreq[i],
                                                customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);
-        /*gnssTextLabels[i]->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2),
-                                              customPlotPtr->yAxis->range().upper - 2 - gnssTextLabelPos[i]);*/
     }
 
 }

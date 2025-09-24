@@ -16,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
+    VersionUpdater versionUpdater(config); // Handles any config changes needed
     useDbm = config->getUseDbm();
 
     QFont font = QApplication::font("QMessageBox");
@@ -117,7 +118,6 @@ MainWindow::MainWindow(QWidget *parent)
     measurementDevice->setTcpStreamPtr(tcpStream);
     measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
     measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
-    VersionUpdater versionUpdater(config); // Handles any config changes needed
 
     QSettings extras;
     if (extras.value("incGeometry").isValid())
@@ -574,8 +574,8 @@ void MainWindow::setToolTips()
 
 void MainWindow::getConfigValues()
 {
-    instrStartFreq->setValue(config->getInstrStartFreq());
-    instrStopFreq->setValue(config->getInstrStopFreq());
+    instrStartFreq->setValue(1e-6 * config->getInstrStartFreq());
+    instrStopFreq->setValue(1e-6 * config->getInstrStopFreq());
     instrMeasurementTime->setValue(config->getInstrMeasurementTime());
     instrAtt->setValue(config->getInstrManAtt());
     instrAutoAtt->setChecked(config->getInstrAutoAtt());
@@ -591,7 +591,7 @@ void MainWindow::getConfigValues()
     instrAttChanged();
     //instrIpChanged();
     instrPortChanged();
-    instrFfmCenterFreq->setValue(config->getInstrFfmCenterFreq());
+    instrFfmCenterFreq->setValue(1e-6 * config->getInstrFfmCenterFreq());
 
     instrAntPort->setEditable(true);
     instrAntPort->setLineEdit(antPortLineEdit);
@@ -683,19 +683,20 @@ void MainWindow::instrModeChanged()
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
     }
-    instrStartFreqChanged();
-    instrStopFreqChanged();
+    instrPscanFreqChanged();
     setResolutionFunction();
 }
 
 void MainWindow::setValidators()
 {
-    instrStartFreq->setRange(20, 600e3);
-    instrStartFreq->setDecimals(0);
-    instrFfmCenterFreq->setRange(0.1, 600e3);
-    instrFfmCenterFreq->setDecimals(0);
-    instrStopFreq->setRange(20, 600e3);
-    instrStopFreq->setDecimals(0);
+    instrStartFreq->setRange(0, 600e3);
+    instrStartFreq->setDecimals(6);
+    instrStartFreq->setSingleStep(1);
+    instrFfmCenterFreq->setRange(1, 600e3);
+    instrFfmCenterFreq->setDecimals(6);
+    instrStopFreq->setRange(0, 600e3);
+    instrStopFreq->setDecimals(6);
+    instrStopFreq->setSingleStep(1);
     instrMeasurementTime->setRange(1, 5000);
     instrAtt->setRange(-40, 40);
 
@@ -723,35 +724,34 @@ void MainWindow::setValidators()
     gnssTimeOffset->setRange(0, 10e6);
 }
 
-void MainWindow::instrStartFreqChanged()
+void MainWindow::instrPscanFreqChanged()
 {
-    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
-        config->setInstrStartFreq(instrStartFreq->value());
+    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN &&
+        instrStartFreq->value() < instrStopFreq->value()) {
+        measurementDevice->setPscanFrequency(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
+        config->setInstrStartFreq(instrStartFreq->value() * 1e6);
+        config->setInstrStopFreq(instrStopFreq->value() * 1e6);
+        ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
     }
     if (measurementDevice->isConnected())
         traceBuffer->restartCalcAvgLevel();
-}
 
-void MainWindow::instrStopFreqChanged()
-{
-    if (measurementDevice->currentMode() == Instrument::Mode::PSCAN) {
-        config->setInstrStartFreq(instrStartFreq->value());
-        config->setInstrStopFreq(instrStopFreq->value());
-    }
-    if (measurementDevice->isConnected())
-        traceBuffer->restartCalcAvgLevel();
 }
 
 void MainWindow::instrFfmCenterFreqChanged()
 {
     if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
-        config->setInstrFfmCenterFreq(instrFfmCenterFreq->value());
+        config->setInstrFfmCenterFreq(1e6 * instrFfmCenterFreq->value());
+        measurementDevice->setFfmCenterFrequency(1e6 * instrFfmCenterFreq->value());
+        ptrNetwork->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
+                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
     }
+
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
         waterfall->restartPlot();
     }
-    iqPlot->setFfmFrequency(instrFfmCenterFreq->value());
+    iqPlot->setFfmFrequency(instrFfmCenterFreq->value()); // Sent as MHz, used for image text
 }
 
 void MainWindow::instrFfmSpanChanged()
