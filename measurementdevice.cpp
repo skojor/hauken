@@ -854,7 +854,7 @@ void MeasurementDevice::updSettings()
         fftMode = config->getInstrFftMode().toLocal8Bit();
         setFftMode();
     }
-    scpiAddress = new QHostAddress(config->getInstrIpAddr());
+    //scpiAddress = new QHostAddress(config->getInstrIpAddr());
     scpiPort = config->getInstrPort();
 
     if (useUdpStream != !config->getInstrUseTcpDatastream())

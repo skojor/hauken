@@ -160,6 +160,8 @@ private slots:
     void gnssIncidentAlarm(bool state);
     void recordEnabled(bool state);
     void restartWaterfall();
+    void btnConnectPressed();
+    void btnDisconnectPressed();
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);

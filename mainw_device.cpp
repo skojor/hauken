@@ -149,17 +149,6 @@ void MainWindow::instrAutoAttChanged()
         traceBuffer->restartCalcAvgLevel();
 }
 
-void MainWindow::instrIpChanged()
-{
-    if (instrIpAddr->currentData().isNull()) { // custom IP/hostname added
-        instrIpAddr->setItemData(instrIpAddr->currentIndex(), instrIpAddr->currentText());
-    }
-    //config->setInstrIpAddr(instrIpAddr->currentText());
-    config->setInstrIpAddr(instrIpAddr->currentData().toString());
-    measurementDevice->setAddress(config->getInstrIpAddr());
-    qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData();
-}
-
 void MainWindow::instrPortChanged()
 {
     config->setInstrPort(instrPort->text().toUInt());
@@ -282,3 +271,48 @@ void MainWindow::setDeviceFftModes()
     }
 }
 
+void MainWindow::btnConnectPressed()
+{
+    if (instrIpAddr->currentText() != config->getInstrIpAddr()) { // Custom text written
+        config->setInstrCustomEntry(instrIpAddr->currentText());
+        config->setInstrIpAddr(instrIpAddr->currentText());
+    }
+    if (!instrIpAddr->currentData().isValid()) {
+        QHostAddress address;
+        if (address.setAddress(instrIpAddr->currentText())) {
+            qDebug() << "valid adr";
+        }
+        else {
+            statusBar->showMessage("Looking up host " + instrIpAddr->currentText(), 5000);
+            QHostInfo info = QHostInfo::fromName(instrIpAddr->currentText());
+            if (info.error() != QHostInfo::NoError) {
+                qDebug() << "Error looking up IP address" << info.errorString();
+                statusBar->showMessage("DNS lookup failed, " + info.errorString(), 5000);
+            }
+            else {
+                instrIpAddr->setCurrentText(info.addresses()[0].toString());
+                config->setInstrIpAddr(instrIpAddr->currentText());
+            }
+        }
+    }
+    if (instrIpAddr->currentData().isValid())
+        measurementDevice->setAddress(instrIpAddr->currentData().toString());
+    else
+        measurementDevice->setAddress(instrIpAddr->currentText());
+    qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData().toString();
+
+    measurementDevice->instrConnect();
+    instrDisconnect->setEnabled(true);
+}
+
+void MainWindow::instrIpChanged()
+{
+    config->setInstrIpAddr(instrIpAddr->currentText());
+    qDebug() << "saving" << instrIpAddr->currentText();
+}
+
+void MainWindow::btnDisconnectPressed()
+{
+    instrDisconnect->setEnabled(false);
+    measurementDevice->instrDisconnect();
+}
