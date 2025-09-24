@@ -199,6 +199,8 @@ void MeasurementDevice::setFfmCenterFrequency(const quint64 freq)
 
     if (f == 0)
         f = devicePtr->ffmCenterFrequency;
+    else
+        devicePtr->ffmCenterFrequency = f;
 
     if (connected && devicePtr->hasFfm && devicePtr->mode == Instrument::Mode::FFM)
         scpiWrite("sens:freq " + QByteArray::number(f));
