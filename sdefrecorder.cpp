@@ -211,6 +211,7 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
     if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
         QByteArray byteArray;
+        byteArray.reserve(data.size() * 6);
         if (useNewMsFormat)
             byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit());
         else
@@ -221,10 +222,11 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
                          .append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }
 
-        for (auto val : data) {
+        for (auto && val : data) {
             byteArray.append(",").append(QByteArray::number(val / 10));
         }
         byteArray.append("\n");
+
         file.write(byteArray);
     }
     if (skipTraces) skipTraces--;
