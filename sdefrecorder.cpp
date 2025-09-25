@@ -672,7 +672,7 @@ void SdefRecorder::saveDataToTempFile()
         else
             byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit());
 
-        if (addPosition) {
+        if (addPosition && !positionHistory.isEmpty()) {
             byteArray.append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
             .append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }

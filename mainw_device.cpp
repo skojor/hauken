@@ -99,8 +99,10 @@ void MainWindow::instrPscanFreqChanged()
         config->setInstrStopFreq(instrStopFreq->value() * 1e6);
         ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
     }
-    if (measurementDevice->isConnected())
+    if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
+        waterfall->restartPlot();
+    }
 
 }
 
