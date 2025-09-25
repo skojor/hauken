@@ -274,8 +274,15 @@ void MainWindow::setDeviceFftModes()
 void MainWindow::btnConnectPressed()
 {
     if (instrIpAddr->currentText() != config->getInstrIpAddr()) { // Custom text written
-        config->setInstrCustomEntry(instrIpAddr->currentText());
-        config->setInstrIpAddr(instrIpAddr->currentText());
+        if (instrIpAddr->findText(instrIpAddr->currentText()) != -1) {
+            // IP/hostname written is the same as was already in the list, select this entry instead
+            instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
+        }
+        else {
+            // New entry, store it for later
+            config->setInstrCustomEntry(instrIpAddr->currentText());
+            config->setInstrIpAddr(instrIpAddr->currentText());
+        }
     }
     if (!instrIpAddr->currentData().isValid()) {
         QHostAddress address;
@@ -284,13 +291,14 @@ void MainWindow::btnConnectPressed()
         }
         else {
             statusBar->showMessage("Looking up host " + instrIpAddr->currentText(), 5000);
-            QHostInfo info = QHostInfo::fromName(instrIpAddr->currentText());
+            const QHostInfo info = QHostInfo::fromName(instrIpAddr->currentText());
+
             if (info.error() != QHostInfo::NoError) {
                 qDebug() << "Error looking up IP address" << info.errorString();
                 statusBar->showMessage("DNS lookup failed, " + info.errorString(), 5000);
             }
             else {
-                instrIpAddr->setCurrentText(info.addresses()[0].toString());
+                instrIpAddr->setCurrentText(info.addresses().constFirst().toString());
                 config->setInstrIpAddr(instrIpAddr->currentText());
             }
         }
