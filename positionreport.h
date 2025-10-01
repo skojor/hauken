@@ -23,6 +23,8 @@
 #include <QFile>
 #include <QElapsedTimer>
 
+#define PROCESSTIMEOUT_MS   5000
+
 
 class PositionReport : public QObject
 {
@@ -55,6 +57,7 @@ private:
     QTimer *reportTimer = new QTimer;
     QTimer *gnssReqTimer = new QTimer;
     QTimer *sensorDataTimer = new QTimer;
+    QTimer *processTimeoutTimer = new QTimer;
 
     QProcess *curlProcess = new QProcess;
     bool measurementDeviceConnected = false, inUse = false;
