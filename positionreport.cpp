@@ -36,6 +36,12 @@ PositionReport::PositionReport(QSharedPointer<Config> c)
     }
     if (addSensorData && config->getArduinoReadDHT20()) sensorDataTimer->start(60 * 1e3);
 
+    connect(processTimeoutTimer, &QTimer::timeout, this, [this]() {
+        if (curlProcess->isOpen()) curlProcess->close();
+        qDebug() << "curl process timed out";
+    });
+    processTimeoutTimer->setSingleShot(true);
+
     uptime.start();
 }
 
@@ -125,13 +131,14 @@ void PositionReport::generateReport()
 
 void PositionReport::sendReport()
 {
-    curlProcess->setArguments(reportArgs);
     //qDebug() << "req to send" << reportArgs;
     if (curlProcess->state() != QProcess::NotRunning) { // process stuck, closing
         qDebug() << "Curl process stuck, closing" << curlProcess->processId();
         curlProcess->close();
     }
+    curlProcess->setArguments(reportArgs);
     curlProcess->start();
+    processTimeoutTimer->start(PROCESSTIMEOUT_MS);
 }
 
 void PositionReport::updSettings()
@@ -157,12 +164,13 @@ void PositionReport::updSettings()
 
 void PositionReport::checkReturnValue(int exitCode, QProcess::ExitStatus)
 {
-    if (exitCode != 0 || !curlProcess->readAllStandardOutput().contains("200")) {
-        //qDebug() << "Report failed" << reportArgs << curlProcess->readAllStandardError() << curlProcess->readAllStandardOutput() << exitCode;
+    processTimeoutTimer->stop();
+    /*if (exitCode != 0 || !curlProcess->readAllStandardOutput().contains("200")) {
+       //qDebug() << "Report failed" << reportArgs << curlProcess->readAllStandardError() << curlProcess->readAllStandardOutput() << exitCode;
     }
     else {
-        //qDebug() << "Report sent";
-    }
+        qDebug() << "Report sent";
+    }*/
 }
 
 void PositionReport::updMqttData(QString& name, double& val)

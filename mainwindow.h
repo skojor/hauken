@@ -83,6 +83,24 @@
 #include "network.h"
 #include "iqplot.h"
 
+
+class MyComboBox : public QComboBox {
+    Q_OBJECT
+public:
+    using QComboBox::QComboBox;
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override {
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+            emit enterPressed(currentText());
+        }
+        QComboBox::keyPressEvent(event);
+    }
+
+signals:
+    void enterPressed(const QString &text);
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -186,7 +204,7 @@ private:
     QComboBox *instrAntPort = new QComboBox;
     QComboBox *instrMode = new QComboBox;
     QComboBox *instrFftMode = new QComboBox;
-    QComboBox *instrIpAddr = new QComboBox;
+    MyComboBox *instrIpAddr = new MyComboBox;
     QLineEdit *instrPort = new QLineEdit;
     QComboBox *instrGainControl = new QComboBox;
     QGroupBox *rightBox = new QGroupBox("GNSS status");

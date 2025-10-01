@@ -20,6 +20,7 @@ enum SITESTATUS {
 };
 
 #define MQTT_CONN_TIMEOUT_MS    30000
+#define MQTT_DATATRANSFER_TIMEOUT_MS 120000
 
 class Mqtt : public QObject
 {
@@ -56,6 +57,7 @@ private:
     QTimer *keepaliveTimer = new QTimer;
     QTimer *webswitchTimer = new QTimer;
     QTimer *connectionTimer = new QTimer;
+    QTimer *receivedDataTimer = new QTimer;
     QList<double> subValues;
     QProcess *webswitchProcess = new QProcess;
     SITESTATUS siteStatus = UNKNOWN;

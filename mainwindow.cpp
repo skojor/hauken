@@ -517,7 +517,7 @@ void MainWindow::setToolTips()
                           "FFM gives much better time resolution.");
     instrFftMode->setToolTip("FFT calculation method. Clear/write is the fastest method. "
                              "Max hold increases chances to record short burst signals.");
-    instrIpAddr->setToolTip("IP address or station name. Press ENTER after writing IP manually");
+    instrIpAddr->setToolTip("IP address, hostname or station name");
     instrPort->setToolTip("SCPI port to connect to, default 5555");
     instrGainControl->setToolTip(
         "Gain mode for newer R&S instruments. Change according to RF environment");

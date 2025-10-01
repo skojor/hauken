@@ -209,30 +209,24 @@ QString SdefRecorder::createFilename()
 }
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
-    /*if (!historicDataSaved) {
-        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Trace history data not saved correctly");
-        failed = true;
-        file.close();
-    }
-    else*/
     if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
         QByteArray byteArray;
+        byteArray.reserve(data.size() * 6);
         if (useNewMsFormat)
-            byteArray
-                += QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit();
+            byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit());
         else
-            byteArray += QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit();
+            byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss").toLocal8Bit());
 
         if (addPosition) {
-            byteArray += QByteArray::number(positionHistory.last().first, 'f', 6) + ","
-                         + QByteArray::number(positionHistory.last().second, 'f', 6) + ",";
+            byteArray.append(",").append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
+                         .append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }
 
-        for (auto val : data) {
-            byteArray += QByteArray::number((int) (val / 10)) + ',';
+        for (auto && val : data) {
+            byteArray.append(",").append(QByteArray::number(val / 10));
         }
-        byteArray.remove(byteArray.size() - 1, 1); // remove last comma
-        byteArray += "\n";
+        byteArray.append("\n");
+
         file.write(byteArray);
     }
     if (skipTraces) skipTraces--;
@@ -678,7 +672,7 @@ void SdefRecorder::saveDataToTempFile()
         else
             byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit());
 
-        if (addPosition) {
+        if (addPosition && !positionHistory.isEmpty()) {
             byteArray.append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
             .append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }

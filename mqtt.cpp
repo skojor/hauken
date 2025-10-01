@@ -34,6 +34,12 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
         webswitchProcess->setProgram("curl");
     }
 
+    receivedDataTimer->setSingleShot(true);
+    connect(receivedDataTimer, &QTimer::timeout, this, [this]() {
+        qWarning() << "MQTT data transfer timeout, resetting connection";
+        mqttClient.disconnectFromHost();
+
+    });
     /*
      * 02.09 14:26:21:226 Debug: MQTT received QMqttTopicName("basic_status/testevent") "{\"siteid\":1,\"sitename\":\"Test Area 1\",\"name\":\"1.6.1\",\"description\":\"Jammer F8.1: 0.2 \xC2\xB5W (-37dBm) to 50 W (47dBm) with 2 dB increments PRN: L1\",\"comment\":\"Intergration test 2\",\"status\":\"start\",\"localtime\":\"2025-09-02T14:26:21+02:00\",\"utctime\":\"2025-09-02T12:26:21Z\"}"
      */
@@ -131,7 +137,10 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
 void Mqtt::stateChanged(QMqttClient::ClientState state)
 {
     if (state == QMqttClient::ClientState::Disconnected) {
-        qDebug() << "MQTT disconnected";
+        qDebug() << "MQTT disconnected, trying reconnect in 1 minute";
+        QTimer::singleShot(60e3, this, [this]() {
+            reconnect();
+        });
     }
     else if (state == QMqttClient::ClientState::Connecting) {
         qDebug() << "MQTT connecting";
@@ -148,7 +157,8 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
 
 void Mqtt::error(QMqttClient::ClientError error)
 {
-    qDebug() << "MQTT error:" << error;
+    qWarning() << "MQTT error, trying to disconnect MQTT" << error;
+    mqttClient.disconnectFromHost();
 }
 
 void Mqtt::msgSent(qint32 id)
@@ -165,6 +175,8 @@ void Mqtt::subscribe()
 
 void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
 {
+    receivedDataTimer->start(MQTT_DATATRANSFER_TIMEOUT_MS);
+
     QStringList subs = config->getMqttSubTopics();
     QStringList subNames = config->getMqttSubNames();
     QStringList subToIncidentlog = config->getMqttSubToIncidentlog();
