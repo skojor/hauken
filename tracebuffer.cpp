@@ -263,10 +263,10 @@ void TraceBuffer::restartCalcAvgLevel()
     averageDispLevel.clear();
     averageDispLevel.resize(plotResolution);
     averageDispLevelNormalized.clear();
-    emit averageLevelCalculating();
-    avgFactor = 40;
     maxholdBuffer.clear();
     maxholdBufferAggregate.clear();
+    emit averageLevelCalculating();
+    avgFactor = 40;
 }
 
 void TraceBuffer::updSettings()

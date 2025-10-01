@@ -511,8 +511,11 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
         QJsonObject replyObject = reply.object();
         //qDebug() << output << reply.toJson() << reply.isObject() << reply.isArray() ;
 
-        if (reply.isNull() || replyObject.isEmpty() ||
-            replyObject.find("token_type")->toString().contains("Bearer") ||
+        if (!reply.isNull() && !replyObject.isEmpty() &&
+            replyObject.find("access_token") != replyObject.end() &&
+            replyObject.find("token_type") != replyObject.end() &&
+            replyObject.find("expires_in") != replyObject.end() &&
+            replyObject.find("token_type")->toString().contains("Bearer") &&
             replyObject.find("expires_in")->toInt() > 0) {
 
             graphAccessToken = replyObject.find("access_token")->toString().toUtf8();

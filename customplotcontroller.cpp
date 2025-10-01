@@ -169,7 +169,7 @@ void CustomPlotController::plotTriglevel(const QVector<double> &data)
         }
     }
     customPlotPtr->graph(2)->setData(keyValues, copy);
-    //customPlotPtr->replot();
+    customPlotPtr->layer("triggerLayer")->replot();
 }
 
 void CustomPlotController::doReplot()
