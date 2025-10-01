@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.51</td><td>ESMD support added. Various bugfixes and optimizations</td></tr>"
        << "<tr><td>2.50</td><td>Option for I/Q recording over the whole trig area(s)</td></tr>"
        << "<tr><td>2.49</td><td>Option for multiple I/Q recordings when triggered. Band overlay options added. Various jammertest mods</td></tr>"
        << "<tr><td>2.48</td><td>UDP cef data forwarder. Various bugfixes. </td></tr>"

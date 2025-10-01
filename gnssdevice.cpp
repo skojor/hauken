@@ -137,7 +137,7 @@ void GnssDevice::handleBuffer()
 
     } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0) && failsafe < 50);
     if (failsafe >= 50) {
-        qDebug() << "Panic!" << gnssBuffer.size();
+        //qDebug() << "Panic!" << gnssBuffer.size();
         gnssBuffer.clear();
     }
     if (gnssBuffer.size() > 15000) gnssBuffer.clear();

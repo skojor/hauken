@@ -164,12 +164,13 @@ void PositionReport::updSettings()
 
 void PositionReport::checkReturnValue(int exitCode, QProcess::ExitStatus)
 {
-    if (exitCode != 0 || !curlProcess->readAllStandardOutput().contains("200")) {
-        //qDebug() << "Report failed" << reportArgs << curlProcess->readAllStandardError() << curlProcess->readAllStandardOutput() << exitCode;
+    processTimeoutTimer->stop();
+    /*if (exitCode != 0 || !curlProcess->readAllStandardOutput().contains("200")) {
+       //qDebug() << "Report failed" << reportArgs << curlProcess->readAllStandardError() << curlProcess->readAllStandardOutput() << exitCode;
     }
     else {
-        //qDebug() << "Report sent";
-    }
+        qDebug() << "Report sent";
+    }*/
 }
 
 void PositionReport::updMqttData(QString& name, double& val)
