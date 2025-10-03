@@ -311,7 +311,7 @@ QByteArray SdefRecorder::createHeader()
     }*/
     QString gain;
     if (config->getInstrId().contains("em200", Qt::CaseInsensitive)
-        || config->getInstrId().contains("pr200", Qt::CaseInsensitive))
+        || config->getInstrId().contains("pr200", Qt::CaseInsensitive)
         || config->getInstrId().contains("esmw", Qt::CaseInsensitive)
         || config->getInstrId().contains("esmd", Qt::CaseInsensitive)) {
         if (config->getInstrGainControl() == 0)
@@ -334,7 +334,8 @@ QByteArray SdefRecorder::createHeader()
            << '\n'
            << "FreqStart " << QString::number(startfreq / 1e3, 'f', 0) << '\n'
            << "FreqStop " << QString::number(stopfreq / 1e3, 'f', 0) << '\n'
-           << "AntennaType NoAntennaFactor" << '\n'
+           << "AntennaFactor NoAntennaFactor" << '\n'
+           << "AntennaGain NA" << "\n"
            << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n'
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
