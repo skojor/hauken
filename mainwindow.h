@@ -351,5 +351,6 @@ signals:
     void stopPlot(bool);
     void antennaNameEdited(const int index, const QString name);
     void antennaPortChanged();
+    void antennaNameChanged(QString);
 };
 #endif // MAINWINDOW_H

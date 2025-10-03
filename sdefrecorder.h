@@ -58,6 +58,7 @@ public slots:
     void skipNextNTraces(int i) { skipTraces = i;}
     void updFrequencies(quint64 sta, quint64 stop) { startfreq = sta; stopfreq = stop;}
     void updResolution(quint32 res) { resolution = res;} // Not used per now, read from config class}
+    void updAntName(QString s) {antName = s.remove(' ');}
 
 private slots:
     QByteArray createHeader();
@@ -131,6 +132,7 @@ private:
     bool startTempRecording = false;
     bool iqRecordingInProgress = false;
     int skipTraces = 0;
+    QString antName = "NA";
 
     // Config cache
     bool useNewMsFormat;

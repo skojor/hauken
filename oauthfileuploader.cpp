@@ -108,6 +108,7 @@ void OAuthFileUploader::networkReplyFinishedHandler()
     if (QString(reply).contains("uploaded", Qt::CaseInsensitive)) {
         qDebug() << "File uploaded successfully using OAuth!";
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File uploaded successfully");
+        qDebug() << "FØR" << uploadBacklog.size() << uploadBacklog.last();
         cleanUploadBacklog();
 
         QStringList list = QString(reply).split(':');

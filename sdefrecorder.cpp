@@ -56,6 +56,7 @@ void SdefRecorder::start()
 
     connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
         emit fileReadyForUpload(finishedFilename);
+        finishedFilename.clear();
     });
 
     tempFileCheckFilesize->start(3600 * 1e3);
@@ -334,6 +335,7 @@ QByteArray SdefRecorder::createHeader()
            << "FreqStart " << QString::number(1e-3 * startfreq, 'f', 0) << '\n'
            << "FreqStop " << QString::number(1e-3 * stopfreq, 'f', 0) << '\n'
            << "AntennaType NoAntennaFactor" << '\n'
+           << "AntennaGain NA" << "\n"
            << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n'
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
@@ -352,7 +354,7 @@ QByteArray SdefRecorder::createHeader()
                    ? "Clear/write"
                    : config->getInstrFftMode())
            << "\n"
-           << "AntennaPort " << QString::number(config->getInstrAntPort() + 1) << "\n"
+           << "AntennaPort " << antName << "\n" //<< QString::number(config->getInstrAntPort() + 1) << "\n"
            << (!gain.isEmpty() ? "GainControl " + gain + "\n" : "") << "Note "
            << config->getInstrId() << "\n"
            << "Note\n"
@@ -407,9 +409,10 @@ void SdefRecorder::finishRecording()
         }
     }
 
-    if (file.isOpen())
+    if (file.isOpen()) {
         file.close();
-    finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+        finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+    }
 
     if (predictionReceived)
         updFileWithPrediction(file.fileName());
