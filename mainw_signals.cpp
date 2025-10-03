@@ -33,6 +33,7 @@ void MainWindow::setSignals()
             [this](int index) {
                 if (instrAntPort->currentIndex() != -1)
                     config->setInstrAntPort(index);
+                    emit antennaNameChanged(instrAntPort->currentText()); // Info for sdef header
             }); // to ignore signals when combo data is inserted
     connect(this,
             &MainWindow::antennaPortChanged,
@@ -888,4 +889,5 @@ void MainWindow::setSignals()
     });
 
     connect(instrIpAddr, &MyComboBox::enterPressed, this, &MainWindow::btnConnectPressed);
+    connect(this, &MainWindow::antennaNameChanged, sdefRecorder, &SdefRecorder::updAntName);
 }

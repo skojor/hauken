@@ -56,6 +56,7 @@ void SdefRecorder::start()
 
     connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
         emit fileReadyForUpload(finishedFilename);
+        finishedFilename.clear();
     });
 
     tempFileCheckFilesize->start(3600 * 1e3);
@@ -310,7 +311,9 @@ QByteArray SdefRecorder::createHeader()
     }*/
     QString gain;
     if (config->getInstrId().contains("em200", Qt::CaseInsensitive)
-        || config->getInstrId().contains("pr200", Qt::CaseInsensitive)) {
+        || config->getInstrId().contains("pr200", Qt::CaseInsensitive)
+        || config->getInstrId().contains("esmw", Qt::CaseInsensitive)
+        || config->getInstrId().contains("esmd", Qt::CaseInsensitive)) {
         if (config->getInstrGainControl() == 0)
             gain = "Low noise";
         else if (config->getInstrGainControl() == 2)
@@ -331,7 +334,8 @@ QByteArray SdefRecorder::createHeader()
            << '\n'
            << "FreqStart " << QString::number(startfreq / 1e3, 'f', 0) << '\n'
            << "FreqStop " << QString::number(stopfreq / 1e3, 'f', 0) << '\n'
-           << "AntennaType NoAntennaFactor" << '\n'
+           << "AntennaFactor NoAntennaFactor" << '\n'
+           << "AntennaGain NA" << "\n"
            << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n'
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
@@ -350,7 +354,7 @@ QByteArray SdefRecorder::createHeader()
                    ? "Clear/write"
                    : config->getInstrFftMode())
            << "\n"
-           << "AntennaPort " << QString::number(config->getInstrAntPort() + 1) << "\n"
+           << "AntennaPort " << antName << "\n" //<< QString::number(config->getInstrAntPort() + 1) << "\n"
            << (!gain.isEmpty() ? "GainControl " + gain + "\n" : "") << "Note "
            << config->getInstrId() << "\n"
            << "Note\n"
@@ -405,9 +409,10 @@ void SdefRecorder::finishRecording()
         }
     }
 
-    if (file.isOpen())
+    if (file.isOpen()) {
         file.close();
-    finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+        finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+    }
 
     if (predictionReceived)
         updFileWithPrediction(file.fileName());
