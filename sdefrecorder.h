@@ -56,6 +56,7 @@ public slots:
     void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
     void setIqRecordingInProgress(bool b) { iqRecordingInProgress = b;}
     void skipNextNTraces(int i) { skipTraces = i;}
+    void updAntName(QString s) {antName = s.remove(' ');}
 
 private slots:
     QByteArray createHeader();
@@ -129,6 +130,7 @@ private:
     bool startTempRecording = false;
     bool iqRecordingInProgress = false;
     int skipTraces = 0;
+    QString antName = "NA";
 
     // Config cache
     bool useNewMsFormat;
