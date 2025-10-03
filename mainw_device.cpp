@@ -182,7 +182,6 @@ void MainWindow::instrGainControlChanged(int index)
     else
         config->setInstrGainControl(index);
 
-    qDebug() << "Gain control changed:" << index;
     instrGainControl->setCurrentIndex(index);
 
     if (measurementDevice->deviceHasGainControl()) {
