@@ -311,7 +311,9 @@ QByteArray SdefRecorder::createHeader()
     }*/
     QString gain;
     if (config->getInstrId().contains("em200", Qt::CaseInsensitive)
-        || config->getInstrId().contains("pr200", Qt::CaseInsensitive)) {
+        || config->getInstrId().contains("pr200", Qt::CaseInsensitive))
+        || config->getInstrId().contains("esmw", Qt::CaseInsensitive)
+        || config->getInstrId().contains("esmd", Qt::CaseInsensitive)) {
         if (config->getInstrGainControl() == 0)
             gain = "Low noise";
         else if (config->getInstrGainControl() == 2)
