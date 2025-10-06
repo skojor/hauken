@@ -98,6 +98,7 @@ void MainWindow::instrPscanFreqChanged()
         config->setInstrStartFreq(instrStartFreq->value() * 1e6);
         config->setInstrStopFreq(instrStopFreq->value() * 1e6);
         ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
+        sdefRecorder->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
     }
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
@@ -112,6 +113,8 @@ void MainWindow::instrFfmCenterFreqChanged()
         config->setInstrFfmCenterFreq(1e6 * instrFfmCenterFreq->value());
         measurementDevice->setFfmCenterFrequency(1e6 * instrFfmCenterFreq->value());
         ptrNetwork->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
+                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
+        sdefRecorder->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
                                    1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
     }
 
@@ -167,6 +170,8 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         instrGainControlChanged();
         instrStartFreq->setMinimum(measurementDevice->deviceMinFreq() / 1e6);
         instrStopFreq->setMaximum(measurementDevice->deviceMaxFreq() / 1e6);
+        instrPscanFreqChanged();
+        instrFfmCenterFreqChanged();
     } else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
     }
@@ -179,7 +184,6 @@ void MainWindow::instrGainControlChanged(int index)
     else
         config->setInstrGainControl(index);
 
-    qDebug() << "Gain control changed:" << index;
     instrGainControl->setCurrentIndex(index);
 
     if (measurementDevice->deviceHasGainControl()) {

@@ -25,14 +25,14 @@ signals:
 public slots:
     // meas. device data
     quint64 getInstrStartFreq() { return settings->value("instr/StartFreq", 1.56e9).toULongLong();}
-    void setInstrStartFreq(quint64 val) { settings->setValue("instr/StartFreq", val);}
+    void setInstrStartFreq(quint64 val) { settings->setValue("instr/StartFreq", val); emit settingsUpdated();}
     quint64 getInstrStopFreq() { return settings->value("instr/StopFreq", 1.61e9).toULongLong();}
-    void setInstrStopFreq(quint64 val) { settings->setValue("instr/StopFreq", val);}
+    void setInstrStopFreq(quint64 val) { settings->setValue("instr/StopFreq", val); emit settingsUpdated();}
     QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
     void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
     quint64 getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toULongLong();}
     void setInstrFfmCenterFreq(quint64 f) { settings->setValue("instr/FfmCenterFreq", f);}
-    QString getInstrFfmSpan() { return settings->value("instr/FfmSpan", "2000").toString();}
+    QString getInstrFfmSpan() { return settings->value("instr/FfmSpan", "2000").toString(); emit settingsUpdated();}
     void setInstrFfmSpan(QString s) { settings->setValue("instr/FfmSpan", s); emit settingsUpdated(); emit settingsUpdated();}
     int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt();}
     void setInstrMeasurementTime(int val) { settings->setValue("instr/MeasurementTime", val); emit settingsUpdated();}

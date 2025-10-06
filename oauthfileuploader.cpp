@@ -72,6 +72,8 @@ void OAuthFileUploader::receiveAuthToken(
             request.setRawHeader(QByteArray("Authorization"),
                                  QByteArray("Bearer ") + token.toLatin1());
 
+            qDebug() << request.headers();
+
             networkReply = networkAccessManager->post(request, multipart);
             uploadTimeoutTimer->start(UPLOAD_TIMEOUT);
 
@@ -205,5 +207,5 @@ void OAuthFileUploader::cleanUploadBacklog()
 {
     if (!uploadBacklog.isEmpty())
         qDebug() << "OAuth debug: Deleted" << uploadBacklog.removeAll(uploadBacklog.last())
-                 << "occurrences from the backlog";
+                 << "occurrences from the backlog, left:" << uploadBacklog.size();
 }

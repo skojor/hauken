@@ -56,6 +56,8 @@ public slots:
     void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
     void setIqRecordingInProgress(bool b) { iqRecordingInProgress = b;}
     void skipNextNTraces(int i) { skipTraces = i;}
+    void updFrequencies(quint64 sta, quint64 stop) { startfreq = sta; stopfreq = stop;}
+    void updResolution(quint32 res) { resolution = res;} // Not used per now, read from config class}
     void updAntName(QString s) {antName = s.remove(' ');}
 
 private slots:

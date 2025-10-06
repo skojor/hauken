@@ -107,13 +107,13 @@ void SdefRecorder::updSettings()
     useNewMsFormat = config->getSdefNewMsFormat();
 
     if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
-        startfreq = config->getInstrStartFreq();
-        stopfreq = config->getInstrStopFreq();
+        //startfreq = config->getInstrStartFreq();
+        //stopfreq = config->getInstrStopFreq();
         resolution = config->getInstrResolution().toDouble() * 1e3;
     } else {
-        int span = config->getInstrFfmSpan().toInt() * 1e3;
-        startfreq = config->getInstrFfmCenterFreq() - span / 2;
-        stopfreq = startfreq + span;
+        //int span = config->getInstrFfmSpan().toInt() * 1e3;
+        //startfreq = config->getInstrFfmCenterFreq() - span / 2;
+        //stopfreq = startfreq + span;
         resolution = (stopfreq - startfreq) / (datapoints - 1);
     }
     tempFileMaxhold = config->getSaveToTempFileMaxhold();
@@ -179,8 +179,8 @@ QString SdefRecorder::createFilename()
     if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
         ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
         << "_" << AsciiTranslator::toAscii(config->getStationName()) // New, don't use norwegian weird letters in filenames
-        << "_" << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
-        << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0);
+        << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
+        << QString::number(1e-3 * stopfreq, 'f', 0);
         /*
         ts << dir << "/" << config->getSdefStationInitals() << "_"
            << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
@@ -332,9 +332,9 @@ QByteArray SdefRecorder::createHeader()
            << convertDdToddmmss((addPosition ? prevLng : config->getStnLongitude().toDouble()),
                                 false)
            << '\n'
-           << "FreqStart " << QString::number(startfreq / 1e3, 'f', 0) << '\n'
-           << "FreqStop " << QString::number(stopfreq / 1e3, 'f', 0) << '\n'
-           << "AntennaFactor NoAntennaFactor" << '\n'
+           << "FreqStart " << QString::number(1e-3 * startfreq, 'f', 0) << '\n'
+           << "FreqStop " << QString::number(1e-3 * stopfreq, 'f', 0) << '\n'
+           << "AntennaType NoAntennaFactor" << '\n'
            << "AntennaGain NA" << "\n"
            << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n'
