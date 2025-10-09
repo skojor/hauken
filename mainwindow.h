@@ -178,7 +178,7 @@ private slots:
     void gnssIncidentAlarm(bool state);
     void recordEnabled(bool state);
     void restartWaterfall();
-    void btnConnectPressed();
+    void btnConnectPressed(bool state = true);
     void btnDisconnectPressed();
 
 private:

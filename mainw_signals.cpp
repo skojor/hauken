@@ -46,10 +46,9 @@ void MainWindow::setSignals()
     connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
-    connect(instrConnect,
-            &QPushButton::clicked,
-            this,
-            &MainWindow::btnConnectPressed);
+    connect(instrConnect, &QPushButton::clicked, this, [this]() {
+            btnConnectPressed(true);
+    });
     connect(instrDisconnect,
             &QPushButton::clicked,
             this,
@@ -888,6 +887,8 @@ void MainWindow::setSignals()
         iqPlot->getIqCenterFrequency(measurementDevice->retIqCenterFrequency());
     });
 
-    connect(instrIpAddr, &MyComboBox::enterPressed, this, &MainWindow::btnConnectPressed);
+    connect(instrIpAddr, &MyComboBox::enterPressed, this, [this]() {
+        btnConnectPressed(true);
+    });
     connect(this, &MainWindow::antennaNameChanged, sdefRecorder, &SdefRecorder::updAntName);
 }

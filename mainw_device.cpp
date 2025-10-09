@@ -205,7 +205,8 @@ void MainWindow::changeAntennaPortName()
 void MainWindow::instrAutoConnect()
 {
     if (config->getInstrConnectOnStartup() && instrCheckSettings()) {
-        measurementDevice->instrConnect();
+        //measurementDevice->instrConnect();
+        btnConnectPressed();
     }
 }
 
@@ -277,17 +278,21 @@ void MainWindow::setDeviceFftModes()
     }
 }
 
-void MainWindow::btnConnectPressed()
+void MainWindow::btnConnectPressed(bool state)
 {
     if (instrIpAddr->currentText() != config->getInstrIpAddr()) { // Custom text written
         if (instrIpAddr->findText(instrIpAddr->currentText()) != -1) {
             // IP/hostname written is the same as was already in the list, select this entry instead
             instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
+            //qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
         }
         else {
             // New entry, store it for later
             config->setInstrCustomEntry(instrIpAddr->currentText());
             config->setInstrIpAddr(instrIpAddr->currentText());
+            instrIpAddr->setItemData(instrIpAddr->currentIndex(), QVariant());
+            //qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+
         }
     }
     if (!instrIpAddr->currentData().isValid()) {
@@ -313,9 +318,10 @@ void MainWindow::btnConnectPressed()
         measurementDevice->setAddress(instrIpAddr->currentData().toString());
     else
         measurementDevice->setAddress(instrIpAddr->currentText());
-    qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData().toString();
+    //qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData().toString();
 
-    measurementDevice->instrConnect();
+    qDebug() << "connecting" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+    if (state) measurementDevice->instrConnect();
     instrDisconnect->setEnabled(true);
 }
 
