@@ -9,8 +9,8 @@ MainWindow::MainWindow(QWidget *parent)
     progressBar->setMaximum(100);
 
     updWindowTitle();
-    resize(1200, 780);
-    setMinimumSize(1024, 780);
+    //resize(1200, 780);
+    //setMinimumSize(1024, 780);
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
@@ -73,7 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
     cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(false);
+    incidentLog->setReadOnly(true);
 
 #ifdef _WIN32
     if (QFile::exists(config->getWorkFolder() + "/notify.wav")) {
@@ -97,7 +97,10 @@ MainWindow::MainWindow(QWidget *parent)
     setToolTips();
     setValidators();
     setSignals();
+    instrumentList->start(); // check if instrument server is available
+
     getConfigValues();
+    btnConnectPressed(false); // Read and select instr. from list before any connections are made
     instrConnected(false); // to set initial inputs state
     instrAutoConnect();
     QTimer::singleShot(50, customPlotController, [this] {
@@ -108,7 +111,6 @@ MainWindow::MainWindow(QWidget *parent)
     });
     notificationTimer->setSingleShot(true);
 
-    instrumentList->start(); // check if instrument server is available
     gnssDisplay->setParent(this);
     gnssDisplay->start();
 
@@ -357,8 +359,8 @@ void MainWindow::createLayout()
 
     //QFormLayout *instrForm = new QFormLayout;
     instrGroupBox = new QGroupBox("Measurement receiver");
-    instrGroupBox->setMinimumWidth(320);
-    instrGroupBox->setMaximumWidth(320);
+    instrGroupBox->setMinimumWidth(280);
+    instrGroupBox->setMaximumWidth(280);
 
     instrForm->addRow(startFreqLabel, instrStartFreq);
     instrForm->addRow(stopFreqLabel, instrStopFreq);

@@ -119,7 +119,7 @@ void Notifications::appendIncidentLog(QDateTime dt, const QString string)
         << "</td></tr>";
     }
     else {
-        ts << "<tr><td>" << dt.toString("dd.MM.yy") << "</td><td>"
+        ts << "<tr><td width=50>" << dt.toString("dd.MM.yy") << "</td><td width=50>"
            << dt.toString("hh:mm:ss") << "</td><td>" << string
            << "</td></tr>";
 
@@ -298,7 +298,7 @@ void Notifications::setupIncidentTable()
         emit showIncident("<table><tr><th width=50 align=left>Day</th><th width=120 align=left>Time</th><th align=left>Text</th></tr>");
     }
     else {
-        emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th width=100 align=left>Text</th></tr>");
+        emit showIncident("<tr><th width=50 align=left>Date</th><th width=50 align=left>Time</th><th align=left>Text</th></tr>");
         appendIncidentLog(QDateTime::currentDateTime(), "Application started");
     }
 }
