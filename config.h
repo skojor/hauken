@@ -198,7 +198,7 @@ public slots:
     void setSdefServer(QString s) { settings->setValue("sdef/Server", s); emit settingsUpdated();}
     QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString().trimmed();}
     void setSdefAuthAddress(QString s) { settings->setValue("sdef/AuthAddress", s); emit settingsUpdated();}
-    bool getSdefNewMsFormat() { return settings->value("sdef/newMsFormat", false).toBool();}
+    bool getSdefNewMsFormat() { return true;} // Forced on since oct-25
     void setSdefNewMsFormat(bool b) { settings->setValue("sdef/newMsFormat", b); emit settingsUpdated();}
 
     // OAuth2 options

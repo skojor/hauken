@@ -56,7 +56,9 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(cbOpt5);
     cbOpt5->setText("Use new ms format in 1809 file");
-    cbOpt5->setToolTip("Enable this option to add date and millisecond timestamp in 1809 file");
+    cbOpt5->setToolTip("Forced on, always use millisecond (or better) resolution");
+    cbOpt5->setChecked(true); // Forced on since oct-25
+    cbOpt5->setDisabled(true);
 
 
     connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
@@ -82,7 +84,7 @@ void SdefOptions::start()
     sbOpt2->setValue(config->getSdefMaxRecordTime());
     comboOpt1->setCurrentText(config->getSdefGpsSource());
     sbOpt3->setValue(config->getSdefPreRecordTime());
-    cbOpt5->setChecked(config->getSdefNewMsFormat());
+    //cbOpt5->setChecked(config->getSdefNewMsFormat());
 
 
     dialog->exec();
@@ -102,7 +104,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());
-    config->setSdefNewMsFormat(cbOpt5->isChecked());
+    //config->setSdefNewMsFormat(cbOpt5->isChecked());
 
     dialog->close();
 }
