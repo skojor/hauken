@@ -122,6 +122,7 @@ void InstrumentList::loadFile()
 {
     QFile file(config->getWorkFolder() + "/stationdata.csv");
     QTextStream ts(&file);
+    QStringList list;
 
     if (!file.open(QIODevice::ReadOnly)) {
         qDebug() << "Couldn't open station data file" << file.fileName();
@@ -131,8 +132,16 @@ void InstrumentList::loadFile()
             QString str = file.readLine();
             QStringList split = str.split(";");
             if (split.size() == 3) {
-                usableStnIps.append(split[0].trimmed());
-                usableStnNames.append(split[1].trimmed());
+                list.append( QString().append(split[1]).append(";").append(split[0]).append(";").append(split[2]) ); // List for sorting
+                // Why not store it in different order?!
+            }
+        }
+        std::sort(list.begin(), list.end());
+        for (auto && string : list) {
+            QStringList split = string.split(';');
+            if (split.size() == 3) {
+                usableStnNames.append(split[0].trimmed());
+                usableStnIps.append(split[1].trimmed());
                 usableStnTypes.append(split[2].trimmed());
             }
         }

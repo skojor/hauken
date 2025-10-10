@@ -283,15 +283,23 @@ void MainWindow::btnConnectPressed(bool state)
     if (instrIpAddr->currentText() != config->getInstrIpAddr()) { // Custom text written
         if (instrIpAddr->findText(instrIpAddr->currentText()) != -1) {
             // IP/hostname written is the same as was already in the list, select this entry instead
-            instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
-            //qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+            if (config->getInstrIpAddr() == instrIpAddr->currentText()) { // Failsafe in case list changed
+                instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
+                qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+            }
+            else {
+                qDebug() << "not found" << config->getInstrIpAddr();
+                instrIpAddr->addItem("Unknown", QVariant("127.0.0.1")); // Dummy, choose sth that exists
+                instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1); // Select dummy
+            }
+
         }
         else {
             // New entry, store it for later
             config->setInstrCustomEntry(instrIpAddr->currentText());
             config->setInstrIpAddr(instrIpAddr->currentText());
             instrIpAddr->setItemData(instrIpAddr->currentIndex(), QVariant());
-            //qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+            qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
 
         }
     }
