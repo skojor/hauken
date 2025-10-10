@@ -359,8 +359,8 @@ void MainWindow::createLayout()
 
     //QFormLayout *instrForm = new QFormLayout;
     instrGroupBox = new QGroupBox("Measurement receiver");
-    instrGroupBox->setMinimumWidth(280);
-    instrGroupBox->setMaximumWidth(280);
+    instrGroupBox->setMinimumWidth(320);
+    instrGroupBox->setMaximumWidth(320);
 
     instrForm->addRow(startFreqLabel, instrStartFreq);
     instrForm->addRow(stopFreqLabel, instrStopFreq);
@@ -393,8 +393,8 @@ void MainWindow::createLayout()
     trigForm->addRow(new QLabel("Altitude offset (m)"), gnssAltOffset);
     trigForm->addRow(new QLabel("Time offset (msec)"), gnssTimeOffset);
     trigGroupBox->setLayout(trigForm);
-    trigGroupBox->setMinimumWidth(280);
-    trigGroupBox->setMaximumWidth(280);
+    trigGroupBox->setMinimumWidth(320);
+    trigGroupBox->setMaximumWidth(320);
 
     trigGroupBox->setLayout(trigForm);
 
