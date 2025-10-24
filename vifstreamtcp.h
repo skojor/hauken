@@ -34,6 +34,7 @@ private:
     quint32 readStreamId = 0;
     QList<complexInt16> iqSamples;
     bool headerValidated = false;
+    bool headerIsRead = false;
 
 };
 
