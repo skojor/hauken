@@ -28,31 +28,44 @@ void VifStreamTcp::newDataHandler()
 {
     QByteArray data = tcpSocket->readAll();
     ifBufferTcp.append(data);
+
     if (ifBufferTcp.size() > 127) {
-        while (!readHeader(ifBufferTcp)
-               && ifBufferTcp.size() > 20)
-        {  // Remove one byte at a time until a valid header is found, or buffer is empty
-            ifBufferTcp.removeFirst();
+        if (!headerIsRead) {
+            headerIsRead = true;
+            readHeader(ifBufferTcp);
         }
 
-        while (readHeader(ifBufferTcp)
-               && ifBufferTcp.size() >= nrOfWords * 4)
-        {
+        if (headerIsRead && ifBufferTcp.size() >= nrOfWords * 4) {
             if (packetClassCode == 0x0001) {
                 int readbytes = parseDataPacket(ifBufferTcp);
-                if (readbytes > 0 && ifBufferTcp.size() >= readbytes)
+                if (readbytes > 0 && ifBufferTcp.size() >= readbytes) {
                     ifBufferTcp.remove(0, readbytes);
-                else
-                    qDebug() << "Read 0 bytes, check your code dude" << readbytes << ifBufferTcp.size();
+                }
+                else {
+                    ifBufferTcp.clear();
+                }
             }
             else if (packetClassCode == 0x0002) {
+                headerIsRead = false;
                 int readbytes = parseContextPacket(ifBufferTcp);
 
-                if (readbytes > 0 && ifBufferTcp.size() >= readbytes)
+                if (readbytes > 0 && ifBufferTcp.size() >= readbytes) {
                     ifBufferTcp.remove(0, readbytes);
-                else
-                    qDebug() << "Read 0 bytes, check your code dude"<< readbytes << ifBufferTcp.size();
+                }
+                else {
+                    ifBufferTcp.clear();
+                }
             }
+            else {
+                qDebug() << "Unknown packet class, deleting buffer";
+                ifBufferTcp.clear();
+            }
+            headerIsRead = false;
+        }
+        if (ifBufferTcp.size() > 1e6) { // Should never happen
+            ifBufferTcp.clear();
+            headerIsRead = false;
+            qDebug() << "Failsafe triggered, VIF stream buffer > 1 Mbyte!";
         }
     }
 }
@@ -64,17 +77,22 @@ int VifStreamTcp::parseDataPacket(const QByteArray &data)
     ds.skipRawData(28); // Skip header of data packet, 28 bytes / 7 words
     int readWords = 7;
     QList<complexInt16> buf;
-    buf.resize((nrOfWords - readWords));
-    int readBytes = ds.readRawData((char *)buf.data(), (nrOfWords - readWords) * 4);
-    if (readBytes == (nrOfWords - readWords) * 4) {
-        buf.removeLast();
-        for (auto & val : buf) { // readRaw makes a mess out of byte order. Reorder manually
-            val.real = qToBigEndian(val.real);
-            val.imag = qToBigEndian(val.imag);
+    if (nrOfWords > readWords && nrOfWords < 16000)
+    {
+        buf.resize((nrOfWords - readWords));
+        int readBytes = ds.readRawData((char *)buf.data(), (nrOfWords - readWords) * 4);
+        if (readBytes == (nrOfWords - readWords) * 4) {
+            buf.removeLast();
+            for (auto & val : buf) { // readRaw makes a mess out of byte order. Reorder manually
+                val.real = qToBigEndian(val.real);
+                val.imag = qToBigEndian(val.imag);
+            }
+            if (headerValidated) emit newIqData(buf);
         }
-        if (headerValidated) emit newIqData(buf);
+        return nrOfWords * 4;
     }
-    return nrOfWords * 4;
+    else
+        return 0;
 }
 
 quint32 VifStreamTcp::calcStreamIdentifier()
@@ -104,7 +122,8 @@ bool VifStreamTcp::readHeader(const QByteArray &data)
     //qDebug() << "Header is read:" << nrOfWords << readStreamId << infClassCode << packetClassCode << ifBufferTcp.size();
     if (calcStreamIdentifier() == readStreamId
         && infClassCode == 0x0001
-        && (packetClassCode == 0x0001 || packetClassCode == 0x0002))
+        && (packetClassCode == 0x0001 || packetClassCode == 0x0002)
+        && nrOfWords > 0)
         return true;
     else
         return false;

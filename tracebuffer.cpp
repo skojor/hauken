@@ -126,11 +126,14 @@ void TraceBuffer::calcMaxhold()
     if (!maxholdBuffer.isEmpty()) {
         for (int seconds = 0; seconds < maxholdTime - 1 && seconds < maxholdBuffer.size(); seconds++) {
             for (int i=0; i<plotResolution; i++) {
-                if (maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) maxhold[i] = maxholdBuffer.at(seconds).at(i);
+                if (maxholdBuffer[seconds].size() == plotResolution &&
+                    maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) {
+                    maxhold[i] = maxholdBuffer.at(seconds).at(i);
+                }
             }
         }
     }
-    if (!maxholdBufferAggregate.isEmpty()) { // Comparing maxhold to changes which happened < 1 second ago
+    if (maxholdBufferAggregate.size() == plotResolution) { // Comparing maxhold to changes which happened < 1 second ago
         for (int i=0; i<plotResolution; i++) {
             if (maxhold[i] < maxholdBufferAggregate[i])
                 maxhold[i] = maxholdBufferAggregate[i];
@@ -167,7 +170,7 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
             tmpNormTraceBuffer[i] = top;
         }
     }
-    else {
+    else if (data.size()) {
         double rate = (double)plotResolution / data.size();
         for (int i=0; i<plotResolution; i++) {
             displayBuffer.append((double)data.at((int)((double)i / rate)) / 10.0);

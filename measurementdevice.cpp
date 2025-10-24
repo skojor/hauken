@@ -93,7 +93,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -124,6 +124,7 @@ void MeasurementDevice::instrDisconnect()
     scpiSocket->close();
     tcpStream->closeListener();
     udpStream->closeListener();
+    vifStreamTcp->closeListener();
 }
 
 void MeasurementDevice::scpiDisconnected()
@@ -166,9 +167,9 @@ void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 st
         emit resetBuffers();        
     }
     else if (connected &&
-               devicePtr->hasDscan &&
-               devicePtr->mode == Instrument::Mode::PSCAN &&
-               startf < stopf)
+             devicePtr->hasDscan &&
+             devicePtr->mode == Instrument::Mode::PSCAN &&
+             startf < stopf)
     { // esmb mode
         abor();
         scpiWrite("freq:dsc:stop " + QByteArray::number(stopfreq));
@@ -676,8 +677,10 @@ void MeasurementDevice::setupTcpStream()
     /*vifStreamUdp->setDeviceType(devicePtr);
     vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);*/
 
-    vifStreamTcp->setDeviceType(devicePtr);
-    vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+    if (config->getIqCreateFftPlot()) { // && devicePtr->type != InstrumentType::USRP) {
+        vifStreamTcp->setDeviceType(devicePtr);
+        vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+    }
 
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
@@ -723,8 +726,10 @@ void MeasurementDevice::setupUdpStream()
     /*vifStreamUdp->setDeviceType(devicePtr);
     vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);*/
 
-    vifStreamTcp->setDeviceType(devicePtr);
-    vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+    if (config->getIqCreateFftPlot() && devicePtr->type != InstrumentType::USRP) {
+        vifStreamTcp->setDeviceType(devicePtr);
+        vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+    }
 
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
@@ -812,7 +817,7 @@ void MeasurementDevice::updSettings()
         devicePtr->pscanResolution = config->getInstrResolution().toDouble() * 1e3;
         setPscanResolution();
     }
-   /* if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {
+    /* if (devicePtr->ffmCenterFrequency != config->getInstrFfmCenterFreq() * 1e6) {
         devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq() * 1e6;
         setFfmCenterFrequency();
     }*/
