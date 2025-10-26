@@ -100,6 +100,10 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt14->setToolTip("Enable this option to show GNSS messages in the incident log");
     gnss4Layout->addRow(cbOpt14);
 
+    gnss4Layout->addRow(new QLabel(tr("Incident filter time (sec)")), sbOpt1);
+    sbOpt1->setToolTip("Any incidents will be filtered until the set filter time has passed. If incident is gone before the set time it will not appear in the log.");
+    sbOpt1->setRange(1, 86400);
+
     gnss4Layout->addRow(tr("GNSS 1 name"), leOpt1);
     leOpt1->setToolTip(tr("Name will be displayed on separate window, in title"));
 
@@ -145,6 +149,7 @@ void GnssOptions::start()
     leOpt1->setText(config->getGnss1Name());
     leOpt2->setText(config->getGnss2Name());
     cbOpt14->setChecked(config->getGnssShowNotifications());
+    sbOpt1->setValue(config->getGnssTimeFilter());
 
     dialog->exec();
 }
@@ -170,6 +175,7 @@ void GnssOptions::saveCurrentSettings()
     config->setGnss1Name(leOpt1->text());
     config->setGnss2Name(leOpt2->text());
     config->setGnssShowNotifications(cbOpt14->isChecked());
+    config->setGnssTimeFilter(sbOpt1->value());
 
     dialog->close();
 }

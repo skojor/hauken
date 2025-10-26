@@ -7,6 +7,8 @@
 #include "config.h"
 #include "typedefs.h"
 
+#define EVENTFILTERTIME_MS  1e4
+
 class GnssAnalyzer : public QObject
 {
     Q_OBJECT
@@ -63,6 +65,8 @@ private:
 
     const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
     QSharedPointer<Config> config;
+
+    QElapsedTimer posOffsetTimer;
 };
 
 #endif // GNSSANALYZER_H

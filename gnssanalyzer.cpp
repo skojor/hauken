@@ -161,7 +161,10 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && posOffsetLimit > 0 && data.posOffset > posOffsetLimit) {
-        if (!posOffsetTriggered) {
+        if (!posOffsetTimer.isValid()) { // First activation, start timer to filter short term events
+            posOffsetTimer.start();
+        }
+        else if (!posOffsetTriggered && posOffsetTimer.elapsed() > EVENTFILTERTIME_MS) {
             ts << "Position offset triggered, current offset: "
                << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m"
                << (logToFile ? ". Recording":"");
@@ -173,6 +176,7 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
         }
     }
     else if (data.posValid && posOffsetTriggered) {
+        posOffsetTimer.invalidate();
         ts << "Position offset normal";
         posOffsetTriggered = false;
         emit alarmEnded();

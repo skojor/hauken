@@ -84,6 +84,8 @@ public slots:
     void setGnssAltOffset(int val) { settings->setValue("gnss/AltOffset", val); emit settingsUpdated();}
     int getGnssTimeOffset() { return settings->value("gnss/TimeOffset", 0).toInt(); }
     void setGnssTimeOffset(int val) { settings->setValue("gnss/TimeOffset", val); emit settingsUpdated();}
+    int getGnssTimeFilter() { return settings->value("gnss/timeFilter", 10).toInt(); }
+    void setGnssTimeFilter(int val) { settings->setValue("gnss/timeFilter", val); }
 
     // General options
     QString getStationName() { return settings->value("station/Name", "").toString(); }
