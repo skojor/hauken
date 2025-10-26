@@ -72,7 +72,7 @@ void OAuthFileUploader::receiveAuthToken(
             request.setRawHeader(QByteArray("Authorization"),
                                  QByteArray("Bearer ") + token.toLatin1());
 
-            qDebug() << request.headers();
+            //qDebug() << request.headers();
 
             networkReply = networkAccessManager->post(request, multipart);
             uploadTimeoutTimer->start(UPLOAD_TIMEOUT);
