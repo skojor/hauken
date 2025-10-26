@@ -54,7 +54,7 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
 {
     bool truncateThis = false;
 
-    if (truncateTime && (type == NOTIFY::TYPE::GNSSANALYZER || type == NOTIFY::TYPE::TRACEANALYZER)) { // check if certain notifications should be truncated
+    if (truncateTime && (type == NOTIFY::TYPE::TRACEANALYZER)) { // check if certain notifications should be truncated
         if (!truncateList.isEmpty()) { // check if we recently got a notification from the same type of notifier
             for (int i=0; i < truncateList.size(); i++) {
                 if (truncateList.at(i).type == type && truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) < truncateTime) { // found one, it seems we should truncate this

@@ -5,6 +5,8 @@ GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, int id)
     gnssData.id = id;
     config = c;
     connect(updDisplayTimer, &QTimer::timeout, this, &GnssAnalyzer::updDisplay);
+
+    if (RUNTESTS) tests();
 }
 
 void GnssAnalyzer::getData(GnssData &data)
@@ -164,7 +166,7 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
         if (!posOffsetTimer.isValid()) { // First activation, start timer to filter short term events
             posOffsetTimer.start();
         }
-        else if (!posOffsetTriggered && posOffsetTimer.elapsed() > EVENTFILTERTIME_MS) {
+        else if (!posOffsetTriggered && posOffsetTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             ts << "Position offset triggered, current offset: "
                << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m"
                << (logToFile ? ". Recording":"");
@@ -176,10 +178,14 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
         }
     }
     else if (data.posValid && posOffsetTriggered) {
+        ts << "Position offset normal after " << posOffsetTimer.elapsed() / 1e3 << " seconds";
         posOffsetTimer.invalidate();
-        ts << "Position offset normal";
         posOffsetTriggered = false;
         emit alarmEnded();
+    }
+    else if (data.posValid && posOffsetTimer.isValid()) { // Normal sit. before incidence reported. Deactivate timer
+        posOffsetTimer.invalidate();
+        qDebug() << "Inc. gone before filter time";
     }
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
@@ -192,7 +198,10 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && altOffsetLimit > 0 && data.altOffset > altOffsetLimit) {
-        if (!altOffsetTriggered) {
+        if (!altOffsetTimer.isValid())
+            altOffsetTimer.start();
+
+        else if (!altOffsetTriggered && altOffsetTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             ts << "Altitude offset triggered, current offset: "
                << data.altOffset << " m" << (logToFile ? ". Recording":"");
             altOffsetTriggered = true;
@@ -203,10 +212,14 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
         }
     }
     else if (data.posValid && altOffsetTriggered) {
-        ts << "Altitude offset normal";
+        ts << "Altitude offset normal after " << altOffsetTimer.elapsed() / 1e3 << " seconds";
+        altOffsetTimer.invalidate();
         altOffsetTriggered = false;
         emit alarmEnded();
     }
+    else if (altOffsetTimer.isValid() && data.posValid)
+        altOffsetTimer.invalidate();
+
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
@@ -218,7 +231,10 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && timeOffsetLimit > 0 && data.timeOffset > timeOffsetLimit) {
-        if (!timeOffsetTriggered) {
+        if (!timeOffsetTimer.isValid())
+            timeOffsetTimer.start();
+
+        else if (!timeOffsetTriggered && timeOffsetTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             ts << "Time offset triggered, current offset: "
                << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms"
                << (logToFile ? ". Recording":"");
@@ -230,10 +246,14 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
         }
     }
     else if (data.posValid && timeOffsetTriggered) {
-        ts << "Time offset normal";
+        ts << "Time offset normal after " << timeOffsetTimer.elapsed() / 1e3 << " seconds";
+        timeOffsetTimer.invalidate();
         timeOffsetTriggered = false;
         emit alarmEnded();
     }
+    else if (timeOffsetTimer.isValid() && data.posValid)
+        timeOffsetTimer.invalidate();
+
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
@@ -245,7 +265,10 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && cnoLimit > 0 && data.cnoOffset > cnoLimit) {
-        if (!cnoLimitTriggered) {
+        if (!cnoTimer.isValid())
+            cnoTimer.start();
+
+        else if (!cnoLimitTriggered && cnoTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             ts << "C/No offset triggered, current offset: " << data.cnoOffset << " dB"
                << (logToFile ? ". Recording":"");
             cnoLimitTriggered = true;
@@ -256,10 +279,14 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
         }
     }
     else if (data.posValid && cnoLimitTriggered) {
-        ts << "C/No offset normal";
+        ts << "C/No offset normal after " << cnoTimer.elapsed() << " seconds";
+        cnoTimer.invalidate();
         cnoLimitTriggered = false;
         emit alarmEnded();
     }
+    else if (cnoTimer.isValid() && data.posValid)
+        cnoTimer.invalidate();
+
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
@@ -271,7 +298,10 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && agcLimit > 0 && data.agcOffset > agcLimit) {
-        if (!agcLimitTriggered) {
+        if (!agcTimer.isValid())
+            agcTimer.start();
+
+        else if (!agcLimitTriggered && agcTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             ts << "AGC offset triggered, current offset: "
                << data.agcOffset << (logToFile ? ". Recording":"");
             agcLimitTriggered = true;
@@ -282,10 +312,14 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
         }
     }
     else if (data.posValid && agcLimitTriggered) {
-        ts << "AGC offset normal";
+        ts << "AGC offset normal after " << agcTimer.elapsed() / 1e3 << " seconds";
+        agcTimer.invalidate();
         agcLimitTriggered = false;
         emit alarmEnded();
     }
+    else if (agcTimer.isValid() && data.posValid)
+        agcTimer.invalidate();
+
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
 }
 
@@ -297,7 +331,10 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
     ts.setRealNumberPrecision(1);
 
     if (data.posValid && data.jammingIndicator > jammingIndicatorTriggerValue) {
-        if (!jamIndTriggered) {
+        if (!jamIndTimer.isValid())
+            jamIndTimer.start();
+
+        else if (!jamIndTriggered && jamIndTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             ts << "Jamming indicator high: " << data.avgJammingIndicator << (logToFile ? ". Recording":"");
             jamIndTriggered = true;
             emit visualAlarm();
@@ -307,9 +344,57 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
         }
     }
     else if (data.posValid && jamIndTriggered) {
-        ts << "Jamming indicator normal";
+        ts << "Jamming indicator normal after " << jamIndTimer.elapsed() / 1e3 << " seconds";
+        jamIndTimer.invalidate();
         jamIndTriggered = false;
         emit alarmEnded();
     }
+    else if (jamIndTimer.isValid() && data.posValid)
+        jamIndTimer.invalidate();
+
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+}
+
+void GnssAnalyzer::tests()
+{
+    testData.gsaValid = testData.gnsValid = testData.ggaValid = testData.gsvValid = testData.posValid = testData.inUse = true;
+    testData.latitude = config->getStnLatitude().toDouble();
+    testData.longitude = config->getStnLongitude().toDouble();
+    testData.altitude = config->getStnAltitude().toDouble();
+    testData.agc = 40;
+
+    QTimer *t = new QTimer;
+    qDebug() << "Starting gnss simulation";
+    connect(t, &QTimer::timeout, this, [this] () {
+        getData(testData);
+    });
+    t->start(1000);
+
+    QTimer::singleShot(config->getGnssTimeFilter() * 2e3, this, [this] () {
+        qDebug() << "Now adding pos. offset";
+        testData.latitude += 0.01;
+        testData.longitude -= 0.01;
+        testData.altitude -= 100;
+        testData.timestamp = QDateTime::currentDateTime().addSecs(10);
+    });
+    QTimer::singleShot((config->getGnssTimeFilter() * 2e3) + 2e3, this, [this] () {
+        qDebug() << "Removing pos. offset after 2 secs";
+        testData.latitude -= 0.01;
+        testData.longitude += 0.01;
+        testData.altitude += 100;
+    });
+    QTimer::singleShot((config->getGnssTimeFilter() * 2e3) + 6e3, this, [this] () {
+        qDebug() << "Adding pos. offset again, this time left on for > filter time";
+        testData.latitude -= 0.01;
+        testData.longitude += 0.01;
+        testData.altitude -= 200;
+        testData.timestamp = QDateTime::currentDateTime().addSecs(1e3);
+        testData.agc = 10;
+    });
+    QTimer::singleShot((config->getGnssTimeFilter() * 2e3) + 12e3 + config->getGnssTimeFilter() * 1e3, this, [this] () {
+        qDebug() << "Removing pos. offset";
+        testData.latitude += 0.01;
+        testData.longitude -= 0.01;
+        testData.altitude += 100;
+    });
 }
