@@ -31,7 +31,7 @@ public slots:
     QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
     void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
     quint64 getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toULongLong();}
-    void setInstrFfmCenterFreq(quint64 f) { settings->setValue("instr/FfmCenterFreq", f);}
+    void setInstrFfmCenterFreq(quint64 f) { settings->setValue("instr/FfmCenterFreq", f); emit settingsUpdated();}
     QString getInstrFfmSpan() { return settings->value("instr/FfmSpan", "2000").toString(); emit settingsUpdated();}
     void setInstrFfmSpan(QString s) { settings->setValue("instr/FfmSpan", s); emit settingsUpdated(); emit settingsUpdated();}
     int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt();}
@@ -55,13 +55,13 @@ public slots:
     QString getMeasurementDeviceName() { return measurementDeviceName;}
     void setMeasurementDeviceName(QString s) { measurementDeviceName = s; emit settingsUpdated();}
     int getInstrGainControl() { return settings->value("instr/gainControl", 1).toInt(); }
-    void setInstrGainControl(int i)
-    {
-        settings->setValue("instr/gainControl", i);
-        emit settingsUpdated();
-    }
+    void setInstrGainControl(int i) { settings->setValue("instr/gainControl", i); emit settingsUpdated(); }
     QString getInstrCustomEntry() { return settings->value("instr/customEntry", "").toString();}
     void setInstrCustomEntry(QString s) { settings->setValue("instr/customEntry", s);}
+    bool getInstrRestoreAvgLevels() { return settings->value("instr/restoreAvgLevels", true).toBool(); }
+    void setInstrRestoreAvgLevels(bool b) { settings->setValue("instr/restoreAvgLevels", b); }
+    QVariantList getInstrAvgLevels() { return settings->value("instr/avgLevels").toList(); }
+    void setInstrAvgLevels(QVariantList l) { settings->setValue("instr/avgLevels", l); }
 
     // spectrum criterias
     int getInstrTrigLevel() { return settings->value("instr/TrigLevel", 15.0).toInt(); }

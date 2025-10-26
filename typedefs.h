@@ -39,7 +39,8 @@ enum class FftMode {
     OFF,
     MIN,
     MAX,
-    SCALAR
+    SCALAR,
+    APEAK
 };
 
 enum class Tags

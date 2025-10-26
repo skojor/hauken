@@ -12,12 +12,12 @@ void TraceBuffer::start()
     throttleTimer = new QElapsedTimer;
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
-    //connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+    connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
 
     connect(maintenanceRestartTimer, &QTimer::timeout, this, [this]() {
         maintenanceRestartTimer->stop();
         averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime);
-        qDebug() << "Restarting avg calc. after incident";
+        //qDebug() << "Restarting avg calc. after incident";
     });
 }
 
@@ -38,44 +38,48 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
-    if (data.size() != nrOfDataPoints) {
-        emit nrOfDatapointsChanged(data.size());
-        nrOfDataPoints = data.size();
+    if (!skipTraces) {
+        if (data.size() != nrOfDataPoints) {
+            emit nrOfDatapointsChanged(data.size());
+            nrOfDataPoints = data.size();
+        }
+
+        emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
+        mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
+        if (!traceBuffer.isEmpty()) {
+            if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
+                emptyBuffer();
+        }
+
+        if (normalizeSpectrum) {
+            traceCopy = data;
+            traceBuffer.append(calcNormalizedTrace(data));
+        }
+        else
+            traceBuffer.append(data);
+
+        if (recording)
+            emit traceToRecorder(traceBuffer.last());
+
+        emit traceData(traceBuffer.last());
+
+        datetimeBuffer.append(QDateTime::currentDateTime());
+
+        addDisplayBufferTrace(data);
+        calcMaxhold();
+
+        if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
+            throttleTimer->start();
+            emit newDispTrace(displayBuffer);
+            //emit reqReplot(); // Why this one? Not needed really?
+        }
+        mutex.unlock();
+
+        if (tracesUsedInAvg < tracesNeededForAvg)
+            calcAvgLevel(data);
     }
 
-    emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
-    mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
-    if (!traceBuffer.isEmpty()) {
-        if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
-            emptyBuffer();
-    }
-    
-    if (normalizeSpectrum) {
-        traceCopy = data;
-        traceBuffer.append(calcNormalizedTrace(data));
-    }
-    else
-        traceBuffer.append(data);
-
-    if (recording)
-        emit traceToRecorder(traceBuffer.last());
-
-    emit traceData(traceBuffer.last());
-
-    datetimeBuffer.append(QDateTime::currentDateTime());
-    
-    addDisplayBufferTrace(data);
-    calcMaxhold();
-
-    if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
-        throttleTimer->start();
-        emit newDispTrace(displayBuffer);
-        //emit reqReplot(); // Why this one? Not needed really?
-    }
-    mutex.unlock();
-    
-    if (tracesUsedInAvg <= tracesNeededForAvg)
-        calcAvgLevel(data);
+    if (skipTraces) skipTraces--;
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
@@ -190,11 +194,11 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 
 void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
 {
-    if (!data.isEmpty()) {
+    if (!data.isEmpty()) {        
         if (!traceBuffer.isEmpty()) { // never work on an empty buffer!
             if (averageLevel.isEmpty())
                 averageLevel = data;
-            else {
+            else if (averageLevel.size() == data.size()) {
                 for (int i=0; i<data.size(); i++) {
                     if (averageLevel.at(i) < data.at(i)) averageLevel[i] += (int)(avgFactor + 0.5);
                     else averageLevel[i] -= (int)(avgFactor + 0.5);
@@ -202,7 +206,8 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                 if (avgFactor > 1) avgFactor -= avgFactor * 10 / tracesNeededForAvg; //avgFactor *= 0.98;
                 //qDebug() << "avgfactor:" << avgFactor;
             }
-            if (data.size() > plotResolution) {
+
+            if (data.size() > plotResolution && averageLevel.size() == data.size()) {
                 double rate = (double)data.size() / plotResolution;
                 for (int i=0; i<plotResolution; i++) {
                     int val = averageLevel.at(rate * i);
@@ -210,14 +215,17 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                         val += averageLevel.at(rate * i + j);
                     }
                     averageDispLevel[i] = ((double)val / 10.0) / (int)rate + 1;
-                    
                 }
             }
-            else {
+            else if (averageLevel.size() == data.size()) {
                 double rate = (double)plotResolution / data.size();
                 for (int i=0; i<plotResolution; i++) {
                     averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10.0;
                 }
+            }
+            else {
+                qDebug() << "Tracebuffer: Sth is not right, restart trace calcs";
+                emptyBuffer();
             }
         }
     }
@@ -244,10 +252,13 @@ void TraceBuffer::emptyBuffer()
     traceBuffer.clear();
     datetimeBuffer.clear();
     displayBuffer.clear();
-    averageDispLevel.clear();
-    averageDispLevelNormalized.clear();
     maxholdBuffer.clear();
     maxholdBufferAggregate.clear();
+    averageLevel.clear();
+    averageDispLevel.clear();
+    averageDispLevel.resize(plotResolution);
+    averageDispLevelNormalized.clear();
+
     restartCalcAvgLevel();
 }
 
@@ -256,20 +267,49 @@ void TraceBuffer::finishAvgLevelCalc()
     averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime); // routine to keep updating the average level at a very slow interval
     emit averageLevelReady(averageLevel);
     emit stopAvgLevelFlash();
+    saveAvgLevels();
 }
 
 void TraceBuffer::restartCalcAvgLevel()
 {
-    tracesUsedInAvg = 0;
-    averageLevelMaintenanceTimer->stop();
-    averageLevel.clear();
-    averageDispLevel.clear();
-    averageDispLevel.resize(plotResolution);
-    averageDispLevelNormalized.clear();
-    maxholdBuffer.clear();
-    maxholdBufferAggregate.clear();
-    emit averageLevelCalculating();
-    avgFactor = 40;
+    skipTraces = 3;
+
+    if (!useSavedAvgLevels) {
+        init = true;
+        tracesUsedInAvg = 0;
+        maxholdBuffer.clear();
+        maxholdBufferAggregate.clear();
+        averageLevelMaintenanceTimer->stop();
+        averageLevel.clear();
+        averageDispLevel.clear();
+        averageDispLevel.resize(plotResolution);
+        averageDispLevelNormalized.clear();
+        emit averageLevelCalculating();
+        avgFactor = 40;
+    }
+    else {
+        if (!restoreAvgLevels()) {
+            init = true;
+            tracesUsedInAvg = 0;
+            maxholdBuffer.clear();
+            maxholdBufferAggregate.clear();
+
+            averageLevelMaintenanceTimer->stop();
+            averageLevel.clear();
+            averageDispLevel.clear();
+            averageDispLevel.resize(plotResolution);
+            averageDispLevelNormalized.clear();
+            emit averageLevelCalculating();
+            avgFactor = 40;
+        }
+        else {
+            averageDispLevel.clear();
+            averageDispLevel.resize(plotResolution);
+            averageDispLevelNormalized.clear();
+            tracesUsedInAvg = tracesNeededForAvg - 1;
+            avgFactor = 1;
+        }
+    }
 }
 
 void TraceBuffer::updSettings()
@@ -280,18 +320,45 @@ void TraceBuffer::updSettings()
     }
     maxholdTime = config->getPlotMaxholdTime();
     emit showMaxhold((bool)maxholdTime);
-    if (fftMode != config->getInstrFftMode() || antPort != QString::number(config->getInstrAntPort()) || // any of these changes should invalidate average level
-        autoAtt != config->getInstrAutoAtt() || att != config->getInstrManAtt()) {
+    if (init ||
+        startfreq != config->getInstrStartFreq() || stopfreq != config->getInstrStopFreq() ||
+        resolution != config->getInstrResolution() ||
+        ffmCenterFreq != config->getInstrFfmCenterFreq() || span != config->getInstrFfmSpan() ||
+        fftMode != config->getInstrFftMode() || antPort != QString::number(config->getInstrAntPort()) || // any of these changes should invalidate average level
+        autoAtt != config->getInstrAutoAtt() || att != config->getInstrManAtt() ||
+        gainControl != config->getInstrGainControl())
+    {
+        /*qDebug() << startfreq << config->getInstrStartFreq() << stopfreq << config->getInstrStopFreq() <<
+            resolution << config->getInstrResolution() <<
+            ffmCenterFreq << config->getInstrFfmCenterFreq() << span << config->getInstrFfmSpan() <<
+            fftMode << config->getInstrFftMode() << antPort << QString::number(config->getInstrAntPort()) <<
+            autoAtt << config->getInstrAutoAtt() << att << config->getInstrManAtt();*/
+
+        startfreq = config->getInstrStartFreq();
+        stopfreq = config->getInstrStopFreq();
+        resolution = config->getInstrResolution();
+        ffmCenterFreq = config->getInstrFfmCenterFreq();
+        span = config->getInstrFfmSpan();
+
         fftMode = config->getInstrFftMode();
         antPort = QString::number(config->getInstrAntPort());
         autoAtt = config->getInstrAutoAtt();
         att = config->getInstrManAtt();
-        restartCalcAvgLevel();
+        gainControl = config->getInstrGainControl();
+
+        if (!init) {
+            emptyBuffer();
+        }
+        else {
+            skipTraces = 3;
+        }
+        init = false;
     }
     normalizeSpectrum = config->getInstrNormalizeSpectrum();
     averageDispLevelNormalized.clear();
     tracesNeededForAvg = config->getInstrTracesNeededForAverage();
     useDbm = config->getUseDbm();
+    useSavedAvgLevels = config->getInstrRestoreAvgLevels();
     //maintainAvgLevel();
 }
 
@@ -317,6 +384,8 @@ void TraceBuffer::maintainAvgLevel()
     else if (normalizeSpectrum && !traceCopy.isEmpty()) calcAvgLevel(traceCopy);
     //qDebug() << "avg level maintenance update";
     emit averageLevelReady(averageLevel); // update trace analyzer with the new avg level data
+    if (useSavedAvgLevels)
+        saveAvgLevels(); // Stored every 2 min here
 }
 
 void TraceBuffer::recorderStarted()
@@ -345,4 +414,95 @@ void TraceBuffer::incidenceTriggered() // called whenever sth is above trig line
         averageLevelMaintenanceTimer->stop();
         maintenanceRestartTimer->start(120000);
     }
+}
+
+void TraceBuffer::saveAvgLevels()
+{
+    QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+    if (file.open(QIODevice::WriteOnly)) {
+        QBuffer buffer;
+        buffer.open(QIODevice::WriteOnly);
+        QDataStream ds(&buffer);
+        Instrument::FftMode fftm;
+        if (fftMode.contains("Max", Qt::CaseInsensitive))
+            fftm = Instrument::FftMode::MAX;
+        else if (fftMode.contains("Min", Qt::CaseInsensitive))
+            fftm = Instrument::FftMode::MIN;
+        else if (fftMode.contains("Scalar", Qt::CaseInsensitive))
+            fftm = Instrument::FftMode::SCALAR;
+        else if (fftMode.contains("APeak", Qt::CaseInsensitive))
+            fftm = Instrument::FftMode::APEAK;
+        else fftm = Instrument::FftMode::OFF;
+
+        ds << startfreq << stopfreq << (int)(resolution.toDouble() * 1e3) << ffmCenterFreq << (int)(span.toDouble() * 1e3) << fftm << antPort.toInt() << (int)autoAtt << att << gainControl;
+
+        for (auto && val : averageLevel)
+            ds << val;
+
+        file.write(buffer.buffer());
+        file.close();
+    }
+    else {
+        qWarning() << "Could not open file" << config->getWorkFolder() + "/" + AVGFILENAME << "for writing";
+    }
+}
+
+bool TraceBuffer::restoreAvgLevels()
+{
+    QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+    if (file.open(QIODevice::ReadOnly)) {
+        quint64 a_startfreq, a_stopfreq, a_ffmCenterFreq;
+        int a_res, a_sp;
+        Instrument::FftMode a_fftm;
+        QString a_fftMode;
+        int a_antPort;
+        int a_autoAtt;
+        int a_att;
+        int a_gainControl;
+
+        QDataStream ds(&file);
+        ds >> a_startfreq >> a_stopfreq >> a_res >> a_ffmCenterFreq >> a_sp >> a_fftm >> a_antPort >> a_autoAtt >> a_att >> a_gainControl;
+
+        if (a_fftm == Instrument::FftMode::MAX)
+            a_fftMode = "Max";
+        else if (a_fftm == Instrument::FftMode::MIN)
+            a_fftMode = "Min";
+        else if (a_fftm == Instrument::FftMode::SCALAR)
+            a_fftMode = "Scalar";
+        else if (a_fftm == Instrument::FftMode::APEAK)
+            a_fftMode = "APeak";
+        else
+            a_fftMode = "Off";
+
+        /*qDebug() << a_startfreq << config->getInstrStartFreq() << a_stopfreq << config->getInstrStopFreq() <<
+            a_res << (int)(config->getInstrResolution().toDouble() * 1e3) <<
+            a_ffmCenterFreq << config->getInstrFfmCenterFreq() << a_sp << (int)(config->getInstrFfmSpan().toDouble() * 1e3) <<
+            a_fftMode << config->getInstrFftMode() << a_antPort << QString::number(config->getInstrAntPort()) <<
+            a_autoAtt << config->getInstrAutoAtt() << a_att << config->getInstrManAtt() << a_gainControl << gainControl;*/
+        if (a_startfreq == startfreq && a_stopfreq == stopfreq &&
+            a_ffmCenterFreq == config->getInstrFfmCenterFreq() && a_res == (int)(resolution.toDouble() * 1e3) &&
+            a_sp == (int)(span.toDouble() * 1e3) && a_fftMode == fftMode && a_antPort == antPort.toInt() &&
+            a_autoAtt == (int)autoAtt && a_att == att && a_gainControl == gainControl)
+        {
+            //qDebug() << "Using average data from file";
+            averageLevel.clear();
+
+            while (!ds.atEnd()) {
+                qint16 val;
+                ds >> val;
+                averageLevel.append(val);
+            }
+            file.close();
+
+            return true;
+        }
+        else {
+            //qDebug() << "Average data invalid, generating new set";
+            return false;
+        }
+    }
+    else {
+        qWarning() << "Could not open file" << config->getWorkFolder() + "/" + AVGFILENAME << "for reading";
+    }
+    return false;
 }

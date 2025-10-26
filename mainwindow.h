@@ -346,6 +346,7 @@ private:
     RestApi *restApi = new RestApi(config);
     Network *ptrNetwork = new Network(config);
     bool useDbm;
+    bool measDeviceFinished = false;
 
 signals:
     void stopPlot(bool);

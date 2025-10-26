@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QMutex>
+#include <QBuffer>
 #include "typedefs.h"
 #include "config.h"
 
@@ -20,6 +21,8 @@
  * The average level is also calculated here, used in
  * normalized spectrum and trig level settings
  */
+
+#define AVGFILENAME ".avgdata"
 
 class TraceBuffer : public QObject
 {
@@ -54,6 +57,7 @@ public slots:
     void recorderStarted();
     void recorderEnded();
     void incidenceTriggered();
+    //void updFlagInvalidateAvgLevels() { flagSavedAvgLevelsInvalidated = true; restartCalcAvgLevel(); }
 
 signals:
     void newDispTrace(const QVector<double> &data);
@@ -82,6 +86,8 @@ private slots:
     void finishAvgLevelCalc();
     QVector<qint16> calcNormalizedTrace(const QVector<qint16> &data);
     void maintainAvgLevel();
+    void saveAvgLevels();
+    bool restoreAvgLevels();
 
 private:
     QSharedPointer<Config> config;
@@ -103,21 +109,30 @@ private:
     QMutex mutex;
     int trigLevel = 0;
     double avgFactor = 40;
-    QString fftMode, antPort;
-    bool autoAtt;
-    int att;
-    bool normalizeSpectrum;
     bool recording = false;
     int tracesUsedInAvg = 0;
     int plotResolution;
     QElapsedTimer *maxholdBufferElapsedTimer = new QElapsedTimer;
     QVector<double> maxholdBufferAggregate;
     const int throttleTime = 40; // min time in ms between screen updates
-    const int calcAvgLevelTime = 45; // secs
     const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;
     bool useDbm = false;
     int nrOfDataPoints = 0;
+    bool flagSavedAvgLevelsInvalidated = true;
+    bool flagAvgLevelsRestored = false;
+
+    // Config cache
+    quint64 startfreq, stopfreq, ffmCenterFreq;
+    QString resolution, span;
+    QString fftMode, antPort;
+    bool autoAtt;
+    int att;
+    bool normalizeSpectrum;
+    bool useSavedAvgLevels = false;
+    bool init = true;
+    int gainControl = 0;
+    int skipTraces = 3;
 };
 
 #endif // TRACEBUFFER_H
