@@ -20,7 +20,7 @@ void VifStreamTcp::closeListener()
 
 void VifStreamTcp::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    qDebug() << "VIF TCP stream state" << state;
+    //qDebug() << "VIF TCP stream state" << state;
     //    if (state == QAbstractSocket::UnconnectedState)
     }
 

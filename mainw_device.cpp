@@ -175,6 +175,9 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
     } else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
     }
+    QTimer::singleShot(500, this, [this] () {
+        measDeviceFinished = measurementDevice->isConnected();
+    });
 }
 
 void MainWindow::instrGainControlChanged(int index)
@@ -219,14 +222,8 @@ bool MainWindow::instrCheckSettings() // TODO: More checks here
 
 void MainWindow::setResolutionFunction()
 {
-    disconnect(instrResolution,
-               &QComboBox::currentIndexChanged,
-               this,
-               &MainWindow::instrResolutionChanged);
-    disconnect(instrFfmSpan,
-               &QComboBox::currentIndexChanged,
-               this,
-               &MainWindow::instrFfmSpanChanged);
+    disconnect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
+    disconnect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
 
     instrResolution->clear();
     instrResolution->addItems(measurementDevice->devicePscanResolutions());
@@ -240,10 +237,7 @@ void MainWindow::setResolutionFunction()
     if (instrFfmSpan->findText(config->getInstrFfmSpan()) >= 0)
         instrFfmSpan->setCurrentIndex(instrFfmSpan->findText(config->getInstrFfmSpan()));
 
-    connect(instrResolution,
-            &QComboBox::currentIndexChanged,
-            this,
-            &MainWindow::instrResolutionChanged);
+    connect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
     connect(instrFfmSpan, &QComboBox::currentIndexChanged, this, &MainWindow::instrFfmSpanChanged);
 }
 
@@ -268,6 +262,8 @@ void MainWindow::setDeviceAntPorts()
 
 void MainWindow::setDeviceFftModes()
 {
+    disconnect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
+
     instrFftMode->clear();
     QString val = config->getInstrFftMode(); // tmp keeper
     instrFftMode->addItems(measurementDevice->deviceFftModes());
@@ -276,6 +272,7 @@ void MainWindow::setDeviceFftModes()
     if (instrFftMode->findText(val) >= 0) {
         instrFftMode->setCurrentIndex(instrFftMode->findText(val));
     }
+    connect(instrFftMode, &QComboBox::currentTextChanged, config.data(), &Config::setInstrFftMode);
 }
 
 void MainWindow::btnConnectPressed(bool state)

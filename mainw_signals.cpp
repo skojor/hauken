@@ -14,10 +14,7 @@ void MainWindow::setSignals()
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
             &MainWindow::instrFfmCenterFreqChanged); //Taken care of after init.
-    connect(instrResolution,
-            &QComboBox::currentIndexChanged,
-            this,
-            &MainWindow::instrResolutionChanged);
+    connect(instrResolution, &QComboBox::currentIndexChanged, this, &MainWindow::instrResolutionChanged);
     connect(instrMeasurementTime,
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),
@@ -811,7 +808,7 @@ void MainWindow::setSignals()
         instrPscanFreqChanged();
     });
     connect(restApi, &RestApi::pscanResolution, this, [this](QString res) {
-        config->setInstrResolution(res);
+        //config->setInstrResolution(res);
         if (instrResolution->findText(config->getInstrResolution()) >= 0)
             instrResolution->setCurrentIndex(
                 instrResolution->findText(config->getInstrResolution()));
