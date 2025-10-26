@@ -7,6 +7,8 @@
 #include "config.h"
 #include "typedefs.h"
 
+#define RUNTESTS false
+
 class GnssAnalyzer : public QObject
 {
     Q_OBJECT
@@ -37,6 +39,7 @@ private slots:
     void checkCnoOffset(GnssData &data);
     void checkAgcOffset(GnssData &data);
     void checkJammingIndicator(GnssData &data);
+    void tests();
 
 private:
     QMutex mutex;
@@ -63,6 +66,9 @@ private:
 
     const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
     QSharedPointer<Config> config;
+
+    QElapsedTimer posOffsetTimer, altOffsetTimer, cnoTimer, agcTimer, timeOffsetTimer, jamIndTimer;
+    GnssData testData;
 };
 
 #endif // GNSSANALYZER_H
