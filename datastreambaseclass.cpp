@@ -222,21 +222,13 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                 val = qToBigEndian(val);
 
             fft.append(tmpBuffer);
-            /*ds >> data;
-            if (data > 2000) { // shouldn't happen, unless hell breaks loose. discard all the data
-                fft.clear();
-                //qDebug() << "Dropped trace, values > 200 dBuV!";
-                break;
+            if (waitingForPscanEndMarker && fft.last() == 2000) {
+                waitingForPscanEndMarker = false;
+                fft.clear(); // End of pscan received, but discarding all data since we don't know if the whole trace was received correct. Next complete trace should be correct then
             }
-            else if (data != 2000) fft.append(data);
-            else {*/
-        }
-        if (fft.size() > calcPscanPointsPerTrace() && fft.last() != 2000) {
-            //qDebug() << "Weeeeird";
-            fft.clear();
         }
 
-        else if (fft.last() == 2000) {
+        if (!fft.isEmpty() && fft.last() == 2000) {
             fft.removeLast();
 
             if (fft.size() == calcPscanPointsPerTrace())

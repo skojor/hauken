@@ -41,16 +41,11 @@ void UdpDataStream::newDataHandler()
         QByteArray data = udpSocket->receiveDatagram().data();
         byteCtr += data.size();
         readHeader(data);
-        if ( header.seqNumber == sequenceNr + 1 && checkHeader() ) { // Check for out-of-order packet
-            if (!quarantine) {
-                processData(data);
-            }
-            else {
-                quarantine = 8;
-            }
-        }
-        if (quarantine)
-            quarantine--;
+        qDebug() << sequenceNr << header.seqNumber << waitingForPscanEndMarker;
+        if ( header.seqNumber == sequenceNr + 1 && checkHeader() )  // Check for out-of-order packet
+            processData(data);
+        else
+            waitingForPscanEndMarker = true;
 
         sequenceNr = header.seqNumber;
     }

@@ -39,18 +39,13 @@ void TcpDataStream::newDataHandler()
 
     while (readHeader(tcpBuffer) && checkHeader() && tcpBuffer.size() >= (int)header.dataSize) {
         if (header.seqNumber == sequenceNr + 1) {
-           if (!quarantine)
-                processData(tcpBuffer.first(header.dataSize));
+            processData(tcpBuffer.first(header.dataSize));
         }
         else {
-            ///qDebug() << "OOO!" << sequenceNr << quarantine;
-            quarantine = 8;
+            waitingForPscanEndMarker = true;
         }
+
         tcpBuffer = tcpBuffer.sliced(header.dataSize);
-
-        if (quarantine)
-            quarantine--;
-
         sequenceNr = header.seqNumber;
     }
 #ifdef Q_OS_WIN

@@ -21,7 +21,7 @@ signals:
 
 private:
     bool headerIsRead = false;
-    int quarantine = 0;
+
 };
 
 #endif // UDPDATASTREAM_H

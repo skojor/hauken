@@ -62,6 +62,7 @@ public:
     //QList<QByteArray> arrIfBufferTcp; // Multi recording buffer
     QVector<complexInt16> iq;
     quint16 sequenceNr = 0;
+    bool waitingForPscanEndMarker = true;
 
 public slots:
     virtual void openListener() = 0;
