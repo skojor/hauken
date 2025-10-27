@@ -38,7 +38,6 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
     connect(receivedDataTimer, &QTimer::timeout, this, [this]() {
         qWarning() << "MQTT data transfer timeout, resetting connection";
         mqttClient.disconnectFromHost();
-
     });
     /*
      * 02.09 14:26:21:226 Debug: MQTT received QMqttTopicName("basic_status/testevent") "{\"siteid\":1,\"sitename\":\"Test Area 1\",\"name\":\"1.6.1\",\"description\":\"Jammer F8.1: 0.2 \xC2\xB5W (-37dBm) to 50 W (47dBm) with 2 dB increments PRN: L1\",\"comment\":\"Intergration test 2\",\"status\":\"start\",\"localtime\":\"2025-09-02T14:26:21+02:00\",\"utctime\":\"2025-09-02T12:26:21Z\"}"
@@ -359,4 +358,9 @@ void Mqtt::parseMqtt(QString topic, QByteArray msg)
 
         if (!msg.isEmpty()) emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
     }
+}
+
+void Mqtt::createGet()
+{
+
 }

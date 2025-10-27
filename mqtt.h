@@ -10,6 +10,7 @@
 #include <QProcess>
 #include "config.h"
 #include "typedefs.h"
+#include "networkrequestsbase.h"
 
 enum SITESTATUS {
     UNKNOWN,
@@ -22,7 +23,7 @@ enum SITESTATUS {
 #define MQTT_CONN_TIMEOUT_MS    30000
 #define MQTT_DATATRANSFER_TIMEOUT_MS 120000
 
-class Mqtt : public QObject
+class Mqtt : public NetworkRequestsBase
 {
     Q_OBJECT
 public:
@@ -51,6 +52,7 @@ private slots:
     void webswitchRequestData();
     void webswitchParseData(int exitCode, QProcess::ExitStatus);
     void parseMqtt(QString topic, QByteArray msg);
+    void createGet();
 
 private:
     QMqttClient mqttClient;
@@ -68,5 +70,4 @@ private:
     QString keepaliveTopic;
     QString webswitchAddress;
 };
-
 #endif // MQTT_H
