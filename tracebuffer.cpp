@@ -38,48 +38,44 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
-    if (!skipTraces) {
-        if (data.size() != nrOfDataPoints) {
-            emit nrOfDatapointsChanged(data.size());
-            nrOfDataPoints = data.size();
-        }
-
-        emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
-        mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
-        if (!traceBuffer.isEmpty()) {
-            if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
-                emptyBuffer();
-        }
-
-        if (normalizeSpectrum) {
-            traceCopy = data;
-            traceBuffer.append(calcNormalizedTrace(data));
-        }
-        else
-            traceBuffer.append(data);
-
-        if (recording)
-            emit traceToRecorder(traceBuffer.last());
-
-        emit traceData(traceBuffer.last());
-
-        datetimeBuffer.append(QDateTime::currentDateTime());
-
-        addDisplayBufferTrace(data);
-        calcMaxhold();
-
-        if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
-            throttleTimer->start();
-            emit newDispTrace(displayBuffer);
-            //emit reqReplot(); // Why this one? Not needed really?
-        }
-        mutex.unlock();
-
-        if (tracesUsedInAvg < tracesNeededForAvg)
-            calcAvgLevel(data);
+    if (data.size() != nrOfDataPoints) {
+        emit nrOfDatapointsChanged(data.size());
+        nrOfDataPoints = data.size();
     }
 
-    if (skipTraces) skipTraces--;
+    emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
+    mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
+    if (!traceBuffer.isEmpty()) {
+        if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
+            emptyBuffer();
+    }
+
+    if (normalizeSpectrum) {
+        traceCopy = data;
+        traceBuffer.append(calcNormalizedTrace(data));
+    }
+    else
+        traceBuffer.append(data);
+
+    if (recording)
+        emit traceToRecorder(traceBuffer.last());
+
+    emit traceData(traceBuffer.last());
+
+    datetimeBuffer.append(QDateTime::currentDateTime());
+
+    addDisplayBufferTrace(data);
+    calcMaxhold();
+
+    if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
+        throttleTimer->start();
+        emit newDispTrace(displayBuffer);
+        //emit reqReplot(); // Why this one? Not needed really?
+    }
+    mutex.unlock();
+
+    if (tracesUsedInAvg < tracesNeededForAvg)
+        calcAvgLevel(data);
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
@@ -272,8 +268,6 @@ void TraceBuffer::finishAvgLevelCalc()
 
 void TraceBuffer::restartCalcAvgLevel()
 {
-    skipTraces = 3;
-
     if (!useSavedAvgLevels) {
         init = true;
         tracesUsedInAvg = 0;
@@ -348,9 +342,6 @@ void TraceBuffer::updSettings()
 
         if (!init) {
             emptyBuffer();
-        }
-        else {
-            skipTraces = 3;
         }
         init = false;
     }
