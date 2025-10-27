@@ -178,7 +178,7 @@ install(TARGETS Hauken
 
 qt_generate_deploy_app_script(
     TARGET Hauken
-    FILENAME_VARIABLE deploy_script
+    OUTPUT_SCRIPT deploy_script
     NO_UNSUPPORTED_PLATFORM_ERROR
 )
 
