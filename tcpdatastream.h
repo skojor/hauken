@@ -21,6 +21,7 @@ signals:
 
 private:
     bool headerIsRead = false;
+    int quarantine = 0;
 
 };
 

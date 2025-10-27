@@ -21,8 +21,6 @@ signals:
 
 private:
     bool headerIsRead = false;
-    quint16 sequenceNr = 0;
-
 };
 
 #endif // UDPDATASTREAM_H
