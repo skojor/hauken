@@ -25,7 +25,7 @@ PositionReport::PositionReport(QSharedPointer<Config> c)
     connect(sensorDataTimer, &QTimer::timeout, this, [this] {
         emit reqSensorData(sensorTemp, sensorHumidity);
         //qDebug() << "Data received" << sensorTemp << sensorHumidity << "";
-        if (sensorTemp > -30 && sensorHumidity > 0) sensorDataValid = true;
+        if (sensorTemp > -30 && (int)sensorHumidity >= 0) sensorDataValid = true;
     });
 
     if (!posSource.isEmpty() && !posSource.contains("Manual", Qt::CaseInsensitive)) gnssReqTimer->start(1000);
