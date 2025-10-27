@@ -25,7 +25,7 @@ PositionReport::PositionReport(QSharedPointer<Config> c)
     connect(sensorDataTimer, &QTimer::timeout, this, [this] {
         emit reqSensorData(sensorTemp, sensorHumidity);
         //qDebug() << "Data received" << sensorTemp << sensorHumidity << "";
-        if (sensorTemp > -30 && sensorHumidity > 0) sensorDataValid = true;
+        if (sensorTemp > -30 && (int)sensorHumidity >= 0) sensorDataValid = true;
     });
 
     if (!posSource.isEmpty() && !posSource.contains("Manual", Qt::CaseInsensitive)) gnssReqTimer->start(1000);
@@ -85,9 +85,16 @@ void PositionReport::generateReport()
         if (measurementDeviceConnected && !inUse) {
             state = "Hauken";
             inUseBy.clear();
-            reportArgs  << "--data" << "startFreq=" + QString::number(devicePtr->pscanStartFrequency)
-            << "--data" << "stopFreq=" + QString::number(devicePtr->pscanStopFrequency)
-            << "--data" << "res=" + QString::number(devicePtr->pscanResolution);
+            reportArgs  << "--data"
+                       << "startFreq=" + (devicePtr->mode == Instrument::Mode::PSCAN ?
+                                              QString::number(devicePtr->pscanStartFrequency) :
+                                              (QString::number(devicePtr->ffmCenterFrequency - devicePtr->ffmFrequencySpan / 2)))
+            << "--data" << "stopFreq=" + (devicePtr->mode == Instrument::Mode::PSCAN ?
+                                                         QString::number(devicePtr->pscanStopFrequency) :
+                                                         (QString::number(devicePtr->ffmCenterFrequency + devicePtr->ffmFrequencySpan / 2)))
+            << "--data" << "res="+ (devicePtr->mode == Instrument::Mode::PSCAN ?
+                                                    QString::number(devicePtr->pscanResolution) :
+                                                    QString::number(devicePtr->ffmFrequencySpan / 800)); // TODO: Really?
         }
         else if (inUse) {
             state = "Other user";
@@ -160,6 +167,11 @@ void PositionReport::updSettings()
 
     configReportTimer();
     if (!devicePtr) emit reqMeasurementDevicePtr();
+
+    if (posSource.contains("Manual", Qt::CaseInsensitive)) {
+        gnssData.latitude = config->getStnLatitude().toDouble();
+        gnssData.longitude = config->getStnLongitude().toDouble();
+    }
 }
 
 void PositionReport::checkReturnValue(int exitCode, QProcess::ExitStatus)

@@ -43,8 +43,8 @@ private slots:
 public slots:
     void updPosition(GnssData data) { gnssData = data;}
     void setMeasurementDevicePtr(QSharedPointer<Device> dev) { devicePtr = dev;}
-    void setMeasurementDeviceConnectionStatus(bool b) { qDebug() << "Pos.report signal: device status" << b; measurementDeviceConnected = b; if (b) inUse = false;}
-    void setMeasurementDeviceReconnected() { qDebug() << "Pos.report signal: reconn."; measurementDeviceConnected = true; inUse = false;}
+    void setMeasurementDeviceConnectionStatus(bool b) { measurementDeviceConnected = b; if (b) inUse = false;}
+    void setMeasurementDeviceReconnected() { measurementDeviceConnected = true; inUse = false;}
     void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
     void setInUse(QString s) { inUse = true; inUseBy = s; }
     void setInUseByIp(QString s) { inUseByIp = s.simplified(); }
