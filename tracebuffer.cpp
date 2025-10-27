@@ -220,7 +220,7 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                 }
             }
             else {
-                qDebug() << "Tracebuffer: Sth is not right, restart trace calcs";
+                //qDebug() << "Tracebuffer: Sth is not right, restart trace calcs";
                 emptyBuffer();
             }
         }
