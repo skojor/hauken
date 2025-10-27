@@ -41,7 +41,9 @@ void UdpDataStream::newDataHandler()
         QByteArray data = udpSocket->receiveDatagram().data();
         byteCtr += data.size();
         readHeader(data);
-        if (checkHeader())
+        if ( header.seqNumber == sequenceNr + 1 && checkHeader() )  // Check for out-of-order packet
             processData(data);
+
+        sequenceNr = header.seqNumber;
     }
 }

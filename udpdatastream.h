@@ -21,6 +21,7 @@ signals:
 
 private:
     bool headerIsRead = false;
+    quint16 sequenceNr = 0;
 
 };
 
