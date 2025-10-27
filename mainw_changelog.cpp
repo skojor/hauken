@@ -2,7 +2,7 @@
 
 void MainWindow::changelog()
 {
-    QMessageBox msgBox;)
+    QMessageBox msgBox;
     msgBox.setText("Hauken changelog");
     QString txt;
     QTextStream ts(&txt);
