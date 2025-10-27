@@ -47,17 +47,17 @@ bool DataStreamBaseClass::readHeader(const QByteArray &buf)
         return false;
 }
 
-bool DataStreamBaseClass::
-    checkHeader() // Reads the initial bytes of every packet and does a quick sanity check of the data
+bool DataStreamBaseClass::checkHeader() // Reads the initial bytes of every packet and does a quick sanity check of the data
 {
+    //qDebug() << header.seqNumber;
     if (header.magicNumber != 0x000eb200) {
         return false;
     }
-
     else if (header.dataSize > 100000) {
         qDebug() << "Enormous header size" << header.dataSize;
         return false;
-    } else {
+    }
+    else {
         return true;
     }
 }
@@ -147,7 +147,7 @@ void DataStreamBaseClass::readIfpanOptHeader(QDataStream &ds)
         >> optHeaderIfPanEb500.demodFreqLow >> optHeaderIfPanEb500.demodFreqHigh
         >> optHeaderIfPanEb500.outputTimestamp;
     quint64 tmpStart = (quint64) optHeaderIfPanEb500.freqHigh << 32
-                             | optHeaderIfPanEb500.freqLow - optHeaderIfPanEb500.freqSpan / 2;
+                       | optHeaderIfPanEb500.freqLow - optHeaderIfPanEb500.freqSpan / 2;
     quint64 tmpStop = tmpStart + optHeaderIfPanEb500.freqSpan;
     if (startfreq != tmpStart || stopfreq != tmpStop) {
         startfreq = tmpStart;
@@ -222,16 +222,13 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
                 val = qToBigEndian(val);
 
             fft.append(tmpBuffer);
-            /*ds >> data;
-            if (data > 2000) { // shouldn't happen, unless hell breaks loose. discard all the data
-                fft.clear();
-                //qDebug() << "Dropped trace, values > 200 dBuV!";
-                break;
+            if (waitingForPscanEndMarker && fft.last() == 2000) {
+                waitingForPscanEndMarker = false;
+                fft.clear(); // End of pscan received, but discarding all data since we don't know if the whole trace was received correct. Next complete trace should be correct then
             }
-            else if (data != 2000) fft.append(data);
-            else {*/
         }
-        if (fft.last() == 2000) {
+
+        if (!fft.isEmpty() && fft.last() == 2000) {
             fft.removeLast();
 
             if (fft.size() == calcPscanPointsPerTrace())
@@ -272,7 +269,7 @@ void DataStreamBaseClass::fillFft(const QByteArray &buf)
         int readBytes = ds.readRawData((char *) tmpBuffer.data(), packetCtr * 2);
         if (readBytes != packetCtr * 2) {
             qWarning() << "Data failed to copy, aborting" << tmpBuffer.size() << buf.size()
-                       << readBytes << attrHeader.numItems << genAttrAdvHeader.numItems;
+            << readBytes << attrHeader.numItems << genAttrAdvHeader.numItems;
         } else {
             for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
                 val = qToBigEndian(val);

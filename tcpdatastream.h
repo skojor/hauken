@@ -21,7 +21,6 @@ signals:
 
 private:
     bool headerIsRead = false;
-
 };
 
 #endif // TCPDATASTREAM_H

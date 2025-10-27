@@ -41,7 +41,34 @@ void UdpDataStream::newDataHandler()
         QByteArray data = udpSocket->receiveDatagram().data();
         byteCtr += data.size();
         readHeader(data);
-        if (checkHeader())
-            processData(data);
+        if (sequenceNr == 0)
+            sequenceNr = header.seqNumber; // Initial value
+
+        udpPacketList.append(UdpPacket(header.seqNumber, data));
+    }
+
+    while (udpPacketList.size() > 19) { // Wait for 20 udp packets, to have some data to reorder if needed
+        int idx = 0;
+        for (auto && udpPacket : udpPacketList) {
+            if (udpPacket.seqNumber == sequenceNr) {
+                processData(udpPacket.data);
+                break;
+            }
+            idx++;
+        }
+        if (idx < 20) {
+            udpPacketList.removeAt(idx);
+            sequenceNr++;
+        }
+        else {
+            sequenceNr = 0;
+            waitingForPscanEndMarker = true;
+            udpPacketList.clear();
+        }
+    }
+    if (udpPacketList.size() > 500) {
+        udpPacketList.clear();
+        sequenceNr = 0;
+        waitingForPscanEndMarker = true;
     }
 }

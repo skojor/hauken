@@ -499,7 +499,7 @@ void MainWindow::createLayout()
     rightBox->setVisible(config->getShowGnssStatusWindow());
     incBox->setVisible(config->getShowIncidentLog());
 
-    instrMeasurementTime->setFocus();
+    //instrMeasurementTime->setFocus();
 }
 
 void MainWindow::setToolTips()

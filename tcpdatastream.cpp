@@ -38,12 +38,18 @@ void TcpDataStream::newDataHandler()
     tcpBuffer.append(buf);
 
     while (readHeader(tcpBuffer) && checkHeader() && tcpBuffer.size() >= (int)header.dataSize) {
-        processData(tcpBuffer.first(header.dataSize));
+        if (header.seqNumber == sequenceNr + 1)
+            processData(tcpBuffer.first(header.dataSize));
+        else
+            waitingForPscanEndMarker = true;
+
         tcpBuffer = tcpBuffer.sliced(header.dataSize);
+        sequenceNr = header.seqNumber;
     }
 #ifdef Q_OS_WIN
-    while (readHeader(tcpBuffer) && !checkHeader()) // out of sync
+    while (tcpBuffer.size() > 127 && readHeader(tcpBuffer) && !checkHeader()) { // out of sync
         tcpBuffer.removeFirst();
+    }
 #else
     tcpBuffer.clear();
 #endif
