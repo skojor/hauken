@@ -41,12 +41,34 @@ void UdpDataStream::newDataHandler()
         QByteArray data = udpSocket->receiveDatagram().data();
         byteCtr += data.size();
         readHeader(data);
-        qDebug() << sequenceNr << header.seqNumber << waitingForPscanEndMarker;
-        if ( header.seqNumber == sequenceNr + 1 && checkHeader() )  // Check for out-of-order packet
-            processData(data);
-        else
-            waitingForPscanEndMarker = true;
+        if (sequenceNr == 0)
+            sequenceNr = header.seqNumber; // Initial value
 
-        sequenceNr = header.seqNumber;
+        udpPacketList.append(UdpPacket(header.seqNumber, data));
+    }
+
+    while (udpPacketList.size() > 19) { // Wait for 20 udp packets, to have some data to reorder if needed
+        int idx = 0;
+        for (auto && udpPacket : udpPacketList) {
+            if (udpPacket.seqNumber == sequenceNr) {
+                processData(udpPacket.data);
+                break;
+            }
+            idx++;
+        }
+        if (idx < 20) {
+            udpPacketList.removeAt(idx);
+            sequenceNr++;
+        }
+        else {
+            sequenceNr = 0;
+            waitingForPscanEndMarker = true;
+            udpPacketList.clear();
+        }
+    }
+    if (udpPacketList.size() > 500) {
+        udpPacketList.clear();
+        sequenceNr = 0;
+        waitingForPscanEndMarker = true;
     }
 }

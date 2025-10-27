@@ -38,12 +38,10 @@ void TcpDataStream::newDataHandler()
     tcpBuffer.append(buf);
 
     while (readHeader(tcpBuffer) && checkHeader() && tcpBuffer.size() >= (int)header.dataSize) {
-        if (header.seqNumber == sequenceNr + 1) {
+        if (header.seqNumber == sequenceNr + 1)
             processData(tcpBuffer.first(header.dataSize));
-        }
-        else {
+        else
             waitingForPscanEndMarker = true;
-        }
 
         tcpBuffer = tcpBuffer.sliced(header.dataSize);
         sequenceNr = header.seqNumber;

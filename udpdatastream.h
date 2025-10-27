@@ -3,6 +3,17 @@
 
 #include "datastreambaseclass.h"
 
+class UdpPacket {
+public:
+    UdpPacket(int i, QByteArray d)
+    {
+        seqNumber = i;
+        data = d;
+    }
+    int seqNumber;
+    QByteArray data;
+};
+
 class UdpDataStream : public DataStreamBaseClass
 {
     Q_OBJECT
@@ -21,7 +32,7 @@ signals:
 
 private:
     bool headerIsRead = false;
-
+    QList<UdpPacket> udpPacketList;
 };
 
 #endif // UDPDATASTREAM_H
