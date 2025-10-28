@@ -21,7 +21,6 @@ void NetworkRequestsBase::networkAccessManagerReplyHandler(QNetworkReply *reply)
     else {
         qDebug() << "Error:" << reply->errorString();
     }
-    reply->deleteLater();
 }
 
 void NetworkRequestsBase::tmNetworkTimeoutHandler()
@@ -34,10 +33,10 @@ void NetworkRequestsBase::postRequest(QNetworkRequest request, QByteArray text)
 {
     tmNetworkTimeout->start(5000);
     QNetworkReply *reply = networkAccessManager->post(request, text);
-    connect(reply, &QNetworkReply::errorOccurred, this, [this] (QNetworkReply::NetworkError error) {
+    connect(reply, &QNetworkReply::errorOccurred, this, [reply] (QNetworkReply::NetworkError error) {
         qWarning() << "Network access manager failed:" << error;
     });
-    connect(reply, &QNetworkReply::finished, this, [this] () {
-        qInfo() << "Network access manager finished ok";
+    connect(reply, &QNetworkReply::finished, this, [reply] () {
+        reply->deleteLater();
     });
 }
