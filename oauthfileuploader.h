@@ -16,9 +16,9 @@
 #include "typedefs.h"
 
 
-#define AUTH_TIMEOUT 10000 // millisecs
-#define UPLOAD_TIMEOUT 60000
-#define UPLOAD_RETRY 20 * 60 * 1e3 // millisecs
+#define AUTH_TIMEOUT_MS 10000
+#define UPLOAD_TIMEOUT_MS 10000
+#define UPLOAD_RETRY_MS 20 * 60 * 1e3
 
 class OAuthFileUploader : public QObject
 {
@@ -34,8 +34,7 @@ signals:
     void uploadProgress(int);
 
 private slots:
-    void networkReplyFinishedHandler();
-    void networkAccessManagerFinished();
+    void networkReplyFinishedHandler(QNetworkReply *networkReply);
     void networkReplyProgressHandler(qint64, qint64);
     void authTimeoutHandler();
     void uploadTimeoutHandler();
@@ -45,7 +44,7 @@ private slots:
 private:
     QSharedPointer<Config> config;
     QNetworkAccessManager *networkAccessManager;
-    QNetworkReply *networkReply = nullptr;
+    //QNetworkReply *networkReply = nullptr;
     //QString uploadFilename;
     //QFile *file = nullptr;
     //QHttpMultiPart *multipart = nullptr;
