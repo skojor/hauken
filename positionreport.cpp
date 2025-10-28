@@ -185,7 +185,7 @@ void PositionReport::checkReturnValue(int exitCode, QProcess::ExitStatus)
     }*/
 }
 
-void PositionReport::updMqttData(QString& name, double& val)
+void PositionReport::updMqttData(const QString name, double val)
 {
     if (mqttNames.isEmpty()) {
         mqttNames.append(name);

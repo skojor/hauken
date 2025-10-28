@@ -63,7 +63,7 @@ void MainWindow::setValidators()
     instrStopFreq->setRange(0, 600e3);
     instrStopFreq->setDecimals(6);
     instrStopFreq->setSingleStep(1);
-    instrMeasurementTime->setRange(2, 5000);
+    instrMeasurementTime->setRange(1, 5000);
     instrAtt->setRange(-40, 40);
 
     /*QString ipRange = "(([ 0]+)|([ 0]*[0-9] *)|([0-9][0-9] )|([ 0][0-9][0-9])|(1[0-9][0-9])|([2][0-4][0-9])|(25[0-5]))";

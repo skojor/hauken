@@ -48,7 +48,7 @@ public slots:
     void updSensorData(double temp, double humidity) { sensorTemp = temp; sensorHumidity = humidity; sensorDataValid = true;}
     void setInUse(QString s) { inUse = true; inUseBy = s; }
     void setInUseByIp(QString s) { inUseByIp = s.simplified(); }
-    void updMqttData(QString& name, double& val);
+    void updMqttData(const QString name, double val);
     void setModeUsed(QString s) { modeUsed = s; }
     void setFreqUsed(quint64 a, quint64 b) { startFreqUsed = a, stopFreqUsed = b; }
     void setResUsed(int a) { resUsed = a; }

@@ -5,6 +5,7 @@ project(Hauken LANGUAGES C CXX)
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 qt_standard_project_setup()
 
@@ -93,6 +94,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     network.h network.cpp
     iqplot.h iqplot.cpp
     asciitranslator.h asciitranslator.cpp
+    networkrequestsbase.h networkrequestsbase.cpp
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -168,6 +170,7 @@ elseif(UNIX)
       debug opencv_videoio
       debug quazip1-qt6
   )
+target_link_libraries(Hauken PRIVATE Qt6::Core)
 endif()
 
 install(TARGETS Hauken
