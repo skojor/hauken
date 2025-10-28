@@ -261,6 +261,7 @@ void TraceBuffer::emptyBuffer()
 void TraceBuffer::finishAvgLevelCalc()
 {
     averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime); // routine to keep updating the average level at a very slow interval
+    emit averageLevelCalculating(); // To tell every class we have worked at least for a moment for this avg data
     emit averageLevelReady(averageLevel);
     emit stopAvgLevelFlash();
     saveAvgLevels();
