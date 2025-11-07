@@ -219,10 +219,10 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
                     averageDispLevel[i] = (double)averageLevel.at((int)((double)i / rate)) / 10.0;
                 }
             }
-            else {
+            /*else {
                 //qDebug() << "Tracebuffer: Sth is not right, restart trace calcs";
                 emptyBuffer();
-            }
+            }*/
         }
     }
     
@@ -261,7 +261,10 @@ void TraceBuffer::emptyBuffer()
 void TraceBuffer::finishAvgLevelCalc()
 {
     averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime); // routine to keep updating the average level at a very slow interval
-    emit averageLevelCalculating(); // To tell every class we have worked at least for a moment for this avg data
+    if (flagAvgLevelRestarted) {
+        emit averageLevelCalculating(); // To tell every class we have worked at least for a moment for this avg data
+        flagAvgLevelRestarted = false;
+    }
     emit averageLevelReady(averageLevel);
     emit stopAvgLevelFlash();
     saveAvgLevels();
@@ -269,6 +272,7 @@ void TraceBuffer::finishAvgLevelCalc()
 
 void TraceBuffer::restartCalcAvgLevel()
 {
+    flagAvgLevelRestarted = true;
     if (!useSavedAvgLevels) {
         init = true;
         tracesUsedInAvg = 0;

@@ -121,6 +121,7 @@ private:
     int nrOfDataPoints = 0;
     bool flagSavedAvgLevelsInvalidated = true;
     bool flagAvgLevelsRestored = false;
+    bool flagAvgLevelRestarted = true;
 
     // Config cache
     quint64 startfreq, stopfreq, ffmCenterFreq;
