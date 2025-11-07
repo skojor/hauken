@@ -137,34 +137,6 @@ void OAuthFileUploader::networkReplyFinishedHandler(QNetworkReply *networkReply)
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File upload failed, retrying later. Reason: " + networkReply->errorString());
         qWarning() << "OAuthUploader: Failed upload," << networkReply->errorString();
     }
-
-/*    if (QString(reply).contains("uploaded", Qt::CaseInsensitive)) {
-        qDebug() << "OAuthUploader: File uploaded successfully using OAuth!";
-        emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File uploaded successfully");
-        cleanUploadBacklog();
-
-        QStringList list = QString(reply).split(':');
-        QString id;
-        if (list.size() > 2) {
-            if (list[0].contains("id"))
-                id = list[1];
-            id.remove('\"');
-            id = id.split(',').first();
-            //qDebug() << id << accessToken << list;
-            if (!config->getOauth2OperatorAddress().isEmpty()
-                && !id.contains("null", Qt::CaseInsensitive))
-                setOperator(id, m_accessToken); // Add operator if url is specified
-        }
-    } else if (QString(reply).contains("filealreadyexists", Qt::CaseInsensitive)) {
-        qDebug() << "OAuth: File upload failed, already uploaded" << reply;
-        emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD,
-                           "",
-                           "OAuth: File upload failed, already uploaded");
-        cleanUploadBacklog();
-    }
-
-    qDebug() << "OAuthUploader: Reply finished," << QDateTime::currentDateTime().toString()
-             << networkReply->errorString() << reply;*/
 }
 
 void OAuthFileUploader::authTimeoutHandler()

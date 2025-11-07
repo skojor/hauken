@@ -222,10 +222,10 @@ void MainWindow::setSignals()
             &TraceBuffer::averageLevelCalculating,
             traceAnalyzer,
             &TraceAnalyzer::resetAverageLevel);
-    connect(traceBuffer,
+    /*connect(traceBuffer,
             &TraceBuffer::averageLevelCalculating,
             sdefRecorder,
-            &SdefRecorder::closeTempFile);
+            &SdefRecorder::closeTempFile);*/
     connect(traceBuffer,
             &TraceBuffer::averageLevelReady,
             traceAnalyzer,
