@@ -23,6 +23,7 @@ void IqPlot::getIqData(const QList<complexInt16> &iq16)
     dataFromFile = false;
     if (!listFreqs.isEmpty()) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
     if (flagHeaderValidated) iqSamples += iq16;
+    qDebug() << iqSamples.size();
     if (iqSamples.size() >= samplesNeeded) {
         ffmFrequency = listFreqs.first(); // Silly, but blame the coder
         parseIqData(iqSamples, listFreqs.first());
@@ -309,7 +310,8 @@ void IqPlot::requestIqData()
     emit reqIqCenterFrequency();
 
     if (config->getIqCreateFftPlot()
-        && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 )) {
+        && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 ))
+    {
         samplesNeeded = (int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
 
         listFreqs.clear();
