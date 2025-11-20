@@ -29,6 +29,7 @@
  * eventually invalid if timeout or any error occurs.
  *
  * MSVC / Qt code mix, using QTimer and states to handle async operations
+ *
  */
 
 enum STATE_HANDLER {
