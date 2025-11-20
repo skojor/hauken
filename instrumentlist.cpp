@@ -29,6 +29,7 @@ void InstrumentList::updSettings()
     if (tmpServer != server) { // address changed, reconnect
         server = tmpServer;
         if (isStarted && !server.isEmpty()) emit  askForLogin();
+        emit instrumentListStarted();
     }
 }
 
@@ -265,6 +266,7 @@ void InstrumentList::updStationInfoWithEquipmentList()
     qDebug() << "Done parsing station/instrument list";
     generateInstrumentList();
     saveFile();
+    emit instrumentListDownloaded();
 }
 
 void InstrumentList::generateInstrumentList()

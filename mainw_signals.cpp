@@ -297,14 +297,21 @@ void MainWindow::setSignals()
             &SdefRecorder::fileReadyForUpload,
             oauthFileUploader,
             &OAuthFileUploader::fileUploadRequest);
-    connect(oauthFileUploader,
+    /*connect(oauthFileUploader,
             &OAuthFileUploader::reqAuthToken,
             accessHandler,
             &AccessHandler::reqAuthorization);
     connect(accessHandler,
             &AccessHandler::authorizationGranted,
             oauthFileUploader,
-            &OAuthFileUploader::receiveAuthToken);
+            &OAuthFileUploader::receiveAuthToken);*/
+    connect(oauthFileUploader, &OAuthFileUploader::reqAuthToken, this, [this] () {
+        QString token = accessHandler->getToken();
+        if (!token.isEmpty())
+            oauthFileUploader->receiveAuthToken(token);
+        else
+            qWarning() << "OAuth: File uploader requested a token, but accessHandler says it's not valid";
+    });
 
     connect(traceBuffer, &TraceBuffer::traceToRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
     connect(traceBuffer, &TraceBuffer::traceData, sdefRecorder, &SdefRecorder::tempFileData);
@@ -888,4 +895,27 @@ void MainWindow::setSignals()
         btnConnectPressed(true);
     });
     connect(this, &MainWindow::antennaNameChanged, sdefRecorder, &SdefRecorder::updAntName);
+
+    connect(accessHandler, &AccessHandler::accessTokenInvalid, this, [this](QString s) {
+        ledAzureStatus->setOffColor(Qt::red);
+        ledAzureStatus->setToolTip(s);
+    });
+    connect(accessHandler, &AccessHandler::accessTokenValid, this, [this](QString user) {
+        ledAzureStatus->setOffColor(Qt::green);
+        ledAzureStatus->setToolTip("Logged in as " + user);
+    });
+    connect(accessHandler, &AccessHandler::reqAccessToken, this, [this]() {
+        ledAzureStatus->setOffColor(Qt::yellow);
+    });
+    connect(accessHandler, &AccessHandler::settingsInvalid, this, [this](QString s) {
+        ledAzureStatus->setOffColor(Qt::red);
+        ledAzureStatus->setToolTip(s);
+    });
+    connect(instrumentList, &InstrumentList::instrumentListDownloaded, this, [this]() {
+        ledInstrListStatus->setOffColor(Qt::green);
+        ledInstrListStatus->setToolTip("Instrument list downloaded " + QDateTime::currentDateTime().toString("hh:mm:ss"));
+    });
+    connect(instrumentList, &InstrumentList::instrumentListStarted, this, [this]() {
+        ledInstrListStatus->setOffColor(Qt::yellow);
+    });
 }

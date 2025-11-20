@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+#include "version.h"
+#include "versionupdater.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -124,7 +126,6 @@ MainWindow::MainWindow(QWidget *parent)
         incidentLog->restoreGeometry(extras.value("incGeometry").toByteArray());
     if (extras.value("plotGeometry").isValid())
         customPlot->restoreGeometry(extras.value("plotGeometry").toByteArray());
-
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -420,15 +421,25 @@ void MainWindow::createLayout()
     QGridLayout *bottomIndicatorLayout = new QGridLayout;
     grpIndicator = new QGroupBox("Status indicators");
 
-    bottomIndicatorLayout->addWidget(ledTraceStatus, 0, 0, Qt::AlignBottom);
-    bottomIndicatorLayout->addWidget(labelTraceLedText, 0, 1);
-    bottomIndicatorLayout->addWidget(ledRecordStatus, 1, 0, Qt::AlignBottom);
-    bottomIndicatorLayout->addWidget(labelRecordLedText, 1, 1);
-    bottomIndicatorLayout->addWidget(ledGnssStatus, 2, 0, Qt::AlignBottom);
-    bottomIndicatorLayout->addWidget(labelGnssLedText, 2, 1);
-    ledTraceStatus->setLedSize(30);
-    ledRecordStatus->setLedSize(30);
-    ledGnssStatus->setLedSize(30);
+    bottomIndicatorLayout->addWidget(ledTraceStatus, 0, 0, Qt::AlignVCenter);
+    bottomIndicatorLayout->addWidget(labelTraceLedText, 0, 1, Qt::AlignTop);
+    bottomIndicatorLayout->addWidget(ledRecordStatus, 1, 0, Qt::AlignVCenter);
+    bottomIndicatorLayout->addWidget(labelRecordLedText, 1, 1, Qt::AlignTop);
+    bottomIndicatorLayout->addWidget(ledGnssStatus, 2, 0, Qt::AlignVCenter);
+    bottomIndicatorLayout->addWidget(labelGnssLedText, 2, 1, Qt::AlignTop);
+    bottomIndicatorLayout->addWidget(ledAzureStatus, 3, 0, Qt::AlignVCenter);
+    bottomIndicatorLayout->addWidget(labelAzureLedText, 3, 1, Qt::AlignTop);
+    bottomIndicatorLayout->addWidget(ledInstrListStatus, 4, 0, Qt::AlignVCenter);
+    bottomIndicatorLayout->addWidget(labelInstrListLedText, 4, 1, Qt::AlignTop);
+
+    ledTraceStatus->setLedSize(20);
+    ledRecordStatus->setLedSize(20);
+    ledGnssStatus->setLedSize(20);
+    ledAzureStatus->setLedSize(20);
+    ledInstrListStatus->setLedSize(20);
+    ledAzureStatus->setState(false);
+    ledInstrListStatus->setState(false);
+
 
     grpIndicator->setMaximumHeight(220);
 
