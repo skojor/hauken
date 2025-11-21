@@ -96,9 +96,11 @@ void AccessHandler::stateHandler()
         MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
         MSALRUNTIME_ReleaseLogCallbackHandle(m_logHandle);
         MSALRUNTIME_Shutdown();
-
-        emit accessTokenValid(m_ctx.acc + ", valid until " + m_ctx.expiryTime.toLocalTime().toString("hh:mm:ss"));
-        QTimer::singleShot(QDateTime::currentDateTime().msecsTo(m_ctx.expiryTime.toLocalTime().addSecs(-60)), this, &AccessHandler::login); // Renewal is handled here
+        emit accessTokenValid(m_ctx.acc);
+        if (!m_initialLogin)
+            emit accessTokenReady(m_ctx.token);
+        else
+            m_initialLogin = false;
     }
 }
 
@@ -110,22 +112,22 @@ void AccessHandler::loggerCallback(const os_char *logMessage,
     default:
         /* fall-thru */
     case Msalruntime_Log_Level_Trace:
-        std::wcout << "[Trace  ]" << logMessage << std::endl;
+        qDebug() << "[Trace  ]" << logMessage;
         break;
     case Msalruntime_Log_Level_Debug:
-        std::wcout << "[Debug  ]" << logMessage << std::endl;
+        qDebug() << "[Debug  ]" << logMessage;
         break;
     case Msalruntime_Log_Level_Info:
-        std::wcout << "[Info   ]" << logMessage << std::endl;
+        qInfo() << "[Info   ]" << logMessage;
         break;
     case Msalruntime_Log_Level_Warning:
-        std::wcout << "[Warning]" << logMessage << std::endl;
+        qWarning() << "[Warning]" << logMessage;
         break;
     case Msalruntime_Log_Level_Error:
-        std::wcout << "[Error  ]" << logMessage << std::endl;
+        qWarning() << "[Error  ]" << logMessage;
         break;
     case Msalruntime_Log_Level_Fatal:
-        std::wcout << "[Fatal  ]" << logMessage << std::endl;
+        qFatal() << "[Fatal  ]" << logMessage;
         break;
     }
 }
@@ -135,7 +137,7 @@ void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void
     discover_t *ctx = (discover_t *)callbackData;
     MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
 
-    //MSALRUNTIME_GetAccount(authResult, &account);
+    MSALRUNTIME_GetAccount(authResult, &account);
     //printAccount(account);
     //printAuthResult(authResult);
 
@@ -155,13 +157,21 @@ void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void
     MSAL_GET_STRING(authResult, MSALRUNTIME_GetTelemetryData, telemetry);
     jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(telemetry));
     jsonObj = jsonDoc.object();
-    QJsonValue expiryTime = jsonObj.value("access_token_expiry_time");
+    //QJsonValue expiryTime = jsonObj.value("access_token_expiry_time");
     QJsonValue success = jsonObj.value("is_successful");
 
+    std::string additionalFields;
+    MSAL_GET_STRING(account, MSALRUNTIME_GetAdditionalFieldsJson, additionalFields);
+    jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(additionalFields));
+    jsonObj = jsonDoc.object();
+    QJsonValue expTime = jsonObj.value("exp");
+
     if (success.toString() == "true") {
-        ctx->expiryTime = QDateTime::fromString(expiryTime.toString(), Qt::ISODateWithMs);
+        //ctx->expiryTime = QDateTime::fromString(expiryTime.toString(), Qt::ISODateWithMs);
+        ctx->expiryTime = QDateTime::fromSecsSinceEpoch(expTime.toInt(), QTimeZone::LocalTime);
         ctx->token = QString::fromStdString(token);
     }
+    //qDebug() << expTime.toInteger() << ctx->expiryTime.toLocalTime();
     // free memory
     MSALRUNTIME_ReleaseAccount(account);
     MSALRUNTIME_ReleaseAuthResult(authResult);

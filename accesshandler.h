@@ -22,8 +22,10 @@
 /*
  * AccessHandler takes care of logging in the user using Microsofts own MSAL library.
  * Neccessary config values are updated via Config class signal (updSettings).
- * Initial login and renewal is handled automagically. getToken()
+ * Initial login is handled automagically. getToken()
  * returns a valid token, or blank QString if invalid.
+ *
+ * Call login() before asking for a token, to be sure it is valid!
  *
  * Signals when requesting token, when valid (including login name), and
  * eventually invalid if timeout or any error occurs.
@@ -60,6 +62,7 @@ public:
 
 signals:
     void reqAccessToken();
+    void accessTokenReady(QString);
     void accessTokenValid(QString);
     void accessTokenInvalid(QString);
     void settingsInvalid(QString);
@@ -89,5 +92,6 @@ private:
 
     // Config cache
     bool m_loginEnabled = false;
+    bool m_initialLogin = true;
 };
 #endif // ACCESSHANDLER_H

@@ -297,21 +297,21 @@ void MainWindow::setSignals()
             &SdefRecorder::fileReadyForUpload,
             oauthFileUploader,
             &OAuthFileUploader::fileUploadRequest);
-    /*connect(oauthFileUploader,
+    connect(oauthFileUploader,
             &OAuthFileUploader::reqAuthToken,
             accessHandler,
-            &AccessHandler::reqAuthorization);
+            &AccessHandler::login);
     connect(accessHandler,
-            &AccessHandler::authorizationGranted,
+            &AccessHandler::accessTokenReady,
             oauthFileUploader,
-            &OAuthFileUploader::receiveAuthToken);*/
-    connect(oauthFileUploader, &OAuthFileUploader::reqAuthToken, this, [this] () {
+            &OAuthFileUploader::receiveAuthToken);
+    /*connect(oauthFileUploader, &OAuthFileUploader::reqAuthToken, this, [this] () {
         QString token = accessHandler->getToken();
         if (!token.isEmpty())
             oauthFileUploader->receiveAuthToken(token);
         else
             qWarning() << "OAuth: File uploader requested a token, but accessHandler says it's not valid";
-    });
+    });*/
 
     connect(traceBuffer, &TraceBuffer::traceToRecorder, sdefRecorder, &SdefRecorder::receiveTrace);
     connect(traceBuffer, &TraceBuffer::traceData, sdefRecorder, &SdefRecorder::tempFileData);
