@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.19)
 project(Hauken LANGUAGES C CXX)
 
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64")
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
 find_package(Qt6 REQUIRED COMPONENTS Core)
+
+set(CMAKE_CXX_STANDARD 20)
 
 qt_standard_project_setup()
 
@@ -112,11 +115,14 @@ target_link_libraries(Hauken PRIVATE
     Qt6::Mqtt
 )
 
+target_link_libraries(Hauken PRIVATE runtimeobject)
+
 if (WIN32)
 target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/msal
 )
 elseif(UNIX)
   target_include_directories(Hauken PRIVATE
@@ -136,6 +142,7 @@ target_link_libraries(Hauken PRIVATE
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -147,6 +154,7 @@ target_link_libraries(Hauken PRIVATE
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_imgproc490d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
 )
 elseif(UNIX)
   target_link_libraries(Hauken PRIVATE
@@ -186,3 +194,7 @@ qt_generate_deploy_app_script(
 )
 
 install(SCRIPT ${deploy_script})
+
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /await)
+endif()

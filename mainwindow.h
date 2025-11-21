@@ -75,8 +75,6 @@
 #include "traceanalyzer.h"
 #include "tracebuffer.h"
 #include "udpdatastream.h"
-#include "version.h"
-#include "versionupdater.h"
 #include "vifstreamtcp.h"
 #include "vifstreamudp.h"
 #include "waterfall.h"
@@ -232,6 +230,10 @@ private:
     QLabel *labelRecordLedText = new QLabel("Not recording");
     LedIndicator *ledGnssStatus = new LedIndicator;
     QLabel *labelGnssLedText = new QLabel("No GNSS data");
+    LedIndicator *ledAzureStatus = new LedIndicator;
+    QLabel *labelAzureLedText = new QLabel("OAuth");
+    LedIndicator *ledInstrListStatus = new LedIndicator;
+    QLabel *labelInstrListLedText = new QLabel("Instr.list");
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
     GnssDevice *gnssDevice1 = new GnssDevice(config, 1);
@@ -341,7 +343,7 @@ private:
     QSharedPointer<VifStreamTcp> vifStreamTcp = QSharedPointer<VifStreamTcp>(new VifStreamTcp, &QObject::deleteLater);
 
     double tracesPerSecond = 0;
-    AccessHandler *accessHandler = new AccessHandler(config);
+    AccessHandler *accessHandler = new AccessHandler(this, config);
     OAuthFileUploader *oauthFileUploader = new OAuthFileUploader(config);
     RestApi *restApi = new RestApi(config);
     Network *ptrNetwork = new Network(config);

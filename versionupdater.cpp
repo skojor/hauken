@@ -15,6 +15,14 @@ VersionUpdater::VersionUpdater(QSharedPointer<Config> c)
         config->setInstrStopFreq(config->getInstrStopFreq() * 1e6);
     if (config->getInstrFfmCenterFreq() < 6e3)
         config->setInstrFfmCenterFreq(config->getInstrFfmCenterFreq() * 1e6);
+
+    // OAuth update from old to new values
+    if (config->getOAuth2AuthUrl().contains("oauth")) {
+        config->setOAuth2AuthUrl(config->getOAuth2AuthUrl().split("/oauth").first());
+    }
+    if (config->getOAuth2Scope().contains("access_as_user")) {
+        config->setOAuth2Scope(config->getOAuth2Scope().split("/access_as_user").first() + "/.default");
+    }
 }
 
 void VersionUpdater::handleConfigUpdates()

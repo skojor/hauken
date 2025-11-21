@@ -136,6 +136,7 @@ void OAuthFileUploader::networkReplyFinishedHandler(QNetworkReply *networkReply)
     else { // Upload failed for some reason. Inform user and retry again later
         emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File upload failed, retrying later. Reason: " + networkReply->errorString());
         qWarning() << "OAuthUploader: Failed upload," << networkReply->errorString();
+        if (m_uploadBacklog.size() > 1) QTimer::singleShot(300000, this, &OAuthFileUploader::reqAuthToken); // Request new token in 5 mins
     }
 }
 

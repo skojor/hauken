@@ -71,6 +71,8 @@ private:
 signals:
     void askForLogin();
     void instrumentListReady(QStringList, QStringList, QStringList);
+    void instrumentListDownloaded();
+    void instrumentListStarted();
 };
 
 #endif // INSTRUMENTLIST_H

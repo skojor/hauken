@@ -1,123 +1,211 @@
-#include "accesshandler.h"
+#include "AccessHandler.h"
 
-AccessHandler::AccessHandler(QSharedPointer<Config> c)
+AccessHandler::AccessHandler(QObject *parent, QSharedPointer<Config> c)
+    : QObject(parent)
 {
-    config = c;
-    oauth2Flow = new QOAuth2AuthorizationCodeFlow(this);
-    replyHandler = new QOAuthHttpServerReplyHandler(this);
-    rewriteHeader();
-    //qDebug() << "port" << replyHandler->port();
-#ifdef Q_OS_WIN
-    oauth2Flow->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::S256, 43);
-#endif
-    oauth2Flow->setReplyHandler(replyHandler);
-    renewTokenTimer = new QTimer();
-    renewTokenTimer->setSingleShot(true);
+    if (c)
+        m_config = c;
+    else
+        qFatal() << "AccessHandler: No config pointer set, giving up";
 
-    connect(oauth2Flow,
-            &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser,
-            this,
-            &QDesktopServices::openUrl);
-
-    connect(oauth2Flow, &QOAuth2AuthorizationCodeFlow::granted, this, [this]() {
-        if (QDateTime::currentDateTime().msecsTo(oauth2Flow->expirationAt()) < 6e5) {
-            qDebug() << "Access handler: Lib says granted, but expiry time is less than 10 "
-                        "minutes. Requesting new auth";
-            oauth2Flow->setToken(QString());
-            reqAuthorization();
-        } else {
-            qDebug() << "We have a token, expires at" << oauth2Flow->expirationAt().toString();
-            replyHandler->close();
-            emit authorizationGranted(oauth2Flow->token());
-            renewTokenTimer->start(
-                QDateTime::currentDateTime().msecsTo(oauth2Flow->expirationAt().addSecs(
-                    -60))); // Set a renew timer for 1 min before expiry time
-            qDebug() << "Adding exp. timer in" << renewTokenTimer->remainingTime() / 1e3
-                     << "seconds";
-        }
+    connect(m_stateTimer, &QTimer::timeout, this, &AccessHandler::stateHandler);
+    connect(m_timeoutTimer, &QTimer::timeout, this, [this] () {
+        m_timeoutTimer->stop();
+        m_stateTimer->stop();
+        m_state = IDLE;
+        qWarning() << "AccessHandler: Timeout while running authorization routine, retrying later";
+        emit accessTokenInvalid("Authorization timed out");
+        QTimer::singleShot(5 * 60 * 1000, this, &AccessHandler::login); // 5 min retry
     });
 
-#ifdef Q_OS_WIN
-    connect(oauth2Flow,
-            &QOAuth2AuthorizationCodeFlow::serverReportedErrorOccurred,
-            this,
-            [](const QString &error, const QString &errorDescription, const QUrl &uri) {
-                qDebug() << "authflow error" << error << errorDescription << uri.toString();
-            });
-#endif
-    connect(oauth2Flow,
-            &QOAuth2AuthorizationCodeFlow::requestFailed,
-            this,
-            [](const QAbstractOAuth::Error error) { qDebug() << "Req failed" << (int) error; });
-
-    connect(renewTokenTimer, &QTimer::timeout, this, [this] {
-        qDebug() << "Asking for new token";
-#ifdef Q_OS_WIN
-        oauth2Flow->refreshTokens();
-#else
-        oauth2Flow->refreshToken();
-#endif
+    connect(m_debugTimer, &QTimer::timeout, this, [this] () {
+        qDebug() << "AccessHandler debug:" << m_ctx.token << m_ctx.expiryTime.toLocalTime().toString();
     });
-}
-
-AccessHandler::~AccessHandler()
-{
-    delete oauth2Flow;
-    delete replyHandler;
-}
-
-void AccessHandler::reqAuthorization()
-{
-    if (!replyHandler->isListening()) {
-        replyHandler->listen(QHostAddress::Any, REDIRECT_PORT);
-        rewriteHeader(); // Change 127.0.0.1 to localhost, because Azure
-    }
-
-    if (authEnabled && replyHandler->isListening() && oauth2Flow->token().isEmpty()) {
-        oauth2Flow->grant();
-    } else if (authEnabled && replyHandler->isListening()
-               && !oauth2Flow->refreshToken().isEmpty()) { // Should already be auth'ed
-        qDebug() << "Auth: We are already granted access";
-        emit authorizationGranted(oauth2Flow->token());
-    }
+    //m_debugTimer->start(60000);
 }
 
 void AccessHandler::updSettings()
 {
-    if (!config->getOAuth2AccessTokenUrl().isEmpty() &&
-        !config->getOAuth2AuthUrl().isEmpty() &&
-        !config->getOAuth2Scope().isEmpty() &&
-        !config->getOAuth2ClientId().isEmpty())
-    {
-        setAuthorizationUrl(config->getOAuth2AuthUrl());
-#ifdef Q_OS_WIN
-        setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
-        setScope(QSet<QByteArray>() << config->getOAuth2Scope().toLatin1()
-                                    << QByteArray("offline_access"));
-#else
-        setAccessTokenUrl(config->getOAuth2AccessTokenUrl());
-        setScope(config->getOAuth2Scope() + "_" + QString("offline_access"));
-#endif
-        setClientIdentifier(config->getOAuth2ClientId());
-    }
-    authEnabled = config->getOauth2Enable();
+    m_appId = m_config->getOAuth2ClientId().toStdWString();
+    m_authority = m_config->getOAuth2AuthUrl().toStdWString();
+    m_scope = m_config->getOAuth2Scope().toStdWString();
 
-    // Parameters check
-    if (authEnabled
-        && (config->getOAuth2AuthUrl().isEmpty() || config->getOAuth2AccessTokenUrl().isEmpty()
-            || config->getOAuth2ClientId().isEmpty() || config->getOAuth2Scope().isEmpty())) {
-        //qDebug() << "OAuth2: Missing one or more parameters, disabling";
-        authEnabled = false;
+    if (m_loginEnabled != m_config->getOauth2Enable()) {
+        m_loginEnabled = m_config->getOauth2Enable();
+        if (m_loginEnabled) { // Attempt login
+            login();
+        }
+        else {  // Was enabled, now disabled. Stop any renewal timers
+            m_timeoutTimer->stop();
+            m_stateTimer->stop();
+            emit settingsInvalid("OAuth disabled in settings");
+            m_ctx.expiryTime = QDateTime::currentDateTime(); // Expired
+            m_ctx.token.clear();
+        }
     }
 }
 
-void AccessHandler::rewriteHeader()
+void AccessHandler::login()
 {
-    oauth2Flow->setModifyParametersFunction(
-        [this](QAbstractOAuth::Stage, QMultiMap<QString, QVariant> *parameters) {
-            parameters->remove("redirect_uri");
-            parameters->insert("redirect_uri",
-                               QUrl("http://localhost:" + QByteArray::number(replyHandler->port())
-                                    + "/"));
-        });
+    if (m_config->getOauth2Enable()) {
+        if (!m_appId.empty() && !m_authority.empty() && !m_scope.empty()) {
+            // Init MSAL
+            m_correlationId = uuidGen();
+            MSALRUNTIME_Startup();
+            MSALRUNTIME_SetIsPiiEnabled(false);
+            MSALRUNTIME_CreateAuthParameters(m_appId.c_str(), m_authority.c_str(), &m_authParameters);
+            MSALRUNTIME_SetRequestedScopes(m_authParameters, m_scope.c_str());
+            MSALRUNTIME_SetRedirectUri(m_authParameters, L"placeholder");
+            MSALRUNTIME_SetAdditionalParameter(
+                m_authParameters, L"msal_gui_thread", L"true");
+
+            m_state = IDLE;
+            m_stateTimer->start(100);
+            m_timeoutTimer->start(TIMEOUT_MS);
+            emit reqAccessToken();
+        }
+        else {
+            qWarning() << "Auth requested, but parameters are not set. Giving up";
+            emit settingsInvalid("One or more OAuth values not set, not possible to log in");
+        }
+    }
+    else {
+        emit settingsInvalid("OAuth disabled in settings");
+    }
+}
+
+void AccessHandler::stateHandler()
+{
+    if (m_state == IDLE) { // Start fresh
+        m_state = DISCOVER_ACCOUNT;
+        m_asyncHandle = nullptr;
+        m_ctx = { 0 };
+        MSALRUNTIME_DiscoverAccountsAsync(m_appId.c_str(), m_correlationId.c_str(), discoverCallback, &m_ctx, &m_asyncHandle);
+    }
+    else if (m_state == DISCOVER_ACCOUNT && m_ctx.called) { // Done, we have first acc. set in ctx
+        MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
+        m_state = ACQUIRE_TOKEN;
+        m_ctx.called = false;
+        MSALRUNTIME_AcquireTokenSilentlyAsync(m_authParameters, m_correlationId.c_str(), m_ctx.account, authCallback, &m_ctx, &m_asyncHandle);
+    }
+    else if (m_state == ACQUIRE_TOKEN && m_ctx.called) {
+        m_state = FINISHED;
+        m_stateTimer->stop();
+        m_timeoutTimer->stop();
+        MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
+        MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
+        MSALRUNTIME_ReleaseLogCallbackHandle(m_logHandle);
+        MSALRUNTIME_Shutdown();
+
+        emit accessTokenValid(m_ctx.acc + ", valid until " + m_ctx.expiryTime.toLocalTime().toString("hh:mm:ss"));
+        QTimer::singleShot(QDateTime::currentDateTime().msecsTo(m_ctx.expiryTime.toLocalTime().addSecs(-60)), this, &AccessHandler::login); // Renewal is handled here
+    }
+}
+
+void AccessHandler::loggerCallback(const os_char *logMessage,
+                                   const MSALRUNTIME_LOG_LEVEL logLevel,
+                                   void *callbackData)
+{
+    switch (logLevel) {
+    default:
+        /* fall-thru */
+    case Msalruntime_Log_Level_Trace:
+        std::wcout << "[Trace  ]" << logMessage << std::endl;
+        break;
+    case Msalruntime_Log_Level_Debug:
+        std::wcout << "[Debug  ]" << logMessage << std::endl;
+        break;
+    case Msalruntime_Log_Level_Info:
+        std::wcout << "[Info   ]" << logMessage << std::endl;
+        break;
+    case Msalruntime_Log_Level_Warning:
+        std::wcout << "[Warning]" << logMessage << std::endl;
+        break;
+    case Msalruntime_Log_Level_Error:
+        std::wcout << "[Error  ]" << logMessage << std::endl;
+        break;
+    case Msalruntime_Log_Level_Fatal:
+        std::wcout << "[Fatal  ]" << logMessage << std::endl;
+        break;
+    }
+}
+
+void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void *callbackData)
+{
+    discover_t *ctx = (discover_t *)callbackData;
+    MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
+
+    //MSALRUNTIME_GetAccount(authResult, &account);
+    //printAccount(account);
+    //printAuthResult(authResult);
+
+    ctx->called = true;
+
+    std::string idToken;
+    MSAL_GET_STRING(authResult, MSALRUNTIME_GetIdToken, idToken);
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(idToken));
+    QJsonObject jsonObj = jsonDoc.object();
+    QJsonValue user = jsonObj.value("preferred_username");
+    ctx->acc = user.toString();
+
+    std::string token;
+    MSAL_GET_STRING(authResult, MSALRUNTIME_GetAccessToken, token);
+
+    std::string telemetry;
+    MSAL_GET_STRING(authResult, MSALRUNTIME_GetTelemetryData, telemetry);
+    jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(telemetry));
+    jsonObj = jsonDoc.object();
+    QJsonValue expiryTime = jsonObj.value("access_token_expiry_time");
+    QJsonValue success = jsonObj.value("is_successful");
+
+    if (success.toString() == "true") {
+        ctx->expiryTime = QDateTime::fromString(expiryTime.toString(), Qt::ISODateWithMs);
+        ctx->token = QString::fromStdString(token);
+    }
+    // free memory
+    MSALRUNTIME_ReleaseAccount(account);
+    MSALRUNTIME_ReleaseAuthResult(authResult);
+}
+
+void AccessHandler::discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE discoverAccountsResult, void *callbackData)
+{
+    discover_t *ctx = (discover_t *)callbackData;
+
+    // fetch the first account available
+    MSALRUNTIME_GetDiscoverAccountsAt(discoverAccountsResult, 0, &ctx->account);
+
+    // free up memory
+    MSALRUNTIME_ReleaseDiscoverAccountsResult(discoverAccountsResult);
+
+    // stop waiting for this async call
+    ctx->called = true;
+}
+
+MSALRUNTIME_ACCOUNT_HANDLE AccessHandler::discoverFirstAccount(std::wstring &correlationId, std::wstring &appId)
+{
+    discover_t ctx = { 0 };
+    /*MSALRUNTIME_ASYNC_HANDLE asyncHandle = nullptr;
+
+    MSALRUNTIME_DiscoverAccountsAsync(correlationId.c_str(),
+                                      discoverCallback, &ctx, &asyncHandle);
+
+    // this is a terrible way to wait for async, but this is
+    // an example, so please use locks & signals.
+    while (!ctx.called) {
+        Sleep(300);
+    }
+
+    // free the async handle
+    MSALRUNTIME_ReleaseAsyncHandle(asyncHandle);
+
+    // return the first account.*/
+    return ctx.account;
+}
+
+QString AccessHandler::getToken()
+{
+    if (QDateTime::currentDateTime().secsTo(m_ctx.expiryTime) > 0)
+        return m_ctx.token;
+    else
+        return QString();
 }
