@@ -53,11 +53,11 @@ void AccessHandler::login()
             m_correlationId = uuidGen();
             MSALRUNTIME_Startup();
             MSALRUNTIME_SetIsPiiEnabled(false);
-            MSALRUNTIME_CreateAuthParameters(m_appId.c_str(), m_authority.c_str(), &authParameters);
-            MSALRUNTIME_SetRequestedScopes(authParameters, m_scope.c_str());
-            MSALRUNTIME_SetRedirectUri(authParameters, L"placeholder");
+            MSALRUNTIME_CreateAuthParameters(m_appId.c_str(), m_authority.c_str(), &m_authParameters);
+            MSALRUNTIME_SetRequestedScopes(m_authParameters, m_scope.c_str());
+            MSALRUNTIME_SetRedirectUri(m_authParameters, L"placeholder");
             MSALRUNTIME_SetAdditionalParameter(
-                authParameters, L"msal_gui_thread", L"true");
+                m_authParameters, L"msal_gui_thread", L"true");
 
             m_state = IDLE;
             m_stateTimer->start(100);
@@ -78,23 +78,23 @@ void AccessHandler::stateHandler()
 {
     if (m_state == IDLE) { // Start fresh
         m_state = DISCOVER_ACCOUNT;
-        asyncHandle = nullptr;
+        m_asyncHandle = nullptr;
         m_ctx = { 0 };
-        MSALRUNTIME_DiscoverAccountsAsync(m_appId.c_str(), m_correlationId.c_str(), discoverCallback, &m_ctx, &asyncHandle);
+        MSALRUNTIME_DiscoverAccountsAsync(m_appId.c_str(), m_correlationId.c_str(), discoverCallback, &m_ctx, &m_asyncHandle);
     }
     else if (m_state == DISCOVER_ACCOUNT && m_ctx.called) { // Done, we have first acc. set in ctx
-        MSALRUNTIME_ReleaseAsyncHandle(asyncHandle);
+        MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
         m_state = ACQUIRE_TOKEN;
         m_ctx.called = false;
-        MSALRUNTIME_AcquireTokenSilentlyAsync(authParameters, m_correlationId.c_str(), m_ctx.account, authCallback, &m_ctx, &asyncHandle);
+        MSALRUNTIME_AcquireTokenSilentlyAsync(m_authParameters, m_correlationId.c_str(), m_ctx.account, authCallback, &m_ctx, &m_asyncHandle);
     }
     else if (m_state == ACQUIRE_TOKEN && m_ctx.called) {
         m_state = FINISHED;
         m_stateTimer->stop();
         m_timeoutTimer->stop();
-        MSALRUNTIME_ReleaseAsyncHandle(asyncHandle);
-        MSALRUNTIME_ReleaseAuthParameters(authParameters);
-        MSALRUNTIME_ReleaseLogCallbackHandle(logHandle);
+        MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
+        MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
+        MSALRUNTIME_ReleaseLogCallbackHandle(m_logHandle);
         MSALRUNTIME_Shutdown();
 
         emit accessTokenValid(m_ctx.acc + ", valid until " + m_ctx.expiryTime.toLocalTime().toString("hh:mm:ss"));

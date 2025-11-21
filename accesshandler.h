@@ -71,10 +71,10 @@ private:
     static void discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE discoverAccountsResult, void *callbackData);
     static MSALRUNTIME_ACCOUNT_HANDLE discoverFirstAccount(std::wstring &correlationId, std::wstring &appId);
 
-    MSALRUNTIME_LOG_CALLBACK_HANDLE logHandle = nullptr;
-    MSALRUNTIME_AUTH_PARAMETERS_HANDLE authParameters = nullptr;
-    MSALRUNTIME_ASYNC_HANDLE asyncHandle = nullptr;
-    MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
+    MSALRUNTIME_LOG_CALLBACK_HANDLE m_logHandle = nullptr;
+    MSALRUNTIME_AUTH_PARAMETERS_HANDLE m_authParameters = nullptr;
+    MSALRUNTIME_ASYNC_HANDLE m_asyncHandle = nullptr;
+    MSALRUNTIME_ACCOUNT_HANDLE m_account = nullptr;
 
     std::wstring m_appId;
     std::wstring m_authority;
