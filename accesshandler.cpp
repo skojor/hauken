@@ -53,6 +53,7 @@ void AccessHandler::login()
             m_correlationId = uuidGen();
             MSALRUNTIME_Startup();
             MSALRUNTIME_SetIsPiiEnabled(false);
+            //MSALRUNTIME_RegisterLogCallback(loggerCallback, nullptr, &m_logHandle);
             MSALRUNTIME_CreateAuthParameters(m_appId.c_str(), m_authority.c_str(), &m_authParameters);
             MSALRUNTIME_SetRequestedScopes(m_authParameters, m_scope.c_str());
             MSALRUNTIME_SetRedirectUri(m_authParameters, L"placeholder");
@@ -96,11 +97,16 @@ void AccessHandler::stateHandler()
         MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
         MSALRUNTIME_ReleaseLogCallbackHandle(m_logHandle);
         MSALRUNTIME_Shutdown();
-        emit accessTokenValid(m_ctx.acc);
-        if (!m_initialLogin)
-            emit accessTokenReady(m_ctx.token);
-        else
-            m_initialLogin = false;
+        if (m_ctx.token.isEmpty()) {
+            emit accessTokenInvalid("Couldn't retrieve a valid token");
+        }
+        else {
+            emit accessTokenValid(m_ctx.acc);
+            if (!m_initialLogin)
+                emit accessTokenReady(m_ctx.token); // Don't signal new token when starting up
+            else
+                m_initialLogin = false;
+        }
     }
 }
 
@@ -191,31 +197,7 @@ void AccessHandler::discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE
     ctx->called = true;
 }
 
-MSALRUNTIME_ACCOUNT_HANDLE AccessHandler::discoverFirstAccount(std::wstring &correlationId, std::wstring &appId)
-{
-    discover_t ctx = { 0 };
-    /*MSALRUNTIME_ASYNC_HANDLE asyncHandle = nullptr;
-
-    MSALRUNTIME_DiscoverAccountsAsync(correlationId.c_str(),
-                                      discoverCallback, &ctx, &asyncHandle);
-
-    // this is a terrible way to wait for async, but this is
-    // an example, so please use locks & signals.
-    while (!ctx.called) {
-        Sleep(300);
-    }
-
-    // free the async handle
-    MSALRUNTIME_ReleaseAsyncHandle(asyncHandle);
-
-    // return the first account.*/
-    return ctx.account;
-}
-
 QString AccessHandler::getToken()
 {
-    if (QDateTime::currentDateTime().secsTo(m_ctx.expiryTime) > 0)
-        return m_ctx.token;
-    else
-        return QString();
+    return m_ctx.token;
 }

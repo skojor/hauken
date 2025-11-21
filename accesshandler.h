@@ -72,7 +72,6 @@ private:
     static void loggerCallback(const os_char *logMessage, const MSALRUNTIME_LOG_LEVEL logLevel, void *callbackData);
     static void authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void *callbackData);
     static void discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE discoverAccountsResult, void *callbackData);
-    static MSALRUNTIME_ACCOUNT_HANDLE discoverFirstAccount(std::wstring &correlationId, std::wstring &appId);
 
     MSALRUNTIME_LOG_CALLBACK_HANDLE m_logHandle = nullptr;
     MSALRUNTIME_AUTH_PARAMETERS_HANDLE m_authParameters = nullptr;
