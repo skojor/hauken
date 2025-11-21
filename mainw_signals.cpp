@@ -335,13 +335,15 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this]() {
         if (measurementDevice->isConnected() || read1809Data->isRunning()) {
             ledTraceStatus->setState(false);
-            labelTraceLedText->setText("Calc. avg. noise floor");
+            ledTraceStatus->setOffColor(Qt::yellow);
+            ledTraceStatus->setToolTip("RF average level calculation");
         }
     });
 
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, this, [this]() {
-        ledTraceStatus->setState(true);
-        labelTraceLedText->setText("Detector ready");
+        ledTraceStatus->setState(false);
+        ledTraceStatus->setOffColor(Qt::green);
+        ledTraceStatus->setToolTip("RF detector ready");
     });
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this]() { traceIncidentAlarm(true); });
