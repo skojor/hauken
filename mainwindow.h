@@ -210,6 +210,7 @@ private:
     QPushButton *instrConnect = new QPushButton("Connect");
     QPushButton *instrDisconnect = new QPushButton("Disconnect");
     QPushButton *btnTrigRecording = new QPushButton("Trigger recording");
+    QPushButton *btnRestartAvgCalc = new QPushButton("Restart avg. calc.");
     QPushButton *btnPmrTable = new QPushButton("PMR table");
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
@@ -225,11 +226,11 @@ private:
     QTextEdit *incidentLog = new QTextEdit;
     QTextEdit *gnssStatus = new QTextEdit;
     LedIndicator *ledTraceStatus = new LedIndicator;
-    QLabel *labelTraceLedText = new QLabel("Awaiting trace data");
+    QLabel *labelTraceLedText = new QLabel("RF");
     LedIndicator *ledRecordStatus = new LedIndicator;
-    QLabel *labelRecordLedText = new QLabel("Not recording");
+    QLabel *labelRecordLedText = new QLabel("Recorder");
     LedIndicator *ledGnssStatus = new LedIndicator;
-    QLabel *labelGnssLedText = new QLabel("No GNSS data");
+    QLabel *labelGnssLedText = new QLabel("GNSS");
     LedIndicator *ledAzureStatus = new LedIndicator;
     QLabel *labelAzureLedText = new QLabel("OAuth");
     LedIndicator *ledInstrListStatus = new LedIndicator;

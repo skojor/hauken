@@ -471,8 +471,9 @@ void MainWindow::createLayout()
     }
 
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
+    bottomPlotLayout->addWidget(btnRestartAvgCalc);
     bottomPlotLayout->addWidget(btnTrigRecording);
-    btnTrigRecording->setFixedWidth(100);
+    //btnTrigRecording->setFixedWidth(100);
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
     bottomPlotLayout->addWidget(plotMaxholdTime);
     bottomPlotLayout->addWidget(new QLabel("Waterfall type"));
@@ -860,7 +861,8 @@ void MainWindow::traceIncidentAlarm(bool state)
     if (state != traceAlarmRaised) {
         if (state) {
             ledTraceStatus->setState(false);
-            labelTraceLedText->setText("Detector triggered");
+            ledTraceStatus->setOffColor(Qt::red);
+            ledTraceStatus->setToolTip("RF detector triggered");
             qApp->alert(this->parentWidget());
             if (config->getSoundNotification() && !notificationTimer->isActive()) {
                 player->play();
@@ -869,8 +871,9 @@ void MainWindow::traceIncidentAlarm(bool state)
             }
             traceAlarmRaised = true;
         } else {
-            ledTraceStatus->setState(true);
-            labelTraceLedText->setText("Normal");
+            ledTraceStatus->setState(false);
+            ledTraceStatus->setOffColor(Qt::green);
+            ledTraceStatus->setToolTip("RF detector ready");
             traceAlarmRaised = false;
         }
     }
@@ -881,11 +884,12 @@ void MainWindow::recordIncidentAlarm(bool state)
     if (state != recordAlarmRaised) {
         if (state) {
             ledRecordStatus->setState(false);
-            labelRecordLedText->setText("Recording");
+            ledRecordStatus->setOffColor(Qt::red);
+            ledRecordStatus->setToolTip("Recording to CEF file");
             recordAlarmRaised = true;
         } else {
-            ledRecordStatus->setState(true);
-            labelRecordLedText->setText("Ready to record");
+            ledRecordStatus->setOffColor(Qt::green);
+            ledRecordStatus->setToolTip("Recorder idle");
             recordAlarmRaised = false;
         }
     }
@@ -895,13 +899,13 @@ void MainWindow::gnssIncidentAlarm(bool state)
 {
     if (state != gnssAlarmRaised) {
         if (state) {
-            ledGnssStatus->setState(false);
-            labelGnssLedText->setText("GNSS alarm");
+            ledGnssStatus->setOffColor(Qt::red);
+            ledGnssStatus->setToolTip("GNSS alarm triggered");
             gnssAlarmRaised = true;
             qApp->alert(this);
         } else {
-            ledGnssStatus->setState(true);
-            labelGnssLedText->setText("GNSS normal");
+            ledGnssStatus->setOffColor(Qt::green);
+            ledGnssStatus->setToolTip("GNSS normal");
             gnssAlarmRaised = false;
         }
     }
@@ -911,14 +915,12 @@ void MainWindow::recordEnabled(bool state)
 {
     if (state != !recordDisabledRaised) {
         if (!state) {
-            ledRecordStatus->setOffColor(Qt::gray);
-            ledRecordStatus->setState(false);
-            labelRecordLedText->setText("Recording disabled");
+            ledRecordStatus->setOffColor(Qt::yellow);
+            ledRecordStatus->setToolTip("Recording disabled");
             recordDisabledRaised = true;
         } else {
-            ledRecordStatus->setState(true);
-            ledRecordStatus->setOffColor(Qt::red);
-            labelRecordLedText->setText("Ready to record");
+            ledRecordStatus->setOffColor(Qt::green);
+            ledRecordStatus->setToolTip("Recorder idle");
             recordDisabledRaised = false;
         }
     }

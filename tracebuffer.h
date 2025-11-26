@@ -36,7 +36,7 @@ public slots:
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
     void getAiData(int secs = 0);
-    void restartCalcAvgLevel();
+    void restartCalcAvgLevel(bool startFresh = false);
     void sendDispTrigline()
     {
         if (normalizeSpectrum) {

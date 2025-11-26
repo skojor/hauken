@@ -335,13 +335,15 @@ void MainWindow::setSignals()
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this]() {
         if (measurementDevice->isConnected() || read1809Data->isRunning()) {
             ledTraceStatus->setState(false);
-            labelTraceLedText->setText("Calc. avg. noise floor");
+            ledTraceStatus->setOffColor(Qt::yellow);
+            ledTraceStatus->setToolTip("RF average level calculation");
         }
     });
 
     connect(traceBuffer, &TraceBuffer::stopAvgLevelFlash, this, [this]() {
-        ledTraceStatus->setState(true);
-        labelTraceLedText->setText("Detector ready");
+        ledTraceStatus->setState(false);
+        ledTraceStatus->setOffColor(Qt::green);
+        ledTraceStatus->setToolTip("RF detector ready");
     });
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this]() { traceIncidentAlarm(true); });
@@ -621,15 +623,10 @@ void MainWindow::setSignals()
     connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
     connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
-    connect(instrumentList, &InstrumentList::askForLogin, sdefRecorder, &SdefRecorder::loginRequest);
-    connect(sdefRecorder,
-            &SdefRecorder::loginSuccessful,
-            instrumentList,
-            &InstrumentList::loginCompleted);
     connect(instrumentList,
-            &InstrumentList::instrumentListReady,
+            &InstrumentList::listReady,
             this,
-            [this](QStringList ip, QStringList name, QStringList type) {
+            [this](QStringList name, QStringList ip, QStringList type) {
                 disconnect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
                 instrIpAddr->clear();
 
@@ -911,11 +908,19 @@ void MainWindow::setSignals()
         ledAzureStatus->setOffColor(Qt::red);
         ledAzureStatus->setToolTip(s);
     });
-    connect(instrumentList, &InstrumentList::instrumentListDownloaded, this, [this]() {
+    connect(instrumentList, &InstrumentList::instrumentListDownloaded, this, [this](QString s) {
         ledInstrListStatus->setOffColor(Qt::green);
-        ledInstrListStatus->setToolTip("Instrument list downloaded " + QDateTime::currentDateTime().toString("hh:mm:ss"));
+        ledInstrListStatus->setToolTip(QDateTime::currentDateTime().toString("hh:mm:ss: ") + s);
     });
-    connect(instrumentList, &InstrumentList::instrumentListStarted, this, [this]() {
+    connect(instrumentList, &InstrumentList::instrumentListStarted, this, [this](QString s) {
         ledInstrListStatus->setOffColor(Qt::yellow);
+        ledInstrListStatus->setToolTip(s);
+    });
+    connect(instrumentList, &InstrumentList::instrumentListFailed, this, [this](QString s) {
+        ledInstrListStatus->setOffColor(Qt::red);
+        ledInstrListStatus->setToolTip(s);
+    });
+    connect(btnRestartAvgCalc, &QPushButton::clicked, this, [this] () {
+        traceBuffer->restartCalcAvgLevel(true); // Force restart
     });
 }
