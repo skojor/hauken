@@ -920,5 +920,7 @@ void MainWindow::setSignals()
         ledInstrListStatus->setOffColor(Qt::red);
         ledInstrListStatus->setToolTip(s);
     });
-
+    connect(btnRestartAvgCalc, &QPushButton::clicked, this, [this] () {
+        traceBuffer->restartCalcAvgLevel(true); // Force restart
+    });
 }

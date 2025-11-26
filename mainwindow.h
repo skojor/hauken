@@ -210,6 +210,7 @@ private:
     QPushButton *instrConnect = new QPushButton("Connect");
     QPushButton *instrDisconnect = new QPushButton("Disconnect");
     QPushButton *btnTrigRecording = new QPushButton("Trigger recording");
+    QPushButton *btnRestartAvgCalc = new QPushButton("Restart avg. calc.");
     QPushButton *btnPmrTable = new QPushButton("PMR table");
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;

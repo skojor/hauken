@@ -471,8 +471,9 @@ void MainWindow::createLayout()
     }
 
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
+    bottomPlotLayout->addWidget(btnRestartAvgCalc);
     bottomPlotLayout->addWidget(btnTrigRecording);
-    btnTrigRecording->setFixedWidth(100);
+    //btnTrigRecording->setFixedWidth(100);
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
     bottomPlotLayout->addWidget(plotMaxholdTime);
     bottomPlotLayout->addWidget(new QLabel("Waterfall type"));

@@ -270,10 +270,10 @@ void TraceBuffer::finishAvgLevelCalc()
     saveAvgLevels();
 }
 
-void TraceBuffer::restartCalcAvgLevel()
+void TraceBuffer::restartCalcAvgLevel(bool startFresh)
 {
     flagAvgLevelRestarted = true;
-    if (!useSavedAvgLevels) {
+    if (!useSavedAvgLevels or startFresh) {
         init = true;
         tracesUsedInAvg = 0;
         maxholdBuffer.clear();
