@@ -3,58 +3,119 @@
 InstrumentList::InstrumentList(QSharedPointer<Config> c)
 {
     config = c;
-    curlProcess->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
+    connect(tmNetworkTimeout, &QTimer::timeout, this, &InstrumentList::tmNetworkTimeoutHandler);
+    connect(networkAccessManager,
+            &QNetworkAccessManager::finished,
+            this,
+            &InstrumentList::networkAccessManagerFinished);
 
-    if (QSysInfo::kernelType().contains("win")) {
-        curlProcess->setProgram("curl.exe");
+    networkAccessManager->setCookieJar(cookieJar);
+    //QTimer::singleShot(100, this, [this]() { loadFile(); });
+}
+
+void InstrumentList::loadFile()
+{
+    QFile file(config->getWorkFolder() + "/stationdata.csv");
+    //QTextStream ts(&file);
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "Couldn't open station data file" << file.fileName();
+    } else {
+        while (!file.atEnd()) {
+            QString str = file.readLine();
+            QStringList split = str.split(";");
+            if (split.size() == 3) {
+                usableStnNames.append(split[0].trimmed());
+                usableStnIps.append(split[1].trimmed());
+                usableStnTypes.append(split[2].trimmed());
+            }
+        }
+        qDebug() << "Loaded station data from file" << file.fileName();
     }
+    file.close();
+    emit listReady(usableStnNames, usableStnIps, usableStnTypes);
+}
 
-    else if (QSysInfo::kernelType().contains("linux")) {
-        curlProcess->setProgram("curl");
+void InstrumentList::saveFile()
+{
+    QFile file(config->getWorkFolder() + "/stationdata.csv");
+    QTextStream ts(&file);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        qDebug() << "Couldn't save station data to file" << file.fileName();
+    } else {
+        for (int i = 0; i < usableStnIps.size(); i++) {
+            ts << usableStnNames[i] << ";" << usableStnIps[i] << ";" << usableStnTypes[i]
+               << Qt::endl;
+        }
+        qDebug() << "Saved station data to" << file.fileName();
     }
-
+    file.close();
 }
 
-void InstrumentList::start()
+void InstrumentList::tmNetworkTimeoutHandler()
 {
-    isStarted = true;
-    if (!server.isEmpty()) emit askForLogin();
-    loadFile();
-    if (!usableStnIps.isEmpty()) emit instrumentListReady(usableStnIps, usableStnNames, usableStnTypes);
+    tmNetworkTimeout->stop();
+    qWarning() << "Network request timed out";
+    state = FAILED;
+    emit instrumentListFailed("Network request timed out");
 }
 
-void InstrumentList::updSettings()
+void InstrumentList::networkAccessManagerFinished(QNetworkReply *reply)
 {
-    QString tmpServer = config->getIpAddressServer();
-    if (tmpServer != server) { // address changed, reconnect
-        server = tmpServer;
-        if (isStarted && !server.isEmpty()) emit  askForLogin();
-        emit instrumentListStarted();
+    tmNetworkTimeout->stop();
+    fetchDataHandler(reply->readAll());
+}
+
+void InstrumentList::parseLoginReply(const QByteArray &reply)
+{
+    if (!networkAccessManager->cookieJar()
+             ->cookiesForUrl(config->getIpAddressServer())
+             .isEmpty()) {
+        qDebug() << "Cookie received, proceeding";
+        state = LOGGEDIN;
+    } else {
+        qWarning() << "Couldn't login, aborting";
+        state = FAILED;
     }
+    fetchDataHandler();
 }
 
-void InstrumentList::checkConnection()
+void InstrumentList::loginRequest()
 {
-    curlProcess->close();
-
-    QStringList reportArgs;
-    reportArgs << "--cookie" << config->getWorkFolder() + "/.kake" << "-k" << server + "?action=ListStations";
-    curlProcess->setArguments(reportArgs);
-    curlProcess->start();
-
-    connect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &InstrumentList::checkStationListReturn);
+    QNetworkRequest networkRequest;
+    networkRequest.setUrl(config->getSdefAuthAddress());
+    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                             "application/x-www-form-urlencoded");
+    QUrlQuery urlQuery;
+    urlQuery.addQueryItem("brukernavn", config->getSdefUsername());
+    urlQuery.addQueryItem("passord", config->getSdefPassword());
+    tmNetworkTimeout->start(10000);
+    networkReply = networkAccessManager->post(networkRequest,
+                                              urlQuery.toString(QUrl::FullyEncoded).toUtf8());
 }
 
-void InstrumentList::parseStationList(const QByteArray &ba)
+void InstrumentList::stationListRequest()
 {
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(ba);
+    QNetworkRequest networkRequest;
+    networkRequest.setUrl(config->getIpAddressServer() + "?action=ListStations");
+    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                             "application/x-www-form-urlencoded");
+
+    tmNetworkTimeout->start(10000);
+    networkReply = networkAccessManager->get(networkRequest);
+    state = ASKEDFORSTATIONS;
+}
+
+void InstrumentList::parseStationList(const QByteArray &reply)
+{
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(reply);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonObject metaObject = jsonObject.value("metadata").toObject();
-    QJsonObject dataObject = jsonObject.value("data").toObject();
 
     int nrOfElements = metaObject.value("totaltAntallTreff").toInt(0);
     if (nrOfElements > 0) {
-        nrOfStations = nrOfElements;
+        //nrOfStations = nrOfElements;
         QJsonArray data = jsonObject.value("data").toArray();
         if (data.size() == nrOfElements) { // Super simple fault check, improve! TODO
             for (auto &&array : data) {
@@ -66,28 +127,43 @@ void InstrumentList::parseStationList(const QByteArray &ba)
                 stn.latitude = array.toObject().value("Latitude").toString().toDouble();
                 stn.longitude = array.toObject().value("Longitude").toString().toDouble();
                 stn.status = array.toObject().value("Status").toString();
-                stn.type = (StationType)array.toObject().value("Type").toString().toInt();
+                stn.type = (StationType) array.toObject().value("Type").toString().toInt();
                 stn.mmsi = array.toObject().value("MMSI").toString().toULong();
                 int active = array.toObject().value("Aktiv").toString().toInt();
-                if (active == 0) stn.active = false; else stn.active = true;
+                if (active == 0)
+                    stn.active = false;
+                else
+                    stn.active = true;
 
                 stationInfo.append(stn);
             }
         }
         // We should have a list of stations here, time to ask for what they can do
-        stnIndex = 0;
-        disconnect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &InstrumentList::checkStationListReturn);
-        connect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &InstrumentList::checkInstrumentListReturn);
-        askForInstruments();
+        stationIndex = 0;
+        state = RECEIVEDSTATIONS;
+        fetchDataHandler();
+    }
+    else { // Failed request
+        tmNetworkTimeout->stop();
+        state = FAILED;
+        fetchDataHandler(); // Will deal with error msgs
     }
 }
 
-void InstrumentList::parseInstrumentList(const QByteArray &ba)
+void InstrumentList::instrumentListRequest()
 {
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(ba);
+    QNetworkRequest networkRequest;
+    networkRequest.setUrl(QUrl(config->getIpAddressServer() + "?action=ListInstruments&stnId="
+                               + QString::number(stationInfo[stationIndex].StationIndex)));
+    networkReply = networkAccessManager->get(networkRequest);
+    state = ASKEDFORINSTRUMENTS;
+}
+
+void InstrumentList::parseInstrumentList(const QByteArray &reply)
+{
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(reply);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonObject metaObject = jsonObject.value("metadata").toObject();
-    QJsonObject dataObject = jsonObject.value("data").toObject();
 
     int nrOfElements = metaObject.value("totaltAntallTreff").toInt(0);
     if (nrOfElements > 0) {
@@ -98,142 +174,51 @@ void InstrumentList::parseInstrumentList(const QByteArray &ba)
                 info.index = array.toObject().value("Ind").toString().toInt();
                 info.equipmentIndex = array.toObject().value("Utstyr_ind").toString().toInt();
                 QString category = array.toObject().value("Kategori").toString();
-                if (category.contains("Mottaker")) info.category = InstrumentCategory::RECEIVER;
-                else if (category.contains("PC")) info.category = InstrumentCategory::PC;
-                else info.category = InstrumentCategory::UNKNOWN;
+                if (category.contains("Mottaker"))
+                    info.category = InstrumentCategory::RECEIVER;
+                else if (category.contains("PC"))
+                    info.category = InstrumentCategory::PC;
+                else
+                    info.category = InstrumentCategory::UNKNOWN;
                 info.frequencyRange = array.toObject().value("Frekvensområde").toString();
                 info.ipAddress = array.toObject().value("IP").toString();
                 info.producer = array.toObject().value("Produsent").toString();
                 info.type = array.toObject().value("Type").toString();
                 info.serialNumber = array.toObject().value("Serienummer").toString();
 
-                stationInfo[stnIndex].instrumentInfo.append(info);
+                stationInfo[stationIndex].instrumentInfo.append(info);
             }
         }
     }
-    if (++stnIndex < nrOfStations) askForInstruments(); // keep asking until every stn is queried
-    else {      // now ask for equipment list
-        disconnect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &InstrumentList::checkInstrumentListReturn);
-        connect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &InstrumentList::checkEquipmentListReturn);
-        askForEquipmentList();
+    else { // Failed request
+        tmNetworkTimeout->stop();
+        state = FAILED;
+        fetchDataHandler(); // Will deal with error msgs
+    }
+    stationIndex++;
+    if (stationIndex == stationInfo.size()) {
+        state = RECEIVEDINSTRUMENTS;
+        fetchDataHandler();
+    } else {
+        instrumentListRequest(); // Keep asking until all stns queried
     }
 }
 
-void InstrumentList::loadFile()
+void InstrumentList::equipmentListRequest()
 {
-    QFile file(config->getWorkFolder() + "/stationdata.csv");
-    QTextStream ts(&file);
-    QStringList list;
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "Couldn't open station data file" << file.fileName();
-    }
-    else {
-        while (!file.atEnd()) {
-            QString str = file.readLine();
-            QStringList split = str.split(";");
-            if (split.size() == 3) {
-                list.append( QString().append(split[1]).append(";").append(split[0]).append(";").append(split[2]) ); // List for sorting
-                // Why not store it in different order?!
-            }
-        }
-        std::sort(list.begin(), list.end());
-        for (auto && string : list) {
-            QStringList split = string.split(';');
-            if (split.size() == 3) {
-                usableStnNames.append(split[0].trimmed());
-                usableStnIps.append(split[1].trimmed());
-                usableStnTypes.append(split[2].trimmed());
-            }
-        }
-    }
-    file.close();
+    QNetworkRequest networkRequest;
+    networkRequest.setUrl(QUrl(config->getIpAddressServer() + "?action=ListUtstyr"));
+    if (!tmNetworkTimeout->isActive())
+        tmNetworkTimeout->start(30000);
+    networkReply = networkAccessManager->get(networkRequest);
+    state = ASKEDFOREQUIPMENT;
 }
 
-void InstrumentList::saveFile()
+void InstrumentList::parseEquipmentList(const QByteArray &reply)
 {
-    QFile file(config->getWorkFolder() + "/stationdata.csv");
-    QTextStream ts(&file);
-
-    if (!file.open(QIODevice::WriteOnly)) {
-        qDebug() << "Couldn't save station data to file" << file.fileName();
-    }
-    else {
-        for (int i=0; i < usableStnIps.size(); i++) {
-            ts << usableStnIps[i] << ";" << usableStnNames[i] << ";" << usableStnTypes[i] << Qt::endl;
-        }
-    }
-    file.close();
-}
-
-void InstrumentList::checkStationListReturn(int exitCode, QProcess::ExitStatus)
-{
-    QByteArray ba = curlProcess->readAllStandardOutput();
-    if (exitCode == 0) {
-        parseStationList(ba);
-    }
-    else {
-        qDebug() << "InstrumentList: Error connecting, giving up";
-    }
-
-}
-
-void InstrumentList::checkInstrumentListReturn(int exitCode, QProcess::ExitStatus)
-{
-    QByteArray ba = curlProcess->readAllStandardOutput();
-    if (exitCode == 0) {
-        parseInstrumentList(ba);
-    }
-    else {
-        qDebug() << "InstrumentList: Error retreiving instrument data, giving up";
-    }
-
-}
-
-void InstrumentList::loginCompleted() // other class confirms login successful, continue
-{
-    checkConnection();
-}
-
-void InstrumentList::askForInstruments()
-{
-    curlProcess->close();
-
-    QStringList reportArgs;
-    reportArgs << "--cookie" << config->getWorkFolder() + "/.kake" << "-k"
-               << server + "?action=ListInstruments&stnId=" + QString::number(stationInfo[stnIndex].StationIndex);
-    curlProcess->setArguments(reportArgs);
-    curlProcess->start();
-}
-
-void InstrumentList::askForEquipmentList()
-{
-    curlProcess->close();
-
-    QStringList reportArgs;
-    reportArgs << "--cookie" << config->getWorkFolder() + "/.kake" << "-k"
-               << server + "?action=ListUtstyr";
-    curlProcess->setArguments(reportArgs);
-    curlProcess->start();
-}
-
-void InstrumentList::checkEquipmentListReturn(int exitCode, QProcess::ExitStatus)
-{
-    QByteArray ba = curlProcess->readAllStandardOutput();
-    if (exitCode == 0) {
-        parseEquipmentList(ba);
-    }
-    else {
-        qDebug() << "InstrumentList: Error retreiving equipment data, giving up";
-    }
-}
-
-void InstrumentList::parseEquipmentList(const QByteArray &ba)
-{
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(ba);
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(reply);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonObject metaObject = jsonObject.value("metadata").toObject();
-    QJsonObject dataObject = jsonObject.value("data").toObject();
 
     int nrOfElements = metaObject.value("totaltAntallTreff").toInt(0);
     if (nrOfElements > 0) {
@@ -247,15 +232,15 @@ void InstrumentList::parseEquipmentList(const QByteArray &ba)
             }
         }
     }
-    updStationInfoWithEquipmentList(); // Finally we should have enough data to generate a complete equipment list per station
-    //emit instrumentListReady(usableStnIps, usableStnNames, usableStnTypes);
+    state = RECEIVEDEQUIPMENT;
+    fetchDataHandler();
 }
 
-void InstrumentList::updStationInfoWithEquipmentList()
+void InstrumentList::updStationsWithEquipmentList()
 {
-    for (auto &station : stationInfo) {
-        for (auto &instrument : station.instrumentInfo) {
-            for (auto &type : equipmentInfo) {
+    for (auto &&station : stationInfo) {
+        for (auto &&instrument : station.instrumentInfo) {
+            for (auto &&type : equipmentInfo) {
                 if (instrument.equipmentIndex == type.index) {
                     instrument.type = type.type;
                     break;
@@ -263,20 +248,63 @@ void InstrumentList::updStationInfoWithEquipmentList()
             }
         }
     }
-    qDebug() << "Done parsing station/instrument list";
-    generateInstrumentList();
-    saveFile();
-    emit instrumentListDownloaded();
 }
 
-void InstrumentList::generateInstrumentList()
+void InstrumentList::fetchDataHandler(const QByteArray &reply)
+{
+    if (state == BEGIN) {
+        loginRequest();
+        state = ASKEDFORLOGIN;
+        qDebug() << ("Logging in");
+        emit instrumentListStarted("Logging in");
+    } else if (state == ASKEDFORLOGIN) {
+        parseLoginReply(reply);
+    } else if (state == LOGGEDIN) {
+        qDebug() << ("Logged in, asking for station data");
+        emit instrumentListStarted("Logged in, asking for station data");
+        stationListRequest();
+        state = ASKEDFORSTATIONS;
+    } else if (state == ASKEDFORSTATIONS) {
+        parseStationList(reply);
+    } else if (state == RECEIVEDSTATIONS) {
+        qDebug() << ("Received station data, now asking for instruments");
+        emit instrumentListStarted("Received station data, now asking for instruments");
+        instrumentListRequest();
+    } else if (state == ASKEDFORINSTRUMENTS) {
+        parseInstrumentList(reply);
+    } else if (state == RECEIVEDINSTRUMENTS) {
+        qDebug() << ("Received instruments, now asking for equipment list");
+        emit instrumentListStarted("Received instruments, now asking for equipment list");
+        equipmentListRequest();
+    } else if (state == ASKEDFOREQUIPMENT) {
+        parseEquipmentList(reply);
+    } else if (state == RECEIVEDEQUIPMENT) {
+        updStationsWithEquipmentList();
+        state = DONE;
+        qDebug() << ("Station list updated");
+        generateLists();
+        saveFile();
+        emit listReady(usableStnNames, usableStnIps, usableStnTypes);
+        emit instrumentListDownloaded("Updated instrument list, " +
+                                      QString::number(usableStnNames.size()) +
+                                      " instruments total");
+    } else if (state == FAILED) {
+        qWarning() << "Failed retrieving station list, giving up";
+        emit instrumentListFailed("Failed retrieving station list");
+        /*qDebug() << ("");
+        if (!usableStnNames.isEmpty())
+            emit listReady(usableStnNames, usableStnIps, usableStnTypes); // Cached data*/
+    }
+}
+
+void InstrumentList::generateLists()
 {
     usableStnIps.clear();
     usableStnNames.clear();
     usableStnTypes.clear();
 
-    for (auto &station: stationInfo) {
-        for (auto &instrument : station.instrumentInfo) {
+    for (auto &&station : stationInfo) {
+        for (auto &&instrument : station.instrumentInfo) {
             if (instrument.type.contains("EM200") || instrument.type.contains("EM100") || instrument.type.contains("PR200") ||
                 instrument.type.contains("PR100") || instrument.type.contains("EB500") || instrument.type.contains("ESMW") ||
                 instrument.type.contains("ESMB") || instrument.type.contains("USRP"))
