@@ -35,6 +35,9 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <QtMultimedia/QAudioOutput>
 #include <QtMultimedia/QMediaPlayer>
+#include <QAudioOutput>
+#include <QAudioFormat>
+#include <QBuffer>
 #include "config.h"
 #include "measurementdevice.h"
 #include "qcustomplot.h"
@@ -80,7 +83,9 @@
 #include "waterfall.h"
 #include "network.h"
 #include "iqplot.h"
-
+#include "datastreamaudio.h"
+#include "audioplayer.h"
+#include "audiooptions.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -212,6 +217,7 @@ private:
     QPushButton *btnTrigRecording = new QPushButton("Trigger recording");
     QPushButton *btnRestartAvgCalc = new QPushButton("Restart avg. calc.");
     QPushButton *btnPmrTable = new QPushButton("PMR table");
+    QPushButton *btnAudioOpt = new QPushButton("Audio");
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
     QDoubleSpinBox *instrTrigBandwidth = new QDoubleSpinBox;
@@ -263,6 +269,7 @@ private:
     QAction *optMqtt;
     QAction *optOAuth;
     QAction *optIq;
+
     QAction *hideShowControls = new QAction("Hide/show receiver controls");
     QAction *hideShowTrigSettings = new QAction("Hide/show trigger settings");
     QAction *hideShowStatusIndicator = new QAction("Hide/show status indicators");
@@ -292,6 +299,7 @@ private:
     MqttOptions *mqttOptions;
     OAuthOptions *oAuthOptions;
     IqOptions *iqOptions;
+    AudioOptions *audioOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
 
@@ -342,6 +350,7 @@ private:
     QSharedPointer<TcpDataStream> tcpStream = QSharedPointer<TcpDataStream>(new TcpDataStream, &QObject::deleteLater);
     QSharedPointer<VifStreamUdp> vifStreamUdp = QSharedPointer<VifStreamUdp>(new VifStreamUdp, &QObject::deleteLater);
     QSharedPointer<VifStreamTcp> vifStreamTcp = QSharedPointer<VifStreamTcp>(new VifStreamTcp, &QObject::deleteLater);
+    DatastreamAudio *datastreamAudio = new DatastreamAudio;
 
     double tracesPerSecond = 0;
     AccessHandler *accessHandler = new AccessHandler(this, config);
@@ -350,6 +359,7 @@ private:
     Network *ptrNetwork = new Network(config);
     bool useDbm;
     bool measDeviceFinished = false;
+    AudioPlayer audioPlayer;
 
 signals:
     void stopPlot(bool);

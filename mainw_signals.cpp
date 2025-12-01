@@ -923,4 +923,25 @@ void MainWindow::setSignals()
     connect(btnRestartAvgCalc, &QPushButton::clicked, this, [this] () {
         traceBuffer->restartCalcAvgLevel(true); // Force restart
     });
+    connect(tcpStream.data(), &DataStreamBaseClass::newAudioData, datastreamAudio, &DatastreamAudio::parseAudioData);
+    connect(udpStream.data(), &DataStreamBaseClass::newAudioData, datastreamAudio, &DatastreamAudio::parseAudioData);
+
+    connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioPlayer, &AudioPlayer::playChunk);
+    connect(datastreamAudio, &DatastreamAudio::audioModeChanged, &audioPlayer, &AudioPlayer::setFormat);
+
+    connect(btnAudioOpt, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(audioOptions, &AudioOptions::askForDemodBwList, this, [this] {
+        audioOptions->getDemodBwList(measurementDevice->retDemodBwList());
+    });
+    connect(audioOptions, &AudioOptions::askForDemodTypeList, this, [this] {
+        audioOptions->getDemodTypeList(measurementDevice->retDemodTypeList());
+    });
+    connect(audioOptions, &AudioOptions::audioMode, measurementDevice, &MeasurementDevice::setAudioMode);
+    connect(audioOptions, &AudioOptions::demodType, measurementDevice, &MeasurementDevice::setDemodType);
+    connect(audioOptions, &AudioOptions::demodBw, measurementDevice, &MeasurementDevice::setDemodBw);
+    connect(audioOptions, &AudioOptions::squelch, measurementDevice, &MeasurementDevice::setSquelch);
+    connect(audioOptions, &AudioOptions::squelchLevel, measurementDevice, &MeasurementDevice::setSquelchLevel);
+    connect(audioOptions, &AudioOptions::audioDevice, &audioPlayer, &AudioPlayer::setAudioDevice);
+    connect(audioOptions, &AudioOptions::activateAudio, &audioPlayer, &AudioPlayer::playAudio);
+
 }

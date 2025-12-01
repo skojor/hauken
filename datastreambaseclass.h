@@ -63,6 +63,7 @@ public:
     QVector<complexInt16> iq;
     quint16 sequenceNr = 0;
     bool waitingForPscanEndMarker = true;
+    friend class DatastreamAudio;
 
 public slots:
     virtual void openListener() = 0;
@@ -102,6 +103,7 @@ signals:
     void freqChanged(double, double);
     void resChanged(double);
     void newIqData(const QList<complexInt16>&);
+    void newAudioData(const QByteArray &);
 
 private slots:
 
@@ -110,5 +112,7 @@ protected:
 private:
 
 };
+
+
 
 #endif // DATASTREAMBASECLASS_H

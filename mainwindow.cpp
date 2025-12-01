@@ -53,6 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     mqttOptions = new MqttOptions(config);
     oAuthOptions = new OAuthOptions(config);
     iqOptions = new IqOptions(config);
+    audioOptions = new AudioOptions(config);
 
     arduinoPtr = new Arduino(config);
     aiPtr = new AI(config);
@@ -375,6 +376,7 @@ void MainWindow::createLayout()
     instrForm->addRow(new QLabel("Gain control"), instrGainControl);
     instrForm->addRow(new QLabel("IP address"), instrIpAddr);
     instrForm->addRow(new QLabel("Port"), instrPort);
+    instrForm->addRow(new QLabel(), btnAudioOpt);
     instrForm->addRow(instrConnect, instrDisconnect);
 
     instrGroupBox->setLayout(instrForm);
@@ -666,6 +668,7 @@ void MainWindow::setInputsState(const bool state)
     instrAntPort->setEnabled(state);
     instrGainControl->setEnabled(state);
     btnTrigRecording->setEnabled(state);
+    btnAudioOpt->setEnabled(state);
 }
 
 void MainWindow::generatePopup(const QString msg)

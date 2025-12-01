@@ -7,6 +7,9 @@ set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64")
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
 find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -98,6 +101,11 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     iqplot.h iqplot.cpp
     asciitranslator.h asciitranslator.cpp
     networkrequestsbase.h networkrequestsbase.cpp
+    datastreamaudio.h datastreamaudio.cpp
+    audioplayer.h audioplayer.cpp
+    audiooptions.h audiooptions.cpp
+
+
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -178,6 +186,9 @@ elseif(UNIX)
       debug opencv_videoio
       debug quazip1-qt6
   )
+target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)
 endif()
 

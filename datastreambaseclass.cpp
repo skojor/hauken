@@ -29,6 +29,10 @@ void DataStreamBaseClass::processData(const QByteArray &buf)
         if (attrHeader.tag == (int) Instrument::Tags::GPSC
             || genAttrAdvHeader.tag == (int) Instrument::Tags::GPSC)
             readGpscompassData(buf);
+        else if ((devicePtr->advProtocol && genAttrAdvHeader.tag == (int)Instrument::Tags::AUDIO) ||
+                 (!devicePtr->advProtocol && attrHeader.tag == (int)Instrument::Tags::AUDIO)) {
+            emit newAudioData(buf); // Handled in own class
+        }
         else {
             fillFft(buf);
         }

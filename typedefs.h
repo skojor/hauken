@@ -102,6 +102,8 @@ enum class JAMMINGSTATE
     CRITICALNOFIX
 };
 
+enum class MODULATIONTYPE { FM, AM, PULSE, PM, IQ, ISB, CW, USB, LSB };
+
 class Eb200Header
 {
 public:
@@ -112,7 +114,13 @@ public:
     quint16 seqNumber = 0;
     quint16 reserved = 0;
     quint32 dataSize = 0;
-    const int size = 16;
+    static const int size = 16;
+    bool readData(QDataStream &ds) {
+        ds >> magicNumber >> versionMinor >> versionMajor >> seqNumber >> reserved >> dataSize;
+        if (!ds.atEnd()) return true;
+        else return false;
+    }
+
 };
 
 class UdpDatagramAttribute
@@ -125,7 +133,12 @@ public:
     quint8 channelNumber = 0;
     quint8 optHeaderLength= 0;
     quint32 selectorFlags = 0;
-    const int size = 12;
+    static const int size = 12;
+    bool readData(QDataStream &ds) {
+        ds  >> tag >> length >> numItems >> channelNumber >> optHeaderLength >> selectorFlags;
+        if (!ds.atEnd()) return true;
+        else return false;
+    }
 };
 
 class EsmbOptHeaderDScan
@@ -210,7 +223,33 @@ public:
     quint32 res6 = 0;
     quint32 res7 = 0;
     quint32 res8 = 0;
-    const int size = 60;
+    static const int size = 60;
+};
+
+class AudioOptHeader
+{
+public:
+    AudioOptHeader() {}
+    qint16  audioMode = 0;
+    qint16  frameLength = 0;
+    quint32 freqLow = 0;
+    quint32 bandwidth = 0;
+    quint16 demodulation = 0;
+    char    demodString[8];
+    quint32 freqHigh = 0;
+    char    reserved[6];
+    quint64 outputTimeStamp = 0;
+    qint16  signalSource = 0;
+    static const int size = 42;
+    bool readData(QDataStream &ds) {
+        ds  >> audioMode >> frameLength >> freqLow >> bandwidth >> demodulation;
+        ds.readRawData(demodString, sizeof(demodString));
+        ds  >> freqHigh;
+        ds.readRawData(reserved, sizeof(reserved));
+        ds  >> outputTimeStamp >> signalSource;
+        if (!ds.atEnd()) return true;
+        else return false;
+    }
 };
 
 //class OptHeaderEM200  just use pscan opt header
@@ -263,6 +302,8 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             antPorts << "Default";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
@@ -270,6 +311,9 @@ public:
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000";
             fftModes << "Off" << "Min" << "Max" << "Scalar";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
@@ -289,12 +333,17 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             antPorts << "Default";
             pscanResolutions << "0.125" << "0.250" << "0.625"
                              << "1.25" << "2" << "3.125" << "6.25" << "12.5"
                              << "25" << "50";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             fftModes << "Off";
             minFrequency = 20e6;
             maxFrequency = 6e9;
@@ -313,6 +362,8 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             antPorts << "Ant1" << "Ant2";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
@@ -320,6 +371,9 @@ public:
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000";
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000" << "40000";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             minFrequency = 8e3;
             maxFrequency = 8e9;
             hasAntNames = true;
@@ -340,6 +394,8 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             antPorts << "Ant1" << "Ant2" << "Ant3";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
@@ -348,6 +404,10 @@ public:
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "80000" << "125000"
                      << "250000" << "500000";
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000"
+                        << "40000" << "80000" << "125000";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             minFrequency = 8e3;
             maxFrequency = 8e9;
             hasAntNames = true;
@@ -369,6 +429,8 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             antPorts << "Ant1" << "Ant2" << "Ant3";
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
@@ -376,6 +438,10 @@ public:
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "80000";
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000"
+                        << "40000" << "80000";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             minFrequency = 8e3;
             maxFrequency = 26.5e9;
             hasAntNames = true;
@@ -393,11 +459,16 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             pscanResolutions << "0.075" << "0.15" << "0.3" << "0.5" << "0.75"
                              << "1.2" << "1.5" << "2" << "3" << "4" << "4.5" << "7.5"
                              << "15" << "50" << "60" << "75" << "125" << "150";
             ffmSpans << "25" << "50" << "100" << "200" << "500" << "1000";
             fftModes << "Off";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             antPorts << "Default";
             minFrequency = 9e3;
             maxFrequency = 2.999e9;
@@ -419,6 +490,8 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             antPorts << "Default";
             pscanResolutions << "0.125" << "0.250" << "0.625"
                              << "1.25" << "2" << "3.125" << "6.25" << "12.5"
@@ -426,6 +499,9 @@ public:
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000";
             fftModes << "Off";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             minFrequency = 20e6;
             maxFrequency = 6e9;
         }
@@ -445,12 +521,17 @@ public:
             antPorts.clear();
             fftModes.clear();
             antPorts.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
             pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
                              << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
                              << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
             ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
                      << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000";
             fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000" << "40000";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
             minFrequency = 8e3;
             maxFrequency = 8e9;
             hasAntNames = false;
@@ -467,6 +548,8 @@ public:
             ffmSpans.clear();
             antPorts.clear();
             fftModes.clear();
+            demodBwList.clear(); // NOPE
+            demodTypeList.clear(); //NOPE
             hasAvgType = true;
             hasAutoAtt = true;
             pscanResolutions << "0.625" << "1.25" << "2" << "2.5" << "3.125" << "5"
@@ -517,6 +600,8 @@ public:
     QStringList ffmSpans;
     QStringList pscanResolutions;
     QStringList fftModes;
+    QStringList demodBwList;
+    QStringList demodTypeList;
     double latitude = 0, longitude = 0, altitude = 0, dop = 0;
     float sog = 0, cog = 0;
     QDateTime gnssTimestamp;
