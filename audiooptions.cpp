@@ -46,8 +46,8 @@ void AudioOptions::start()
     emit askForDemodTypeList();
     emit askForDemodBwList();
 
-    comboOpt3->setCurrentIndex(comboOpt3->findText(config->getAudioModulationBw()));
-    comboOpt4->setCurrentIndex(comboOpt4->findText(config->getAudioModulationType()));
+    comboOpt3->setCurrentIndex(comboOpt3->findText(config->getAudioModulationType()));
+    comboOpt4->setCurrentIndex(comboOpt4->findText(config->getAudioModulationBw()));
     sbOpt1->setValue(config->getAudioSquelchLevel());
     cbOpt4->setChecked(config->getAudioActivate());
 
@@ -60,17 +60,13 @@ void AudioOptions::saveCurrentSettings()
     config->setAudioRecordToFile(cbOpt2->isChecked());
     config->setPlaybackDevice(comboOpt1->currentIndex());
     config->setAudioMode(comboOpt2->currentIndex());
-    config->setAudioModulationBw(comboOpt3->currentText());
-    config->setAudioModulationType(comboOpt4->currentText());
+    config->setAudioModulationType(comboOpt3->currentText());
+    config->setAudioModulationBw(comboOpt4->currentText());
     config->setAudioSquelch(cbOpt3->isChecked());
     config->setAudioSquelchLevel(sbOpt1->value());
     config->setAudioActivate(cbOpt4->isChecked());
 
-    reportAudioMode();
-    reportDemodBw();
-    reportDemodType();
-    reportPlayback();
-    reportSquelch();
+    report();
 
     dialog->close();
 }
@@ -118,30 +114,47 @@ void AudioOptions::getDemodTypeList(const QStringList &list)
 
 void AudioOptions::reportAudioMode()
 {
-    if (cbOpt4->isChecked())
-        emit audioMode(comboOpt2->currentIndex() + 1);
+    if (config->getAudioActivate())
+        emit audioMode(config->getAudioMode() + 1);
     else
         emit audioMode(0); // Effectively disabling demod
 }
 
 void AudioOptions::reportDemodBw()
 {
-    emit demodBw(comboOpt4->currentText().toInt());
+    emit demodBw(config->getAudioModulationBw().toInt());
 }
 
 void AudioOptions::reportDemodType()
 {
-    emit demodType(comboOpt3->currentText());
+    emit demodType(config->getAudioModulationType());
 }
 
 void AudioOptions::reportPlayback()
 {
-    emit activateAudio(cbOpt1->isChecked());
-    emit audioDevice(comboOpt1->currentIndex());
+    emit activateAudio(config->getAudioLivePlayback());
+    QList<QAudioDevice> audioDevices = QMediaDevices::audioOutputs();
+    for (int i=0; i<audioDevices.size(); i++)
+        if (audioDevices[i].isDefault()) emit audioDevice(i);
 }
 
 void AudioOptions::reportSquelch()
 {
-    emit squelch(cbOpt3->isChecked());
-    emit squelchLevel(sbOpt1->value());
+    emit squelch(config->getAudioSquelch());
+    emit squelchLevel(config->getAudioSquelchLevel());
+}
+
+void AudioOptions::reportRecord()
+{
+    emit record(config->getAudioRecordToFile());
+}
+
+void AudioOptions::report()
+{
+    reportAudioMode();
+    reportDemodBw();
+    reportDemodType();
+    reportPlayback();
+    reportSquelch();
+    reportRecord();
 }

@@ -172,6 +172,7 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         instrStopFreq->setMaximum(measurementDevice->deviceMaxFreq() / 1e6);
         instrPscanFreqChanged();
         instrFfmCenterFreqChanged();
+        audioOptions->report();
     } else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
     }

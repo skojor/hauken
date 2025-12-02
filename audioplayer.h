@@ -28,7 +28,8 @@ private:
     QAudioSink *m_audioSink = nullptr;
     QIODevice *m_output = nullptr;
     QAudioFormat m_format;
-    bool playerActive = true;
+    bool m_playerActive = true;
+    bool m_formatSet = false;
 };
 
 #endif // AUDIOPLAYER_H

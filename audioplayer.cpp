@@ -3,12 +3,12 @@
 AudioPlayer::AudioPlayer(QObject *parent)
     : QObject{parent}
 {
-    m_format.setSampleFormat(QAudioFormat::Unknown);
+   // m_format.setSampleFormat(QAudioFormat::Unknown);
 }
 
 void AudioPlayer::playChunk(const QByteArray &pcm)
 {
-    if (!m_output || !playerActive)
+    if (!m_output || !m_playerActive || !m_formatSet)
         return;
     else m_output->write(pcm);
     /*if (written != pcm.size()) {
@@ -28,6 +28,7 @@ void AudioPlayer::setFormat(int samplerate, int channels, QAudioFormat::SampleFo
     else if (channels < 1 or channels > 2)
         qDebug() << "Channels can only be 1 or 2!";
     else {
+        m_formatSet = true;
         if (m_audioSink)
             m_audioSink->deleteLater();
         m_format.setSampleRate(samplerate);
@@ -43,10 +44,10 @@ void AudioPlayer::setFormat(int samplerate, int channels, QAudioFormat::SampleFo
 void AudioPlayer::playAudio(bool play)
 {
     if (play) {
-        playerActive = true;
+        m_playerActive = true;
     }
     else {
-        playerActive = false;
+        m_playerActive = false;
     }
 
 }

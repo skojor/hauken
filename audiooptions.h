@@ -16,6 +16,7 @@ public:
     void saveCurrentSettings();
     void getDemodBwList(const QStringList &list);
     void getDemodTypeList(const QStringList &list);
+    void report();
 
 signals:
     void askForDemodBwList();
@@ -27,6 +28,7 @@ signals:
     void activateAudio(bool);
     void squelch(bool);
     void squelchLevel(int);
+    void record(bool);
 
 private:
     QSharedPointer<Config> config;
@@ -37,6 +39,7 @@ private:
     void reportDemodBw();
     void reportPlayback();
     void reportSquelch();
+    void reportRecord();
 };
 
 #endif // AUDIOOPTIONS_H

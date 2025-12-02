@@ -86,6 +86,7 @@
 #include "datastreamaudio.h"
 #include "audioplayer.h"
 #include "audiooptions.h"
+#include "audiorecorder.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -360,6 +361,7 @@ private:
     bool useDbm;
     bool measDeviceFinished = false;
     AudioPlayer audioPlayer;
+    AudioRecorder audioRecorder;
 
 signals:
     void stopPlot(bool);

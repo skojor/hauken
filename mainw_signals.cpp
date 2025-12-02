@@ -936,6 +936,7 @@ void MainWindow::setSignals()
     connect(audioOptions, &AudioOptions::askForDemodTypeList, this, [this] {
         audioOptions->getDemodTypeList(measurementDevice->retDemodTypeList());
     });
+    connect(audioOptions, &AudioOptions::audioMode, datastreamAudio, &DatastreamAudio::reportAudioMode); // Needed to have initial setup of player format
     connect(audioOptions, &AudioOptions::audioMode, measurementDevice, &MeasurementDevice::setAudioMode);
     connect(audioOptions, &AudioOptions::demodType, measurementDevice, &MeasurementDevice::setDemodType);
     connect(audioOptions, &AudioOptions::demodBw, measurementDevice, &MeasurementDevice::setDemodBw);
@@ -944,4 +945,18 @@ void MainWindow::setSignals()
     connect(audioOptions, &AudioOptions::audioDevice, &audioPlayer, &AudioPlayer::setAudioDevice);
     connect(audioOptions, &AudioOptions::activateAudio, &audioPlayer, &AudioPlayer::playAudio);
 
+    connect(audioOptions, &AudioOptions::record, &audioRecorder, &AudioRecorder::enableRecorder);
+    connect(datastreamAudio, &DatastreamAudio::audioModeChanged, &audioRecorder, &AudioRecorder::updFormat);
+    connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioRecorder, &AudioRecorder::receiveAudioData);
+    connect(datastreamAudio, &DatastreamAudio::headerDataChanged, &audioRecorder, &AudioRecorder::demodChanged);
+    connect(config.data(), &Config::settingsUpdated, this, [this]() {
+        audioRecorder.setFileLocation(config->getLogFolder());
+    });
+    connect(iqPlot, &IqPlot::busyRecording, this, [this](bool b) {
+        if (b)
+            measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
+        else if (config->getAudioActivate())
+            ///measurementDevice->setAudioMode(config->getAudioMode() + 1); // Restore mode when done (if it should be active)
+            audioOptions->report();
+    });
 }

@@ -10,6 +10,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -104,6 +105,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     datastreamaudio.h datastreamaudio.cpp
     audioplayer.h audioplayer.cpp
     audiooptions.h audiooptions.cpp
+    audiorecorder.h audiorecorder.cpp
 
 
 )
@@ -131,6 +133,7 @@ target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
     ${CMAKE_CURRENT_SOURCE_DIR}/include/msal
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/lame
 )
 elseif(UNIX)
   target_include_directories(Hauken PRIVATE
@@ -151,6 +154,7 @@ target_link_libraries(Hauken PRIVATE
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/libmp3lame.lib
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -163,6 +167,7 @@ target_link_libraries(Hauken PRIVATE
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/libmp3lame.lib
 )
 elseif(UNIX)
   target_link_libraries(Hauken PRIVATE
@@ -186,6 +191,7 @@ elseif(UNIX)
       debug opencv_videoio
       debug quazip1-qt6
   )
+target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)

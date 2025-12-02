@@ -8,10 +8,10 @@ DatastreamAudio::DatastreamAudio(QObject *parent)
 void DatastreamAudio::parseAudioData(const QByteArray &buf)
 {
     QDataStream ds(buf);
-    if (readHeaders(ds) && checkHeaders())
+    if (readHeaders(ds) && checkHeaders()) {
         readAudioData(ds);
-    /*else
-        qDebug() << "Audio headers failed sanity check";*/
+        checkForHeaderChanges();
+    }
 }
 
 bool DatastreamAudio::readHeaders(QDataStream &ds)
@@ -31,9 +31,9 @@ bool DatastreamAudio::checkHeaders()
     if (m_attrHeader.tag != (int)Instrument::Tags::AUDIO)
         valid = false;
 
-    if (m_attrHeader.optHeaderLength && m_audioOptHeader.audioMode != audioMode) {
-        audioMode = m_audioOptHeader.audioMode;
-        reportAudioMode();
+    if (m_attrHeader.optHeaderLength && m_audioOptHeader.audioMode != m_audioMode) {
+        m_audioMode = m_audioOptHeader.audioMode;
+        reportAudioMode(m_audioMode);
     }
 
     return valid;
@@ -59,9 +59,9 @@ void DatastreamAudio::readAudioData(QDataStream &ds)
     }
 }
 
-void DatastreamAudio::reportAudioMode()
+void DatastreamAudio::reportAudioMode(const int mode)
 {
-    switch (audioMode) {
+    switch (mode) {
     case 1:
         emit audioModeChanged(32000, 2, QAudioFormat::Int16);
         break;
@@ -100,5 +100,17 @@ void DatastreamAudio::reportAudioMode()
         break;
     default:
         emit audioModeChanged(0, 0, QAudioFormat::Unknown);
+    }
+}
+
+void DatastreamAudio::checkForHeaderChanges()
+{
+    quint64 f = (quint64)m_audioOptHeader.freqHigh << 32 | m_audioOptHeader.freqLow;
+
+    if (f != m_freq || m_audioOptHeader.bandwidth != m_bw || m_audioOptHeader.demodString != m_demodType) { // Report changes
+        m_freq = f;
+        m_bw = m_audioOptHeader.bandwidth;
+        m_demodType = QString(m_audioOptHeader.demodString);
+        emit headerDataChanged(m_freq, m_bw, m_demodType);
     }
 }
