@@ -956,7 +956,6 @@ void MainWindow::setSignals()
         if (b)
             measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
         else if (config->getAudioActivate())
-            ///measurementDevice->setAudioMode(config->getAudioMode() + 1); // Restore mode when done (if it should be active)
-            audioOptions->report();
+            audioOptions->report(); // Restore mode when done (if it should be active)
     });
 }
