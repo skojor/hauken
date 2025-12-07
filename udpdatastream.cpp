@@ -40,7 +40,7 @@ void UdpDataStream::newDataHandler()
     while (udpSocket->hasPendingDatagrams()) {                    // will read all pending packets and analyze, one by one
         QByteArray data = udpSocket->receiveDatagram().data();
         byteCtr += data.size();
-        readHeader(data);
+        readHeaders(data);
         if (sequenceNr == 0)
             sequenceNr = header.seqNumber; // Initial value
 
@@ -62,13 +62,13 @@ void UdpDataStream::newDataHandler()
         }
         else {
             sequenceNr = 0;
-            waitingForPscanEndMarker = true;
+            emit waitForPscanEndMarker(true);
             udpPacketList.clear();
         }
     }
     if (udpPacketList.size() > 500) {
         udpPacketList.clear();
         sequenceNr = 0;
-        waitingForPscanEndMarker = true;
+        emit waitForPscanEndMarker(true);
     }
 }

@@ -457,6 +457,26 @@ public slots:
     int getMqttSiteFilter() { return settings->value("mqtt/siteFilter", 0).toInt();}
     void setMqttSiteFilter(int i) { settings->setValue("mqtt/siteFilter", i); emit settingsUpdated();}
 
+    // Audio options
+    bool getAudioActivate() { return settings->value("audio/activate", false).toBool();}
+    void setAudioActivate(bool b) { settings->setValue("audio/activate", b);}
+    bool getAudioLivePlayback() { return settings->value("audio/livePlayback", false).toBool();}
+    void setAudioLivePlayback(bool b) { settings->setValue("audio/livePlayback", b); }
+    bool getAudioRecordToFile() { return settings->value("audio/recordToFile", false).toBool();}
+    void setAudioRecordToFile(bool b) { settings->setValue("audio/recordToFile", b);}
+    int getPlaybackDevice() { return settings->value("audio/playbackDevice", 0).toInt();}
+    void setPlaybackDevice(int i) { settings->setValue("audio/playbackDevice", i);}
+    int getAudioMode() { return settings->value("audio/mode", 5).toInt();}
+    void setAudioMode(int i) { settings->setValue("audio/mode", i);}
+    QString getAudioModulationType() { return settings->value("audio/modulationType", "FM").toString();}
+    void setAudioModulationType(QString s) { settings->setValue("audio/modulationType", s);}
+    QString getAudioModulationBw() { return settings->value("audio/modulationBw", "12").toString();}
+    void setAudioModulationBw(QString s) { settings->setValue("audio/modulationBw", s);}
+    bool getAudioSquelch() { return settings->value("audio/squelch", true).toBool();};
+    void setAudioSquelch(bool b) { settings->setValue("audio/squelch", b);}
+    int getAudioSquelchLevel() { return settings->value("audio/squelchLevel", 0).toInt();}
+    void setAudioSquelchLevel(int i) { settings->setValue("audio/squelchLevel", i);}
+
 private slots:
 
 private:

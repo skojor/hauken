@@ -30,7 +30,7 @@ void MainWindow::setSignals()
             [this](int index) {
                 if (instrAntPort->currentIndex() != -1)
                     config->setInstrAntPort(index);
-                    emit antennaNameChanged(instrAntPort->currentText()); // Info for sdef header
+                emit antennaNameChanged(instrAntPort->currentText()); // Info for sdef header
             }); // to ignore signals when combo data is inserted
     connect(this,
             &MainWindow::antennaPortChanged,
@@ -44,7 +44,7 @@ void MainWindow::setSignals()
     connect(instrPort, &QLineEdit::editingFinished, this, &MainWindow::instrPortChanged);
 
     connect(instrConnect, &QPushButton::clicked, this, [this]() {
-            btnConnectPressed(true);
+        btnConnectPressed(true);
     });
     connect(instrDisconnect,
             &QPushButton::clicked,
@@ -207,10 +207,10 @@ void MainWindow::setSignals()
             &TraceAnalyzer::setAnalyzerReady);
 
     if (!config->getGeoLimitActive()) {
-        connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
-        connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
-        connect(tcpStream.data(), &TcpDataStream::newFftData, ptrNetwork, &Network::newTraceline);
-        connect(udpStream.data(), &UdpDataStream::newFftData, ptrNetwork, &Network::newTraceline);
+        connect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+        connect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
+        connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+        connect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
     }
 
     connect(measurementDevice,
@@ -558,24 +558,18 @@ void MainWindow::setSignals()
     });
     connect(geoLimit, &GeoLimit::currentPositionOk, this, [this](bool weAreInsidePolygon) {
         if (weAreInsidePolygon) {
-            connect(tcpStream.data(),
-                    &TcpDataStream::newFftData,
-                    traceBuffer,
-                    &TraceBuffer::addTrace);
-            connect(udpStream.data(),
-                    &UdpDataStream::newFftData,
-                    traceBuffer,
-                    &TraceBuffer::addTrace);
+            connect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            connect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
+            connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            connect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
+
             waterfall->restartPlot();
         } else {
-            disconnect(tcpStream.data(),
-                       &TcpDataStream::newFftData,
-                       traceBuffer,
-                       &TraceBuffer::addTrace);
-            disconnect(udpStream.data(),
-                       &UdpDataStream::newFftData,
-                       traceBuffer,
-                       &TraceBuffer::addTrace);
+            disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
+            disconnect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            disconnect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
+
             emit stopPlot(false);
             traceBuffer->emptyBuffer();
         }
@@ -648,11 +642,24 @@ void MainWindow::setSignals()
         else
             gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
     });
+    connect(datastreamPScan, &DatastreamPScan::frequencyChanged, customPlotController, &CustomPlotController::freqChanged);
+    connect(datastreamPScan, &DatastreamPScan::frequencyChanged, traceAnalyzer, &TraceAnalyzer::freqChanged);
+    connect(datastreamPScan, &DatastreamPScan::frequencyChanged, aiPtr, &AI::freqChanged);
+    connect(datastreamPScan, &DatastreamPScan::resolutionChanged, customPlotController, &CustomPlotController::resChanged);
+    connect(datastreamPScan, &DatastreamPScan::resolutionChanged, traceAnalyzer, &TraceAnalyzer::resChanged);
+    connect(datastreamPScan, &DatastreamPScan::resolutionChanged, aiPtr, &AI::resChanged);
+
+    connect(datastreamIfPan, &DatastreamIfPan::frequencyChanged, customPlotController, &CustomPlotController::freqChanged);
+    connect(datastreamIfPan, &DatastreamIfPan::frequencyChanged, traceAnalyzer, &TraceAnalyzer::freqChanged);
+    connect(datastreamIfPan, &DatastreamIfPan::frequencyChanged, aiPtr, &AI::freqChanged);
+    connect(datastreamIfPan, &DatastreamPScan::resolutionChanged, customPlotController, &CustomPlotController::resChanged);
+    connect(datastreamIfPan, &DatastreamPScan::resolutionChanged, traceAnalyzer, &TraceAnalyzer::resChanged);
+    connect(datastreamIfPan, &DatastreamPScan::resolutionChanged, aiPtr, &AI::resChanged);
 
     // Tcp/udp shared pointer signals
     //connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
     //connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
-    connect(tcpStream.data(), &TcpDataStream::freqChanged, this, [this](double a, double b) {
+    /*connect(tcpStream.data(), &TcpDataStream::freqChanged, this, [this](double a, double b) {
         customPlotController->freqChanged(a, b);
         traceAnalyzer->freqChanged(a, b);
         aiPtr->freqChanged(a, b);
@@ -671,7 +678,7 @@ void MainWindow::setSignals()
         customPlotController->resChanged(a);
         traceAnalyzer->resChanged(a);
         aiPtr->resChanged(a);
-    });
+    });*/ /// FIX! New signal from pscan/ifpan class!
 
     connect(read1809Data, &Read1809Data::freqChanged, this, [this](double a, double b) {
         customPlotController->freqChanged(a, b);
@@ -686,53 +693,20 @@ void MainWindow::setSignals()
 
     connect(tcpStream.data(), &TcpDataStream::bytesPerSecond, this, &MainWindow::showBytesPerSec);
     connect(udpStream.data(), &UdpDataStream::bytesPerSecond, this, &MainWindow::showBytesPerSec);
-    connect(tcpStream.data(), &TcpDataStream::tracesPerSecond, this, [this](double d) {
+    connect(datastreamPScan, &DatastreamPScan::tracesPerSecond, this, [this](double d) {
         sdefRecorder->updTracesPerSecond(d);
         tracesPerSecond = d; // For view on mainWindow
     });
-    connect(udpStream.data(), &UdpDataStream::tracesPerSecond, this, [this](double d) {
+    connect(datastreamPScan, &DatastreamPScan::tracesPerSecond, this, [this](double d) {
         sdefRecorder->updTracesPerSecond(d);
         tracesPerSecond = d; // For view on mainWindow
     });
 
-    connect(tcpStream.data(),
-            &TcpDataStream::timeout,
-            measurementDevice,
-            &MeasurementDevice::handleStreamTimeout);
-    connect(udpStream.data(),
-            &UdpDataStream::timeout,
-            measurementDevice,
-            &MeasurementDevice::handleStreamTimeout);
-
-    connect(tcpStream.data(),
-            &TcpDataStream::streamErrorResetFreq,
-            measurementDevice,
-            &MeasurementDevice::resetFreqSettings);
-    connect(udpStream.data(),
-            &UdpDataStream::streamErrorResetFreq,
-            measurementDevice,
-            &MeasurementDevice::resetFreqSettings);
-
-    connect(tcpStream.data(),
-            &TcpDataStream::streamErrorResetConnection,
-            measurementDevice,
-            &MeasurementDevice::handleNetworkError);
-    connect(udpStream.data(),
-            &UdpDataStream::streamErrorResetConnection,
-            measurementDevice,
-            &MeasurementDevice::handleNetworkError);
-    connect(traceAnalyzer,
-            &TraceAnalyzer::trigRegistered,
-            iqPlot,
-            &IqPlot::setFfmFrequency);
-    connect(measurementDevice,
-            &MeasurementDevice::iqFfmFreqChanged,
-            iqPlot,
-            &IqPlot::setFfmFrequency);
-    connect(vifStreamTcp.data(),
-            &VifStreamTcp::newFfmCenterFrequency,
-            iqPlot,
-            &IqPlot::setFfmFrequency);
+    connect(tcpStream.data(), &TcpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
+    connect(udpStream.data(), &UdpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
+    connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setFfmFrequency);
+    connect(measurementDevice, &MeasurementDevice::iqFfmFreqChanged, iqPlot, &IqPlot::setFfmFrequency);
+    connect(vifStreamTcp.data(), &VifStreamTcp::newFfmCenterFrequency, iqPlot, &IqPlot::setFfmFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
         if (gnssDevice1->isValid())
@@ -742,30 +716,15 @@ void MainWindow::setSignals()
         else if (measurementDevice->isPositionValid())
             cameraRecorder->updPosition(measurementDevice->sendGnssData());
     });
-    connect(traceAnalyzer,
-            &TraceAnalyzer::maxLevelMeasured,
-            cameraRecorder,
-            &CameraRecorder::receivedSignalLevel);
+    connect(traceAnalyzer, &TraceAnalyzer::maxLevelMeasured, cameraRecorder, &CameraRecorder::receivedSignalLevel);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, cameraRecorder, &CameraRecorder::startRecorder);
 
-    connect(oauthFileUploader,
-            &OAuthFileUploader::toIncidentLog,
-            notifications,
-            &Notifications::toIncidentLog);
-    connect(traceBuffer,
-            &TraceBuffer::nrOfDatapointsChanged,
-            sdefRecorder,
-            &SdefRecorder::dataPointsChanged);
+    connect(oauthFileUploader, &OAuthFileUploader::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(traceBuffer, &TraceBuffer::nrOfDatapointsChanged, sdefRecorder, &SdefRecorder::dataPointsChanged);
 
-    connect(oauthFileUploader,
-            &OAuthFileUploader::uploadProgress,
-            this,
-            &MainWindow::uploadProgress);
+    connect(oauthFileUploader, &OAuthFileUploader::uploadProgress, this, &MainWindow::uploadProgress);
 
-    connect(instrGainControl,
-            &QComboBox::currentIndexChanged,
-            this,
-            &MainWindow::instrGainControlChanged);
+    connect(instrGainControl, &QComboBox::currentIndexChanged, this, &MainWindow::instrGainControlChanged);
 
 #ifdef Q_OS_WIN
     connect(config.data(), &Config::settingsUpdated, this, [this]() {
@@ -923,4 +882,65 @@ void MainWindow::setSignals()
     connect(btnRestartAvgCalc, &QPushButton::clicked, this, [this] () {
         traceBuffer->restartCalcAvgLevel(true); // Force restart
     });
+    connect(tcpStream.data(), &DataStreamBaseClass::newAudioData, datastreamAudio, &DatastreamAudio::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newAudioData, datastreamAudio, &DatastreamAudio::parseData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newIfData, datastreamIf, &DatastreamIf::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newIfData, datastreamIf, &DatastreamIf::parseData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
+
+    connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioPlayer, &AudioPlayer::playChunk);
+    connect(datastreamAudio, &DatastreamAudio::audioModeChanged, &audioPlayer, &AudioPlayer::setFormat);
+
+    connect(btnAudioOpt, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(audioOptions, &AudioOptions::askForDemodBwList, this, [this] {
+        audioOptions->getDemodBwList(measurementDevice->retDemodBwList());
+    });
+    connect(audioOptions, &AudioOptions::askForDemodTypeList, this, [this] {
+        audioOptions->getDemodTypeList(measurementDevice->retDemodTypeList());
+    });
+    connect(audioOptions, &AudioOptions::audioMode, datastreamAudio, &DatastreamAudio::reportAudioMode); // Needed to have initial setup of player format
+    connect(audioOptions, &AudioOptions::audioMode, measurementDevice, &MeasurementDevice::setAudioMode);
+    connect(audioOptions, &AudioOptions::demodType, measurementDevice, &MeasurementDevice::setDemodType);
+    connect(audioOptions, &AudioOptions::demodBw, measurementDevice, &MeasurementDevice::setDemodBw);
+    connect(audioOptions, &AudioOptions::squelch, measurementDevice, &MeasurementDevice::setSquelch);
+    connect(audioOptions, &AudioOptions::squelchLevel, measurementDevice, &MeasurementDevice::setSquelchLevel);
+    connect(audioOptions, &AudioOptions::audioDevice, &audioPlayer, &AudioPlayer::setAudioDevice);
+    connect(audioOptions, &AudioOptions::activateAudio, &audioPlayer, &AudioPlayer::playAudio);
+
+    connect(audioOptions, &AudioOptions::record, &audioRecorder, &AudioRecorder::enableRecorder);
+    connect(datastreamAudio, &DatastreamAudio::audioModeChanged, &audioRecorder, &AudioRecorder::updFormat);
+    connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioRecorder, &AudioRecorder::receiveAudioData);
+    connect(datastreamAudio, &DatastreamAudio::headerDataChanged, &audioRecorder, &AudioRecorder::demodChanged);
+    connect(config.data(), &Config::settingsUpdated, this, [this]() {
+        audioRecorder.setFileLocation(config->getLogFolder());
+    });
+    connect(iqPlot, &IqPlot::busyRecording, this, [this](bool b) {
+        if (b)
+            measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
+        else if (config->getAudioActivate())
+            audioOptions->report(); // Restore mode when done (if it should be active)
+    });
+    connect(customPlotController, &CustomPlotController::centerFrequency, this, [this] (double d) {
+        instrFfmCenterFreq->setValue(d);
+        if (measurementDevice->currentMode() != Instrument::Mode::FFM) {
+            instrMode->setCurrentIndex(instrMode->findText("FFM"));
+            instrModeChanged();
+        }
+        instrFfmCenterFreqChanged();
+    });
+    connect(customPlotController, &CustomPlotController::scroll, this, [this] (int i) {
+        if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
+            instrFfmCenterFreq->setValue( ( 1e6 * instrFfmCenterFreq->value() + i * (1e3 * instrFfmSpan->currentText().toDouble() / 40.0) ) / 1e6 );
+            instrFfmCenterFreqChanged();
+        }
+    });
+    connect(tcpStream.data(), &DataStreamBaseClass::waitForPscanEndMarker, datastreamPScan, &DatastreamPScan::updWaitForPscanEndMarker);
+    connect(udpStream.data(), &DataStreamBaseClass::waitForPscanEndMarker, datastreamPScan, &DatastreamPScan::updWaitForPscanEndMarker);
+    connect(tcpStream.data(), &DataStreamBaseClass::newIfPanData, datastreamIfPan, &DatastreamIfPan::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newIfPanData, datastreamIfPan, &DatastreamIfPan::parseData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
+
+    connect(datastreamGpsCompass, &DatastreamGpsCompass::gpsdataReady, measurementDevice, &MeasurementDevice::updGpsCompassData);
 }

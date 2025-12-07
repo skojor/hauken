@@ -10,6 +10,7 @@
 #include <QSharedPointer>
 #include <QTimer>
 #include <QVector>
+#include <QWheelEvent>
 #include "config.h"
 #include "qcustomplot.h"
 #include "typedefs.h"
@@ -59,11 +60,15 @@ private slots:
     void updTextLabelPositions();
     void updOverlay();
     void updOverlayText();
+    void doubleClickEvent(QMouseEvent *event);
+    void mouseWheel(QWheelEvent *event);
 
 signals:
     void reqTrigline();
     void freqSelectionChanged();
     void retTracePlot(QPixmap *);
+    void centerFrequency(double f);
+    void scroll(int val);
 
 private:
     QSharedPointer<Config> config;

@@ -12,6 +12,7 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
     connect(timeoutTimer, &QTimer::timeout, this, [this]() {
         qWarning() << "I/Q transfer timed out." << iqSamples.size() << flagRequestedEndVifConnection << flagHeaderValidated;
         emit endVifConnection();
+        emit busyRecording(false);
         iqSamples.clear();
         flagRequestedEndVifConnection = true;
         flagHeaderValidated = false;

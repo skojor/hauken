@@ -7,6 +7,10 @@ set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64")
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
 find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -27,6 +31,12 @@ configure_file(
     ${CMAKE_SOURCE_DIR}/version.h.in
     ${CMAKE_SOURCE_DIR}/version.h
 )
+
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAKE_CURRENT_BINARY_DIR}/version.rc
 
@@ -98,6 +108,19 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     iqplot.h iqplot.cpp
     asciitranslator.h asciitranslator.cpp
     networkrequestsbase.h networkrequestsbase.cpp
+    datastreamaudio.h datastreamaudio.cpp
+    audioplayer.h audioplayer.cpp
+    audiooptions.h audiooptions.cpp
+    audiorecorder.h audiorecorder.cpp
+    datastreamif.h datastreamif.cpp
+
+    datastreampscan.h datastreampscan.cpp
+    streamparserbase.h streamparserbase.cpp
+    datastreamifpan.h datastreamifpan.cpp
+    datastreamgpscompass.h datastreamgpscompass.cpp
+
+
+
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -123,6 +146,7 @@ target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/zlib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
     ${CMAKE_CURRENT_SOURCE_DIR}/include/msal
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/lame
 )
 elseif(UNIX)
   target_include_directories(Hauken PRIVATE
@@ -143,6 +167,7 @@ target_link_libraries(Hauken PRIVATE
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
+    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/libmp3lame.lib
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -155,6 +180,7 @@ target_link_libraries(Hauken PRIVATE
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv_videoio490d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
+    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/libmp3lame.lib
 )
 elseif(UNIX)
   target_link_libraries(Hauken PRIVATE
@@ -179,6 +205,15 @@ elseif(UNIX)
       debug quazip1-qt6
   )
 target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 endif()
 
 install(TARGETS Hauken

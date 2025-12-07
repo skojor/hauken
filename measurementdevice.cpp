@@ -93,7 +93,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -685,7 +685,7 @@ void MeasurementDevice::setupTcpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud, if";
 
     /*// ssh tunnel hackaround
     tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
@@ -736,7 +736,7 @@ void MeasurementDevice::setupUdpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud, if";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -1176,4 +1176,42 @@ double MeasurementDevice::retIqCenterFrequency()
         f = devicePtr->ffmCenterFrequency;
 
     return f;
+}
+
+void MeasurementDevice::setAudioMode(int mode)
+{
+    scpiWrite("syst:aud:rem:mode " + QByteArray::number(mode));
+}
+
+void MeasurementDevice::setDemodType(QString type)
+{
+    scpiWrite("dem:mode " + type.toLocal8Bit());
+}
+
+void MeasurementDevice::setDemodBw(int bw)
+{
+    scpiWrite("band " + QByteArray::number(bw * 1e3));
+}
+
+void MeasurementDevice::setSquelch(bool sq)
+{
+    scpiWrite("outp:squ " + QByteArray::number(sq));
+}
+
+void MeasurementDevice::setSquelchLevel(int level)
+{
+    scpiWrite("outp:squ:thr " + QByteArray::number(level));
+}
+
+void MeasurementDevice::updGpsCompassData(GpsData &data)
+{
+    devicePtr->latitude = data.latitude;
+    devicePtr->longitude = data.longitude;
+    devicePtr->altitude = data.altitude;
+    devicePtr->dop = data.dop;
+    devicePtr->sog = data.sog;
+    devicePtr->cog = data.cog;
+    devicePtr->gnssTimestamp = data.timestamp;
+    devicePtr->sats = data.sats;
+    devicePtr->positionValid = data.valid;
 }

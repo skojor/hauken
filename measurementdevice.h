@@ -121,6 +121,14 @@ public slots:
     void setVifFreqAndMode(const double frequency);
     void restartTcpTimeoutTimer() { if (tcpTimeoutTimer->isActive()) tcpTimeoutTimer->stop();}
     double retIqCenterFrequency();
+    QStringList retDemodBwList() { return devicePtr->demodBwList;}
+    QStringList retDemodTypeList() { return devicePtr->demodTypeList;}
+    void setAudioMode(int mode);
+    void setDemodType(QString type);
+    void setDemodBw(int bw);
+    void setSquelch(bool sq);
+    void setSquelchLevel(int level);
+    void updGpsCompassData(GpsData &data);
 
 private slots:
     void scpiConnected();

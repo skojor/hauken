@@ -33,7 +33,6 @@ class DataStreamBaseClass : public QObject
     Q_OBJECT
 public:
     explicit DataStreamBaseClass(QObject *parent = nullptr);
-    QList<qint16> fft;
     QHostAddress ownAddress;
     quint16 port = 0, udpPort = 5559;
     QTcpSocket *tcpSocket = new QTcpSocket;
@@ -43,28 +42,16 @@ public:
     QByteArray tcpBuffer, udpBuffer;
     QSharedPointer<Device> devicePtr;
     Eb200Header header;
-    UdpDatagramAttribute attrHeader;
-    EsmbOptHeaderDScan esmbOptHeader;
-    OptHeaderPScan optHeaderPscan;
-    OptHeaderPScanEB500 optHeaderPscanEb500;
-    OptHeaderIfPanEB500 optHeaderIfPanEb500;
-    GenAttrAdvanced genAttrAdvHeader;
+    AttrHeaderCombined attrHeader;
+    EsmbOptHeaderDScan esmbOptHeader; // FIX
     QTimer *timeoutTimer = new QTimer;
     QElapsedTimer *traceTimer = new QElapsedTimer;
-    int errorCtr = 0;
-    bool errorHandleSent = false;
     const int timeoutInMs = 10000;
-    quint64 startfreq = 0, stopfreq = 0;
-    unsigned int resolution = 0;
-    int traceCtr = 0;
     QVector<QNetworkDatagram> ifBufferUdp;
     QByteArray ifBufferTcp;
-    //QList<QByteArray> arrIfBufferTcp; // Multi recording buffer
     QVector<complexInt16> iq;
     quint16 sequenceNr = 0;
-    bool waitingForPscanEndMarker = true;
 
-public slots:
     virtual void openListener() = 0;
     virtual void openListener(const QHostAddress addr, const int port) = 0;
     virtual void closeListener() = 0;
@@ -76,36 +63,24 @@ public slots:
     quint16 getTcpPort() { return tcpSocket->localPort(); }
     virtual void newDataHandler() = 0;
     void processData(const QByteArray &);
-    bool readHeader(const QByteArray &);
-    bool checkHeader();
-    bool checkOptHeader(const QByteArray &);
-    void readAttrHeader(QDataStream &ds);
-    void readIfpanOptHeader(QDataStream &ds);
-    void readPscanOptHeader(QDataStream &ds);
-    void readDscanOptHeader(QDataStream &ds);
-    void readAdvHeader(QDataStream &ds);
-    void fillFft(const QByteArray &);
-    void calcBytesPerSecond();
-    int calcPscanPointsPerTrace();
+    bool readHeaders(const QByteArray &buf);
+    void readDscanOptHeader(QDataStream &ds); //FIX
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
     virtual void restartTimeoutTimer() = 0;
+    void calcBytesPerSecond();
 
 signals:
     void connectedState(bool);
-    void newFftData(QVector<qint16> &);
-    void bytesPerSecond(int);
-    void tracesPerSecond(double);
     void timeout();
-    void streamErrorResetFreq();
-    void streamErrorResetConnection();
-    void freqChanged(double, double);
-    void resChanged(double);
     void newIqData(const QList<complexInt16>&);
-
-private slots:
-
-protected:
+    void newAudioData(const QByteArray &);
+    void newIfData(const QByteArray &);
+    void newPscanData(const QByteArray &);
+    void newIfPanData(const QByteArray &);
+    void newGpsCompassData(const QByteArray &);
+    void waitForPscanEndMarker(bool);
+    void bytesPerSecond(int);
 
 private:
 
