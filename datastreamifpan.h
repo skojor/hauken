@@ -24,6 +24,7 @@ private:
     bool readOptHeader(QDataStream &ds) { return m_OptHeader.readData(ds, m_attrHeader.optHeaderLength);}
     bool checkHeaders();
     void checkOptHeader();
+    void invalidateCachedFreqs() { m_ifPanCenterFreq = m_ifPanResolution = m_ifPanSpan = 0; }
 
     OptHeaderIfPanEB500 m_OptHeader;
     QElapsedTimer *m_traceTimer = new QElapsedTimer;

@@ -2,6 +2,7 @@
 #define STREAMPARSERBASE_H
 
 #include <QObject>
+#include <QTimer>
 #include "typedefs.h"
 
 class StreamParserBase : public QObject
@@ -18,6 +19,7 @@ public:
 
     Eb200Header m_eb200Header;
     AttrHeaderCombined m_attrHeader;
+    QTimer *m_timeoutTimer = new QTimer;
 
 signals:
     void frequencyChanged(double, double);

@@ -1,6 +1,9 @@
 #include "datastreampscan.h"
 
-DatastreamPScan::DatastreamPScan(QObject *parent) {}
+DatastreamPScan::DatastreamPScan(QObject *parent)
+{
+    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateCachedFreqs);
+}
 
 bool DatastreamPScan::checkHeaders()
 {
@@ -13,6 +16,8 @@ bool DatastreamPScan::checkHeaders()
 
 void DatastreamPScan::readData(QDataStream &ds)
 {
+    m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
+
     if (checkHeaders())
         m_pscanOptHeader.readData(ds, m_attrHeader.optHeaderLength);
     checkOptHeader();
