@@ -685,7 +685,7 @@ void MeasurementDevice::setupTcpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud, if";
 
     /*// ssh tunnel hackaround
     tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
@@ -736,7 +736,7 @@ void MeasurementDevice::setupUdpStream()
     QByteArray modeStr;
     if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
     else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud";
+    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud, if";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -1201,4 +1201,17 @@ void MeasurementDevice::setSquelch(bool sq)
 void MeasurementDevice::setSquelchLevel(int level)
 {
     scpiWrite("outp:squ:thr " + QByteArray::number(level));
+}
+
+void MeasurementDevice::updGpsCompassData(GpsData &data)
+{
+    devicePtr->latitude = data.latitude;
+    devicePtr->longitude = data.longitude;
+    devicePtr->altitude = data.altitude;
+    devicePtr->dop = data.dop;
+    devicePtr->sog = data.sog;
+    devicePtr->cog = data.cog;
+    devicePtr->gnssTimestamp = data.timestamp;
+    devicePtr->sats = data.sats;
+    devicePtr->positionValid = data.valid;
 }

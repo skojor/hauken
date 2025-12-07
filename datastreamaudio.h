@@ -5,18 +5,15 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QAudioSink>
-#include "typedefs.h"
+#include "streamparserbase.h"
 
-class PcmPlayer;
-
-class DatastreamAudio : public QObject
+class DatastreamAudio : public StreamParserBase
 {
     Q_OBJECT
 public:
     explicit DatastreamAudio(QObject *parent = nullptr);
-
-public slots:
-    void parseAudioData(const QByteArray &buf);
+    bool readOptHeader(QDataStream &ds) { return m_audioOptHeader.readData(ds);}
+    bool checkHeaders();
     void reportAudioMode(const int mode);
 
 signals:
@@ -24,20 +21,17 @@ signals:
     void audioModeChanged(int, int, QAudioFormat::SampleFormat);
     void headerDataChanged(int freq, int bw, QString demodType);
 
-private slots:
-    bool readHeaders(QDataStream &ds);
-    bool checkHeaders();
-    void readAudioData(QDataStream &ds);
-    void checkForHeaderChanges();
-
 private:
-    Eb200Header m_eb200Header;
-    UdpDatagramAttribute m_attrHeader;
-    AudioOptHeader m_audioOptHeader;
+    void readData(QDataStream &ds);
+    void checkForHeaderChanges();
+    void checkOptHeader() {};
+
     int m_audioMode = 0;
     quint64 m_freq;
     int m_bw;
     QString m_demodType;
+    AudioOptHeader m_audioOptHeader;
+
 };
 
 

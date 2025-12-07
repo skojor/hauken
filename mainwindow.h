@@ -87,6 +87,10 @@
 #include "audioplayer.h"
 #include "audiooptions.h"
 #include "audiorecorder.h"
+#include "datastreamif.h"
+#include "datastreampscan.h"
+#include "datastreamifpan.h"
+#include "datastreamgpscompass.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -352,6 +356,10 @@ private:
     QSharedPointer<VifStreamUdp> vifStreamUdp = QSharedPointer<VifStreamUdp>(new VifStreamUdp, &QObject::deleteLater);
     QSharedPointer<VifStreamTcp> vifStreamTcp = QSharedPointer<VifStreamTcp>(new VifStreamTcp, &QObject::deleteLater);
     DatastreamAudio *datastreamAudio = new DatastreamAudio;
+    DatastreamIf *datastreamIf = new DatastreamIf;
+    DatastreamPScan *datastreamPScan = new DatastreamPScan;
+    DatastreamIfPan *datastreamIfPan = new DatastreamIfPan;
+    DatastreamGpsCompass *datastreamGpsCompass = new DatastreamGpsCompass;
 
     double tracesPerSecond = 0;
     AccessHandler *accessHandler = new AccessHandler(this, config);

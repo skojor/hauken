@@ -8,6 +8,8 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
     connect(customPlotPtr->selectionRect(), &QCPSelectionRect::accepted, this, &CustomPlotController::showSelectionMenu);
     connect(customPlotPtr, &QCustomPlot::mouseRelease, this, &CustomPlotController::onMouseClick);
     connect(flashTimer, &QTimer::timeout, this, &CustomPlotController::flashRoutine);
+    connect(customPlotPtr, &QCustomPlot::mouseDoubleClick, this, &CustomPlotController::doubleClickEvent);
+    connect(customPlotPtr, &QCustomPlot::mouseWheel, this, &CustomPlotController::mouseWheel);
 
     QFile file(config->getWorkFolder() + "/bandplan.csv");
     if (file.exists()) {
@@ -471,4 +473,16 @@ void CustomPlotController::updOverlayText()
         row->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
     }
     customPlotPtr->replot();
+}
+
+void CustomPlotController::doubleClickEvent(QMouseEvent *event)
+{
+    double x = customPlotPtr->xAxis->pixelToCoord(event->pos().x());
+    emit centerFrequency(x);
+}
+
+void CustomPlotController::mouseWheel(QWheelEvent *event)
+{
+    QPoint degrees = event->angleDelta() / 8;
+    emit scroll(degrees.y() / 15);
 }

@@ -19,9 +19,10 @@ void AudioPlayer::playChunk(const QByteArray &pcm)
 void AudioPlayer::setFormat(int samplerate, int channels, QAudioFormat::SampleFormat format)
 {
     if (samplerate == 0 && channels == 0 && format == QAudioFormat::Unknown) { // Mode 0, switch off
-        m_audioSink->stop();
-        if (m_audioSink)
+        if (m_audioSink) {
+            m_audioSink->stop();
             m_audioSink->deleteLater();
+        }
     }
     if (samplerate != 8000 and samplerate != 16000 and samplerate != 32000)
         qDebug() << "Sample rate not supported:" << samplerate;

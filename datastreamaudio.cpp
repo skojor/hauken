@@ -1,61 +1,41 @@
 #include "datastreamaudio.h"
 
 DatastreamAudio::DatastreamAudio(QObject *parent)
-    : QObject{parent}
 {
 }
 
-void DatastreamAudio::parseAudioData(const QByteArray &buf)
-{
-    QDataStream ds(buf);
-    if (readHeaders(ds) && checkHeaders()) {
-        readAudioData(ds);
-        checkForHeaderChanges();
-    }
-}
-
-bool DatastreamAudio::readHeaders(QDataStream &ds)
-{
-    if (!m_eb200Header.readData(ds)) return false;
-    if (!m_attrHeader.readData(ds)) return false;
-    if (m_attrHeader.optHeaderLength && !m_audioOptHeader.readData(ds))
-        return false;
-    return true;
-}
 
 bool DatastreamAudio::checkHeaders()
 {
-    bool valid = true;
-    if (m_eb200Header.magicNumber != 0x000eb200 or m_eb200Header.dataSize > 65536)
-        valid = false;
     if (m_attrHeader.tag != (int)Instrument::Tags::AUDIO)
-        valid = false;
-
+        return false;
     if (m_attrHeader.optHeaderLength && m_audioOptHeader.audioMode != m_audioMode) {
         m_audioMode = m_audioOptHeader.audioMode;
         reportAudioMode(m_audioMode);
     }
 
-    return valid;
+    return true;
 }
 
-void DatastreamAudio::readAudioData(QDataStream &ds)
+void DatastreamAudio::readData(QDataStream &ds)
 {
-    const int totalBytes = m_attrHeader.numItems * m_audioOptHeader.frameLength;
-    QByteArray data;
-    data.resize(totalBytes);
-    int read = ds.readRawData(data.data(), totalBytes);
+    if (m_attrHeader.optHeaderLength && readOptHeader(ds) && checkHeaders()) {
+        const int totalBytes = m_attrHeader.numItems * m_audioOptHeader.frameLength;
+        QByteArray data;
+        data.resize(totalBytes);
+        int read = ds.readRawData(data.data(), totalBytes);
 
-    if (read == totalBytes) {
-        switch (m_audioOptHeader.audioMode) {
-        case 1: case 2: case 5: case 6: case 9: case 10: // 16 bit modes
-            qint16 *samples = reinterpret_cast<qint16*>(data.data());
-            for (int i = 0; i < data.size() / 2; i++) { // Swap endianness after serialized read
-                samples[i] = qToBigEndian(samples[i]);
+        if (read == totalBytes) {
+            switch (m_audioOptHeader.audioMode) {
+            case 1: case 2: case 5: case 6: case 9: case 10: // 16 bit modes
+                qint16 *samples = reinterpret_cast<qint16*>(data.data());
+                for (int i = 0; i < data.size() / 2; i++) { // Swap endianness after serialized read
+                    samples[i] = qToBigEndian(samples[i]);
+                }
+                break;
             }
-            break;
+            emit audioDataReady(data);
         }
-        emit audioDataReady(data);
     }
 }
 

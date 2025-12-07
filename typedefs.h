@@ -51,6 +51,7 @@ enum class Tags
     AUDIO   =     401,
     IFPAN   =     501,
     CW      =     801,
+    IF      =     901,
     PSCAN   =    1201,
     PIFPAN  =    1601,
     FPIFPAN =    1602,
@@ -117,7 +118,7 @@ public:
     static const int size = 16;
     bool readData(QDataStream &ds) {
         ds >> magicNumber >> versionMinor >> versionMajor >> seqNumber >> reserved >> dataSize;
-        if (!ds.atEnd()) return true;
+        if (!ds.atEnd() and magicNumber == 0x000eb200) return true;
         else return false;
     }
 
@@ -135,7 +136,73 @@ public:
     quint32 selectorFlags = 0;
     static const int size = 12;
     bool readData(QDataStream &ds) {
-        ds  >> tag >> length >> numItems >> channelNumber >> optHeaderLength >> selectorFlags;
+        ds >> tag >> length >> numItems >> channelNumber >> optHeaderLength >> selectorFlags;
+        if (!ds.atEnd()) return true;
+        else return false;
+    }
+};
+
+class GenAttrAdvanced
+{
+public:
+    GenAttrAdvanced() {}
+    quint16 tag = 0;
+    quint16 reserved = 0;
+    quint32 length = 0;
+    quint32 res1 = 0;
+    quint32 res2 = 0;
+    quint32 res3 = 0;
+    quint32 res4 = 0;
+    quint32 numItems = 0;
+    quint32 channelNumber = 0;
+    quint32 optHeaderLength = 0;
+    quint32 selectorFlagsLow = 0;
+    quint32 selectorFlagsHigh = 0;
+    quint32 res5 = 0;
+    quint32 res6 = 0;
+    quint32 res7 = 0;
+    quint32 res8 = 0;
+    static const int size = 60;
+};
+
+class AttrHeaderCombined {
+public:
+    AttrHeaderCombined() {}
+    quint16 tag = 0;
+    quint16 reserved = 0;
+    quint32 length = 0;
+    quint32 res1 = 0;
+    quint32 res2 = 0;
+    quint32 res3 = 0;
+    quint32 res4 = 0;
+    quint32 numItems = 0;
+    quint32 channelNumber = 0;
+    quint32 optHeaderLength = 0;
+    quint32 selectorFlagsLow = 0;
+    quint32 selectorFlagsHigh = 0;
+    quint32 res5 = 0;
+    quint32 res6 = 0;
+    quint32 res7 = 0;
+    quint32 res8 = 0;
+    int size;
+    bool readData(QDataStream &ds) {
+        ds >> tag;
+        if (tag < 10000) { // Classic AttrHeader
+            size = 12;
+            quint8 chan, opt;
+            quint16 len, items;
+            ds >> len >> items >> chan >> opt >> selectorFlagsLow;
+            channelNumber = chan;
+            optHeaderLength = opt;
+            length = len;
+            numItems = items;
+        }
+        else {  // Adv. AttrHeader
+            size = 60;
+            ds >> reserved >> length >> res1 >> res2 >> res3 >> res4
+                >> numItems >> channelNumber >> optHeaderLength >> selectorFlagsLow
+                >> selectorFlagsHigh >> res5 >> res6 >> res7 >> res8;
+        }
         if (!ds.atEnd()) return true;
         else return false;
     }
@@ -181,9 +248,36 @@ public:
     quint64 outputTimestamp = 0; /* nanoseconds since Jan 1st, 1970, without leap seconds */
     quint32 stepFreqNumerator = 0;
     quint32 stepFreqDenominator = 0;
-    quint64 freqOffFirstStep = 0;
-    quint32 dummy = 0;
-    const int size = 52;
+    quint64 freqOfFirstStep = 0;
+    qint16  avgType = 0;
+    qint16  setIndex = 0;
+    qint16  avgType2 = 0;
+    qint16  avgType3 = 0;
+    qint64  avgType4 = 0;
+    qint16  attMax = 0;
+    qint16  overload = 0;
+    quint32 nTotalNoTraceValues = 0;
+    quint32 nOffsetOfFirstValue = 0;
+    int     size = 0;
+    bool readData(QDataStream &ds, const int headerSize) {
+        size = headerSize;
+        if (size >= 32) { // Early pscan optHeader, EM100 and others
+            ds >> startFreqLow >> stopFreqLow >> stepFreq >> startFreqHigh >> stopFreqHigh >> reserved >> outputTimestamp;
+            ds.skipRawData(headerSize - 32);
+        }
+        else ds.skipRawData(headerSize); // Weird!
+        /*
+        if (size >= 62) { // EB500 and others, early firmware, also EM200 new firmware!
+            ds >> stepFreqNumerator >> stepFreqDenominator >> freqOfFirstStep >> avgType
+                >> setIndex >> avgType2 >> avgType3 >> avgType4 >> attMax >> overload;
+        }
+        if (size == 70) {
+            ds >> nTotalNoTraceValues >> nOffsetOfFirstValue;
+        }
+        if (ds.atEnd() or size != 32 or size != 62 or size != 70) return false;*/
+        // Skip reading rest of header, values are not used anywhere for now
+        return true;
+    }
 };
 
 class OptHeaderIfPanEB500
@@ -200,30 +294,17 @@ public:
     quint32 demodFreqLow = 0;
     quint32 demodFreqHigh = 0;
     quint64 outputTimestamp = 0;
-    const int size = 40;                // TODO old version? Should be much bigger
-};
-
-class GenAttrAdvanced
-{
-public:
-    GenAttrAdvanced() {}
-    quint16 tag = 0;
-    quint16 reserved = 0;
-    quint32 length = 0;
-    quint32 res1 = 0;
-    quint32 res2 = 0;
-    quint32 res3 = 0;
-    quint32 res4 = 0;
-    quint32 numItems = 0;
-    quint32 channelNumber = 0;
-    quint32 optHeaderLength = 0;
-    quint32 selectorFlagsLow = 0;
-    quint32 selectorFlagsHigh = 0;
-    quint32 res5 = 0;
-    quint32 res6 = 0;
-    quint32 res7 = 0;
-    quint32 res8 = 0;
-    static const int size = 60;
+    int size = 0;
+    bool readData(QDataStream &ds, const int headerSize) {
+        size = headerSize;
+        if (size >= 40) {
+            ds >> freqLow >> freqSpan >> avgTime >> avgType >> measureTime
+                >> freqHigh >> demodFreqChannel >> demodFreqLow >> demodFreqHigh >> outputTimestamp;
+        }
+        ds.skipRawData(headerSize - 40); // Old style IfPan header, not using newer vals for now
+        if (!ds.atEnd()) return true;
+        else return false;
+    }
 };
 
 class AudioOptHeader
@@ -252,7 +333,123 @@ public:
     }
 };
 
-//class OptHeaderEM200  just use pscan opt header
+class IfOptHeader
+{
+public:
+    IfOptHeader() {}
+    qint16      ifMode = 0;
+    qint16      frameLength = 0;
+    quint32     sampleRate = 0;
+    quint32     freqLow = 0;
+    quint32     bandwidth = 0;
+    quint16     demodulation = 0;
+    qint16      rxAttenuation = 0;
+    quint16     flags = 0;
+    qint16      kFactor = 0;
+    char        demodString[8] = {0};
+    quint64     sampleCount = 0;
+    quint32     freqHigh = 0;
+    qint16      rxGain = 0;
+    char        reserved[2] = {0};
+    quint64     startTimestamp = 0;
+    qint16      signalSource = 0;
+    static const int size = 58;
+    bool readData(QDataStream &ds) {
+        ds >> ifMode >> frameLength >> sampleRate >> freqLow >> bandwidth
+            >> demodulation >> rxAttenuation >> flags >> kFactor;
+        ds.readRawData(demodString, sizeof(demodString));
+        ds >> sampleCount >> freqHigh >> rxGain;
+        ds.readRawData(reserved, sizeof(reserved));
+        ds >> startTimestamp >> signalSource;
+        if (!ds.atEnd()) return true;
+        return false;
+    }
+};
+
+class GpsCompassOptHeader
+{
+public:
+    GpsCompassOptHeader() {}
+    quint64 timestamp;
+    int size = 0;
+    bool readData(QDataStream &ds, int optHeaderSize) {
+        size = optHeaderSize;
+        if (size)
+            ds >> timestamp;
+        if (optHeaderSize > 8)
+            ds.skipRawData(optHeaderSize - 8);
+        if (!ds.atEnd())
+            return true;
+        return false;
+    }
+};
+
+class GpsCompassData
+{
+public:
+    GpsCompassData() {}
+    quint16     compassHeading = 0;
+    qint16      compassHeadingType = 0;
+    // GPS header, 24 bytes
+    qint16      gpsValid = 0;
+    qint16      noOfSatInView = 0;
+    qint16      latRef = 0;
+    qint16      latDeg = 0;
+    float       latMin = 0;
+    qint16      lonRef = 0;
+    qint16      lonDeg = 0;
+    float       lonMin = 0;
+    float       dilution = 0;
+    // EOGPS header
+    qint16      antValid = 0;
+    qint16      antTiltOver = 0;
+    qint16      antElevation = 0;
+    qint16      antRoll = 0;
+    qint16      signalSource = 0;
+    qint16      angularRatesValid = 0;
+    qint16      headingAngularRate = 0;
+    qint16      elevationAngularRate = 0;
+    qint16      rollAngularRate = 0;
+    // GPS extension header, 34 bytes
+    qint16      geoidalSepValid = 0;
+    qint32      geoidalSep = 0;
+    qint32      altitude = 0;
+    qint16      sog = 0;
+    qint16      tmg = 0;
+    float       pdop = 0;
+    float       vdop = 0;
+    quint64     gpsTimestamp = 0;
+    qint32      reserved = 0;
+    quint64     compassTimestamp = 0;
+    qint16      magneticDeclinationSource = 0;
+    qint16      magneticDeclination = 0;
+    qint16      antennaRollExact = 0;
+    qint16      antennaElevationExact = 0;
+    bool readData(QDataStream &ds) {
+        ds.setFloatingPointPrecision(QDataStream::SinglePrecision);
+        ds >> compassHeading >> compassHeadingType >> gpsValid >> noOfSatInView >> latRef
+            >> latDeg >> latMin >> lonRef >> lonDeg >> lonMin >> dilution
+            >> antValid >> antTiltOver >> antElevation >> antRoll >> signalSource >> angularRatesValid
+            >> headingAngularRate >> elevationAngularRate >> rollAngularRate >> geoidalSepValid
+            >> geoidalSep >> altitude >> sog >> tmg >> pdop >> vdop >> gpsTimestamp >> reserved
+            >> compassTimestamp >> magneticDeclinationSource >> magneticDeclination >> antennaRollExact >> antennaElevationExact;
+        if (ds.atEnd())
+            return true; // Should be eos at this point CHECK
+        return false;
+    }
+};
+
+struct GpsData {
+    double latitude;
+    double longitude;
+    double altitude;
+    double dop;
+    double sog;
+    double cog;
+    QDateTime timestamp;
+    int sats;
+    bool valid;
+};
 
 class Device
 {

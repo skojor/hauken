@@ -32,6 +32,12 @@ configure_file(
     ${CMAKE_SOURCE_DIR}/version.h
 )
 
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+
 qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAKE_CURRENT_BINARY_DIR}/version.rc
 
     SimpleMail/SimpleMail
@@ -106,6 +112,13 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     audioplayer.h audioplayer.cpp
     audiooptions.h audiooptions.cpp
     audiorecorder.h audiorecorder.cpp
+    datastreamif.h datastreamif.cpp
+
+    datastreampscan.h datastreampscan.cpp
+    streamparserbase.h streamparserbase.cpp
+    datastreamifpan.h datastreamifpan.cpp
+    datastreamgpscompass.h datastreamgpscompass.cpp
+
 
 
 )
@@ -196,6 +209,11 @@ target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)
 target_link_libraries(Hauken PRIVATE Qt6::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(Hauken PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 endif()
 
 install(TARGETS Hauken

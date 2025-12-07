@@ -128,6 +128,7 @@ public slots:
     void setDemodBw(int bw);
     void setSquelch(bool sq);
     void setSquelchLevel(int level);
+    void updGpsCompassData(GpsData &data);
 
 private slots:
     void scpiConnected();
