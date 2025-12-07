@@ -13,15 +13,20 @@ public:
     explicit DatastreamIf(QObject *parent = nullptr);
 
 signals:
-    void ifDataReady(const QList<qint16> &);
+    void ifDataReady(const QList<complexInt16> &);
+    void headerChanged(quint64, quint32, quint32);
 
 private:
     void readData(QDataStream &ds);
-    bool readOptHeader(QDataStream &ds) { return m_ifOptHeader.readData(ds);}
+    bool readOptHeader(QDataStream &ds) { return m_optHeader.readData(ds);}
     bool checkHeaders();
-    void checkOptHeader() {}
+    void checkOptHeader();
 
-    IfOptHeader m_ifOptHeader;
+    IfOptHeader m_optHeader;
+    quint64 m_frequency = 0;
+    quint32 m_bandwidth = 0;
+    quint32 m_samplerate = 0;
+
 };
 
 #endif // DATASTREAMIF_H

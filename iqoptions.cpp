@@ -30,10 +30,11 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 40 - 400000 microseconds.");
     sbOpt2->setRange(40, 400000);
 
-    mainLayout->addRow(new QLabel(tr("I/Q data bandwidth")), comboOpt1);
+    mainLayout->addRow(new QLabel(tr("I/Q data bandwidth (kHz)")), comboOpt1);
     comboOpt1->setToolTip("Which bandwidth to use for the receiver. Receiver dependent, "\
                           "must be set according to receiver specs! This is NOT checked in software!");
-    comboOpt1->addItems(QStringList() << "500" << "1000" << "5000" << "10000" << "20000" << "40000");
+    comboOpt1->addItems(QStringList() << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000" << "40000");
 
     mainLayout->addRow(new QLabel(tr("I/Q prerecord time (seconds)")), leOpt1);
     leOpt1->setToolTip(tr("Decides how long Hauken will gather I/Q data before analyzing." \

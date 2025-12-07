@@ -127,6 +127,21 @@ MainWindow::MainWindow(QWidget *parent)
         incidentLog->restoreGeometry(extras.value("incGeometry").toByteArray());
     if (extras.value("plotGeometry").isValid())
         customPlot->restoreGeometry(extras.value("plotGeometry").toByteArray());
+
+    if (config->getDarkMode()) {
+        customPlot->setBackground(QBrush(Qt::black));
+        customPlot->xAxis->setTickLabelColor(Qt::white);
+        customPlot->xAxis->setBasePen(QPen(Qt::white));
+        customPlot->xAxis->setLabelColor(Qt::white);
+        customPlot->xAxis->setTickPen(QPen(Qt::white));
+        customPlot->xAxis->setSubTickPen(QPen(Qt::white));
+        customPlot->yAxis->setTickLabelColor(Qt::white);
+        customPlot->yAxis->setBasePen(QPen(Qt::white));
+        customPlot->yAxis->setLabelColor(Qt::white);
+        customPlot->yAxis->setTickPen(QPen(Qt::white));
+        customPlot->yAxis->setSubTickPen(QPen(Qt::white));
+        customPlot->replot();
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

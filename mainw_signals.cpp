@@ -697,7 +697,7 @@ void MainWindow::setSignals()
         sdefRecorder->updTracesPerSecond(d);
         tracesPerSecond = d; // For view on mainWindow
     });
-    connect(datastreamPScan, &DatastreamPScan::tracesPerSecond, this, [this](double d) {
+    connect(datastreamIfPan, &DatastreamIfPan::tracesPerSecond, this, [this](double d) {
         sdefRecorder->updTracesPerSecond(d);
         tracesPerSecond = d; // For view on mainWindow
     });
@@ -836,10 +836,12 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::reqVifConnection, measurementDevice, &MeasurementDevice::setupVifConnection);
     connect(iqPlot, &IqPlot::setFfmCenterFrequency, measurementDevice, &MeasurementDevice::setVifFreqAndMode);
     connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
-    connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
-    connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
+    // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
+    connect(datastreamIf, &DatastreamIf::headerChanged, iqPlot, &IqPlot::validateHeader);
+    //connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
     connect(iqPlot, &IqPlot::endVifConnection, measurementDevice, &MeasurementDevice::deleteIfStream);
-    connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
+    // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
+    connect(datastreamIf, &DatastreamIf::ifDataReady, iqPlot, &IqPlot::getIqData);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, tcpStream.data(), &TcpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, measurementDevice, &MeasurementDevice::restartTcpTimeoutTimer);
