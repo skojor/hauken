@@ -170,7 +170,6 @@ private slots:
     void checkPscanResolution(const QByteArray buffer);
     void checkFfmFreq(const QByteArray buffer);
     void checkFfmSpan(const QByteArray buffer);
-    void setupIfStream();
     void initializeDevicePtr();
 
 private:
