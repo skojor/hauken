@@ -20,20 +20,21 @@ bool DatastreamAudio::checkHeaders()
 void DatastreamAudio::readData(QDataStream &ds)
 {
     if (m_attrHeader.optHeaderLength && readOptHeader(ds) && checkHeaders()) {
+        checkForHeaderChanges();
         const int totalBytes = m_attrHeader.numItems * m_audioOptHeader.frameLength;
         QByteArray data;
         data.resize(totalBytes);
         int read = ds.readRawData(data.data(), totalBytes);
 
         if (read == totalBytes) {
-            switch (m_audioOptHeader.audioMode) {
+            /*switch (m_audioOptHeader.audioMode) {
             case 1: case 2: case 5: case 6: case 9: case 10: // 16 bit modes
                 qint16 *samples = reinterpret_cast<qint16*>(data.data());
                 for (int i = 0; i < data.size() / 2; i++) { // Swap endianness after serialized read
                     samples[i] = qToBigEndian(samples[i]);
                 }
                 break;
-            }
+            }*/
             emit audioDataReady(data);
         }
     }

@@ -96,6 +96,7 @@ private:
     quint64 samplesNeeded = 0;
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;
+    bool throwFirstSamples = true;
     QTimer *timeoutTimer = new QTimer;
     double centerFrequency = 0;
 };

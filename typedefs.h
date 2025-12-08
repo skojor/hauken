@@ -187,7 +187,7 @@ public:
     int size;
     bool readData(QDataStream &ds) {
         ds >> tag;
-        if (tag < 10000) { // Classic AttrHeader
+        if (tag < 5000) { // Classic AttrHeader
             size = 12;
             quint8 chan, opt;
             quint16 len, items;

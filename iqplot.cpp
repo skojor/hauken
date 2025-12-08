@@ -22,10 +22,13 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 void IqPlot::getIqData(const QList<complexInt16> &iq16)
 {
     dataFromFile = false;
-    if (!listFreqs.isEmpty()) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
-    if (flagHeaderValidated) iqSamples += iq16;
+    if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
+    if (flagHeaderValidated and !throwFirstSamples) iqSamples += iq16;
+    else if (flagHeaderValidated and throwFirstSamples)
+        throwFirstSamples = false;
+
     //qDebug() << iqSamples.size();
-    if (iqSamples.size() >= samplesNeeded) {
+    if (iqSamples.size() >= samplesNeeded and !listFreqs.isEmpty()) {
         ffmFrequency = listFreqs.first(); // Silly, but blame the coder
         parseIqData(iqSamples, listFreqs.first());
         receiverControl(); // Change freq, or end datastream if we are done
@@ -175,7 +178,7 @@ void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
     //qDebug() << min << max << avg;
-    min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
+    if (config->getIqUseAvgForPlot()) min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
 
     QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
     QColor imgColor;
@@ -360,10 +363,9 @@ void IqPlot::requestIqData()
                 }
             }
         }
-
+        emit busyRecording(true);
         emit setFfmCenterFrequency(listFreqs.first());
         emit reqVifConnection();
-        emit busyRecording(true);
         lastIqRequestTimer.restart();
         flagRequestedEndVifConnection = false;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS);
@@ -498,21 +500,25 @@ void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
         && bw == (quint32)(config->getIqFftPlotBw() * 1e3))
     {
         flagHeaderValidated = true;
+        qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz");
     }
     else {
         flagHeaderValidated = false;
+        qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << samplerate;
+
     }
 }
 
 void IqPlot::receiverControl()
 {
     flagHeaderValidated = false; // Assume future data to be invalid for now
+    throwFirstSamples = true;
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();
-        emit headerValidated(false);
+        //emit headerValidated(false);
         emit setFfmCenterFrequency(listFreqs.first());
     }
     else { // We are done, stop I/Q stream

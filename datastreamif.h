@@ -26,6 +26,7 @@ private:
     quint64 m_frequency = 0;
     quint32 m_bandwidth = 0;
     quint32 m_samplerate = 0;
+    quint64 m_sampleCtr = 0;
 
 };
 

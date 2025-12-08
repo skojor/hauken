@@ -37,7 +37,7 @@ void TcpDataStream::newDataHandler()
     byteCtr += buf.size();
     tcpBuffer.append(buf);
 
-    while (readHeaders(tcpBuffer) && tcpBuffer.size() >= (int)header.dataSize) {
+    while (!tcpBuffer.isEmpty() && readHeaders(tcpBuffer) && tcpBuffer.size() >= (int)header.dataSize) {
         if (header.seqNumber == sequenceNr + 1)
             processData(tcpBuffer.first(header.dataSize));
         else

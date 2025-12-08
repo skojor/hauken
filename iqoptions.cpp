@@ -26,6 +26,13 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                           "echos in the plot, "
                           "but will make the plotted signal look \"smeared\"."));
 
+    mainLayout->addRow(cbOpt7);
+    cbOpt7->setText(tr("Use average signal as low level of plot"));
+    cbOpt7->setToolTip(tr("If checked the average level of the current received spectrum will be used "
+                          "as the weakest signal color for the plot. Unchecked means the minimum value "
+                          "will be used instead. Average produces cleaner plots, but signal details "
+                          "might be missed."));
+
     mainLayout->addRow(new QLabel(tr("I/Q data plot length in microseconds")), sbOpt2);
     sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 40 - 400000 microseconds.");
     sbOpt2->setRange(40, 400000);
@@ -75,6 +82,7 @@ void IqOptions::start()
     cbOpt3->setChecked(config->getIqUseWindow());
     cbOpt4->setChecked(config->getIqRecordMultipleBands());
     cbOpt6->setChecked(config->getIqRecordAllTrigArea());
+    cbOpt7->setChecked(config->getIqUseAvgForPlot());
 
     dialog->exec();
 }
@@ -90,6 +98,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqUseWindow(cbOpt3->isChecked());
     config->setIqRecordMultipleBands(cbOpt4->isChecked());
     config->setIqRecordAllTrigArea(cbOpt6->isChecked());
+    config->setIqUseAvgForPlot(cbOpt7->isChecked());
 
     emit updSettings();
     dialog->close();

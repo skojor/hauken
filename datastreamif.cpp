@@ -16,6 +16,7 @@ bool DatastreamIf::checkHeaders()
 void DatastreamIf::readData(QDataStream &ds)
 {
     if (checkHeaders()) {
+        ds.setByteOrder(QDataStream::LittleEndian);
         m_optHeader.readData(ds);
         checkOptHeader();
 
@@ -24,16 +25,20 @@ void DatastreamIf::readData(QDataStream &ds)
 
             QList<complexInt16> iqSamples(m_attrHeader.numItems);
             int read = ds.readRawData((char *)iqSamples.data(), totalBytes);
-            if (read == totalBytes && ds.atEnd()) {
-                for (auto &val : iqSamples) {
+            if (read == totalBytes) {
+                /*for (auto &val : iqSamples) {
                     val.imag = qToBigEndian(val.imag);
                     val.real = qToBigEndian(val.real);
-                }
+                }*/
                 emit ifDataReady(iqSamples);
+                //qDebug() << iqSamples.size() << m_attrHeader.numItems << m_optHeader.sampleCount;
             }
             else
                 qDebug() << "IF datastream: Byte numbers doesn't add up!" << read << totalBytes;
         }
+    }
+    else {
+        qDebug() << "IF datastream: Header check failed";
     }
 }
 
@@ -49,4 +54,9 @@ void DatastreamIf::checkOptHeader()
         m_samplerate = m_optHeader.sampleRate;
         emit headerChanged(m_frequency, m_bandwidth, m_samplerate);
     }
+    if (m_optHeader.sampleCount - m_sampleCtr != m_attrHeader.numItems) {
+        qDebug() << "Lost I/Q samples";
+        m_frequency = m_bandwidth = m_samplerate = 0;
+    }
+    m_sampleCtr = m_optHeader.sampleCount;
 }

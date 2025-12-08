@@ -172,6 +172,8 @@ public slots:
     QList<double> getIqMultibandCenterFreqs();
     bool getIqRecordAllTrigArea() { return settings->value("iq/recordAllTrigArea", false).toBool();}
     void setIqRecordAllTrigArea(bool b) { settings->setValue("iq/recordAllTrigArea", b);}
+    bool getIqUseAvgForPlot() { return settings->value("iq/useAvgForPlot", true).toBool();}
+    void setIqUseAvgForPlot(bool b) { settings->setValue("iq/useAvgForPlot", b);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}

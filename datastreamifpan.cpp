@@ -18,27 +18,30 @@ void DatastreamIfPan::readData(QDataStream &ds)
 {
     m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
 
-    if (checkHeaders())
+    if (checkHeaders()) {
+        ds.setByteOrder(QDataStream::LittleEndian);
+
         m_OptHeader.readData(ds, m_attrHeader.optHeaderLength);
-    checkOptHeader();
+        checkOptHeader();
 
-    QList<qint16> tmpBuffer(m_attrHeader.numItems);
-    int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
+        QList<qint16> tmpBuffer(m_attrHeader.numItems);
+        int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
 
-    if (readBytes == tmpBuffer.size() * 2) {
-        for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
-            val = qToBigEndian(val);
+        if (readBytes == tmpBuffer.size() * 2) {
+            /* for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
+            val = qToBigEndian(val);*/
 
-        emit traceReady(tmpBuffer);
+            emit traceReady(tmpBuffer);
 
-        m_traceCtr++;
-        if (m_traceTimer->isValid() && m_traceCtr >= 10) {
-            emit tracesPerSecond(1e10 / m_traceTimer->nsecsElapsed());
-            m_traceCtr = 0;
-            m_traceTimer->start();
+            m_traceCtr++;
+            if (m_traceTimer->isValid() && m_traceCtr >= 10) {
+                emit tracesPerSecond(1e10 / m_traceTimer->nsecsElapsed());
+                m_traceCtr = 0;
+                m_traceTimer->start();
+            }
+            if (!m_traceTimer->isValid())
+                m_traceTimer->start();
         }
-        if (!m_traceTimer->isValid())
-            m_traceTimer->start();
     }
 }
 

@@ -12,7 +12,7 @@ class DatastreamAudio : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamAudio(QObject *parent = nullptr);
-    bool readOptHeader(QDataStream &ds) { return m_audioOptHeader.readData(ds);}
+    bool readOptHeader(QDataStream &ds) { ds.setByteOrder(QDataStream::LittleEndian); return m_audioOptHeader.readData(ds);}
     bool checkHeaders();
     void reportAudioMode(const int mode);
 

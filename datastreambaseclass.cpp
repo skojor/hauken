@@ -25,18 +25,18 @@ DataStreamBaseClass::DataStreamBaseClass(QObject *parent)
 
 void DataStreamBaseClass::processData(const QByteArray &buf)
 {
-        if (attrHeader.tag == (int)Instrument::Tags::AUDIO or attrHeader.tag == (int)Instrument::Tags::AUDIO)
-            emit newAudioData(buf);
-        else if (attrHeader.tag == (int)Instrument::Tags::IF)
-            emit newIfData(buf);
-        else if (attrHeader.tag == (int)Instrument::Tags::PSCAN or attrHeader.tag == (int)Instrument::Tags::ADVPSC)
-            emit newPscanData(buf);
-        else if (attrHeader.tag == (int)Instrument::Tags::IFPAN or attrHeader.tag == (int)Instrument::Tags::ADVIFP)
-            emit newIfPanData(buf);
-        else if (attrHeader.tag == (int)Instrument::Tags::GPSC)
-            emit newGpsCompassData(buf);
-        else
-            qDebug() << "Unknown tag:" << attrHeader.tag;
+    if (attrHeader.tag == (int)Instrument::Tags::AUDIO)
+        emit newAudioData(buf);
+    else if (attrHeader.tag == (int)Instrument::Tags::IF)
+        emit newIfData(buf);
+    else if (attrHeader.tag == (int)Instrument::Tags::PSCAN or attrHeader.tag == (int)Instrument::Tags::ADVPSC)
+        emit newPscanData(buf);
+    else if (attrHeader.tag == (int)Instrument::Tags::IFPAN or attrHeader.tag == (int)Instrument::Tags::ADVIFP)
+        emit newIfPanData(buf);
+    else if (attrHeader.tag == (int)Instrument::Tags::GPSC)
+        emit newGpsCompassData(buf);
+    else
+        qDebug() << "Unknown tag:" << attrHeader.tag;
 }
 
 bool DataStreamBaseClass::readHeaders(const QByteArray &buf)
