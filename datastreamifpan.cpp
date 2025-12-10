@@ -2,7 +2,7 @@
 
 DatastreamIfPan::DatastreamIfPan(QObject *parent)
 {
-    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamIfPan::invalidateCachedFreqs);
+    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamIfPan::invalidateHeader);
 }
 
 bool DatastreamIfPan::checkHeaders()

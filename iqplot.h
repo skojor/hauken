@@ -31,7 +31,7 @@ public slots:
     void requestIqData(); // Function call to set up I/Q transfer
     void getIqData(const QList<complexInt16> &iq16); // New, gather parts of data before doing sth with them
     void parseIqData(const QList<complexInt16> &iq16, const double frequency); // Data from vifstream class
-    void validateHeader(qint64 freq, qint64 bw, qint64 samplerate);
+    void validateHeader(qint64 freq, qint64 bw, qint64 rate);
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void resetTimer() { lastIqRequestTimer.invalidate();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
     void setFilename(QString) {}
@@ -96,7 +96,7 @@ private:
     quint64 samplesNeeded = 0;
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;
-    bool throwFirstSamples = true;
+    int throwFirstSamples = 0;
     QTimer *timeoutTimer = new QTimer;
     double centerFrequency = 0;
 };

@@ -17,6 +17,9 @@ void MainWindow::updInstrButtonsStatus()
 
 void MainWindow::instrModeChanged()
 {
+    datastreamIfPan->invalidateHeader();
+    datastreamPScan->invalidateHeader();
+
     if (instrMode->currentText().contains("pscan", Qt::CaseInsensitive)/* &&
         measurementDevice->currentMode() != Instrument::Mode::PSCAN*/) {
         startFreqLabel->setText("Start frequency (MHz)");
@@ -32,6 +35,7 @@ void MainWindow::instrModeChanged()
         instrResolution->setHidden(false);
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
+        customPlotController->modeChanged(Instrument::Mode::PSCAN);
     }
     else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
              measurementDevice->currentMode() != Instrument::Mode::FFM*/) {
@@ -48,6 +52,7 @@ void MainWindow::instrModeChanged()
         instrResolution->setHidden(true);
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
+        customPlotController->modeChanged(Instrument::Mode::FFM);
     }
     instrPscanFreqChanged();
     setResolutionFunction();
@@ -123,6 +128,7 @@ void MainWindow::instrFfmCenterFreqChanged()
         waterfall->restartPlot();
     }
     iqPlot->setFfmFrequency(instrFfmCenterFreq->value()); // Sent as MHz, used for image text
+    customPlotController->ffmCenterFreqChanged(1e6 * instrFfmCenterFreq->value()); // Displays center line in FFM mode
 }
 
 void MainWindow::instrFfmSpanChanged()

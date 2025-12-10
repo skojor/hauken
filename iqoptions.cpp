@@ -10,6 +10,10 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt1->setText("Save I/Q data to file");
     cbOpt1->setToolTip("Enable this option to save all captured I/Q data to a raw datafile.");
 
+    mainLayout->addRow(cbOpt8);
+    cbOpt8->setText(tr("Save as 16 bit values"));
+    cbOpt8->setToolTip("Enable this option to save the I/Q data as 16 bit. Data is converted to 8 bit before saving if not");
+
     mainLayout->addRow(cbOpt5);
     cbOpt5->setText("Create I/Q high res. plot when triggered");
     cbOpt5->setToolTip("If enabled, the receiver will be switched to FFM mode and collect a few ms of I/Q data "\
@@ -34,14 +38,17 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                           "might be missed."));
 
     mainLayout->addRow(new QLabel(tr("I/Q data plot length in microseconds")), sbOpt2);
-    sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 40 - 400000 microseconds.");
-    sbOpt2->setRange(40, 400000);
+    sbOpt2->setToolTip("This value determines the time range of the FFT plot. Value range is 40 - 100 000 000 microseconds.");
+    sbOpt2->setRange(40, 1e8);
 
     mainLayout->addRow(new QLabel(tr("I/Q data bandwidth (kHz)")), comboOpt1);
     comboOpt1->setToolTip("Which bandwidth to use for the receiver. Receiver dependent, "\
                           "must be set according to receiver specs! This is NOT checked in software!");
-    comboOpt1->addItems(QStringList() << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
-                << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000" << "40000");
+    comboOpt1->addItems(QStringList() << "0.1" << "0.15" << "0.3" << "0.6" << "1" << "1.5" << "2.1"
+                                      << "2.4" << "2.7" << "3.1" << "4" << "4.8" << "6" << "8.333" << "9" << "12" << "15" << "25"
+                                      << "30" << "50" << "75" << "120" << "150" << "250" << "300" << "500" << "800" << "1000"
+                                      << "1250" << "1500" << "2000" << "5000" << "8000" << "10000" << "12500"
+                                      << "15000" << "20000" << "40000");
 
     mainLayout->addRow(new QLabel(tr("I/Q prerecord time (seconds)")), leOpt1);
     leOpt1->setToolTip(tr("Decides how long Hauken will gather I/Q data before analyzing." \
@@ -83,6 +90,7 @@ void IqOptions::start()
     cbOpt4->setChecked(config->getIqRecordMultipleBands());
     cbOpt6->setChecked(config->getIqRecordAllTrigArea());
     cbOpt7->setChecked(config->getIqUseAvgForPlot());
+    cbOpt8->setChecked(config->getIqSaveAs16bit());
 
     dialog->exec();
 }
@@ -99,6 +107,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqRecordMultipleBands(cbOpt4->isChecked());
     config->setIqRecordAllTrigArea(cbOpt6->isChecked());
     config->setIqUseAvgForPlot(cbOpt7->isChecked());
+    config->setIqSaveAs16bit(cbOpt8->isChecked());
 
     emit updSettings();
     dialog->close();

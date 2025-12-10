@@ -157,10 +157,7 @@ void MainWindow::setSignals()
             config.data(),
             &Config::setWaterfallTime);
 
-    connect(traceBuffer,
-            &TraceBuffer::newDispTrace,
-            customPlotController,
-            &CustomPlotController::plotTrace);
+    connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
 
     connect(traceBuffer,
@@ -945,4 +942,6 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
 
     connect(datastreamGpsCompass, &DatastreamGpsCompass::gpsdataReady, measurementDevice, &MeasurementDevice::updGpsCompassData);
+
+    connect(audioOptions, &AudioOptions::demodBw, customPlotController, &CustomPlotController::demodBwChanged);
 }

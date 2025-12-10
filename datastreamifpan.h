@@ -14,6 +14,7 @@ class DatastreamIfPan : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamIfPan(QObject *parent = nullptr);
+    void invalidateHeader() { m_ifPanCenterFreq = m_ifPanSpan = m_ifPanResolution = 0; }
 
 signals:
     void traceReady(const QList<qint16> &);
@@ -24,7 +25,6 @@ private:
     bool readOptHeader(QDataStream &ds) { return m_OptHeader.readData(ds, m_attrHeader.optHeaderLength);}
     bool checkHeaders();
     void checkOptHeader();
-    void invalidateCachedFreqs() { m_ifPanCenterFreq = m_ifPanResolution = m_ifPanSpan = 0; }
 
     OptHeaderIfPanEB500 m_OptHeader;
     QElapsedTimer *m_traceTimer = new QElapsedTimer;

@@ -64,6 +64,7 @@ public:
     virtual void newDataHandler() = 0;
     void processData(const QByteArray &);
     bool readHeaders(const QByteArray &buf);
+    bool readHeadersSimplified(const QByteArray &buf);
     void readDscanOptHeader(QDataStream &ds); //FIX
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);

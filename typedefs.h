@@ -353,14 +353,18 @@ public:
     char        reserved[2] = {0};
     quint64     startTimestamp = 0;
     qint16      signalSource = 0;
-    static const int size = 58;
-    bool readData(QDataStream &ds) {
+    int size = 58;
+    bool readData(QDataStream &ds, int headerSize) {
+        if (headerSize >= 58)  {
         ds >> ifMode >> frameLength >> sampleRate >> freqLow >> bandwidth
             >> demodulation >> rxAttenuation >> flags >> kFactor;
         ds.readRawData(demodString, sizeof(demodString));
         ds >> sampleCount >> freqHigh >> rxGain;
         ds.readRawData(reserved, sizeof(reserved));
         ds >> startTimestamp >> signalSource;
+        }
+        if (headerSize > 58)
+            ds.skipRawData(headerSize - 58);
         if (!ds.atEnd()) return true;
         return false;
     }

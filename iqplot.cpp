@@ -22,10 +22,14 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 void IqPlot::getIqData(const QList<complexInt16> &iq16)
 {
     dataFromFile = false;
+    if (!samplesNeeded)
+        samplesNeeded = (int)(config->getIqLogTime() * samplerate);
+
     if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
+    //qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
     if (flagHeaderValidated and !throwFirstSamples) iqSamples += iq16;
     else if (flagHeaderValidated and throwFirstSamples)
-        throwFirstSamples = false;
+        throwFirstSamples--;
 
     //qDebug() << iqSamples.size();
     if (iqSamples.size() >= samplesNeeded and !listFreqs.isEmpty()) {
@@ -39,7 +43,7 @@ void IqPlot::getIqData(const QList<complexInt16> &iq16)
 void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency)
 {
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
-    samplerate = (double) config->getIqFftPlotBw() * 1.28
+    if (!samplerate) samplerate = (double) config->getIqFftPlotBw() * 1.28
                  * 1e3; // TODO: Is this universal for all R&S instruments?
     fillWindow();
 
@@ -55,9 +59,14 @@ void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency
 
     filename = dir + "/" + foldernameDateTime.toString("yyyyMMddhhmmss_")
                + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
-               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
-    if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
-        saveIqData(iq16);
+               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
+               (config->getIqSaveAs16bit() ? "16bit" : "8bit");
+
+    if (!dataFromFile && config->getIqSaveToFile() && iq16.size()) {
+        (void)QtConcurrent::run(&IqPlot::saveIqData,
+                          this,
+                          iq16);
+    }
 
     QFuture<void> f1000 = QtConcurrent::run(&IqPlot::receiveIqDataWorker,
                                             this,
@@ -166,7 +175,10 @@ void IqPlot::saveIqData(const QList<complexInt16> &iq16)
         qWarning() << "Could not open" << filename + ".iq"
                    << "for writing IQ data, aborting";
     else {
-        file.write((const char *) convertComplex16to8bit(iq16).constData(), iq16.size() * 2);
+        if (config->getIqSaveAs16bit())
+            file.write((const char *) iq16.constData(), iq16.size() * 4);
+        else
+            file.write((const char *) convertComplex16to8bit(iq16).constData(), iq16.size() * 2);
         file.close();
     }
 }
@@ -316,7 +328,7 @@ void IqPlot::requestIqData()
     if (config->getIqCreateFftPlot()
         && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 ))
     {
-        samplesNeeded = (int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
+        samplesNeeded = 0; //(int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
 
         listFreqs.clear();
         if (config->getIqRecordMultipleBands()) {
@@ -493,18 +505,19 @@ void IqPlot::updSettings()
 
 }
 
-void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
+void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 rate)
 {
     if (!listFreqs.isEmpty()
         && freq == (quint64)(listFreqs.first() * 1e6)
         && bw == (quint32)(config->getIqFftPlotBw() * 1e3))
     {
         flagHeaderValidated = true;
-        qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz");
+        samplerate = rate;
+        //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << samplerate;
     }
     else {
         flagHeaderValidated = false;
-        qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << samplerate;
+        //qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << samplerate;
 
     }
 }
@@ -512,7 +525,10 @@ void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
 void IqPlot::receiverControl()
 {
     flagHeaderValidated = false; // Assume future data to be invalid for now
-    throwFirstSamples = true;
+    throwFirstSamples = 4 * samplerate / 1e7;
+    if (!throwFirstSamples) throwFirstSamples = 1;
+
+    qDebug() << throwFirstSamples;
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do

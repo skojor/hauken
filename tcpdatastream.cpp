@@ -1,4 +1,5 @@
 #include "tcpdatastream.h"
+#include <QtConcurrentRun>
 
 TcpDataStream::TcpDataStream()
 {
@@ -37,15 +38,18 @@ void TcpDataStream::newDataHandler()
     byteCtr += buf.size();
     tcpBuffer.append(buf);
 
-    while (!tcpBuffer.isEmpty() && readHeaders(tcpBuffer) && tcpBuffer.size() >= (int)header.dataSize) {
-        if (header.seqNumber == sequenceNr + 1)
+    while (!tcpBuffer.isEmpty() && readHeadersSimplified(tcpBuffer) && tcpBuffer.size() >= (int)header.dataSize) {
+        if (header.seqNumber == sequenceNr + 1) {
             processData(tcpBuffer.first(header.dataSize));
-        else
+        }
+        else {
+            ///qDebug() << "ooo" << header.seqNumber << sequenceNr << attrHeader.length;
             emit waitForPscanEndMarker(true);
-
+        }
         tcpBuffer = tcpBuffer.sliced(header.dataSize);
         sequenceNr = header.seqNumber;
     }
+
 #ifdef Q_OS_WIN
     while (tcpBuffer.size() > 127 && !readHeaders(tcpBuffer)) { // out of sync
         tcpBuffer.removeFirst();

@@ -1,4 +1,5 @@
 #include "datastreambaseclass.h"
+#include <QtEndian>
 
 DataStreamBaseClass::DataStreamBaseClass(QObject *parent)
     : QObject{parent}
@@ -46,6 +47,23 @@ bool DataStreamBaseClass::readHeaders(const QByteArray &buf)
     attrHeader.readData(ds);
     if (!ds.atEnd() and header.magicNumber == 0x000eb200)
         return true;
+    return false;
+}
+
+bool DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
+{
+    if (buf.size() > 17) {
+        memcpy(&header.magicNumber, buf.constData(), sizeof(header.magicNumber));
+        header.magicNumber = qToBigEndian(header.magicNumber);
+        memcpy(&header.seqNumber, buf.constData() + 8, sizeof(header.seqNumber));
+        header.seqNumber = qToBigEndian(header.seqNumber);
+        memcpy(&header.dataSize, buf.constData() + 12, sizeof(header.dataSize));
+        header.dataSize = qToBigEndian(header.dataSize);
+        memcpy(&attrHeader.tag, buf.constData() + 16, sizeof(attrHeader.tag));
+        attrHeader.tag = qToBigEndian(attrHeader.tag);
+
+        if (header.magicNumber == 0x000eb200) return true;
+    }
     return false;
 }
 

@@ -636,7 +636,7 @@ void SdefRecorder::closeTempFile()
 {
     if (tempFile.isOpen()) {
         tempFile.close();
-        qDebug() << "Temp file" << tempFile.fileName() << "closed";
+        //qDebug() << "Temp file" << tempFile.fileName() << "closed";
         startTempRecording = false;
     }
 }

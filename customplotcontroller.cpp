@@ -27,32 +27,9 @@ CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Conf
             }
         }
     }
-    /*else {
-        qDebug() << "No bandplan file found, creating one";
-        file.open(QIODevice::ReadWrite);
-        file.write("G1,1593,1610,255,0,0,0,50\n");
-        file.write("L1/E1,1559,1591,0,0,255,0,50\n");
-        file.write("E6,1260,1300,0,0,255,0,50\n");
-        file.write("G2,1237,1254,255,0,0,0,50\n");
-        file.write("L2,1215,1239.6,0,0,255,0,50\n");
-        file.write("G3/E5b,1189,1214,255,255,0,0,50\n");
-        file.write("L5/E5a,1164,1189,255,0,0,0,50\n");
-
-        file.seek(0); // start at top to read data to memory
-        while (!file.atEnd()) {
-            QString line = file.readLine();
-            QStringList split = line.split(',');
-            if (!line.contains("#") && split.size() == 9) {
-                gnssBands.append(split[0]);
-                gnssBandfrequencies.append(split[1].toDouble());
-                gnssBandfrequencies.append(split[2].toDouble());
-                gnssBandColors.append(QColor(split[3].toInt(), split[4].toInt(), split[5].toInt(), split[7].toInt()));
-                gnssTextLabelPos.append(split[6].toInt());
-                gnssBandCenterFreq.append(split[8].toDouble());
-            }
-        }
-    }*/
     file.close();
+
+    centerFreqLine = new QCPItemStraightLine(customPlotPtr);
 }
 
 void CustomPlotController::init()
@@ -64,6 +41,7 @@ void CustomPlotController::init()
 
 void CustomPlotController::setupBasics()
 {
+    customPlotPtr->addGraph();
     customPlotPtr->addGraph();
     customPlotPtr->addGraph();
     customPlotPtr->addGraph();
@@ -101,8 +79,15 @@ void CustomPlotController::setupBasics()
     customPlotPtr->layer("overlayLayer")->setMode(QCPLayer::lmBuffered);
     customPlotPtr->graph(4)->setLayer("overlayLayer");
     customPlotPtr->graph(4)->setData(QVector<double>() << 1 << 9900, QVector<double>() << -200 << -200);
-    customPlotPtr->xAxis->grid()->setVisible(false);
 
+    // Demod. bw overlay
+    customPlotPtr->addLayer("bwLayer");
+    customPlotPtr->layer("bwLayer")->setMode(QCPLayer::lmBuffered);
+    customPlotPtr->graph(5)->setLayer("bwLayer");
+    customPlotPtr->graph(5)->setData(QVector<double>() << 1 << 9900, QVector<double>() << -200 << -200);
+    customPlotPtr->graph(5)->setChannelFillGraph(customPlotPtr->graph(4));
+
+    customPlotPtr->xAxis->grid()->setVisible(false);
     plotIterator = customPlotPtr->graphCount() - 1;
 
     for (int i=0, j=0; i < gnssBands.size(); i++, j += 2) {
@@ -116,10 +101,8 @@ void CustomPlotController::setupBasics()
 
         addOverlay(plotIterator, gnssBandfrequencies[j], gnssBandfrequencies[j+1]);
         QCPItemText *tmp = new QCPItemText(customPlotPtr);
-        //tmp->position->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), customPlotPtr->yAxis->range().upper - 40);
         tmp->setText(gnssBands[i]);
         tmp->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
-        //tmp->setPen(QPen(Qt::gray));
         gnssTextLabels.append(tmp);
         gnssBandsSelectors.append(true);
 
@@ -129,8 +112,6 @@ void CustomPlotController::setupBasics()
         tmpLine->setPen(pen);
         tmpLine->point1->setCoords( gnssBandCenterFreq[i], 200);
         tmpLine->point2->setCoords( gnssBandCenterFreq[i], -200);
-        /*tmpLine->point1->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), 200);
-        tmpLine->point2->setCoords( gnssBandfrequencies[j] + ((gnssBandfrequencies[j+1] - gnssBandfrequencies[j]) / 2), -200);*/
         gnssCenterLine.append(tmpLine);
     }
     toggleOverlay();
@@ -140,14 +121,18 @@ void CustomPlotController::setupBasics()
 void CustomPlotController::plotTrace(const QVector<double> &data)
 {
     if (keyValues.isEmpty()) reCalc();
-    customPlotPtr->graph(0)->setData(keyValues, data);
-    customPlotPtr->layer("liveGraph")->replot();
+    if (!keyValues.isEmpty() and !data.isEmpty()) {
+        customPlotPtr->graph(0)->setData(keyValues, data);
+        customPlotPtr->layer("liveGraph")->replot();
+    }
 }
 
 void CustomPlotController::plotMaxhold(const QVector<double> &data)
 {
     if (keyValues.isEmpty()) reCalc();
-    customPlotPtr->graph(1)->setData(keyValues, data);
+    if (!keyValues.isEmpty() and !data.isEmpty()) {
+        customPlotPtr->graph(1)->setData(keyValues, data);
+    }
 }
 
 void CustomPlotController::plotTriglevel(const QVector<double> &data)
@@ -412,7 +397,6 @@ void CustomPlotController::toggleOverlay()
             gnssCenterLine[j]->setVisible(markGnss);
         }
     }
-
     customPlotPtr->replot();
 }
 
@@ -485,4 +469,52 @@ void CustomPlotController::mouseWheel(QWheelEvent *event)
 {
     QPoint degrees = event->angleDelta() / 8;
     emit scroll(degrees.y() / 15);
+}
+
+void CustomPlotController::modeChanged(Instrument::Mode m)
+{
+    if (m == Instrument::Mode::FFM) {
+        centerFreqLine->setVisible(true);
+        customPlotPtr->layer("bwLayer")->setVisible(true);
+    }
+    else {
+        centerFreqLine->setVisible(false);
+        customPlotPtr->layer("bwLayer")->setVisible(false);
+    }
+}
+
+void CustomPlotController::ffmCenterFreqChanged(quint64 f)
+{
+    QPen pen;
+    pen.setWidth(1);
+    pen.setStyle(Qt::SolidLine);
+    pen.setColor(Qt::black);
+    centerFreqLine->setPen(pen);
+    centerFreqLine->point1->setCoords(f / 1e6, -200);
+    centerFreqLine->point2->setCoords(f / 1e6, 200);
+    demodBwChanged();
+    customPlotPtr->replot();
+}
+
+void CustomPlotController::demodBwChanged(quint32 f)
+{
+    if (!f) { // Reuse bw
+        f = m_bandwidth;
+    }
+    else
+        m_bandwidth = f;
+
+    QPen pen;
+    pen.setWidth(1);
+    pen.setStyle(Qt::SolidLine);
+    pen.setColor(Qt::black);
+
+    double start = centerFreqLine->point1->key() - (double)f / 1e3 / 2;
+    double stop = centerFreqLine->point1->key() + (double)f / 1e3 / 2;
+    customPlotPtr->graph(5)->setPen(pen);
+    customPlotPtr->graph(5)->setBrush(QBrush(QColor(0, 255, 0, 30)));
+    customPlotPtr->graph(5)->setLineStyle(QCPGraph::lsLine);
+    customPlotPtr->graph(5)->setLayer("bwLayer");
+    customPlotPtr->graph(5)->setData(QVector<double>() << start << stop, QVector<double>() << 200 << 200);
+    customPlotPtr->layer("bwLayer")->replot();
 }

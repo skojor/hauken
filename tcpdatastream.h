@@ -2,6 +2,7 @@
 #define TCPDATASTREAM_H
 
 #include "datastreambaseclass.h"
+#include <QMutex>
 
 class TcpDataStream : public DataStreamBaseClass
 {
@@ -21,6 +22,7 @@ signals:
 
 private:
     bool headerIsRead = false;
+    QMutex mutex;
 };
 
 #endif // TCPDATASTREAM_H

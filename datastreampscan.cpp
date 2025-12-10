@@ -2,7 +2,7 @@
 
 DatastreamPScan::DatastreamPScan(QObject *parent)
 {
-    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateCachedFreqs);
+    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateHeader);
 }
 
 bool DatastreamPScan::checkHeaders()
