@@ -476,6 +476,8 @@ public slots:
     void setAudioSquelch(bool b) { settings->setValue("audio/squelch", b);}
     int getAudioSquelchLevel() { return settings->value("audio/squelchLevel", 0).toInt();}
     void setAudioSquelchLevel(int i) { settings->setValue("audio/squelchLevel", i);}
+    int getAudioDetector() { return settings->value("audio/detector", 0).toInt();}
+    void setAudioDetector(int i) { settings->setValue("audio/detector", i);}
 
 private slots:
 

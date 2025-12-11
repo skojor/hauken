@@ -982,23 +982,14 @@ void MainWindow::setSignals()
 
     connect(datastreamCw, &DatastreamCw::detector1Changed, this, [this] (int i) {
         QString d;
-        switch (i) {
-        case 1:
-            d = "peak";
-            break;
-        case 2:
-            d = "fast";
-            break;
-        case 3:
-            d = "rms";
-            break;
-        default:
-            d = "avg";
-        }
+        if (!i) d = "avg";
+        else if (i == 1) d = "peak";
+        else if (i == 2) d = "rms";
+        else d = "avg";
         btnDetector->setText("Detector " + d);
     });
     connect(btnBw, &QPushButton::clicked, audioOptions, &AudioOptions::start);
     connect(btnDemodulator, &QPushButton::clicked, audioOptions, &AudioOptions::start);
     connect(btnDetector, &QPushButton::clicked, audioOptions, &AudioOptions::start);
-
+    connect(audioOptions, &AudioOptions::detector, measurementDevice, &MeasurementDevice::setDetector);
 }

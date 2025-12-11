@@ -29,6 +29,7 @@ signals:
     void squelch(bool);
     void squelchLevel(int);
     void record(bool);
+    void detector(int);
 
 private:
     QSharedPointer<Config> config;
@@ -40,6 +41,7 @@ private:
     void reportPlayback();
     void reportSquelch();
     void reportRecord();
+    void reportDetector() { emit detector(config->getAudioDetector());}
 };
 
 #endif // AUDIOOPTIONS_H

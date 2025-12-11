@@ -1188,3 +1188,13 @@ void MeasurementDevice::updGpsCompassData(GpsData &data)
     devicePtr->sats = data.sats;
     devicePtr->positionValid = data.valid;
 }
+
+void MeasurementDevice::setDetector(int i)
+{
+    QByteArray det;
+    if (i == 0) det = "POS";
+    else if (i == 1) det = "PAV";
+    else if (i == 2) det = "FAST";
+    else det = "RMS";
+    scpiWrite("sens:det " + det);
+}
