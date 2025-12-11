@@ -3,7 +3,7 @@
 AudioPlayer::AudioPlayer(QObject *parent)
     : QObject{parent}
 {
-   // m_format.setSampleFormat(QAudioFormat::Unknown);
+    //setAudioDevice(0);
 }
 
 void AudioPlayer::playChunk(const QByteArray &pcm)
@@ -19,22 +19,21 @@ void AudioPlayer::playChunk(const QByteArray &pcm)
 void AudioPlayer::setFormat(int samplerate, int channels, QAudioFormat::SampleFormat format)
 {
     if (samplerate == 0 && channels == 0 && format == QAudioFormat::Unknown) { // Mode 0, switch off
-        if (m_audioSink) {
+        /*if (m_audioSink) {
             m_audioSink->stop();
             m_audioSink->deleteLater();
-        }
+        }*/
     }
     if (samplerate != 8000 and samplerate != 16000 and samplerate != 32000)
         qDebug() << "Sample rate not supported:" << samplerate;
     else if (channels < 1 or channels > 2)
         qDebug() << "Channels can only be 1 or 2!";
     else {
-        m_formatSet = true;
-        if (m_audioSink)
-            m_audioSink->deleteLater();
         m_format.setSampleRate(samplerate);
         m_format.setChannelCount(channels);
         m_format.setSampleFormat(format);
+        m_formatSet = true;
+
 
         auto device = QMediaDevices::defaultAudioOutput();
         m_audioSink = new QAudioSink(device, m_format, this);

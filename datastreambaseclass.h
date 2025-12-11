@@ -80,6 +80,7 @@ signals:
     void newPscanData(const QByteArray &);
     void newIfPanData(const QByteArray &);
     void newGpsCompassData(const QByteArray &);
+    void newCwData(const QByteArray &);
     void waitForPscanEndMarker(bool);
     void bytesPerSecond(int);
 

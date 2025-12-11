@@ -2,8 +2,7 @@
 
 DatastreamIfPan::DatastreamIfPan(QObject *parent)
 {
-    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamIfPan::invalidateHeader);
-}
+    }
 
 bool DatastreamIfPan::checkHeaders()
 {
@@ -16,8 +15,6 @@ bool DatastreamIfPan::checkHeaders()
 
 void DatastreamIfPan::readData(QDataStream &ds)
 {
-    m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
-
     if (checkHeaders()) {
         ds.setByteOrder(QDataStream::LittleEndian);
 

@@ -36,6 +36,8 @@ void DataStreamBaseClass::processData(const QByteArray &buf)
         emit newIfPanData(buf);
     else if (attrHeader.tag == (int)Instrument::Tags::GPSC)
         emit newGpsCompassData(buf);
+    else if (attrHeader.tag == (int)Instrument::Tags::CW or attrHeader.tag == (int)Instrument::Tags::ADVCW)
+        emit newCwData(buf);
     else
         qDebug() << "Unknown tag:" << attrHeader.tag;
 }

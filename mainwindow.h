@@ -38,6 +38,8 @@
 #include <QAudioOutput>
 #include <QAudioFormat>
 #include <QBuffer>
+#include <QLCDNumber>
+#include <QFrame>
 #include "config.h"
 #include "measurementdevice.h"
 #include "qcustomplot.h"
@@ -91,6 +93,7 @@
 #include "datastreampscan.h"
 #include "datastreamifpan.h"
 #include "datastreamgpscompass.h"
+#include "datastreamcw.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -188,6 +191,7 @@ private slots:
     void restartWaterfall();
     void btnConnectPressed(bool state = true);
     void btnDisconnectPressed();
+    void hideLayoutWidgets(QLayout *, bool);
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -360,6 +364,7 @@ private:
     DatastreamPScan *datastreamPScan = new DatastreamPScan;
     DatastreamIfPan *datastreamIfPan = new DatastreamIfPan;
     DatastreamGpsCompass *datastreamGpsCompass = new DatastreamGpsCompass;
+    DatastreamCw *datastreamCw = new DatastreamCw;
 
     double tracesPerSecond = 0;
     AccessHandler *accessHandler = new AccessHandler(this, config);
@@ -370,6 +375,13 @@ private:
     bool measDeviceFinished = false;
     AudioPlayer audioPlayer;
     AudioRecorder audioRecorder;
+    QLCDNumber *lcdLevel = new QLCDNumber;
+    QPushButton *btnDemodulator = new QPushButton("Demodulator");
+    QPushButton *btnSigLevel = new QPushButton("Level");
+    QPushButton *btnBw = new QPushButton("BW");
+    QPushButton *btnDetector = new QPushButton("Detector");
+    QHBoxLayout *ffmInfoLayout = new QHBoxLayout(this);
+
 
 signals:
     void stopPlot(bool);

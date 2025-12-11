@@ -940,8 +940,65 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &DataStreamBaseClass::newIfPanData, datastreamIfPan, &DatastreamIfPan::parseData);
     connect(tcpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
     connect(udpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newCwData, datastreamCw, &DatastreamCw::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newCwData, datastreamCw, &DatastreamCw::parseData);
 
     connect(datastreamGpsCompass, &DatastreamGpsCompass::gpsdataReady, measurementDevice, &MeasurementDevice::updGpsCompassData);
 
     connect(audioOptions, &AudioOptions::demodBw, customPlotController, &CustomPlotController::demodBwChanged);
+    /*connect(audioOptions, &AudioOptions::demodBw, this, [this] (int i) {
+        customPlotController->demodBwChanged(i);
+        QString text;
+        QTextStream ts(&text);
+        QString bw;
+        if (i < 1000)
+            bw = QString::number(i) + " Hz";
+        else if (i < 1000000)
+            bw = QString::number(i / 1e3) + " kHz";
+        else
+            bw = QString::number(i / 1e6) + " MHz";
+        ts << "BW " << bw;
+        btnBw->setText(text);
+
+    });*/
+
+    connect(datastreamCw, &DatastreamCw::level, this, [this] (int i) {
+        lcdLevel->display((double)i / 10);
+        QString text;
+        QTextStream ts(&text);
+        if (config->getUseDbm()) i -= 1070;
+        ts << "Level " << (double)i / 10 << (config->getUseDbm() ? " dBm" : " dBμV");
+        btnSigLevel->setText(text);
+    });
+    connect(audioOptions, &AudioOptions::demodType, this, [this] (QString s) {
+        btnDemodulator->setText("Demod " + s);
+    });
+    connect(audioOptions, &AudioOptions::demodBw, this, [this] (int i) {
+        QString text;
+        QTextStream ts(&text);
+        ts << "BW " << i << " kHz";
+        btnBw->setText(text);
+    });
+
+    connect(datastreamCw, &DatastreamCw::detector1Changed, this, [this] (int i) {
+        QString d;
+        switch (i) {
+        case 1:
+            d = "peak";
+            break;
+        case 2:
+            d = "fast";
+            break;
+        case 3:
+            d = "rms";
+            break;
+        default:
+            d = "avg";
+        }
+        btnDetector->setText("Detector " + d);
+    });
+    connect(btnBw, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(btnDemodulator, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(btnDetector, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+
 }

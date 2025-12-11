@@ -675,7 +675,7 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
 
-    QByteArray modeStr = "ifp, aud, if, psc";
+    QByteArray modeStr = "cw, ifp, aud, if, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -700,7 +700,7 @@ void MeasurementDevice::setupUdpStream()
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
 
-    QByteArray modeStr = "ifp, aud, if, psc";
+    QByteArray modeStr = "cw, ifp, aud, if, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";

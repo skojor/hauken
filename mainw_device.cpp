@@ -36,6 +36,7 @@ void MainWindow::instrModeChanged()
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
         customPlotController->modeChanged(Instrument::Mode::PSCAN);
+        hideLayoutWidgets(ffmInfoLayout, true);
     }
     else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
              measurementDevice->currentMode() != Instrument::Mode::FFM*/) {
@@ -53,6 +54,7 @@ void MainWindow::instrModeChanged()
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
         customPlotController->modeChanged(Instrument::Mode::FFM);
+        hideLayoutWidgets(ffmInfoLayout, false);
     }
     instrPscanFreqChanged();
     setResolutionFunction();
