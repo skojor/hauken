@@ -24,8 +24,8 @@ void AudioPlayer::setFormat(int samplerate, int channels, QAudioFormat::SampleFo
             m_audioSink->deleteLater();
         }*/
     }
-    if (samplerate != 8000 and samplerate != 16000 and samplerate != 32000)
-        qDebug() << "Sample rate not supported:" << samplerate;
+    if (samplerate != 8000 and samplerate != 16000 and samplerate != 32000);
+        //qDebug() << "Sample rate not supported:" << samplerate;
     else if (channels < 1 or channels > 2)
         qDebug() << "Channels can only be 1 or 2!";
     else {

@@ -946,22 +946,6 @@ void MainWindow::setSignals()
     connect(datastreamGpsCompass, &DatastreamGpsCompass::gpsdataReady, measurementDevice, &MeasurementDevice::updGpsCompassData);
 
     connect(audioOptions, &AudioOptions::demodBw, customPlotController, &CustomPlotController::demodBwChanged);
-    /*connect(audioOptions, &AudioOptions::demodBw, this, [this] (int i) {
-        customPlotController->demodBwChanged(i);
-        QString text;
-        QTextStream ts(&text);
-        QString bw;
-        if (i < 1000)
-            bw = QString::number(i) + " Hz";
-        else if (i < 1000000)
-            bw = QString::number(i / 1e3) + " kHz";
-        else
-            bw = QString::number(i / 1e6) + " MHz";
-        ts << "BW " << bw;
-        btnBw->setText(text);
-
-    });*/
-
     connect(datastreamCw, &DatastreamCw::level, this, [this] (int i) {
         lcdLevel->display((double)i / 10);
         QString text;
@@ -992,4 +976,5 @@ void MainWindow::setSignals()
     connect(btnDemodulator, &QPushButton::clicked, audioOptions, &AudioOptions::start);
     connect(btnDetector, &QPushButton::clicked, audioOptions, &AudioOptions::start);
     connect(audioOptions, &AudioOptions::detector, measurementDevice, &MeasurementDevice::setDetector);
+    connect(instrDisconnect, &QPushButton::clicked, &audioRecorder, &AudioRecorder::closeFile);
 }
