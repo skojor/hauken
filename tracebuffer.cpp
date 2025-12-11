@@ -81,8 +81,8 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 void TraceBuffer::getSecondsOfBuffer(int secs)
 {
     QDateTime currentDateTime = QDateTime::currentDateTime();
-    QList<QDateTime> dateBuffer;
-    QList<QVector<qint16> > databuffer;
+    QVector<QDateTime> dateBuffer;
+    QVector<QVector<qint16> > databuffer;
     int iterator = traceBuffer.size() - 1;
     while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(currentDateTime) < secs) {
         dateBuffer.append(datetimeBuffer.at(iterator));

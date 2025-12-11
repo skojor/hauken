@@ -19,7 +19,7 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
     });
 }
 
-void IqPlot::getIqData(const QList<complexInt16> &iq16)
+void IqPlot::getIqData(const QVector<complexInt16> &iq16)
 {
     dataFromFile = false;
     if (!samplesNeeded)
@@ -40,7 +40,7 @@ void IqPlot::getIqData(const QList<complexInt16> &iq16)
     }
 }
 
-void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency)
+void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequency)
 {
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
     if (!samplerate) samplerate = (double) config->getIqFftPlotBw() * 1.28
@@ -74,7 +74,7 @@ void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency
                                             config->getIqFftPlotLength() / 1e6);
 }
 
-void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze)
+void IqPlot::receiveIqDataWorker(const QVector<complexInt16> iq, const double secondsToAnalyze)
 {
     const int fftSize = 64;
     const int newFftSize = fftSize * 16;
@@ -110,8 +110,8 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
         = 84.0 * (double) newFftSize
           / 1024.0; // Removing samples to have just above the original sample width visible in the plot
 
-    QList<double> result;
-    QList<QList<double>> iqFftResult;
+    QVector<double> result;
+    QVector<QVector<double>> iqFftResult;
 
     for (int i = 0; i < newFftSize;
          i++) { // Set all input values to 0 initially, used for zero padding
@@ -168,7 +168,7 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
     emit workerDone();
 }
 
-void IqPlot::saveIqData(const QList<complexInt16> &iq16)
+void IqPlot::saveIqData(const QVector<complexInt16> &iq16)
 {
     QFile file(filename + ".iq");
     if (!file.open(QIODevice::WriteOnly))
@@ -183,7 +183,7 @@ void IqPlot::saveIqData(const QList<complexInt16> &iq16)
     }
 }
 
-void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
+void IqPlot::createIqPlot(const QVector<QVector<double>> &iqFftResult,
                           const double secondsAnalyzed,
                           const double secondsPerLine)
 {
@@ -216,7 +216,7 @@ void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
     saveImage(&image, secondsAnalyzed);
 }
 
-void IqPlot::findIqFftMinMaxAvg(const QList<QList<double>> &iqFftResult,
+void IqPlot::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult,
                                 double &min,
                                 double &max,
                                 double &avg)
@@ -384,7 +384,7 @@ void IqPlot::requestIqData()
     }
 }
 
-quint64 IqPlot::analyzeIqStart(const QList<complexInt16> &iq)
+quint64 IqPlot::analyzeIqStart(const QVector<complexInt16> &iq)
 {
     qint16 max = -32768;
     quint64 locMax = 0;
@@ -420,7 +420,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
         dataFromFile = true;
 
         if (int16) {
-            QList<complexInt16> iq16;
+            QVector<complexInt16> iq16;
             iq16.resize(file.size() / 4);
             if (file.read((char *) iq16.data(), file.size()) == -1)
                 qWarning() << "IQ16 read failed:" << file.errorString();
@@ -432,7 +432,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
                 parseIqData(iq16, ffmFrequency);
             }
         } else {
-            QList<complexInt8> iq8;
+            QVector<complexInt8> iq8;
             iq8.resize(file.size() / 2);
             if (file.read((char *) iq8.data(), file.size()) == -1)
                 qWarning() << "IQ8 read failed:" << file.errorString();
@@ -444,9 +444,9 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
     }
 }
 
-const QList<complexInt8> IqPlot::convertComplex16to8bit(const QList<complexInt16> &input)
+const QVector<complexInt8> IqPlot::convertComplex16to8bit(const QVector<complexInt16> &input)
 {
-    QList<complexInt8> output;
+    QVector<complexInt8> output;
     qint16 max;
     findIqMaxValue(input, max);
     double factor;
@@ -461,16 +461,16 @@ const QList<complexInt8> IqPlot::convertComplex16to8bit(const QList<complexInt16
     return output;
 }
 
-const QList<complexInt16> IqPlot::convertComplex8to16bit(const QList<complexInt8> &input)
+const QVector<complexInt16> IqPlot::convertComplex8to16bit(const QVector<complexInt8> &input)
 {
-    QList<complexInt16> output;
+    QVector<complexInt16> output;
     for (const auto &val : input)
         output.append(complexInt16{static_cast<qint16>(val.real * 128), static_cast<qint16>(val.imag * 128)});
 
     return output;
 }
 
-void IqPlot::findIqMaxValue(const QList<complexInt16> &input, qint16 &max)
+void IqPlot::findIqMaxValue(const QVector<complexInt16> &input, qint16 &max)
 {
     max = -32768;
     for (const auto &val : input) {

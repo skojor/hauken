@@ -13,6 +13,7 @@
 #include <QDebug>
 #include <QTimer>
 #include <QList>
+#include <QVector>
 #include "config.h"
 
 #define UDPPORT 5569
@@ -26,7 +27,7 @@ public:
     ~Network();
 
 public slots:
-    void newTraceline(const QList<qint16>);
+    void newTraceline(const QVector<qint16>);
     void updSettings();
     void updFrequencies(const quint64 startf, const quint64 stopf) { startFreq = startf; stopFreq = stopf;}
 

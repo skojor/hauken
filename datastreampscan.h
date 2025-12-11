@@ -5,7 +5,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QElapsedTimer>
-#include <QList>
+#include <QVector>
 #include "streamparserbase.h"
 
 class DatastreamPScan : public StreamParserBase
@@ -17,7 +17,7 @@ public:
     void invalidateHeader() { m_pscStartFreq = m_pscStopFreq = m_pscRes = 0; }
 
 signals:
-    void traceReady(const QList<qint16> &);
+    void traceReady(const QVector<qint16> &);
     void tracesPerSecond(double);
 
 private:
@@ -28,7 +28,7 @@ private:
     void invalidateCachedFreqs() { m_pscStartFreq = m_pscStopFreq = m_pscRes = 0; }
 
     OptHeaderPScanEB500 m_pscanOptHeader;
-    QList<qint16> m_fft;
+    QVector<qint16> m_fft;
     bool m_waitingForPscanEndMarker = true;
     QElapsedTimer *m_traceTimer = new QElapsedTimer;
     int m_traceCtr = 0;

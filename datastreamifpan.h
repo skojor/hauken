@@ -5,7 +5,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QElapsedTimer>
-#include <QList>
+#include <QVector>
 #include "streamparserbase.h"
 
 
@@ -17,7 +17,7 @@ public:
     void invalidateHeader() { m_ifPanCenterFreq = m_ifPanSpan = m_ifPanResolution = 0; }
 
 signals:
-    void traceReady(const QList<qint16> &);
+    void traceReady(const QVector<qint16> &);
     void tracesPerSecond(double);
 
 private:

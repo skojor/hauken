@@ -14,6 +14,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QElapsedTimer>
+#include <QVector>
 #include "config.h"
 #include "typedefs.h"
 #include "JlCompress.h"
@@ -39,7 +40,7 @@ public slots:
     void updSettings();
     void triggerRecording(); // to be called as long as incident is happening!
     void manualTriggeredRecording();
-    void receiveTraceBuffer(const QList<QDateTime> datetime, const QList<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
+    void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
     void receiveTrace(const QVector<qint16> data); // new data arrives here
     void updTracesPerSecond(double d) { tracePerSecond = d;}
     void deviceDisconnected(bool b) { if (!b) finishRecording(); deviceConnected = b;}
@@ -128,7 +129,7 @@ private:
 
     QNetworkAccessManager *networkManager; // New for OAuth2/SSO
 
-    QList<qint16> tempFileTracedata;
+    QVector<qint16> tempFileTracedata;
     bool startTempRecording = false;
     bool iqRecordingInProgress = false;
     int skipTraces = 0;

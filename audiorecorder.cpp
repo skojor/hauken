@@ -33,30 +33,32 @@ void AudioRecorder::receiveAudioData(const QByteArray &pcm)
     }
 
     QByteArray mp3buf(totalSamples16 * 4, 0);
-    int numFrames = totalSamples16 / m_format.channelCount();
-    int bytesEncoded = 0;
+    if (m_format.channelCount()) {
+        int numFrames = totalSamples16 / m_format.channelCount();
+        int bytesEncoded = 0;
 
-    if (m_format.channelCount() == 2) {
-        bytesEncoded = lame_encode_buffer_interleaved(
-            m_lame,
-            const_cast<short*>(samples),
-            numFrames,
-            reinterpret_cast<unsigned char*>(mp3buf.data()),
-            mp3buf.size()
-            );
-    } else {
-        bytesEncoded = lame_encode_buffer(
-            m_lame,
-            const_cast<short*>(samples),
-            nullptr,
-            totalSamples16,
-            reinterpret_cast<unsigned char*>(mp3buf.data()),
-            mp3buf.size()
-            );
+        if (m_format.channelCount() == 2) {
+            bytesEncoded = lame_encode_buffer_interleaved(
+                m_lame,
+                const_cast<short*>(samples),
+                numFrames,
+                reinterpret_cast<unsigned char*>(mp3buf.data()),
+                mp3buf.size()
+                );
+        } else {
+            bytesEncoded = lame_encode_buffer(
+                m_lame,
+                const_cast<short*>(samples),
+                nullptr,
+                totalSamples16,
+                reinterpret_cast<unsigned char*>(mp3buf.data()),
+                mp3buf.size()
+                );
+        }
+
+        if (bytesEncoded > 0)
+            m_file.write(mp3buf.constData(), bytesEncoded);
     }
-
-    if (bytesEncoded > 0)
-        m_file.write(mp3buf.constData(), bytesEncoded);
 }
 
 void AudioRecorder::updFormat(const int samplerate, const int channels, const QAudioFormat::SampleFormat format)
@@ -78,7 +80,7 @@ void AudioRecorder::demodChanged(int freq, int bw, const QString &demodType)
 
     if (m_recorderEnabled) {
         m_file.setFileName(m_fileLocation + "/" +
-                           QDateTime::currentDateTime().toString("yyyyMMdd") + "_" +
+                           QDateTime::currentDateTime().toString("yyyyMMddmmss") + "_" +
                            QString::number(freq) + "_" +
                            QString::number(bw) + "_" +
                            demodType + ".mp3");

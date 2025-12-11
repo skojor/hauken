@@ -69,8 +69,8 @@ signals:
     void averageLevelReady(const QVector<qint16> &data);
     void stopAvgLevelFlash();
     void averageLevelCalculating();
-    void historicData(const QList<QDateTime>, const QList<QVector<qint16> >data);
-    void aiData(const QList<QVector<qint16> >data);
+    void historicData(const QVector<QDateTime>, const QVector<QVector<qint16> >data);
+    void aiData(const QVector<QVector<qint16> >data);
     void traceToAnalyzer(const QVector<qint16> &data);
     void traceToRecorder(const QVector<qint16> &data);
     void traceData(const QVector<qint16> &data);
@@ -91,15 +91,15 @@ private slots:
 
 private:
     QSharedPointer<Config> config;
-    QList<QDateTime> datetimeBuffer;
-    QList<QVector<qint16>> traceBuffer;
-    QList<QVector<qint16>> normTraceBuffer;
+    QVector<QDateTime> datetimeBuffer;
+    QVector<QVector<qint16>> traceBuffer;
+    QVector<QVector<qint16>> normTraceBuffer;
     QVector<qint16> traceCopy;
     QVector<qint16> averageLevel;
     QVector<double> averageDispLevel;
     QVector<double> averageDispLevelNormalized;
     QVector<double> displayBuffer;
-    QList<QVector<double>> maxholdBuffer;
+    QVector<QVector<double>> maxholdBuffer;
     int maxholdTime = 10;
     const int bufferAge = 120; // always hold 120 seconds of buffer. maxhold/other output adjusted to their own settings
     QTimer *deleteOlderThanTimer;

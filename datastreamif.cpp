@@ -23,7 +23,7 @@ void DatastreamIf::readData(QDataStream &ds)
         if (m_optHeader.frameLength == 4) {
             const int totalBytes = m_attrHeader.numItems * m_optHeader.frameLength;
 
-            QList<complexInt16> iqSamples(m_attrHeader.numItems);
+            QVector<complexInt16> iqSamples(m_attrHeader.numItems);
             int read = ds.readRawData((char *)iqSamples.data(), totalBytes);
             if (ds.atEnd() && read == totalBytes) {
                 /*for (auto &val : iqSamples) {

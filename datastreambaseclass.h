@@ -74,7 +74,7 @@ public:
 signals:
     void connectedState(bool);
     void timeout();
-    void newIqData(const QList<complexInt16>&);
+    void newIqData(const QVector<complexInt16>&);
     void newAudioData(const QByteArray &);
     void newIfData(const QByteArray &);
     void newPscanData(const QByteArray &);

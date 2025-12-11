@@ -21,7 +21,7 @@ void DatastreamIfPan::readData(QDataStream &ds)
         m_OptHeader.readData(ds, m_attrHeader.optHeaderLength);
         checkOptHeader();
 
-        QList<qint16> tmpBuffer(m_attrHeader.numItems);
+        QVector<qint16> tmpBuffer(m_attrHeader.numItems);
         int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
 
         if (readBytes == tmpBuffer.size() * 2) {
