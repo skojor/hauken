@@ -105,7 +105,7 @@ void MainWindow::instrPscanFreqChanged()
         config->setInstrStartFreq(instrStartFreq->value() * 1e6);
         config->setInstrStopFreq(instrStopFreq->value() * 1e6);
         ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
-        sdefRecorder->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
+        /*sdefRecorder->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);*/ // Handled by signal directly from datastream pscan / ffm
     }
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
@@ -121,8 +121,8 @@ void MainWindow::instrFfmCenterFreqChanged()
         measurementDevice->setFfmCenterFrequency(1e6 * instrFfmCenterFreq->value());
         ptrNetwork->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
                                    1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
-        sdefRecorder->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
-                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
+        /*sdefRecorder->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2, // Handled by signal directly from datastream pscan / ffm
+                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);*/
     }
 
     if (measurementDevice->isConnected()) {

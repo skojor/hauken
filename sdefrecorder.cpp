@@ -106,16 +106,6 @@ void SdefRecorder::updSettings()
     }
     useNewMsFormat = config->getSdefNewMsFormat();
 
-    if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)) {
-        //startfreq = config->getInstrStartFreq();
-        //stopfreq = config->getInstrStopFreq();
-        resolution = config->getInstrResolution().toDouble() * 1e3;
-    } else {
-        //int span = config->getInstrFfmSpan().toInt() * 1e3;
-        //startfreq = config->getInstrFfmCenterFreq() - span / 2;
-        //stopfreq = startfreq + span;
-        resolution = (stopfreq - startfreq) / (datapoints - 1);
-    }
     tempFileMaxhold = config->getSaveToTempFileMaxhold();
     if (tempFileMaxhold > 0)
         tempFileTimer->start(tempFileMaxhold * 1e3);
@@ -220,14 +210,13 @@ void SdefRecorder::receiveTrace(const QVector<qint16> data)
 
         if (addPosition) {
             byteArray.append(",").append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
-                         .append(QByteArray::number(positionHistory.last().second, 'f', 6));
+            .append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }
 
         for (auto && val : data) {
             byteArray.append(",").append(QByteArray::number(val / 10));
         }
         byteArray.append("\n");
-
         file.write(byteArray);
     }
     if (skipTraces) skipTraces--;
@@ -252,9 +241,9 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
         bool ok = true;
 
         if (useNewMsFormat)
-            byteArray += datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit();
+            byteArray += datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit();
         else
-            byteArray += datetime.at(i).toString("hh:mm:ss,").toLocal8Bit();
+            byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit();
 
         if (startTime.secsTo(datetime.at(i))
             > 0) { // one second of data has passed, counters updated in if below here
@@ -272,18 +261,16 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
             if (dateIterator
                 > positionHistory.size() - 1) // should never happen except in early startup
                 dateIterator = positionHistory.size() - 1;
-            byteArray += QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + ","
-                         + QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6)
-                         + ",";
+            byteArray += "," + QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + ","
+                         + QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6);
         }
 
         for (auto val : data.at(i)) {
-            byteArray += QByteArray::number((int) (val / 10)) + ',';
+            byteArray.append(",").append(QByteArray::number(val / 10));
             if (val < -999 || val >= 2000)
                 ok = false;
         }
-        byteArray.remove(byteArray.size() - 1, 1); // remove last comma
-        byteArray += '\n';
+        byteArray.append("\n");
 
         if (ok)
             file.write(byteArray);
@@ -297,18 +284,7 @@ QByteArray SdefRecorder::createHeader()
 {
     QString buf;
     QTextStream stream(&buf, QIODevice::ReadWrite);
-    /*double startfreq, stopfreq, res;
-    if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
-        startfreq = config->getInstrStartFreq() * 1e3;
-        stopfreq = config->getInstrStopFreq() * 1e3;
-        res = config->getInstrResolution().toDouble();
-        //datapoints = 1 + ((config->getInstrStopFreq() - config->getInstrStartFreq()) / (config->getInstrResolution().toDouble() / 1e3));
-    }
-    else {
-        startfreq = (config->getInstrFfmCenterFreq() * 1e3) - (config->getInstrFfmSpan().toDouble() / 2);
-        stopfreq = config->getInstrFfmCenterFreq() * 1e3 + (config->getInstrFfmSpan().toDouble() / 2);
-        res = (stopfreq - startfreq) / (datapoints - 1);
-    }*/
+
     QString gain;
     if (config->getInstrId().contains("em200", Qt::CaseInsensitive)
         || config->getInstrId().contains("pr200", Qt::CaseInsensitive)
@@ -321,6 +297,7 @@ QByteArray SdefRecorder::createHeader()
         else
             gain = "Normal";
     }
+    //if (!(int)scanTime) scanTime = (double)config->getInstrMeasurementTime() / 1e3;
 
     stream << (config->getSdefAddPosition() ? "FileType MobileData" : "FileType SDF 3.0") << '\n'
            << "User " << config->getSdefStationInitals() << "\n"
@@ -341,7 +318,7 @@ QByteArray SdefRecorder::createHeader()
            << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
            << "DataPoints " << datapoints << '\n'
            << "ScanTime "
-           << QString::number((double) config->getInstrMeasurementTime() / 1e3, 'f', 3) << '\n'
+           << QString::number((double) scanTime, 'f', 3) << '\n'
            << "Instrument " << config->getInstrId() << "\n"
            << "MeasureApp Hauken v" << QString(PROJECT_VERSION) << "\n"
            << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << " s\n"
@@ -673,13 +650,13 @@ void SdefRecorder::saveDataToTempFile()
     if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
         QByteArray byteArray;
         if (useNewMsFormat)
-            byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz,").toLocal8Bit());
+            byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit());
         else
-            byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss,").toLocal8Bit());
+            byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss").toLocal8Bit());
 
         if (addPosition && !positionHistory.isEmpty()) {
-            byteArray.append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
-            .append(QByteArray::number(positionHistory.last().second, 'f', 6));
+            byteArray.append(",").append(QByteArray::number(positionHistory.last().first, 'f', 6))
+                .append(",").append(QByteArray::number(positionHistory.last().second, 'f', 6));
         }
 
         for (auto &&val : tempFileTracedata) {

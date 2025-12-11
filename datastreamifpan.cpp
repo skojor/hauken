@@ -52,7 +52,7 @@ void DatastreamIfPan::checkOptHeader()
         emit frequencyChanged(m_ifPanCenterFreq - m_ifPanSpan / 2, m_ifPanCenterFreq + m_ifPanSpan / 2);
     }
     double resolution = 0;
-    if (m_attrHeader.numItems) resolution = m_OptHeader.freqSpan / m_attrHeader.numItems;
+    if (m_attrHeader.numItems) resolution = m_OptHeader.freqSpan / (m_attrHeader.numItems - 1);
     if ((int)resolution != (int)m_ifPanResolution) {
         m_ifPanResolution = resolution;
         emit resolutionChanged(m_ifPanResolution);

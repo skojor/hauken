@@ -977,4 +977,10 @@ void MainWindow::setSignals()
     connect(btnDetector, &QPushButton::clicked, audioOptions, &AudioOptions::start);
     connect(audioOptions, &AudioOptions::detector, measurementDevice, &MeasurementDevice::setDetector);
     connect(instrDisconnect, &QPushButton::clicked, &audioRecorder, &AudioRecorder::closeFile);
+
+    connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+    connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+    connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+    connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+    connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::updScanTime);
 }
