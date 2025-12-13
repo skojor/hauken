@@ -5,6 +5,11 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    sdefRecorder = new SdefRecorder(config);
+    sdefRecorderThread = new QThread(this);
+    sdefRecorderThread->setObjectName("SdefRecorder");
+    sdefRecorder->moveToThread(sdefRecorderThread);
+
     setStatusBar(statusBar);
     //statusBar->addWidget(progressBar);
     progressBar->setMinimum(0);
@@ -28,7 +33,6 @@ MainWindow::MainWindow(QWidget *parent)
     customPlot = new QCustomPlot;
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
-    waterfall = new Waterfall(config);
 
     //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
@@ -58,22 +62,6 @@ MainWindow::MainWindow(QWidget *parent)
     arduinoPtr = new Arduino(config);
     aiPtr = new AI(config);
     read1809Data = new Read1809Data(config);
-
-    sdefRecorderThread->setObjectName("SdefRecorder");
-    sdefRecorder->moveToThread(sdefRecorderThread);
-    notificationsThread->setObjectName("Notifications");
-    notifications->moveToThread(notificationsThread);
-
-    waterfallThread = new QThread;
-    waterfallThread->setObjectName("waterfall");
-    waterfall->moveToThread(waterfallThread);
-
-    cameraRecorder = new CameraRecorder(config);
-    cameraThread = new QThread;
-    cameraThread->setObjectName("camera");
-    cameraRecorder->moveToThread(cameraThread);
-    connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
-    cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -148,6 +136,10 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    notificationsThread->quit();
+    waterfallThread->quit();
+    cameraThread->quit();
+    sdefRecorderThread->quit();
     gnssDisplay->close();
     if (arduinoPtr->isWatchdogActive())
         arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully

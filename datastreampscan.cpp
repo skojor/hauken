@@ -2,7 +2,9 @@
 
 DatastreamPScan::DatastreamPScan(QObject *parent)
 {
-    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateHeader);
+    //connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateHeader);
+    connect(m_traceTimer, &QTimer::timeout, this, &DatastreamPScan::calcTracesPerSecond);
+    m_traceTimer->start(1000);
 }
 
 bool DatastreamPScan::checkHeaders()
@@ -16,7 +18,7 @@ bool DatastreamPScan::checkHeaders()
 
 void DatastreamPScan::readData(QDataStream &ds)
 {
-    m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
+    //m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
 
     if (checkHeaders()) {
         ds.setByteOrder(QDataStream::LittleEndian);
@@ -49,13 +51,10 @@ void DatastreamPScan::readData(QDataStream &ds)
 
                 m_fft.clear();
                 m_traceCtr++;
-                if (m_traceTimer->isValid() && m_traceCtr >= 10) {
-                    emit tracesPerSecond(1e10 / m_traceTimer->nsecsElapsed());
-                    m_traceCtr = 0;
-                    m_traceTimer->start();
-                }
-                if (!m_traceTimer->isValid())
-                    m_traceTimer->start();
+                if (m_traceElapsedTimer->isValid())
+                    traceTime = 1e3 / m_traceElapsedTimer->restart();
+                else
+                    m_traceElapsedTimer->start();
             }
         }
     }
@@ -74,4 +73,11 @@ void DatastreamPScan::checkOptHeader()
         m_pscRes = m_pscanOptHeader.stepFreq;
         emit resolutionChanged(m_pscRes);
     }
+}
+
+void DatastreamPScan::calcTracesPerSecond()
+{
+    if (m_traceCtr)
+        emit tracesPerSecond(traceTime);
+    m_traceCtr = 0;
 }

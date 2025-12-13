@@ -1,5 +1,7 @@
 #include "config.h"
 #include "version.h"
+#include "asciitranslator.h"
+
 
 Config::Config(QObject *parent)
     : QObject(parent)
@@ -67,4 +69,32 @@ QList<double> Config::getIqMultibandCenterFreqs()
         qDebug() << "No IQ GNSS bands defined";
 
     return iqGnssBands;
+}
+
+void Config::incidentStarted()
+{
+    if (!flagIncident) { // First call to inc. started
+        flagIncident = true;
+        incidentDateTime = QDateTime::currentDateTime();
+        qDebug() << "Suggesting inc. file datestamp" << incidentDateTime.toString();
+    }
+}
+
+void Config::incidentEnded()
+{
+    incidentDateTime = QDateTime(); // Invalid
+    flagIncident = false;
+}
+
+QString Config::incidentFolder()
+{
+    if (!incidentDateTime.isValid()) {
+        incidentDateTime = QDateTime::currentDateTime();
+        flagIncident = true;
+    }
+
+    if (getNewLogFolder()) return getLogFolder() + "/" + incidentDateTime.toString("yyyyMMdd_hhmmss_") + AsciiTranslator::toAscii(getStationName());
+    else return getLogFolder() + "/";
+
+    return QString();
 }

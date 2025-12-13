@@ -20,6 +20,7 @@ public:
     Eb200Header m_eb200Header;
     AttrHeaderCombined m_attrHeader;
     QTimer *m_timeoutTimer = new QTimer;
+    QTimer *m_traceTimer = new QTimer;
 
 signals:
     void frequencyChanged(double, double);

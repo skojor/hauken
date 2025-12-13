@@ -44,20 +44,16 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
 {
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
     if (!samplerate) samplerate = (double) config->getIqFftPlotBw() * 1.28
-                 * 1e3; // TODO: Is this universal for all R&S instruments?
+                 * 1e3;
     fillWindow();
 
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 40) // Don't change folder/filename timestamp too often
-        foldernameDateTime = QDateTime::currentDateTime();
+    QString dir = config->incidentFolder();
+    QTextStream ts(&filename);
 
-    QString dir = config->getLogFolder();
-    if (config->getNewLogFolder()) { // create new folder for incident
-        dir = config->getLogFolder() + "/" + foldernameDateTime.toString("yyyyMMdd_hhmmss_") + config->getStationName();
-        if (!QDir().exists(dir))
-            QDir().mkpath(dir);
-    }
+    if (!QDir().exists(dir))
+        QDir().mkpath(dir);
 
-    filename = dir + "/" + foldernameDateTime.toString("yyyyMMddhhmmss_")
+    filename = dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
                + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
                + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
                (config->getIqSaveAs16bit() ? "16bit" : "8bit");
@@ -528,7 +524,7 @@ void IqPlot::receiverControl()
     throwFirstSamples = 4 * samplerate / 1e7;
     if (!throwFirstSamples) throwFirstSamples = 1;
 
-    qDebug() << throwFirstSamples;
+    //qDebug() << throwFirstSamples;
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do

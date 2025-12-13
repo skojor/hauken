@@ -479,6 +479,14 @@ public slots:
     int getAudioDetector() { return settings->value("audio/detector", 0).toInt();}
     void setAudioDetector(int i) { settings->setValue("audio/detector", i);}
 
+
+    // Incident filename control
+    void incidentStarted();
+    void incidentEnded();
+    void incidentRestart() { incidentEnded(); incidentStarted();}
+    QString incidentFolder();
+    QDateTime incidentTimestamp() { return incidentDateTime;}
+
 private slots:
 
 private:
@@ -487,6 +495,8 @@ private:
     bool ready = false;
     QString measurementDeviceName;
     const int plotResolution = 1200;
+    bool flagIncident = false;
+    QDateTime incidentDateTime;
 };
 
 #endif // CONFIG_H

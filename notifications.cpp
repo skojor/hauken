@@ -314,24 +314,26 @@ void Notifications::recTracePlot(const QPixmap *pic)
 
 void Notifications::updSettings()
 {
-    mailserverAddress = config->getEmailSmtpServer();
-    mailserverPort = config->getEmailSmtpPort();
-    smtpUser = config->getEmailSmtpUser();
-    smtpPass = config->getEmailSmtpPassword();
-    recipients = config->getEmailRecipients();
-    fromAddress = config->getEmailFromAddress();
-    truncateTime = config->getNotifyTruncateTime();
-    if (!workFolder.contains(config->getWorkFolder())) {
-        workFolder = config->getWorkFolder();
-        if (incidentLogfile->isOpen()) incidentLogfile->close(); // in case user changes folder settings
-    }
-    delayBetweenEmails = config->getEmailMinTimeBetweenEmails();
-    msGraphTenantId = config->getEmailGraphTenantId();
-    msGraphApplicationId = config->getEmailGraphApplicationId();
-    msGraphSecret = config->getEmailGraphSecret();
+    if (incidentLogfile) { // Don't do this until thread has started!
+        mailserverAddress = config->getEmailSmtpServer();
+        mailserverPort = config->getEmailSmtpPort();
+        smtpUser = config->getEmailSmtpUser();
+        smtpPass = config->getEmailSmtpPassword();
+        recipients = config->getEmailRecipients();
+        fromAddress = config->getEmailFromAddress();
+        truncateTime = config->getNotifyTruncateTime();
+        if (!workFolder.contains(config->getWorkFolder())) {
+            workFolder = config->getWorkFolder();
+            if (incidentLogfile->isOpen()) incidentLogfile->close(); // in case user changes folder settings
+        }
+        delayBetweenEmails = config->getEmailMinTimeBetweenEmails();
+        msGraphTenantId = config->getEmailGraphTenantId();
+        msGraphApplicationId = config->getEmailGraphApplicationId();
+        msGraphSecret = config->getEmailGraphSecret();
 
-    if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
-        msGraphConfigured = true;
+        if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
+            msGraphConfigured = true;
+        }
     }
 }
 

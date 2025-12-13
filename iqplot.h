@@ -34,10 +34,9 @@ public slots:
     void validateHeader(qint64 freq, qint64 bw, qint64 rate);
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void resetTimer() { lastIqRequestTimer.invalidate();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
-    void setFilename(QString) {}
+    //void setFilename(QString) {}
     bool readAndAnalyzeFile(const QString filename);
     void updSettings();
-    void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
     void setCurrentMode(Instrument::Mode m) { instrMode = m;}
     void setCurrentFfmCenterFrequency(quint64 f) { oldFfmCenterFrequency = f;}
     void setCurrentFfmBandwidth(quint32 f) { oldFfmBandwidth = f;}

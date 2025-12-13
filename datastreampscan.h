@@ -25,15 +25,16 @@ private:
     bool readOptHeader(QDataStream &ds) { return m_pscanOptHeader.readData(ds, m_attrHeader.optHeaderLength);}
     bool checkHeaders();
     void checkOptHeader();
-    void invalidateCachedFreqs() { m_pscStartFreq = m_pscStopFreq = m_pscRes = 0; }
+    void calcTracesPerSecond();
 
     OptHeaderPScanEB500 m_pscanOptHeader;
     QVector<qint16> m_fft;
     bool m_waitingForPscanEndMarker = true;
-    QElapsedTimer *m_traceTimer = new QElapsedTimer;
+    QElapsedTimer *m_traceElapsedTimer = new QElapsedTimer;
     int m_traceCtr = 0;
     double m_pscStartFreq = 0, m_pscStopFreq = 0;
     double m_pscRes = 0;
+    double traceTime = 0;
 };
 
 #endif // DATASTREAMPSCAN_H

@@ -1,6 +1,7 @@
 #include "sdefrecorder.h"
 #include "version.h"
 #include "asciitranslator.h"
+#include "JlCompress.h"
 
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
@@ -9,21 +10,21 @@ SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 
 void SdefRecorder::start()
 {
-    process = new QProcess;
-    recordingStartedTimer = new QTimer;
-    recordingTimeoutTimer = new QTimer;
-    reqPositionTimer = new QTimer;
-    periodicCheckUploadsTimer = new QTimer;
-    autorecorderTimer = new QTimer;
-    finishedFileTimer = new QTimer;
-    tempFileTimer = new QTimer;
-    tempFileCheckFilesize = new QTimer;
+    process = new QProcess(this);
+    recordingStartedTimer = new QTimer(this);
+    recordingTimeoutTimer = new QTimer(this);
+    reqPositionTimer = new QTimer(this);
+    periodicCheckUploadsTimer = new QTimer(this);
+    autorecorderTimer = new QTimer(this);
+    finishedFileTimer = new QTimer(this);
+    tempFileTimer = new QTimer(this);
+    tempFileCheckFilesize = new QTimer(this);
     finishedFileTimer->setSingleShot(true);
 
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
-    connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::finishRecording);
-    connect(recordingTimeoutTimer, &QTimer::timeout, this, &SdefRecorder::restartRecording);
+    connect(recordingStartedTimer, &QTimer::timeout, this, &SdefRecorder::endRecording);
+    connect(recordingTimeoutTimer, &QTimer::timeout, this, &SdefRecorder::endRecording);
     connect(process,
             QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this,
@@ -52,7 +53,7 @@ void SdefRecorder::start()
     periodicCheckUploadsTimer->start(
         1800 * 1e3); // check if any files still waits for upload every half hour
 
-    networkManager = new QNetworkAccessManager;
+    networkManager = new QNetworkAccessManager(this);
 
     connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
         emit fileReadyForUpload(finishedFilename);
@@ -66,51 +67,54 @@ void SdefRecorder::start()
             tempFile.remove();
         }
     });
+    emit recordingEnded();
 }
 
 void SdefRecorder::updSettings()
 {
-    saveToSdef = config->getSdefSaveToFile();
-    recordTime = config->getSdefRecordTime() * 60e3;
-    maxRecordTime = config->getSdefMaxRecordTime() * 60e3;
-    addPosition = config->getSdefAddPosition();
-    QString src = config->getSdefGpsSource();
-    if (src == "InstrumentGnss")
-        positionSource = POSITIONSOURCE::INSTRUMENTGNSS;
-    else if (src.contains("1"))
-        positionSource = POSITIONSOURCE::GNSSDEVICE1;
-    else
-        positionSource = POSITIONSOURCE::GNSSDEVICE2;
-    //prevLat = config->getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
-    //prevLng = config->getStnLongitude().toDouble();
+    if (autorecorderTimer) { // Don't do anything until thread has started!
+        saveToSdef = config->getSdefSaveToFile();
+        recordTime = config->getSdefRecordTime() * 60e3;
+        maxRecordTime = config->getSdefMaxRecordTime() * 60e3;
+        addPosition = config->getSdefAddPosition();
+        QString src = config->getSdefGpsSource();
+        if (src == "InstrumentGnss")
+            positionSource = POSITIONSOURCE::INSTRUMENTGNSS;
+        else if (src.contains("1"))
+            positionSource = POSITIONSOURCE::GNSSDEVICE1;
+        else
+            positionSource = POSITIONSOURCE::GNSSDEVICE2;
+        //prevLat = config->getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
+        //prevLng = config->getStnLongitude().toDouble();
 
-    if (addPosition && !reqPositionTimer->isActive())
-        reqPositionTimer->start(1000); // ask for position once per sec.
+        if (addPosition && !reqPositionTimer->isActive())
+            reqPositionTimer->start(1000); // ask for position once per sec.
 
-    if (saveToSdef)
-        emit recordingEnabled();
-    else
-        emit recordingDisabled();
+        if (saveToSdef)
+            emit recordingEnabled();
+        else
+            emit recordingDisabled();
 
-    if (config->getAutoRecorderActivate()) {
-        if (!autorecorderTimer->isActive()) {
-            autorecorderTimer->start(10000);
-            emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER,
-                               "",
-                               "Auto recording is activated, starting recording of currently "
-                               "chosen frequency spectrum and resolution in 10 seconds");
+        if (config->getAutoRecorderActivate()) {
+            if (!autorecorderTimer->isActive()) {
+                autorecorderTimer->start(10000);
+                emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER,
+                                   "",
+                                   "Auto recording is activated, starting recording of currently "
+                                   "chosen frequency spectrum and resolution in 10 seconds");
+            }
+        } else {
+            if (autorecorderTimer and autorecorderTimer->isActive())
+                autorecorderTimer->stop();
         }
-    } else {
-        if (autorecorderTimer->isActive())
-            autorecorderTimer->stop();
-    }
-    useNewMsFormat = config->getSdefNewMsFormat();
+        useNewMsFormat = config->getSdefNewMsFormat();
 
-    tempFileMaxhold = config->getSaveToTempFileMaxhold();
-    if (tempFileMaxhold > 0)
-        tempFileTimer->start(tempFileMaxhold * 1e3);
-    else
-        tempFileTimer->stop();
+        tempFileMaxhold = config->getSaveToTempFileMaxhold();
+        if (tempFileTimer and tempFileMaxhold > 0)
+            tempFileTimer->start(tempFileMaxhold * 1e3);
+        else if (tempFileTimer)
+            tempFileTimer->stop();
+    }
 }
 
 void SdefRecorder::triggerRecording()
@@ -132,7 +136,7 @@ void SdefRecorder::triggerRecording()
             if (failed || !file.open(QIODevice::WriteOnly)) {
                 emit warning("Error creating file " + file.fileName());
                 failed = true;
-                finishRecording();
+                endRecording();
             } else {
                 file.write(createHeader());
                 if (config->getSdefPreRecordTime() > 0)
@@ -146,78 +150,35 @@ void SdefRecorder::triggerRecording()
 
 void SdefRecorder::manualTriggeredRecording()
 {
+    endRecording();
     emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
     triggerRecording();
 }
 
 QString SdefRecorder::createFilename()
 {
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 40) { // Don't change folder/filename timestamp too often
-        foldernameDateTime = QDateTime::currentDateTime();
-        emit folderDateTimeSet();
-    }
-
-    QString dir = config->getLogFolder();
+    QString dir = config->incidentFolder();
     QString filename;
     QTextStream ts(&filename);
 
-    if (config->getNewLogFolder()) { // create new folder for incident
-        dir = config->getLogFolder() + "/" + foldernameDateTime.toString("yyyyMMdd_hhmmss_") + config->getStationName();
-        if (!QDir().exists(dir))
-            QDir().mkpath(dir);
-    }
-    if (modeUsed.contains("pscan", Qt::CaseInsensitive)) {
-        ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
-        << "_" << AsciiTranslator::toAscii(config->getStationName()) // New, don't use norwegian weird letters in filenames
-        << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
-        << QString::number(1e-3 * stopfreq, 'f', 0);
-        /*
-        ts << dir << "/" << config->getSdefStationInitals() << "_"
-           << QString::number(config->getInstrStartFreq() * 1e3, 'f', 0) << "-"
-           << QString::number(config->getInstrStopFreq() * 1e3, 'f', 0) << "_"
-           << QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");*/
-    } else {
-        ts << dir << "/" << foldernameDateTime.toString("yyyyMMddhhmmss")
-        << "_" << AsciiTranslator::toAscii(config->getStationName()) << "_"
-        << QString::number((config->getInstrFfmCenterFreq()
-                            - config->getInstrFfmSpan().toDouble() / 2e3)
-                               * 1e3,
-                           'f',
-                           0)
-        << "-"
-        << QString::number((config->getInstrFfmCenterFreq()
-                            + config->getInstrFfmSpan().toDouble() / 2e3)
-                               * 1e3,
-                           'f',
-                           0);
-    }
-    //<< ".cef";
+    if (!QDir().exists(dir))
+        QDir().mkpath(dir);
 
-    emit publishFilename(filename);
-    ts << ".cef";
+        ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
+        << "_" << AsciiTranslator::toAscii(config->getStationName())
+        << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
+        << QString::number(1e-3 * stopfreq, 'f', 0)
+        << ".cef";
 
     return filename;
 }
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
     if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
-        QByteArray byteArray;
-        byteArray.reserve(data.size() * 6);
-        if (useNewMsFormat)
-            byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit());
+        if (addPosition and !positionHistory.isEmpty())
+            file.write(genSdefTraceLine(positionHistory.last().first, positionHistory.last().second, data));
         else
-            byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss").toLocal8Bit());
-
-        if (addPosition) {
-            byteArray.append(",").append(QByteArray::number(positionHistory.last().first, 'f', 6)).append(",")
-            .append(QByteArray::number(positionHistory.last().second, 'f', 6));
-        }
-
-        for (auto && val : data) {
-            byteArray.append(",").append(QByteArray::number(val / 10));
-        }
-        byteArray.append("\n");
-        file.write(byteArray);
+            file.write(genSdefTraceLine(0, 0, data));
     }
     if (skipTraces) skipTraces--;
 }
@@ -227,7 +188,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
 {
     QElapsedTimer timer;
     timer.start();
-    QByteArray byteArray;
+    QByteArray buffer;
     QDateTime startTime;
     if (!datetime.isEmpty()) startTime = datetime.last();
     int dateIterator
@@ -237,13 +198,13 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
         dateIterator = 0;
 
     for (int i = data.size() - 1; i >= 0; i--) {
-        byteArray.clear();
+        buffer.clear();
         bool ok = true;
 
         if (useNewMsFormat)
-            byteArray += datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit();
+            buffer.append(datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
         else
-            byteArray += datetime.at(i).toString("hh:mm:ss").toLocal8Bit();
+            buffer.append(datetime.at(i).toString("hh:mm:ss").toUtf8());
 
         if (startTime.secsTo(datetime.at(i))
             > 0) { // one second of data has passed, counters updated in if below here
@@ -258,29 +219,28 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
                 dateIterator++;
                 startTime = datetime.at(i);
             }
-            if (dateIterator
-                > positionHistory.size() - 1) // should never happen except in early startup
+            if (dateIterator > positionHistory.size() - 1) // should never happen except in early startup
                 dateIterator = positionHistory.size() - 1;
-            byteArray += "," + QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6) + ","
-                         + QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6);
+
+            buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6));
+            buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6));
         }
 
-        for (auto val : data.at(i)) {
-            byteArray.append(",").append(QByteArray::number(val / 10));
+        for (auto &&val : data.at(i)) {
+            buffer.append(',').append(QByteArray::number(val / 10));
             if (val < -999 || val >= 2000)
                 ok = false;
         }
-        byteArray.append("\n");
+        buffer.append('\n');
 
-        if (ok)
-            file.write(byteArray);
-        else
-            qDebug() << "This backlog line failed:" << byteArray;
+        if (ok) file.write(buffer);
+        else qDebug() << "This backlog line failed:" << buffer;
     }
     historicDataSaved = true;
+    qDebug() << "spent" << timer.elapsed();
 }
 
-QByteArray SdefRecorder::createHeader()
+QByteArray SdefRecorder::createHeader(const int saveInterval)
 {
     QString buf;
     QTextStream stream(&buf, QIODevice::ReadWrite);
@@ -297,9 +257,13 @@ QByteArray SdefRecorder::createHeader()
         else
             gain = "Normal";
     }
-    //if (!(int)scanTime) scanTime = (double)config->getInstrMeasurementTime() / 1e3;
 
-    stream << (config->getSdefAddPosition() ? "FileType MobileData" : "FileType SDF 3.0") << '\n'
+    double saveInt = 1.0 / tracePerSecond;
+    if (saveInterval) {
+        saveInt = saveInterval;
+    }
+
+    stream << (addPosition ? "FileType MobileData" : "FileType SDF 3.0") << '\n'
            << "User " << config->getSdefStationInitals() << "\n"
            << "LocationName " << config->getStationName() << "\n"
            << "Latitude "
@@ -321,7 +285,7 @@ QByteArray SdefRecorder::createHeader()
            << QString::number((double) scanTime, 'f', 3) << '\n'
            << "Instrument " << config->getInstrId() << "\n"
            << "MeasureApp Hauken v" << QString(PROJECT_VERSION) << "\n"
-           << "SaveInterval " << QString::number(1 / tracePerSecond, 'f', 2) << " s\n"
+           << "SaveInterval " << QString::number(saveInt, 'f', 2) << " s\n"
            << "Attenuator "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
@@ -336,14 +300,9 @@ QByteArray SdefRecorder::createHeader()
            << config->getInstrId() << "\n"
            << "Note\n"
            << "Note " << config->getSdefStationInitals()
-           << ", SaveInterval: " << QString::number(1 / tracePerSecond, 'f', 2) << " s, Attenuator: "
+           << ", SaveInterval: " << QString::number(saveInt, 'f', 2) << " s, Attenuator: "
            << (config->getInstrAutoAtt() ? "Auto"
                                          : QString::number(config->getInstrManAtt()) + " dB")
-           /*<< ", AntennaPort: " << QString::number(config->getInstrAntPort() + 1) << ", FFT: "
-           << (config->getInstrFftMode().contains("off", Qt::CaseInsensitive)
-                   ? "Clear/write"
-                   : config->getInstrFftMode())
-           << (!gain.isEmpty() ? ", GainControl: " + gain : "")*/
            << "\n\n";
 
     return buf.toLocal8Bit();
@@ -362,60 +321,58 @@ QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
     return ret;
 }
 
-void SdefRecorder::finishRecording()
+void SdefRecorder::endRecording()
 {
-    emit recordingEnded();
-    if (config->getSdefSaveToFile()) {
-        if (recordingTimeoutTimer->isActive()) {
-            /*emit toIncidentLog(
-                NOTIFY::TYPE::SDEFRECORDER,
-                "",
-                "Recording ended after "
-                    + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60
-                           ? QString::number(
-                                 dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
-                                 + " seconds"
-                           : QString::number(
-                                 dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                 + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
-                                            == 1
-                                        ? " minute"
-                                        : " minutes")));*/
-            if (autorecorderTimer->isActive())
-                autorecorderTimer->stop();
-        }
-    }
-
     if (file.isOpen()) {
-        file.close();
-        finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+        emit recordingEnded();
+        if (config->getSdefSaveToFile()) {
+            if (recordingTimeoutTimer->isActive()) {
+                emit toIncidentLog(
+                    NOTIFY::TYPE::SDEFRECORDER,
+                    "",
+                    "Recording ended after "
+                        + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60
+                               ? QString::number(
+                                     dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
+                                     + " seconds"
+                               : QString::number(
+                                     dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                                     + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
+                                                == 1
+                                            ? " minute"
+                                            : " minutes")));
+                if (autorecorderTimer->isActive())
+                    autorecorderTimer->stop();
+            }
+        }
+
+        if (file.isOpen()) {
+            file.close();
+            tracePerSecond = -1;
+            finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+        }
+
+        if (predictionReceived)
+            updFileWithPrediction(file.fileName());
+
+        if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) {
+            QTimer::singleShot(
+                10000,
+                this,
+                &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
+        } else {
+            if (config->getSdefZipFiles() && recording)
+                zipit(); // Zip the file anyways, we don't shit storage space here
+        }
+        if (!finishedFilename.isEmpty())
+            finishedFileTimer->start(10000);
+
+        recordingTimeoutTimer->stop();
+        recordingStartedTimer->stop();
+
+        if (!failed)
+            recording = historicDataSaved = failed = false;
     }
-
-    if (predictionReceived)
-        updFileWithPrediction(file.fileName());
-
-    if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) {
-        QTimer::singleShot(
-            10000,
-            this,
-            &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
-    } else {
-        if (config->getSdefZipFiles() && recording)
-            zipit(); // Zip the file anyways, we don't shit storage space here
-    }
-    if (!finishedFilename.isEmpty())
-        finishedFileTimer->start(10000);
-
-    recordingTimeoutTimer->stop();
-    recordingStartedTimer->stop();
-
-    if (!failed)
-        recording = historicDataSaved = failed = false;
-}
-
-void SdefRecorder::restartRecording()
-{
-    finishRecording(); // basically the same operation, recording should restart anyway.
 }
 
 bool SdefRecorder::curlLogin()
@@ -576,6 +533,7 @@ void SdefRecorder::updFileWithPrediction(const QString filename)
         } while (!file.atEnd());
         file.close();
         tempFile.close();
+        tracePerSecond = tracePerSecondForTempFile = -1;
         file.remove();
         tempFile.rename(filename);
     } else {
@@ -593,11 +551,7 @@ void SdefRecorder::startTempFile()
         tempFile.setFileName(config->getLogFolder() + "/" + TEMPFILENAME);
 
         if (tempFile.exists()) {
-            //qDebug() << "File" << tempFile.fileName() << "already exists, trying to delete";
             tempFile.remove();
-            //qDebug() << "Deleted ok";
-            //else
-            //qDebug() << "Failed to delete" << tempFile.errorString();
         }
         if (!tempFile.open(QIODevice::WriteOnly))
             qDebug() << "Could not open file" << tempFile.fileName() << "for writing,"
@@ -606,15 +560,15 @@ void SdefRecorder::startTempFile()
         qDebug() << "Temp file" << tempFile.fileName()
         << "already opened, what did you try to do here?";
     }
-    tempFile.write(createHeader());
+    tempFile.write(createHeader(config->getSaveToTempFileMaxhold()));
 }
 
 void SdefRecorder::closeTempFile()
 {
     if (tempFile.isOpen()) {
         tempFile.close();
-        //qDebug() << "Temp file" << tempFile.fileName() << "closed";
-        startTempRecording = false;
+        tracePerSecondForTempFile = -1;
+        qDebug() << "Temp file" << tempFile.fileName() << "closed";
     }
 }
 
@@ -623,7 +577,7 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
     if (tempFileMaxhold == 0 && !tempFileTimer->isActive()) {
         tempFileTracedata = data;
         saveDataToTempFile(); // save immediately if AFAP mode
-    } else {
+    } else { // if not keep a track of maxhold values
         if (tempFileTracedata.isEmpty())
             tempFileTracedata = data;
         else if (tempFileTracedata.size() == data.size()) {
@@ -637,34 +591,91 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
 
 void SdefRecorder::saveDataToTempFile()
 {
-    if (!startTempRecording && tempFileTracedata.size() > 0) {
-        QTimer::singleShot(3000, this, [this]() {
-            startTempRecording = true;
-        });
-    }
-    if (startTempRecording && !tempFile.isOpen() && config->getSaveToTempFile()) {
-        startTempFile();
-        tempFile.flush();
-    }
-
-    if (tempFile.isOpen() && tempFileTracedata.size() > 0) {
-        QByteArray byteArray;
-        if (useNewMsFormat)
-            byteArray.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit());
-        else
-            byteArray.append(QDateTime::currentDateTime().toString("hh:mm:ss").toLocal8Bit());
-
-        if (addPosition && !positionHistory.isEmpty()) {
-            byteArray.append(",").append(QByteArray::number(positionHistory.last().first, 'f', 6))
-                .append(",").append(QByteArray::number(positionHistory.last().second, 'f', 6));
-        }
-
-        for (auto &&val : tempFileTracedata) {
-            byteArray.append(",").append(QByteArray::number(val / 10));
-        }
-        byteArray.append("\n");
-        tempFile.write(byteArray);
+    if (!tempFile.isOpen() and tempFileTracedata.size() > 0 and tracePerSecondForTempFile > 0) {
         tempFileTracedata.clear();
-        tempFile.flush();
+        startTempFile();
     }
+
+    if (tempFile.isOpen() && tempFileTracedata.size()) {
+        if (addPosition and !positionHistory.isEmpty())
+            tempFile.write(genSdefTraceLine(positionHistory.last().first, positionHistory.last().second, tempFileTracedata));
+        else
+            tempFile.write(genSdefTraceLine(0, 0, tempFileTracedata));
+
+        tempFile.flush();
+        tempFileTracedata.clear();
+    }
+}
+
+void SdefRecorder::setDeviceCconnectedState(bool b)
+{
+    if (!b) {
+        endRecording();
+        closeTempFile();
+    }
+    deviceConnected = b;
+}
+
+void SdefRecorder::updTracesPerSecond(double d)
+{
+    if (!iqRecordingInProgress) {
+        tracePerSecond = tracePerSecondForTempFile = d;
+    }
+}
+
+void SdefRecorder::setIqRecordingInProgress(bool b)
+{
+    if (b) iqRecordingInProgress = b;
+    else QTimer::singleShot(1000, this, [this] {
+            iqRecordingInProgress = false;
+        });
+}
+
+void SdefRecorder::updFrequencies(quint64 sta, quint64 stop)
+{
+    if (!iqRecordingInProgress) {
+        closeTempFile();
+        endRecording();
+        startfreq = sta;
+        stopfreq = stop;
+    }
+}
+
+void SdefRecorder::updResolution(quint32 res)
+{
+    if (!iqRecordingInProgress) {
+        closeTempFile();
+        endRecording();
+        resolution = res;
+    }
+}
+
+void SdefRecorder::updScanTime(int i)
+{
+    if (!iqRecordingInProgress) {
+        closeTempFile();
+        scanTime = (double)i / 1e3;
+    }
+}
+
+QByteArray SdefRecorder::genSdefTraceLine(double lat, double lng, const QVector<qint16> line)
+{
+    QByteArray buffer;
+    buffer.reserve(line.size() * 4 + 128);
+
+    if (useNewMsFormat)
+        buffer.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
+    else
+        buffer.append(QDateTime::currentDateTime().toString("hh:mm:ss").toUtf8());
+
+    if (addPosition) {
+        buffer.append(',').append(QByteArray::number(lat,  'f', 6));
+        buffer.append(',').append(QByteArray::number(lng, 'f', 6));
+    }
+
+    for (auto &&v : line)
+        buffer.append(',').append(QByteArray::number(v / 10));
+
+    buffer.append('\n');
+    return buffer;
 }

@@ -322,12 +322,12 @@ private:
 
     TraceBuffer *traceBuffer = new TraceBuffer(config);
     TraceAnalyzer *traceAnalyzer = new TraceAnalyzer(config);
-    Notifications *notifications = new Notifications(config);
-    QThread *notificationsThread = new QThread;
+    Notifications *notifications;
+    QThread *notificationsThread;
 
     IqPlot *iqPlot = new IqPlot(config);
-    SdefRecorder *sdefRecorder = new SdefRecorder(config);
-    QThread *sdefRecorderThread = new QThread;
+    SdefRecorder *sdefRecorder;
+    QThread *sdefRecorderThread;
 
     Waterfall *waterfall;
     QThread *waterfallThread;

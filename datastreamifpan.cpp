@@ -2,7 +2,9 @@
 
 DatastreamIfPan::DatastreamIfPan(QObject *parent)
 {
-    }
+    connect(m_traceTimer, &QTimer::timeout, this, &DatastreamIfPan::calcTracesPerSecond);
+    m_traceTimer->start(1000);
+}
 
 bool DatastreamIfPan::checkHeaders()
 {
@@ -31,13 +33,6 @@ void DatastreamIfPan::readData(QDataStream &ds)
             emit traceReady(tmpBuffer);
 
             m_traceCtr++;
-            if (m_traceTimer->isValid() && m_traceCtr >= 10) {
-                emit tracesPerSecond(1e10 / m_traceTimer->nsecsElapsed());
-                m_traceCtr = 0;
-                m_traceTimer->start();
-            }
-            if (!m_traceTimer->isValid())
-                m_traceTimer->start();
         }
     }
 }
@@ -56,5 +51,13 @@ void DatastreamIfPan::checkOptHeader()
     if ((int)resolution != (int)m_ifPanResolution) {
         m_ifPanResolution = resolution;
         emit resolutionChanged(m_ifPanResolution);
+    }
+}
+
+void DatastreamIfPan::calcTracesPerSecond()
+{
+    if (m_traceCtr) {
+        emit tracesPerSecond(m_traceCtr);
+        m_traceCtr = 0;
     }
 }
