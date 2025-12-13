@@ -964,12 +964,14 @@ void MainWindow::setSignals()
         customPlotController->freqChanged(a, b);
         aiPtr->freqChanged(a, b);
         datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
+        datastreamIf->invalidateHeader();
     });
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
         traceAnalyzer->freqChanged(a, b);
         customPlotController->freqChanged(a, b);
         aiPtr->freqChanged(a, b);
         datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
+        datastreamIf->invalidateHeader();
     });
     connect(datastreamIfPan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
         traceAnalyzer->resChanged(a);
