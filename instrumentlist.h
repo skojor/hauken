@@ -80,6 +80,7 @@ private slots:
     void updStationsWithEquipmentList();
     void generateLists();
     void fetchDataHandler(const QByteArray &reply = QByteArray());
+    void sortList();
 
 private:
     QNetworkAccessManager *networkAccessManager = new QNetworkAccessManager;

@@ -1,4 +1,6 @@
 #include "instrumentlist.h"
+#include <locale>
+#include <algorithm>
 
 InstrumentList::InstrumentList(QSharedPointer<Config> c)
 {
@@ -33,6 +35,7 @@ void InstrumentList::loadFile()
         qDebug() << "Loaded station data from file" << file.fileName();
     }
     file.close();
+    sortList();
     emit listReady(usableStnNames, usableStnIps, usableStnTypes);
 }
 
@@ -283,6 +286,7 @@ void InstrumentList::fetchDataHandler(const QByteArray &reply)
         state = DONE;
         qDebug() << ("Station list updated");
         generateLists();
+        sortList();
         saveFile();
         emit listReady(usableStnNames, usableStnIps, usableStnTypes);
         emit instrumentListDownloaded("Updated instrument list, " +
@@ -291,9 +295,6 @@ void InstrumentList::fetchDataHandler(const QByteArray &reply)
     } else if (state == FAILED) {
         qWarning() << "Failed retrieving station list, giving up";
         emit instrumentListFailed("Failed retrieving station list");
-        /*qDebug() << ("");
-        if (!usableStnNames.isEmpty())
-            emit listReady(usableStnNames, usableStnIps, usableStnTypes); // Cached data*/
     }
 }
 
@@ -307,7 +308,7 @@ void InstrumentList::generateLists()
         for (auto &&instrument : station.instrumentInfo) {
             if (instrument.type.contains("EM200") || instrument.type.contains("EM100") || instrument.type.contains("PR200") ||
                 instrument.type.contains("PR100") || instrument.type.contains("EB500") || instrument.type.contains("ESMW") ||
-                instrument.type.contains("ESMB") || instrument.type.contains("USRP"))
+                instrument.type.contains("ESMB") || instrument.type.contains("USRP") || instrument.type.contains("ESMD"))
             {
                 usableStnIps.append(instrument.ipAddress);
                 usableStnNames.append(station.officialName);
@@ -315,5 +316,30 @@ void InstrumentList::generateLists()
             }
         }
     }
-    //qDebug() << usableStnIps << usableStnNames << usableStnTypes;
+}
+
+void InstrumentList::sortList()
+{
+    std::locale no("nb_NO.UTF-8");   // Sort norwegian letters as they should be
+    QStringList sort;
+    for (int i=0; i < usableStnNames.size(); i++)
+        sort.append(usableStnNames[i] + ";" + usableStnIps[i] + ";" + usableStnTypes[i]);
+
+    std::sort(sort.begin(), sort.end(),
+              [](const QString &a, const QString &b) {
+                  return QString::localeAwareCompare(a, b) < 0;
+              });
+
+    usableStnNames.clear();
+    usableStnIps.clear();
+    usableStnTypes.clear();
+
+    for (auto && line : sort) {
+        QStringList split = line.split(';');
+        if (split.size() == 3) {
+            usableStnNames.append(split[0]);
+            usableStnIps.append(split[1]);
+            usableStnTypes.append(split[2]);
+        }
+    }
 }

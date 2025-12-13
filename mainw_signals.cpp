@@ -284,8 +284,7 @@ void MainWindow::setSignals()
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
-    //connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData); // New
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
 
     connect(btnTrigRecording, &QPushButton::clicked, config.data(), &Config::incidentRestart); // Manual trig = new filename timestamp
 
@@ -293,8 +292,6 @@ void MainWindow::setSignals()
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
     connect(btnTrigRecording, &QPushButton::clicked, datastreamIf, &DatastreamIf::invalidateHeader);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamIf, &DatastreamIf::invalidateHeader);
-
-    //connect(sdefRecorder, &SdefRecorder::publishFilename, iqPlot, &IqPlot::setFilename);
 
     connect(sdefRecorder,
             &SdefRecorder::recordingStarted,
