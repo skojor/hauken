@@ -291,6 +291,8 @@ void MainWindow::setSignals()
 
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
+    connect(btnTrigRecording, &QPushButton::clicked, datastreamIf, &DatastreamIf::invalidateHeader);
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamIf, &DatastreamIf::invalidateHeader);
 
     //connect(sdefRecorder, &SdefRecorder::publishFilename, iqPlot, &IqPlot::setFilename);
 
