@@ -130,6 +130,7 @@ public slots:
     void setSquelchLevel(int level);
     void updGpsCompassData(GpsData &data);
     void setDetector(int i);
+    void setStreamInfo(QHostAddress addr, int port) { tcpOwnAdress = addr.toString().toUtf8(); tcpOwnPort = QByteArray::number(port);}
 
 private slots:
     void scpiConnected();
@@ -201,8 +202,6 @@ private:
     bool autoReconnectInProgress = false;
     bool muteNotification = false;
 
-    /*UdpDataStream *udpStream = new UdpDataStream;
-    TcpDataStream *tcpStream = new TcpDataStream;*/
     QByteArray tcpOwnAdress = "127.0.0.1";
     QByteArray tcpOwnPort = "0";
     QSharedPointer<Config> config;

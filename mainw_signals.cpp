@@ -976,15 +976,19 @@ void MainWindow::setSignals()
         traceAnalyzer->resChanged(a);
         customPlotController->resChanged(a);
         aiPtr->resChanged(a);
+        traceBuffer->emptyBuffer();
     });
     connect(datastreamPScan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
         traceAnalyzer->resChanged(a);
         customPlotController->resChanged(a);
         aiPtr->resChanged(a);
+        traceBuffer->emptyBuffer();
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
+    connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
+    /*connect(udpStream.data(), &DataStreamBaseClass::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);*/
 }

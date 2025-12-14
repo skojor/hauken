@@ -83,6 +83,7 @@ signals:
     void newCwData(const QByteArray &);
     void waitForPscanEndMarker(bool);
     void bytesPerSecond(int);
+    void streamInfo(QHostAddress adr, int port);
 
 private:
 

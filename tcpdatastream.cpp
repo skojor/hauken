@@ -3,6 +3,7 @@
 
 TcpDataStream::TcpDataStream()
 {
+
 }
 
 void TcpDataStream::openListener(const QHostAddress host, const int port)
@@ -27,8 +28,10 @@ void TcpDataStream::closeListener()
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
     //qDebug() << "TCP stream state" << state;
-    if (state == QAbstractSocket::UnconnectedState)
-        timeoutTimer->stop();
+   /* if (state == QAbstractSocket::UnconnectedState) // Whaat, why?
+        timeoutTimer->stop();*/
+    if (state == QAbstractSocket::ConnectedState) // Update Meas.Dev. class to check if user is this instance
+        emit streamInfo(tcpSocket->localAddress(), tcpSocket->localPort());
 }
 
 void TcpDataStream::newDataHandler()
@@ -49,12 +52,15 @@ void TcpDataStream::newDataHandler()
         tcpBuffer = tcpBuffer.sliced(header.dataSize);
         sequenceNr = header.seqNumber;
     }
+    if (tcpBuffer.size() > 24 and !readHeadersSimplified(tcpBuffer))
+        tcpBuffer.clear(); // Buffer contains unreadable data, clear and continue
 
-#ifdef Q_OS_WIN
+/*#ifdef Q_OS_WIN
     while (tcpBuffer.size() > 127 && !readHeaders(tcpBuffer)) { // out of sync
         tcpBuffer.removeFirst();
+        qDebug() << "Whoops";
     }
 #else
     tcpBuffer.clear();
-#endif
+#endif*/
 }
