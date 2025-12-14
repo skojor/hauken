@@ -237,7 +237,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
         else qDebug() << "This backlog line failed:" << buffer;
     }
     historicDataSaved = true;
-    qDebug() << "spent" << timer.elapsed();
+    qDebug() << "SdefRecorder: Backlog used" << timer.elapsed() << "ms to write to disk";
 }
 
 QByteArray SdefRecorder::createHeader(const int saveInterval)

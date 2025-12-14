@@ -205,9 +205,9 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
         menu.addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
 
         menu.addSeparator();
-        menu.addAction("Show/hide GNSS frequency spectrum overlay", this, &CustomPlotController::toggleOverlay);
+        menu.addAction("Show/hide spectrum overlay", this, &CustomPlotController::toggleOverlay);
 
-        for (int i=0; i < gnssBandsSelectors.size(); i++) {
+        /*for (int i=0; i < gnssBandsSelectors.size(); i++) {
             menu.addAction("Show/hide " + gnssBands[i], this, [this, i] () {
                 gnssBandsSelectors[i] = !gnssBandsSelectors[i];
                 customPlotPtr->graph(customPlotPtr->graphCount() - gnssBands.size() + i)->setVisible(gnssBandsSelectors[i]);
@@ -215,8 +215,7 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
                 gnssCenterLine[i]->setVisible(gnssBandsSelectors[i]);
                 customPlotPtr->replot();
             });
-        }
-
+        }*/
         menu.exec(customPlotPtr->mapToGlobal(event->pos()));
     }
 }
@@ -512,7 +511,12 @@ void CustomPlotController::demodBwChanged(quint32 f)
     double start = centerFreqLine->point1->key() - (double)f / 1e3 / 2;
     double stop = centerFreqLine->point1->key() + (double)f / 1e3 / 2;
     customPlotPtr->graph(5)->setPen(pen);
-    customPlotPtr->graph(5)->setBrush(QBrush(QColor(0, 255, 0, 30)));
+    QBrush brush(Qt::Dense4Pattern);
+    if (config->getDarkMode())
+        brush.setColor(QColor(217, 217, 217, 90));
+    else
+        brush.setColor(QColor(67, 67, 67, 90));
+    customPlotPtr->graph(5)->setBrush(brush);
     customPlotPtr->graph(5)->setLineStyle(QCPGraph::lsLine);
     customPlotPtr->graph(5)->setLayer("bwLayer");
     customPlotPtr->graph(5)->setData(QVector<double>() << start << stop, QVector<double>() << 200 << 200);

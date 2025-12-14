@@ -76,7 +76,7 @@ void Config::incidentStarted()
     if (!flagIncident) { // First call to inc. started
         flagIncident = true;
         incidentDateTime = QDateTime::currentDateTime();
-        qDebug() << "Suggesting inc. file datestamp" << incidentDateTime.toString();
+        //qDebug() << "Suggesting inc. file datestamp" << incidentDateTime.toString();
     }
 }
 

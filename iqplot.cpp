@@ -1,6 +1,7 @@
 #include "iqplot.h"
 #include "asciitranslator.h"
 #include "fftw3.h"
+#include <QRegularExpression>
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
@@ -281,9 +282,13 @@ void IqPlot::addText(QImage *image, const double secondsAnalyzed, const double s
 
     painter.setFont(QFont("Arial", fontSize));
     painter.setPen(pen);
+    QString strFr = QString::number(ffmFrequency, 'f', 6);
+    strFr.remove(QRegularExpression("0+$"));
+    strFr.remove(QRegularExpression("[\\.,]$")); // Don't show more decimals than needed
+
     painter.drawText((image->size().width() / 2) - xMinus + 15,
                      yMinus,
-                     QString::number(ffmFrequency) + " MHz");
+                     strFr + " MHz");
     painter.drawText(0, yMinus, QString::number(-samplerate / 1.28 / 2e6, 'f', 1) + " MHz");
     painter.drawText((image->size().width()) - (xMinus + 40),
                      yMinus,
