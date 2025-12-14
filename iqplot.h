@@ -40,7 +40,7 @@ public slots:
     void setCurrentMode(Instrument::Mode m) { instrMode = m;}
     void setCurrentFfmCenterFrequency(quint64 f) { oldFfmCenterFrequency = f;}
     void setCurrentFfmBandwidth(quint32 f) { oldFfmBandwidth = f;}
-    void setTrigFrequency(double f) { trigFrequency = (quint64)f;} // Set by trace analyzer class
+    void setTrigFrequency(double f) { trigFrequency = f;} // Set by trace analyzer class
     void getIqCenterFrequency(double f) { centerFrequency = f; }
 
 private slots:
@@ -89,7 +89,7 @@ private:
     Instrument::Mode instrMode;
     quint64 oldFfmCenterFrequency;
     quint32 oldFfmBandwidth;
-    quint64 trigFrequency = 0;
+    double trigFrequency = 0;
     QVector<double> listFreqs;
     QVector<complexInt16> iqSamples;
     quint64 samplesNeeded = 0;
