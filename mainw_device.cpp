@@ -149,6 +149,7 @@ void MainWindow::instrMeasurementTimeChanged()
 
 void MainWindow::instrAttChanged()
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     config->setInstrManAtt(instrAtt->text().toInt());
     if (measurementDevice->isConnected())
         traceBuffer->restartCalcAvgLevel();
@@ -156,6 +157,7 @@ void MainWindow::instrAttChanged()
 
 void MainWindow::instrAutoAttChanged()
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     instrAtt->setDisabled(instrAutoAtt->isChecked());
     config->setInstrAutoAtt(instrAutoAtt->isChecked());
     if (measurementDevice->isConnected())
@@ -191,6 +193,7 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
 
 void MainWindow::instrGainControlChanged(int index)
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     if (index == -1)
         index = config->getInstrGainControl();
     else
@@ -259,6 +262,8 @@ void MainWindow::instrResolutionChanged() // pscan res. change
 
 void MainWindow::setDeviceAntPorts()
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
+
     instrAntPort->clear();
     int index = config->getInstrAntPort();
     instrAntPort->addItems(measurementDevice->deviceAntPorts());

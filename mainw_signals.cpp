@@ -992,5 +992,7 @@ void MainWindow::setSignals()
         if (b) config->incidentStarted();
     });
     connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
-    /*connect(udpStream.data(), &DataStreamBaseClass::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);*/
+    connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
+    connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
+    connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::closeTempFile);
 }
