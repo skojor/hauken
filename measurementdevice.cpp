@@ -158,7 +158,7 @@ void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 st
         devicePtr->mode == Instrument::Mode::PSCAN &&
         startfreq < stopfreq)
     {
-        abor();
+        //abor();
         scpiWrite("freq:psc:stop " + QByteArray::number(stopfreq));
         scpiWrite("freq:psc:start " + QByteArray::number(startfreq));
         devicePtr->pscanStartFrequency = startfreq;
@@ -184,7 +184,7 @@ void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 st
 void MeasurementDevice::setPscanResolution()
 {
     if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
-        abor();
+        //abor();
         scpiWrite("psc:step " + QByteArray::number((int)devicePtr->pscanResolution));
         initImm();
     }

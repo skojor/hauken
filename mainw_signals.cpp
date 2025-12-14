@@ -964,6 +964,7 @@ void MainWindow::setSignals()
         aiPtr->freqChanged(a, b);
         datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
         datastreamIf->invalidateHeader();
+        traceBuffer->emptyBuffer();
     });
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
         traceAnalyzer->freqChanged(a, b);
@@ -971,6 +972,7 @@ void MainWindow::setSignals()
         aiPtr->freqChanged(a, b);
         datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
         datastreamIf->invalidateHeader();
+        traceBuffer->emptyBuffer();
     });
     connect(datastreamIfPan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
         traceAnalyzer->resChanged(a);

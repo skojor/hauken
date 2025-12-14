@@ -57,7 +57,6 @@ public slots:
     void recorderStarted();
     void recorderEnded();
     void incidenceTriggered();
-    //void updFlagInvalidateAvgLevels() { flagSavedAvgLevelsInvalidated = true; restartCalcAvgLevel(); }
 
 signals:
     void newDispTrace(const QVector<double> &data);
