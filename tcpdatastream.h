@@ -2,6 +2,7 @@
 #define TCPDATASTREAM_H
 
 #include "datastreambaseclass.h"
+#include <QMutex>
 
 class TcpDataStream : public DataStreamBaseClass
 {
@@ -15,12 +16,13 @@ public slots:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newDataHandler();
-    void restartTimeoutTimer() { timeoutTimer->stop();}
+    void restartTimeoutTimer() { timeoutTimer->stop();} ///??
 
 signals:
 
 private:
     bool headerIsRead = false;
+    QMutex mutex;
 };
 
 #endif // TCPDATASTREAM_H

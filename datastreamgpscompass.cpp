@@ -16,28 +16,30 @@ bool DatastreamGpsCompass::checkHeaders()
 
 void DatastreamGpsCompass::readData(QDataStream &ds)
 {
-    if (checkHeaders())
+    if (checkHeaders()) {
+        ds.setByteOrder(QDataStream::LittleEndian);
         m_optHeader.readData(ds, m_attrHeader.optHeaderLength);
-    checkOptHeader();
-    if (!m_gpsCompassData.readData(ds))
-        qWarning() << "Error reading GPSCompass stream";
-    else {
-        GpsData gpsData;
+        checkOptHeader();
+        if (!m_gpsCompassData.readData(ds))
+            qWarning() << "Error reading GPSCompass stream";
+        else {
+            GpsData gpsData;
 
-        gpsData.latitude = m_gpsCompassData.latDeg + (m_gpsCompassData.latMin * 0.0166666667);
-        if (m_gpsCompassData.latRef == 'S')
-            gpsData.latitude *= -1;
-        gpsData.longitude = m_gpsCompassData.lonDeg + (m_gpsCompassData.lonMin * 0.0166666667);
-        if (m_gpsCompassData.lonRef == 'W')
-            gpsData.longitude *= -1;
-        gpsData.altitude = m_gpsCompassData.altitude;
-        gpsData.dop = m_gpsCompassData.dilution;
-        gpsData.sog = (float) ( (m_gpsCompassData.sog) / 10.0 ) * 1.94384449;
-        gpsData.timestamp = QDateTime::fromMSecsSinceEpoch(m_gpsCompassData.gpsTimestamp / 1e6);
-        gpsData.sats = m_gpsCompassData.noOfSatInView;
-        gpsData.valid = (bool)m_gpsCompassData.gpsValid;
+            gpsData.latitude = m_gpsCompassData.latDeg + (m_gpsCompassData.latMin * 0.0166666667);
+            if (m_gpsCompassData.latRef == 'S')
+                gpsData.latitude *= -1;
+            gpsData.longitude = m_gpsCompassData.lonDeg + (m_gpsCompassData.lonMin * 0.0166666667);
+            if (m_gpsCompassData.lonRef == 'W')
+                gpsData.longitude *= -1;
+            gpsData.altitude = m_gpsCompassData.altitude;
+            gpsData.dop = m_gpsCompassData.dilution;
+            gpsData.sog = (float) ( (m_gpsCompassData.sog) / 10.0 ) * 1.94384449;
+            gpsData.timestamp = QDateTime::fromMSecsSinceEpoch(m_gpsCompassData.gpsTimestamp / 1e6);
+            gpsData.sats = m_gpsCompassData.noOfSatInView;
+            gpsData.valid = (bool)m_gpsCompassData.gpsValid;
 
-        emit gpsdataReady(gpsData);
+            emit gpsdataReady(gpsData);
+        }
     }
 }
 

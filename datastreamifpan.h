@@ -5,7 +5,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QElapsedTimer>
-#include <QList>
+#include <QVector>
 #include "streamparserbase.h"
 
 
@@ -14,9 +14,10 @@ class DatastreamIfPan : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamIfPan(QObject *parent = nullptr);
+    void invalidateHeader() { m_ifPanCenterFreq = m_ifPanSpan = m_ifPanResolution = 0; }
 
 signals:
-    void traceReady(const QList<qint16> &);
+    void traceReady(const QVector<qint16> &);
     void tracesPerSecond(double);
 
 private:
@@ -24,10 +25,9 @@ private:
     bool readOptHeader(QDataStream &ds) { return m_OptHeader.readData(ds, m_attrHeader.optHeaderLength);}
     bool checkHeaders();
     void checkOptHeader();
-    void invalidateCachedFreqs() { m_ifPanCenterFreq = m_ifPanResolution = m_ifPanSpan = 0; }
+    void calcTracesPerSecond();
 
     OptHeaderIfPanEB500 m_OptHeader;
-    QElapsedTimer *m_traceTimer = new QElapsedTimer;
     int m_traceCtr = 0;
     double m_ifPanCenterFreq = 0, m_ifPanSpan = 0;
     double m_ifPanResolution = 0;

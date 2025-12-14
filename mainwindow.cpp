@@ -28,7 +28,6 @@ MainWindow::MainWindow(QWidget *parent)
     customPlot = new QCustomPlot;
     customPlotController = new CustomPlotController(customPlot, config);
     customPlotController->init();
-    waterfall = new Waterfall(config);
 
     //waterfall->start();
     showWaterfall->addItems(QStringList() << "Off" << "Grey" << "Red" << "Blue" << "Pride");
@@ -58,22 +57,6 @@ MainWindow::MainWindow(QWidget *parent)
     arduinoPtr = new Arduino(config);
     aiPtr = new AI(config);
     read1809Data = new Read1809Data(config);
-
-    sdefRecorderThread->setObjectName("SdefRecorder");
-    sdefRecorder->moveToThread(sdefRecorderThread);
-    notificationsThread->setObjectName("Notifications");
-    notifications->moveToThread(notificationsThread);
-
-    waterfallThread = new QThread;
-    waterfallThread->setObjectName("waterfall");
-    waterfall->moveToThread(waterfallThread);
-
-    cameraRecorder = new CameraRecorder(config);
-    cameraThread = new QThread;
-    cameraThread->setObjectName("camera");
-    cameraRecorder->moveToThread(cameraThread);
-    connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
-    cameraThread->start();
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -142,10 +125,16 @@ MainWindow::MainWindow(QWidget *parent)
         customPlot->yAxis->setSubTickPen(QPen(Qt::white));
         customPlot->replot();
     }
+    lcdLevel->setDigitCount(3);
+    lcdLevel->setSmallDecimalPoint(true);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    notificationsThread->quit();
+    waterfallThread->quit();
+    cameraThread->quit();
+    sdefRecorderThread->quit();
     gnssDisplay->close();
     if (arduinoPtr->isWatchdogActive())
         arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
@@ -476,15 +465,31 @@ void MainWindow::createLayout()
     statusBox->addWidget(rightBox);
 
     QGridLayout *plotLayout = new QGridLayout;
-    plotLayout->addWidget(plotMaxScroll, 0, 0, 1, 1);
-    plotLayout->addWidget(plotMinScroll, 2, 0, 1, 1);
+
+    ffmInfoLayout->addWidget(btnBw);
+    ffmInfoLayout->addWidget(btnDemodulator);
+    ffmInfoLayout->addWidget(btnSigLevel);
+    ffmInfoLayout->addWidget(btnDetector);
+    hideLayoutWidgets(ffmInfoLayout, true);
+
+    plotLayout->addWidget(plotMaxScroll,1, 0, 1, 1);
+    plotLayout->addLayout(ffmInfoLayout, 0, 1, 1, 1);
+    plotLayout->addWidget(plotMinScroll, 3, 0, 1, 1);
+
+   // plotLayout->addLayout(vboxLayout, 0, 0);
+    btnBw->setMaximumHeight(20);
+    btnSigLevel->setStyleSheet("font-size: 10px;");
+    btnBw->setStyleSheet("font-size: 10px;");
+    btnDetector->setStyleSheet("font-size: 10px;");
+    btnDemodulator->setStyleSheet("font-size: 10px;");
+    btnSigLevel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     if (config->getSeparatedWindows()) {
         customPlot->show();
         customPlot->setWindowTitle("RF spectrum");
     }
     else {
-        plotLayout->addWidget(customPlot, 0, 1, 3, 1);
+        plotLayout->addWidget(customPlot, 1, 1, 3, 1);
     }
 
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
@@ -500,7 +505,7 @@ void MainWindow::createLayout()
     if (config->getPmrMode())
         bottomPlotLayout->addWidget(btnPmrTable);
 
-    plotLayout->addLayout(bottomPlotLayout, 3, 1, 1, 1, Qt::AlignHCenter);
+    plotLayout->addLayout(bottomPlotLayout, 4, 1, 1, 1, Qt::AlignHCenter);
 
     //plotMaxScroll->setFixedSize(40, 30);
     plotMaxScroll->setRange(-200, 200);
@@ -963,4 +968,19 @@ void MainWindow::restartWaterfall()
     QTimer::singleShot(50, this, [this] { // short delay to allow screen to update before restarting
         waterfall->updSize(customPlot->axisRect()->rect());
     });
+}
+
+void MainWindow::hideLayoutWidgets(QLayout *layout, bool hide)
+{
+    for (int i = 0; i < layout->count(); ++i) {
+        QLayoutItem *item = layout->itemAt(i);
+
+        if (QWidget *w = item->widget()) {
+            w->setVisible(!hide);
+        }
+        else if (QLayout *childLayout = item->layout()) {
+            // Recursively hide widgets inside nested layouts
+            hideLayoutWidgets(childLayout, hide);
+        }
+    }
 }

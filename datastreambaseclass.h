@@ -64,6 +64,7 @@ public:
     virtual void newDataHandler() = 0;
     void processData(const QByteArray &);
     bool readHeaders(const QByteArray &buf);
+    bool readHeadersSimplified(const QByteArray &buf);
     void readDscanOptHeader(QDataStream &ds); //FIX
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
@@ -73,14 +74,16 @@ public:
 signals:
     void connectedState(bool);
     void timeout();
-    void newIqData(const QList<complexInt16>&);
+    void newIqData(const QVector<complexInt16>&);
     void newAudioData(const QByteArray &);
     void newIfData(const QByteArray &);
     void newPscanData(const QByteArray &);
     void newIfPanData(const QByteArray &);
     void newGpsCompassData(const QByteArray &);
+    void newCwData(const QByteArray &);
     void waitForPscanEndMarker(bool);
     void bytesPerSecond(int);
+    void streamInfo(QHostAddress adr, int port);
 
 private:
 

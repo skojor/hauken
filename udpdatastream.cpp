@@ -51,6 +51,7 @@ void UdpDataStream::newDataHandler()
         int idx = 0;
         for (auto && udpPacket : udpPacketList) {
             if (udpPacket.seqNumber == sequenceNr) {
+                readHeaders(udpPacket.data);
                 processData(udpPacket.data);
                 break;
             }

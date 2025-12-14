@@ -76,7 +76,7 @@ int VifStreamTcp::parseDataPacket(const QByteArray &data)
 
     ds.skipRawData(28); // Skip header of data packet, 28 bytes / 7 words
     int readWords = 7;
-    QList<complexInt16> buf;
+    QVector<complexInt16> buf;
     if (nrOfWords > readWords && nrOfWords < 16000)
     {
         buf.resize((nrOfWords - readWords));

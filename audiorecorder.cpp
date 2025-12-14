@@ -14,42 +14,51 @@ void AudioRecorder::receiveAudioData(const QByteArray &pcm)
         return;
     }
 
-    int numSamples = pcm.size();
-    if (m_format.sampleFormat() == QAudioFormat::Int16)
-        numSamples = pcm.size() / 2;  // 16-bit
+    int totalSamples16 = 0;
+    const short *samples = nullptr;
+    QVector<qint16> conv;  // QVector is better than QList for raw PCM
 
-    else { // Need to convert to 16-bit signed int
-        // TODO: WILL NOT WORK WITH 8-BIT AUDIO!
+    if (m_format.sampleFormat() == QAudioFormat::Int16) {
+        totalSamples16 = pcm.size() / 2; // bytes → 16-bit samples
+        samples = reinterpret_cast<const short*>(pcm.constData());
     }
-    QByteArray mp3buf(pcm.size() * 2, 0);
+    else {
+        // Convert 8→16 bit
+        totalSamples16 = pcm.size();     // each 8-bit byte becomes 1 signed 16-bit sample
+        conv.resize(totalSamples16);
+        for (int i = 0; i < totalSamples16; i++)
+            conv[i] = (qint16(pcm[i]) - 128) * 256;
 
-    int bytesEncoded = 0;
-
-    if (m_format.channelCount() == 2) {
-        const short* samples = reinterpret_cast<const short*>(pcm.constData());
-
-        bytesEncoded = lame_encode_buffer_interleaved(
-            m_lame,
-            const_cast<short*>(samples),
-            numSamples / 2,
-            reinterpret_cast<unsigned char*>(mp3buf.data()),
-            mp3buf.size()
-            );
-    } else {
-        const short* samples = reinterpret_cast<const short*>(pcm.constData());
-
-        bytesEncoded = lame_encode_buffer(
-            m_lame,
-            const_cast<short*>(samples),
-            nullptr,
-            numSamples,
-            reinterpret_cast<unsigned char*>(mp3buf.data()),
-            mp3buf.size()
-            );
+        samples = conv.constData();
     }
 
-    if (bytesEncoded > 0)
-        m_file.write(mp3buf.constData(), bytesEncoded);
+    QByteArray mp3buf(totalSamples16 * 4, 0);
+    if (m_format.channelCount()) {
+        int numFrames = totalSamples16 / m_format.channelCount();
+        int bytesEncoded = 0;
+
+        if (m_format.channelCount() == 2) {
+            bytesEncoded = lame_encode_buffer_interleaved(
+                m_lame,
+                const_cast<short*>(samples),
+                numFrames,
+                reinterpret_cast<unsigned char*>(mp3buf.data()),
+                mp3buf.size()
+                );
+        } else {
+            bytesEncoded = lame_encode_buffer(
+                m_lame,
+                const_cast<short*>(samples),
+                nullptr,
+                totalSamples16,
+                reinterpret_cast<unsigned char*>(mp3buf.data()),
+                mp3buf.size()
+                );
+        }
+
+        if (bytesEncoded > 0)
+            m_file.write(mp3buf.constData(), bytesEncoded);
+    }
 }
 
 void AudioRecorder::updFormat(const int samplerate, const int channels, const QAudioFormat::SampleFormat format)
@@ -67,10 +76,11 @@ void AudioRecorder::updFormat(const int samplerate, const int channels, const QA
 
 void AudioRecorder::demodChanged(int freq, int bw, const QString &demodType)
 {
+    if (m_file.isOpen()) m_file.close();
+
     if (m_recorderEnabled) {
-        if (m_file.isOpen()) m_file.close();
         m_file.setFileName(m_fileLocation + "/" +
-                           QDateTime::currentDateTime().toString("yyyyMMdd") + "_" +
+                           QDateTime::currentDateTime().toString("yyyyMMddmmss") + "_" +
                            QString::number(freq) + "_" +
                            QString::number(bw) + "_" +
                            demodType + ".mp3");

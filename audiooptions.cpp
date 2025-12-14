@@ -16,6 +16,9 @@ AudioOptions::AudioOptions(QSharedPointer<Config> c)
     cbOpt3->setText("Squelch level");
     sbOpt1->setRange(-99,99);
 
+    mainLayout->addRow(new QLabel("Signal level detector"), comboOpt5);
+    comboOpt5->addItems(QStringList() << "Positive (peak)" << "Average" << "Fast" << "RMS");
+
     mainLayout->addRow(cbOpt1, comboOpt1);
     cbOpt1->setText("Audio playback");
 
@@ -50,6 +53,7 @@ void AudioOptions::start()
     comboOpt4->setCurrentIndex(comboOpt4->findText(config->getAudioModulationBw()));
     sbOpt1->setValue(config->getAudioSquelchLevel());
     cbOpt4->setChecked(config->getAudioActivate());
+    comboOpt5->setCurrentIndex(config->getAudioDetector());
 
     dialog->exec();
 }
@@ -65,6 +69,7 @@ void AudioOptions::saveCurrentSettings()
     config->setAudioSquelch(cbOpt3->isChecked());
     config->setAudioSquelchLevel(sbOpt1->value());
     config->setAudioActivate(cbOpt4->isChecked());
+    config->setAudioDetector(comboOpt5->currentIndex());
 
     report();
 
@@ -75,8 +80,8 @@ QList<QAudioDevice> AudioOptions::updMediaDevicesList()
 {
     QList<QAudioDevice> audioDevices = QMediaDevices::audioOutputs();
 
-    for (auto && val : audioDevices)
-        qDebug() << val.id() << val.description() << val.isDefault();
+    /*for (auto && val : audioDevices)
+        qDebug() << val.id() << val.description() << val.isDefault();*/
 
     return audioDevices;
 }
@@ -157,4 +162,5 @@ void AudioOptions::report()
     reportPlayback();
     reportSquelch();
     reportRecord();
+    reportDetector();
 }

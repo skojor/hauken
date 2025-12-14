@@ -9,8 +9,8 @@ bool DatastreamAudio::checkHeaders()
 {
     if (m_attrHeader.tag != (int)Instrument::Tags::AUDIO)
         return false;
-    if (m_attrHeader.optHeaderLength && m_audioOptHeader.audioMode != m_audioMode) {
-        m_audioMode = m_audioOptHeader.audioMode;
+    if (m_attrHeader.optHeaderLength && m_optHeader.audioMode != m_audioMode) {
+        m_audioMode = m_optHeader.audioMode;
         reportAudioMode(m_audioMode);
     }
 
@@ -19,21 +19,25 @@ bool DatastreamAudio::checkHeaders()
 
 void DatastreamAudio::readData(QDataStream &ds)
 {
-    if (m_attrHeader.optHeaderLength && readOptHeader(ds) && checkHeaders()) {
-        const int totalBytes = m_attrHeader.numItems * m_audioOptHeader.frameLength;
+    if (checkHeaders()) {
+        ds.setByteOrder(QDataStream::LittleEndian);
+        m_optHeader.readData(ds, m_attrHeader.optHeaderLength);
+
+        checkForHeaderChanges();
+        const int totalBytes = m_attrHeader.numItems * m_optHeader.frameLength;
         QByteArray data;
         data.resize(totalBytes);
         int read = ds.readRawData(data.data(), totalBytes);
 
         if (read == totalBytes) {
-            switch (m_audioOptHeader.audioMode) {
+            /*switch (m_audioOptHeader.audioMode) {
             case 1: case 2: case 5: case 6: case 9: case 10: // 16 bit modes
                 qint16 *samples = reinterpret_cast<qint16*>(data.data());
                 for (int i = 0; i < data.size() / 2; i++) { // Swap endianness after serialized read
                     samples[i] = qToBigEndian(samples[i]);
                 }
                 break;
-            }
+            }*/
             emit audioDataReady(data);
         }
     }
@@ -85,12 +89,12 @@ void DatastreamAudio::reportAudioMode(const int mode)
 
 void DatastreamAudio::checkForHeaderChanges()
 {
-    quint64 f = (quint64)m_audioOptHeader.freqHigh << 32 | m_audioOptHeader.freqLow;
+    quint64 f = (quint64)m_optHeader.freqHigh << 32 | m_optHeader.freqLow;
 
-    if (f != m_freq || m_audioOptHeader.bandwidth != m_bw || m_audioOptHeader.demodString != m_demodType) { // Report changes
+    if (f != m_freq || m_optHeader.bandwidth != m_bw || m_optHeader.demodString != m_demodType) { // Report changes
         m_freq = f;
-        m_bw = m_audioOptHeader.bandwidth;
-        m_demodType = QString(m_audioOptHeader.demodString);
+        m_bw = m_optHeader.bandwidth;
+        m_demodType = QString(m_optHeader.demodString);
         emit headerDataChanged(m_freq, m_bw, m_demodType);
     }
 }

@@ -32,7 +32,7 @@ signals:
 
 private:
     bool headerIsRead = false;
-    QList<UdpPacket> udpPacketList;
+    QVector<UdpPacket> udpPacketList;
 };
 
 #endif // UDPDATASTREAM_H

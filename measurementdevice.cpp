@@ -62,7 +62,7 @@ void MeasurementDevice::scpiConnected()
 
 void MeasurementDevice::scpiStateChanged(QAbstractSocket::SocketState state)
 {
-    qDebug() << "TCP scpi socket state" << state;
+    //qDebug() << "TCP scpi socket state" << state;
 
     if (state == QAbstractSocket::ConnectedState) {
         askId();
@@ -93,7 +93,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        qDebug() << ">>" << data;
+        //qDebug() << ">>" << data;
     }
 }
 
@@ -158,13 +158,13 @@ void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 st
         devicePtr->mode == Instrument::Mode::PSCAN &&
         startfreq < stopfreq)
     {
-        abor();
+        //abor();
         scpiWrite("freq:psc:stop " + QByteArray::number(stopfreq));
         scpiWrite("freq:psc:start " + QByteArray::number(startfreq));
         devicePtr->pscanStartFrequency = startfreq;
         devicePtr->pscanStopFrequency = stopfreq;
         initImm();
-        emit resetBuffers();        
+        emit resetBuffers();
     }
     else if (connected &&
              devicePtr->hasDscan &&
@@ -184,7 +184,7 @@ void MeasurementDevice::setPscanFrequency(const quint64 startf, const quint64 st
 void MeasurementDevice::setPscanResolution()
 {
     if (connected && devicePtr->hasPscan && devicePtr->mode == Instrument::Mode::PSCAN) {
-        abor();
+        //abor();
         scpiWrite("psc:step " + QByteArray::number((int)devicePtr->pscanResolution));
         initImm();
     }
@@ -216,9 +216,9 @@ void MeasurementDevice::setFfmFrequencySpan()
 void MeasurementDevice::setMeasurementTime()
 {
     if (connected) {
-        scpiWrite("abor");
+        //scpiWrite("abor");
         scpiWrite("meas:time " + QByteArray::number(measurementTime) + " ms");
-        scpiWrite("init:imm");
+        //scpiWrite("init:imm");
     }
 }
 
@@ -277,10 +277,10 @@ void MeasurementDevice::setMode()
             emit modeUsed("ffm");
         }
     }
-    if (connected && !autoReconnectInProgress) {
+    /*if (useUdpStream && connected && !autoReconnectInProgress) {
         muteNotification = true;
         restartStream(false); // rerun stream setup if mode changes (obviously)
-    }
+    }*/
 }
 
 void MeasurementDevice::setFftMode()
@@ -633,7 +633,7 @@ void MeasurementDevice::runAfterConnected()
     setAntPort();
     setMeasurementMode();
     setMode();
-    //restartStream(false);
+    restartStream(false);
     setFftMode();
     scpiWrite("syst:if:rem:mode off"); // Don't send IF data unless specifically asked for!
     startDevice();
@@ -675,41 +675,13 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
 
-    /*vifStreamUdp->setDeviceType(devicePtr);
-    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);*/
-
-    /*if (config->getIqCreateFftPlot()) { // && devicePtr->type != InstrumentType::USRP) {
-        vifStreamTcp->setDeviceType(devicePtr);
-        vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
-    }*/
-
-    QByteArray modeStr;
-    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
-    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud, if";
-
-    /*// ssh tunnel hackaround
-    tcpOwnAdress = scpiSocket->localAddress().toString().toLocal8Bit();
-    tcpOwnPort = QByteArray::number(tcpStream->getTcpPort());
-
-    scpiWrite("trac:tcp:sock?");
-    disconnect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
-    scpiSocket->waitForReadyRead(1000);
-    //QThread::msleep(500);
-
-    QByteArray tmpBuffer = scpiSocket->readAll();
-    QList<QByteArray> split = tmpBuffer.split(',');
-    if (split.size() > 1) {
-        tcpOwnAdress = split.at(0).simplified();
-        tcpOwnPort = split.at(1).simplified();
-    }
-    connect(scpiSocket, &QTcpSocket::readyRead, this, &MeasurementDevice::scpiRead);
-*/
+    QByteArray modeStr = "cw, ifp, aud, if, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
     QByteArray em200Specific;
-    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+    if (devicePtr->advProtocol) em200Specific = ", 'ifpan'"; // em200/pr200 specific setting, swap system inverted since these models
+    else em200Specific = ", 'swap'";
 
     scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
@@ -724,25 +696,17 @@ void MeasurementDevice::setupTcpStream()
 
 void MeasurementDevice::setupUdpStream()
 {
-    /*vifStreamUdp->setDeviceType(devicePtr);
-    vifStreamUdp->openListener(*scpiAddress, scpiPort + 10);*/
-
-    /*if (config->getIqCreateFftPlot() && devicePtr->type != InstrumentType::USRP) {
-        vifStreamTcp->setDeviceType(devicePtr);
-        vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
-    }*/
 
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
-    QByteArray modeStr;
-    if (devicePtr->mode == Mode::PSCAN && !devicePtr->optHeaderDscan) modeStr = "pscan";
-    else if (devicePtr->mode == Mode::PSCAN && devicePtr->optHeaderDscan) modeStr = "dscan";
-    else if (devicePtr->mode == Mode::FFM) modeStr = "ifp, aud, if";
+
+    QByteArray modeStr = "cw, ifp, aud, if, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
     QByteArray em200Specific;
-    if (devicePtr->advProtocol) em200Specific = ", 'ifpan', 'swap'"; // em200/pr200 specific setting, swap system inverted since these models
+    if (devicePtr->advProtocol) em200Specific = ", 'ifpan'"; // em200/pr200 specific setting, swap system inverted since these models
+    else em200Specific = ", 'swap'";
 
     scpiWrite("trac:udp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
@@ -752,7 +716,8 @@ void MeasurementDevice::setupUdpStream()
     scpiWrite("trac:udp:flag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() +
               "\", " +
-              QByteArray::number(udpStream->getUdpPort()) + ", 'volt:ac', 'opt'" + em200Specific);
+              QByteArray::number(udpStream->getUdpPort()) +
+              ", 'volt:ac', 'opt'" + em200Specific);
     if (instrumentState == InstrumentState::CONNECTED) askUdp(); // To update the current user ip address 230908
     //askUser(true);
 }
@@ -1140,6 +1105,10 @@ void MeasurementDevice::deleteIfStream()
         setFfmFrequencySpan();
         emit skipNextNTraces(20); // Skip few FFM lines to not mix with old data ##FIXME!
     }
+    if (useUdpStream) {
+        muteNotification = true;
+        restartStream(false);
+    }
 }
 
 void MeasurementDevice::setupVifConnection()
@@ -1147,9 +1116,9 @@ void MeasurementDevice::setupVifConnection()
 /*    scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");*/
-    scpiWrite("meas:time 1800 ms"); // Slow down trace data transfer while I/Q transfer is running
+    scpiWrite("meas:time 100 ms"); // Slow down trace data transfer while I/Q transfer is running
     scpiWrite("dem:mode IQ");
-    scpiWrite("band " + QByteArray::number(config->getIqFftPlotBw()) + " khz");
+    scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3)));
     scpiWrite("syst:if:rem:mode short");
 }
 
@@ -1194,7 +1163,7 @@ void MeasurementDevice::setDemodType(QString type)
 
 void MeasurementDevice::setDemodBw(int bw)
 {
-    scpiWrite("band " + QByteArray::number(bw * 1e3));
+    scpiWrite("band " + QByteArray::number((int)(bw * 1e3)));
 }
 
 void MeasurementDevice::setSquelch(bool sq)
@@ -1218,4 +1187,14 @@ void MeasurementDevice::updGpsCompassData(GpsData &data)
     devicePtr->gnssTimestamp = data.timestamp;
     devicePtr->sats = data.sats;
     devicePtr->positionValid = data.valid;
+}
+
+void MeasurementDevice::setDetector(int i)
+{
+    QByteArray det;
+    if (i == 0) det = "POS";
+    else if (i == 1) det = "PAV";
+    else if (i == 2) det = "FAST";
+    else det = "RMS";
+    scpiWrite("sens:det " + det);
 }

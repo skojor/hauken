@@ -118,6 +118,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     streamparserbase.h streamparserbase.cpp
     datastreamifpan.h datastreamifpan.cpp
     datastreamgpscompass.h datastreamgpscompass.cpp
+    datastreamcw.h datastreamcw.cpp
 
 
 

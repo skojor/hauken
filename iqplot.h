@@ -29,15 +29,14 @@ public:
 
 public slots:
     void requestIqData(); // Function call to set up I/Q transfer
-    void getIqData(const QList<complexInt16> &iq16); // New, gather parts of data before doing sth with them
-    void parseIqData(const QList<complexInt16> &iq16, const double frequency); // Data from vifstream class
-    void validateHeader(qint64 freq, qint64 bw, qint64 samplerate);
+    void getIqData(const QVector<complexInt16> &iq16); // New, gather parts of data before doing sth with them
+    void parseIqData(const QVector<complexInt16> &iq16, const double frequency); // Data from vifstream class
+    void validateHeader(qint64 freq, qint64 bw, qint64 rate);
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void resetTimer() { lastIqRequestTimer.invalidate();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
-    void setFilename(QString) {}
+    //void setFilename(QString) {}
     bool readAndAnalyzeFile(const QString filename);
     void updSettings();
-    void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
     void setCurrentMode(Instrument::Mode m) { instrMode = m;}
     void setCurrentFfmCenterFrequency(quint64 f) { oldFfmCenterFrequency = f;}
     void setCurrentFfmBandwidth(quint32 f) { oldFfmBandwidth = f;}
@@ -45,18 +44,18 @@ public slots:
     void getIqCenterFrequency(double f) { centerFrequency = f; }
 
 private slots:
-    void findIqFftMinMaxAvg(const QList<QList<double> > &iqFftResult, double &min, double &max, double &avg);
-    void createIqPlot(const QList<QList<double> > &, const double secondsAnalyzed, const double secondsPerLine);
+    void findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult, double &min, double &max, double &avg);
+    void createIqPlot(const QVector<QVector<double> > &, const double secondsAnalyzed, const double secondsPerLine);
     void fillWindow();
     void addLines(QImage *image, const double secondsAnalyzed, const double secondsPerLine);
     void addText(QImage *image, const double secondsAnalyzed, const double secondsPerLine);
     void saveImage(const QImage *image, const double secondsAnalyzed);
-    quint64 analyzeIqStart(const QList<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
-    void saveIqData(const QList<complexInt16> &iq);
-    void receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze = 500e-6);
-    const QList<complexInt8> convertComplex16to8bit(const QList<complexInt16> &);
-    const QList<complexInt16> convertComplex8to16bit(const QList<complexInt8> &);
-    void findIqMaxValue(const QList<complexInt16> &, qint16 &max);
+    quint64 analyzeIqStart(const QVector<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
+    void saveIqData(const QVector<complexInt16> &iq);
+    void receiveIqDataWorker(const QVector<complexInt16> iq, const double secondsToAnalyze = 500e-6);
+    const QVector<complexInt8> convertComplex16to8bit(const QVector<complexInt16> &);
+    const QVector<complexInt16> convertComplex8to16bit(const QVector<complexInt8> &);
+    void findIqMaxValue(const QVector<complexInt16> &, qint16 &max);
     void parseFilename(const QString file);
     void receiverControl();
 
@@ -91,11 +90,12 @@ private:
     quint64 oldFfmCenterFrequency;
     quint32 oldFfmBandwidth;
     quint64 trigFrequency = 0;
-    QList<double> listFreqs;
-    QList<complexInt16> iqSamples;
+    QVector<double> listFreqs;
+    QVector<complexInt16> iqSamples;
     quint64 samplesNeeded = 0;
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;
+    int throwFirstSamples = 0;
     QTimer *timeoutTimer = new QTimer;
     double centerFrequency = 0;
 };

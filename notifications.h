@@ -88,7 +88,7 @@ signals:
     void reqPosition();
 
 private:
-    QFile *incidentLogfile;
+    QFile *incidentLogfile = nullptr;
     QString mailtext;
     QTimer *timeBetweenEmailsTimer;
     QTimer *retryEmailsTimer;

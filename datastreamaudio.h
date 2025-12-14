@@ -12,14 +12,14 @@ class DatastreamAudio : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamAudio(QObject *parent = nullptr);
-    bool readOptHeader(QDataStream &ds) { return m_audioOptHeader.readData(ds);}
+    bool readOptHeader(QDataStream &ds) { return m_optHeader.readData(ds, m_attrHeader.optHeaderLength);}
     bool checkHeaders();
     void reportAudioMode(const int mode);
 
 signals:
     void audioDataReady(const QByteArray &);
     void audioModeChanged(int, int, QAudioFormat::SampleFormat);
-    void headerDataChanged(int freq, int bw, QString demodType);
+    void headerDataChanged(quint64 freq, int bw, QString demodType);
 
 private:
     void readData(QDataStream &ds);
@@ -30,7 +30,7 @@ private:
     quint64 m_freq;
     int m_bw;
     QString m_demodType;
-    AudioOptHeader m_audioOptHeader;
+    AudioOptHeader m_optHeader;
 
 };
 

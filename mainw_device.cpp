@@ -17,6 +17,9 @@ void MainWindow::updInstrButtonsStatus()
 
 void MainWindow::instrModeChanged()
 {
+    datastreamIfPan->invalidateHeader();
+    datastreamPScan->invalidateHeader();
+
     if (instrMode->currentText().contains("pscan", Qt::CaseInsensitive)/* &&
         measurementDevice->currentMode() != Instrument::Mode::PSCAN*/) {
         startFreqLabel->setText("Start frequency (MHz)");
@@ -32,6 +35,8 @@ void MainWindow::instrModeChanged()
         instrResolution->setHidden(false);
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
+        customPlotController->modeChanged(Instrument::Mode::PSCAN);
+        hideLayoutWidgets(ffmInfoLayout, true);
     }
     else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
              measurementDevice->currentMode() != Instrument::Mode::FFM*/) {
@@ -48,6 +53,8 @@ void MainWindow::instrModeChanged()
         instrResolution->setHidden(true);
         config->setInstrMode(instrMode->currentText());
         measurementDevice->setMode();
+        customPlotController->modeChanged(Instrument::Mode::FFM);
+        hideLayoutWidgets(ffmInfoLayout, false);
     }
     instrPscanFreqChanged();
     setResolutionFunction();
@@ -98,7 +105,7 @@ void MainWindow::instrPscanFreqChanged()
         config->setInstrStartFreq(instrStartFreq->value() * 1e6);
         config->setInstrStopFreq(instrStopFreq->value() * 1e6);
         ptrNetwork->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
-        sdefRecorder->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
+        /*sdefRecorder->updFrequencies(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);*/ // Handled by signal directly from datastream pscan / ffm
     }
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
@@ -114,8 +121,8 @@ void MainWindow::instrFfmCenterFreqChanged()
         measurementDevice->setFfmCenterFrequency(1e6 * instrFfmCenterFreq->value());
         ptrNetwork->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
                                    1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
-        sdefRecorder->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
-                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
+        /*sdefRecorder->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2, // Handled by signal directly from datastream pscan / ffm
+                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);*/
     }
 
     if (measurementDevice->isConnected()) {
@@ -123,6 +130,7 @@ void MainWindow::instrFfmCenterFreqChanged()
         waterfall->restartPlot();
     }
     iqPlot->setFfmFrequency(instrFfmCenterFreq->value()); // Sent as MHz, used for image text
+    customPlotController->ffmCenterFreqChanged(1e6 * instrFfmCenterFreq->value()); // Displays center line in FFM mode
 }
 
 void MainWindow::instrFfmSpanChanged()
@@ -141,6 +149,7 @@ void MainWindow::instrMeasurementTimeChanged()
 
 void MainWindow::instrAttChanged()
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     config->setInstrManAtt(instrAtt->text().toInt());
     if (measurementDevice->isConnected())
         traceBuffer->restartCalcAvgLevel();
@@ -148,6 +157,7 @@ void MainWindow::instrAttChanged()
 
 void MainWindow::instrAutoAttChanged()
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     instrAtt->setDisabled(instrAutoAtt->isChecked());
     config->setInstrAutoAtt(instrAutoAtt->isChecked());
     if (measurementDevice->isConnected())
@@ -183,6 +193,7 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
 
 void MainWindow::instrGainControlChanged(int index)
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     if (index == -1)
         index = config->getInstrGainControl();
     else
@@ -251,6 +262,8 @@ void MainWindow::instrResolutionChanged() // pscan res. change
 
 void MainWindow::setDeviceAntPorts()
 {
+    sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
+
     instrAntPort->clear();
     int index = config->getInstrAntPort();
     instrAntPort->addItems(measurementDevice->deviceAntPorts());
@@ -283,10 +296,10 @@ void MainWindow::btnConnectPressed(bool state)
             // IP/hostname written is the same as was already in the list, select this entry instead
             if (config->getInstrIpAddr() == instrIpAddr->currentText()) { // Failsafe in case list changed
                 instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
-                qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+                //qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
             }
             else {
-                qDebug() << "not found" << config->getInstrIpAddr();
+                //qDebug() << "not found" << config->getInstrIpAddr();
                 instrIpAddr->addItem("Unknown", QVariant("127.0.0.1")); // Dummy, choose sth that exists
                 instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1); // Select dummy
             }
@@ -295,16 +308,18 @@ void MainWindow::btnConnectPressed(bool state)
         else {
             // New entry, store it for later
             config->setInstrCustomEntry(instrIpAddr->currentText());
+            instrIpAddr->addItem(instrIpAddr->currentText(), QVariant(instrIpAddr->currentText()));
+            instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
             config->setInstrIpAddr(instrIpAddr->currentText());
-            instrIpAddr->setItemData(instrIpAddr->currentIndex(), QVariant());
-            qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+            //instrIpAddr->setItemData(instrIpAddr->currentIndex(), QVariant());
+            //qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
 
         }
     }
     if (!instrIpAddr->currentData().isValid()) {
         QHostAddress address;
         if (address.setAddress(instrIpAddr->currentText())) {
-            qDebug() << "valid adr";
+            //qDebug() << "valid adr";
         }
         else {
             statusBar->showMessage("Looking up host " + instrIpAddr->currentText(), 5000);
@@ -326,7 +341,7 @@ void MainWindow::btnConnectPressed(bool state)
         measurementDevice->setAddress(instrIpAddr->currentText());
     //qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData().toString();
 
-    qDebug() << "connecting" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+    //qDebug() << "connecting" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
     if (state) measurementDevice->instrConnect();
     instrDisconnect->setEnabled(true);
 }

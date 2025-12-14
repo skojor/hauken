@@ -1,6 +1,7 @@
 #include "iqplot.h"
 #include "asciitranslator.h"
 #include "fftw3.h"
+#include <QRegularExpression>
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
@@ -19,13 +20,20 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
     });
 }
 
-void IqPlot::getIqData(const QList<complexInt16> &iq16)
+void IqPlot::getIqData(const QVector<complexInt16> &iq16)
 {
     dataFromFile = false;
-    if (!listFreqs.isEmpty()) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
-    if (flagHeaderValidated) iqSamples += iq16;
+    if (!samplesNeeded)
+        samplesNeeded = (int)(config->getIqLogTime() * samplerate);
+
+    if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
+    //qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
+    if (flagHeaderValidated and !throwFirstSamples) iqSamples += iq16;
+    else if (flagHeaderValidated and throwFirstSamples)
+        throwFirstSamples--;
+
     //qDebug() << iqSamples.size();
-    if (iqSamples.size() >= samplesNeeded) {
+    if (iqSamples.size() >= samplesNeeded and !listFreqs.isEmpty()) {
         ffmFrequency = listFreqs.first(); // Silly, but blame the coder
         parseIqData(iqSamples, listFreqs.first());
         receiverControl(); // Change freq, or end datastream if we are done
@@ -33,28 +41,29 @@ void IqPlot::getIqData(const QList<complexInt16> &iq16)
     }
 }
 
-void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency)
+void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequency)
 {
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
-    samplerate = (double) config->getIqFftPlotBw() * 1.28
-                 * 1e3; // TODO: Is this universal for all R&S instruments?
+    if (!samplerate) samplerate = (double) config->getIqFftPlotBw() * 1.28
+                 * 1e3;
     fillWindow();
 
-    if (foldernameDateTime.secsTo(QDateTime::currentDateTime()) > 40) // Don't change folder/filename timestamp too often
-        foldernameDateTime = QDateTime::currentDateTime();
+    QString dir = config->incidentFolder();
+    QTextStream ts(&filename);
 
-    QString dir = config->getLogFolder();
-    if (config->getNewLogFolder()) { // create new folder for incident
-        dir = config->getLogFolder() + "/" + foldernameDateTime.toString("yyyyMMdd_hhmmss_") + config->getStationName();
-        if (!QDir().exists(dir))
-            QDir().mkpath(dir);
-    }
+    if (!QDir().exists(dir))
+        QDir().mkpath(dir);
 
-    filename = dir + "/" + foldernameDateTime.toString("yyyyMMddhhmmss_")
+    filename = dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
                + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
-               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" + "8bit";
-    if (!dataFromFile && config->getIqSaveToFile() && iq16.size())
-        saveIqData(iq16);
+               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
+               (config->getIqSaveAs16bit() ? "16bit" : "8bit");
+
+    if (!dataFromFile && config->getIqSaveToFile() && iq16.size()) {
+        (void)QtConcurrent::run(&IqPlot::saveIqData,
+                          this,
+                          iq16);
+    }
 
     QFuture<void> f1000 = QtConcurrent::run(&IqPlot::receiveIqDataWorker,
                                             this,
@@ -62,7 +71,7 @@ void IqPlot::parseIqData(const QList<complexInt16> &iq16, const double frequency
                                             config->getIqFftPlotLength() / 1e6);
 }
 
-void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double secondsToAnalyze)
+void IqPlot::receiveIqDataWorker(const QVector<complexInt16> iq, const double secondsToAnalyze)
 {
     const int fftSize = 64;
     const int newFftSize = fftSize * 16;
@@ -98,8 +107,8 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
         = 84.0 * (double) newFftSize
           / 1024.0; // Removing samples to have just above the original sample width visible in the plot
 
-    QList<double> result;
-    QList<QList<double>> iqFftResult;
+    QVector<double> result;
+    QVector<QVector<double>> iqFftResult;
 
     for (int i = 0; i < newFftSize;
          i++) { // Set all input values to 0 initially, used for zero padding
@@ -156,26 +165,29 @@ void IqPlot::receiveIqDataWorker(const QList<complexInt16> iq, const double seco
     emit workerDone();
 }
 
-void IqPlot::saveIqData(const QList<complexInt16> &iq16)
+void IqPlot::saveIqData(const QVector<complexInt16> &iq16)
 {
     QFile file(filename + ".iq");
     if (!file.open(QIODevice::WriteOnly))
         qWarning() << "Could not open" << filename + ".iq"
                    << "for writing IQ data, aborting";
     else {
-        file.write((const char *) convertComplex16to8bit(iq16).constData(), iq16.size() * 2);
+        if (config->getIqSaveAs16bit())
+            file.write((const char *) iq16.constData(), iq16.size() * 4);
+        else
+            file.write((const char *) convertComplex16to8bit(iq16).constData(), iq16.size() * 2);
         file.close();
     }
 }
 
-void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
+void IqPlot::createIqPlot(const QVector<QVector<double>> &iqFftResult,
                           const double secondsAnalyzed,
                           const double secondsPerLine)
 {
     double min, max, avg;
     findIqFftMinMaxAvg(iqFftResult, min, max, avg);
     //qDebug() << min << max << avg;
-    min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
+    if (config->getIqUseAvgForPlot()) min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
 
     QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
     QColor imgColor;
@@ -201,7 +213,7 @@ void IqPlot::createIqPlot(const QList<QList<double>> &iqFftResult,
     saveImage(&image, secondsAnalyzed);
 }
 
-void IqPlot::findIqFftMinMaxAvg(const QList<QList<double>> &iqFftResult,
+void IqPlot::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult,
                                 double &min,
                                 double &max,
                                 double &avg)
@@ -270,13 +282,23 @@ void IqPlot::addText(QImage *image, const double secondsAnalyzed, const double s
 
     painter.setFont(QFont("Arial", fontSize));
     painter.setPen(pen);
+    QString strFr = QString::number(ffmFrequency, 'f', 6);
+    strFr.remove(QRegularExpression("0+$"));
+    strFr.remove(QRegularExpression("[\\.,]$")); // Don't show more decimals than needed
+    QString strUpper = QString::number(samplerate / 1.28 / 2e6, 'f', 3);
+    strUpper.remove(QRegularExpression("0+$"));
+    strUpper.remove(QRegularExpression("[\\.,]$"));
+    QString strLower = QString::number(-samplerate / 1.28 / 2e6, 'f', 3);
+    strLower.remove(QRegularExpression("0+$"));
+    strLower.remove(QRegularExpression("[\\.,]$"));
+
     painter.drawText((image->size().width() / 2) - xMinus + 15,
                      yMinus,
-                     QString::number(ffmFrequency) + " MHz");
-    painter.drawText(0, yMinus, QString::number(-samplerate / 1.28 / 2e6, 'f', 1) + " MHz");
+                     strFr + " MHz");
+    painter.drawText(0, yMinus, strLower + " MHz");
     painter.drawText((image->size().width()) - (xMinus + 40),
                      yMinus,
-                     "+ " + QString::number(samplerate / 1.28 / 2e6, 'f', 1) + " MHz");
+                     "+ " + strUpper + " MHz");
 
     int lineDistance = (secondsAnalyzed / 10) / secondsPerLine;
     int microsecCtr = 1e6 * secondsAnalyzed / 10;
@@ -313,7 +335,7 @@ void IqPlot::requestIqData()
     if (config->getIqCreateFftPlot()
         && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 ))
     {
-        samplesNeeded = (int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
+        samplesNeeded = 0; //(int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
 
         listFreqs.clear();
         if (config->getIqRecordMultipleBands()) {
@@ -360,17 +382,16 @@ void IqPlot::requestIqData()
                 }
             }
         }
-
+        emit busyRecording(true);
         emit setFfmCenterFrequency(listFreqs.first());
         emit reqVifConnection();
-        emit busyRecording(true);
         lastIqRequestTimer.restart();
         flagRequestedEndVifConnection = false;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS);
     }
 }
 
-quint64 IqPlot::analyzeIqStart(const QList<complexInt16> &iq)
+quint64 IqPlot::analyzeIqStart(const QVector<complexInt16> &iq)
 {
     qint16 max = -32768;
     quint64 locMax = 0;
@@ -406,7 +427,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
         dataFromFile = true;
 
         if (int16) {
-            QList<complexInt16> iq16;
+            QVector<complexInt16> iq16;
             iq16.resize(file.size() / 4);
             if (file.read((char *) iq16.data(), file.size()) == -1)
                 qWarning() << "IQ16 read failed:" << file.errorString();
@@ -418,7 +439,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
                 parseIqData(iq16, ffmFrequency);
             }
         } else {
-            QList<complexInt8> iq8;
+            QVector<complexInt8> iq8;
             iq8.resize(file.size() / 2);
             if (file.read((char *) iq8.data(), file.size()) == -1)
                 qWarning() << "IQ8 read failed:" << file.errorString();
@@ -430,9 +451,9 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
     }
 }
 
-const QList<complexInt8> IqPlot::convertComplex16to8bit(const QList<complexInt16> &input)
+const QVector<complexInt8> IqPlot::convertComplex16to8bit(const QVector<complexInt16> &input)
 {
-    QList<complexInt8> output;
+    QVector<complexInt8> output;
     qint16 max;
     findIqMaxValue(input, max);
     double factor;
@@ -447,16 +468,16 @@ const QList<complexInt8> IqPlot::convertComplex16to8bit(const QList<complexInt16
     return output;
 }
 
-const QList<complexInt16> IqPlot::convertComplex8to16bit(const QList<complexInt8> &input)
+const QVector<complexInt16> IqPlot::convertComplex8to16bit(const QVector<complexInt8> &input)
 {
-    QList<complexInt16> output;
+    QVector<complexInt16> output;
     for (const auto &val : input)
         output.append(complexInt16{static_cast<qint16>(val.real * 128), static_cast<qint16>(val.imag * 128)});
 
     return output;
 }
 
-void IqPlot::findIqMaxValue(const QList<complexInt16> &input, qint16 &max)
+void IqPlot::findIqMaxValue(const QVector<complexInt16> &input, qint16 &max)
 {
     max = -32768;
     for (const auto &val : input) {
@@ -491,28 +512,36 @@ void IqPlot::updSettings()
 
 }
 
-void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 samplerate)
+void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 rate)
 {
     if (!listFreqs.isEmpty()
         && freq == (quint64)(listFreqs.first() * 1e6)
         && bw == (quint32)(config->getIqFftPlotBw() * 1e3))
     {
         flagHeaderValidated = true;
+        samplerate = rate;
+        //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << samplerate;
     }
     else {
         flagHeaderValidated = false;
+        //qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << samplerate;
+
     }
 }
 
 void IqPlot::receiverControl()
 {
     flagHeaderValidated = false; // Assume future data to be invalid for now
+    throwFirstSamples = 4 * samplerate / 1e7;
+    if (!throwFirstSamples) throwFirstSamples = 1;
+
+    //qDebug() << throwFirstSamples;
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();
-        emit headerValidated(false);
+        //emit headerValidated(false);
         emit setFfmCenterFrequency(listFreqs.first());
     }
     else { // We are done, stop I/Q stream

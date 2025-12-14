@@ -14,9 +14,9 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QElapsedTimer>
+#include <QVector>
 #include "config.h"
 #include "typedefs.h"
-#include "JlCompress.h"
 #include <QNetworkAccessManager>
 
 #define TEMPFILENAME "feed.cef"
@@ -39,13 +39,12 @@ public slots:
     void updSettings();
     void triggerRecording(); // to be called as long as incident is happening!
     void manualTriggeredRecording();
-    void receiveTraceBuffer(const QList<QDateTime> datetime, const QList<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
+    void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
     void receiveTrace(const QVector<qint16> data); // new data arrives here
-    void updTracesPerSecond(double d) { tracePerSecond = d;}
-    void deviceDisconnected(bool b) { if (!b) finishRecording(); deviceConnected = b;}
-    void endRecording() { finishRecording();}
+    void updTracesPerSecond(double d);
+    void setDeviceCconnectedState(bool b);
+    void endRecording();
     void updPosition(bool b, double l1, double l2);
-    void finishRecording();
     void recPrediction(QString pred, int prob);
     void loginRequest() {  askedForLogin = true; curlLogin(); }
     void setModeUsed(QString s) { modeUsed = s;}
@@ -53,17 +52,16 @@ public slots:
     void tempFileData(const QVector<qint16> data);
     void saveDataToTempFile();
     void closeTempFile();
-    void setFolderDateTime() { foldernameDateTime = QDateTime::currentDateTime();}
-    void setIqRecordingInProgress(bool b) { iqRecordingInProgress = b;}
+    void setIqRecordingInProgress(bool b);
     void skipNextNTraces(int i) { skipTraces = i;}
-    void updFrequencies(quint64 sta, quint64 stop) { startfreq = sta; stopfreq = stop;}
-    void updResolution(quint32 res) { resolution = res;} // Not used per now, read from config class}
+    void updFrequencies(quint64 sta, quint64 stop);
+    void updResolution(quint32 res);
     void updAntName(QString s) {antName = s.remove(' ');}
+    void updScanTime(int i);
 
 private slots:
-    QByteArray createHeader();
+    QByteArray createHeader(const int saveInterval = 0);
     QString convertDdToddmmss(const double d, const bool lat = true);
-    void restartRecording();
     QString createFilename();
     bool curlLogin();
     void curlUpload();
@@ -71,6 +69,7 @@ private slots:
     void zipit();
     void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
     void startTempFile();
+    QByteArray genSdefTraceLine(double lat = 0, double lng = 0, const QVector<qint16> = QVector<qint16>());
 
 signals:
     void recordingStarted();
@@ -82,7 +81,7 @@ signals:
     void recordingEnabled();
     void recordingDisabled();
     void loginSuccessful();
-    void publishFilename(QString);
+   //void publishFilename(QString);
     void reqAuthentication();
     void fileReadyForUpload(QString);
     void folderDateTimeSet();
@@ -90,17 +89,17 @@ signals:
 private:
     //QSharedPointer<Config> config;
     QFile file;
-    double tracePerSecond;
+    double tracePerSecond = -1, tracePerSecondForTempFile = -1;
     QDateTime dateTimeRecordingStarted;
-    QTimer *recordingStartedTimer;
-    QTimer *recordingTimeoutTimer;
-    QTimer *reqPositionTimer;
-    QTimer *periodicCheckUploadsTimer;
-    QTimer *autorecorderTimer;
-    QTimer *finishedFileTimer;
-    QTimer *tempFileTimer;
-    QTimer *tempFileCheckFilesize;
-    QDateTime foldernameDateTime = QDateTime::currentDateTime();
+    QTimer *recordingStartedTimer = nullptr;
+    QTimer *recordingTimeoutTimer = nullptr;
+    QTimer *reqPositionTimer = nullptr;
+    QTimer *periodicCheckUploadsTimer = nullptr;
+    QTimer *autorecorderTimer = nullptr;
+    QTimer *finishedFileTimer = nullptr;
+    QTimer *tempFileTimer = nullptr;
+    QTimer *tempFileCheckFilesize = nullptr;
+    //QDateTime foldernameDateTime = QDateTime::currentDateTime();
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
@@ -128,8 +127,7 @@ private:
 
     QNetworkAccessManager *networkManager; // New for OAuth2/SSO
 
-    QList<qint16> tempFileTracedata;
-    bool startTempRecording = false;
+    QVector<qint16> tempFileTracedata;
     bool iqRecordingInProgress = false;
     int skipTraces = 0;
     QString antName = "NA";
@@ -138,6 +136,7 @@ private:
     bool useNewMsFormat;
     double startfreq, stopfreq, resolution;
     int tempFileMaxhold;
+    double scanTime;
 };
 
 #endif // SDEFRECORDER_H

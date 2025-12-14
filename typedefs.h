@@ -57,6 +57,7 @@ enum class Tags
     FPIFPAN =    1602,
     GPSC    =    1801,
     ADVIFP  =   10501,
+    ADVCW   =   10801,
     ADVPSC  =   11201
 };
 
@@ -187,7 +188,7 @@ public:
     int size;
     bool readData(QDataStream &ds) {
         ds >> tag;
-        if (tag < 10000) { // Classic AttrHeader
+        if (tag < 5000) { // Classic AttrHeader
             size = 12;
             quint8 chan, opt;
             quint16 len, items;
@@ -204,7 +205,33 @@ public:
                 >> selectorFlagsHigh >> res5 >> res6 >> res7 >> res8;
         }
         if (!ds.atEnd()) return true;
-        else return false;
+        return false;
+    }
+};
+
+class OptHeaderCw
+{
+public:
+    OptHeaderCw() {}
+    quint32     freqLow = 0;
+    quint32     freqHigh = 0;
+    quint64     outputTimestamp = 0;
+    qint16      signalSource = 0;
+    qint16      detector1 = 0;
+    qint16      detector2 = 0;
+    qint16      detector3 = 0;
+    qint16      detector4 = 0;
+    int         size = 0;
+    bool readData(QDataStream &ds, int headerSize) {
+        size = headerSize;
+        if (headerSize >=26) {
+            ds >> freqLow >> freqHigh >> outputTimestamp >> signalSource
+                >> detector1 >> detector2 >> detector3 >> detector4;
+        }
+        if (headerSize > 26)
+            ds.skipRawData(headerSize - 26);
+        if (!ds.atEnd()) return true;
+        return false;
     }
 };
 
@@ -276,7 +303,8 @@ public:
         }
         if (ds.atEnd() or size != 32 or size != 62 or size != 70) return false;*/
         // Skip reading rest of header, values are not used anywhere for now
-        return true;
+        if (!ds.atEnd()) return true;
+        return false;
     }
 };
 
@@ -303,7 +331,7 @@ public:
         }
         ds.skipRawData(headerSize - 40); // Old style IfPan header, not using newer vals for now
         if (!ds.atEnd()) return true;
-        else return false;
+        return false;
     }
 };
 
@@ -321,13 +349,19 @@ public:
     char    reserved[6];
     quint64 outputTimeStamp = 0;
     qint16  signalSource = 0;
-    static const int size = 42;
-    bool readData(QDataStream &ds) {
-        ds  >> audioMode >> frameLength >> freqLow >> bandwidth >> demodulation;
-        ds.readRawData(demodString, sizeof(demodString));
-        ds  >> freqHigh;
-        ds.readRawData(reserved, sizeof(reserved));
-        ds  >> outputTimeStamp >> signalSource;
+    int size = 42;
+    bool readData(QDataStream &ds, int headerSize) {
+        size = headerSize;
+        if (headerSize >= 42) {
+            ds  >> audioMode >> frameLength >> freqLow >> bandwidth >> demodulation;
+            ds.readRawData(demodString, sizeof(demodString));
+            ds  >> freqHigh;
+            ds.readRawData(reserved, sizeof(reserved));
+            ds  >> outputTimeStamp >> signalSource;
+        }
+        if (headerSize > 42)
+            ds.skipRawData(headerSize - 42);
+
         if (!ds.atEnd()) return true;
         else return false;
     }
@@ -353,14 +387,18 @@ public:
     char        reserved[2] = {0};
     quint64     startTimestamp = 0;
     qint16      signalSource = 0;
-    static const int size = 58;
-    bool readData(QDataStream &ds) {
-        ds >> ifMode >> frameLength >> sampleRate >> freqLow >> bandwidth
-            >> demodulation >> rxAttenuation >> flags >> kFactor;
-        ds.readRawData(demodString, sizeof(demodString));
-        ds >> sampleCount >> freqHigh >> rxGain;
-        ds.readRawData(reserved, sizeof(reserved));
-        ds >> startTimestamp >> signalSource;
+    int size = 58;
+    bool readData(QDataStream &ds, int headerSize) {
+        if (headerSize >= 58)  {
+            ds >> ifMode >> frameLength >> sampleRate >> freqLow >> bandwidth
+                >> demodulation >> rxAttenuation >> flags >> kFactor;
+            ds.readRawData(demodString, sizeof(demodString));
+            ds >> sampleCount >> freqHigh >> rxGain;
+            ds.readRawData(reserved, sizeof(reserved));
+            ds >> startTimestamp >> signalSource;
+        }
+        if (headerSize > 58)
+            ds.skipRawData(headerSize - 58);
         if (!ds.atEnd()) return true;
         return false;
     }

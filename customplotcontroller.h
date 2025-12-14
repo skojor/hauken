@@ -44,6 +44,9 @@ public slots:
     void reqTracePlot();
     void freqChanged(double a, double b);
     void resChanged(double a);
+    void modeChanged(Instrument::Mode m);
+    void ffmCenterFreqChanged(quint64 f);
+    void demodBwChanged(quint32 f = 0);
 
 private slots:
     void setupBasics();
@@ -74,7 +77,7 @@ private:
     QSharedPointer<Config> config;
     QVector<double> fill;
     QVector<double> freqSelection;
-    QCustomPlot *customPlotPtr;
+    QCustomPlot *customPlotPtr = nullptr;
     QScrollBar *scrollBarMax = new QScrollBar;
     QScrollBar *scrollBarMin = new QScrollBar;
     QVector<double>keyValues;
@@ -100,6 +103,8 @@ private:
     QMutex mutex;
     QList<int> gnssTextLabelPos;
     QList<double> gnssBandCenterFreq;
+    QCPItemStraightLine *centerFreqLine = nullptr;
+    quint32 m_bandwidth;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H

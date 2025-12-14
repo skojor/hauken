@@ -44,7 +44,7 @@ void Network::updSettings()
     useUdp = config->getSaveToTempFile();
 }
 
-void Network::newTraceline(const QList<qint16> data)
+void Network::newTraceline(const QVector<qint16> data)
 {
     bool isConnected = false;
     for (auto && socket : tcpSockets) {

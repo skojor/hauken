@@ -2,7 +2,8 @@
 
 DatastreamIfPan::DatastreamIfPan(QObject *parent)
 {
-    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamIfPan::invalidateCachedFreqs);
+    connect(m_traceTimer, &QTimer::timeout, this, &DatastreamIfPan::calcTracesPerSecond);
+    m_traceTimer->start(1000);
 }
 
 bool DatastreamIfPan::checkHeaders()
@@ -16,29 +17,23 @@ bool DatastreamIfPan::checkHeaders()
 
 void DatastreamIfPan::readData(QDataStream &ds)
 {
-    m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
+    if (checkHeaders()) {
+        ds.setByteOrder(QDataStream::LittleEndian);
 
-    if (checkHeaders())
         m_OptHeader.readData(ds, m_attrHeader.optHeaderLength);
-    checkOptHeader();
+        checkOptHeader();
 
-    QList<qint16> tmpBuffer(m_attrHeader.numItems);
-    int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
+        QVector<qint16> tmpBuffer(m_attrHeader.numItems);
+        int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
 
-    if (readBytes == tmpBuffer.size() * 2) {
-        for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
-            val = qToBigEndian(val);
+        if (readBytes == tmpBuffer.size() * 2) {
+            /* for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
+            val = qToBigEndian(val);*/
 
-        emit traceReady(tmpBuffer);
+            emit traceReady(tmpBuffer);
 
-        m_traceCtr++;
-        if (m_traceTimer->isValid() && m_traceCtr >= 10) {
-            emit tracesPerSecond(1e10 / m_traceTimer->nsecsElapsed());
-            m_traceCtr = 0;
-            m_traceTimer->start();
+            m_traceCtr++;
         }
-        if (!m_traceTimer->isValid())
-            m_traceTimer->start();
     }
 }
 
@@ -52,9 +47,17 @@ void DatastreamIfPan::checkOptHeader()
         emit frequencyChanged(m_ifPanCenterFreq - m_ifPanSpan / 2, m_ifPanCenterFreq + m_ifPanSpan / 2);
     }
     double resolution = 0;
-    if (m_attrHeader.numItems) resolution = m_OptHeader.freqSpan / m_attrHeader.numItems;
+    if (m_attrHeader.numItems) resolution = m_OptHeader.freqSpan / (m_attrHeader.numItems - 1);
     if ((int)resolution != (int)m_ifPanResolution) {
         m_ifPanResolution = resolution;
         emit resolutionChanged(m_ifPanResolution);
+    }
+}
+
+void DatastreamIfPan::calcTracesPerSecond()
+{
+    if (m_traceCtr) {
+        emit tracesPerSecond(m_traceCtr);
+        m_traceCtr = 0;
     }
 }

@@ -32,7 +32,7 @@ private:
     int samplesNeeded;
     qint16 nrOfWords = 0, infClassCode = 0, packetClassCode = 0;
     quint32 readStreamId = 0;
-    QList<complexInt16> iqSamples;
+    QVector<complexInt16> iqSamples;
     bool headerValidated = false;
     bool headerIsRead = false;
 

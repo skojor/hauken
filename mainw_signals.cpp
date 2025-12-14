@@ -2,6 +2,31 @@
 
 void MainWindow::setSignals()
 {
+    sdefRecorder = new SdefRecorder(config);
+    sdefRecorderThread = new QThread(this);
+    sdefRecorderThread->setObjectName("SdefRecorder");
+    sdefRecorder->moveToThread(sdefRecorderThread);
+
+    notifications = new Notifications(config);
+    notificationsThread = new QThread(this);
+    notificationsThread->setObjectName("Notifications");
+    notifications->moveToThread(notificationsThread);
+
+    waterfall = new Waterfall(config);
+    waterfallThread = new QThread(this);
+    waterfallThread->setObjectName("waterfall");
+    waterfall->moveToThread(waterfallThread);
+
+    cameraRecorder = new CameraRecorder(config);
+    cameraThread = new QThread(this);
+    cameraThread->setObjectName("camera");
+    cameraRecorder->moveToThread(cameraThread);
+
+    sdefRecorderThread->start();
+    notificationsThread->start();
+    waterfallThread->start();
+    cameraThread->start();
+
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
@@ -109,7 +134,7 @@ void MainWindow::setSignals()
     connect(measurementDevice,
             &MeasurementDevice::connectedStateChanged,
             sdefRecorder,
-            &SdefRecorder::deviceDisconnected);
+            &SdefRecorder::setDeviceCconnectedState);
     connect(measurementDevice, &MeasurementDevice::deviceStreamTimeout, this, [this] {
         emit stopPlot(false);
     });
@@ -157,10 +182,7 @@ void MainWindow::setSignals()
             config.data(),
             &Config::setWaterfallTime);
 
-    connect(traceBuffer,
-            &TraceBuffer::newDispTrace,
-            customPlotController,
-            &CustomPlotController::plotTrace);
+    connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
 
     connect(traceBuffer,
@@ -188,11 +210,6 @@ void MainWindow::setSignals()
             &TraceBuffer::averageLevelCalculating,
             customPlotController,
             &CustomPlotController::flashTrigline);
-
-    connect(traceBuffer,
-            &TraceBuffer::averageLevelCalculating,
-            sdefRecorder,
-            &SdefRecorder::endRecording); // stop ev. recording in case avg level for any reason should start recalc.
     connect(traceBuffer,
             &TraceBuffer::stopAvgLevelFlash,
             customPlotController,
@@ -222,10 +239,10 @@ void MainWindow::setSignals()
             &TraceBuffer::averageLevelCalculating,
             traceAnalyzer,
             &TraceAnalyzer::resetAverageLevel);
-    connect(traceBuffer,
+    /*connect(traceBuffer,
             &TraceBuffer::averageLevelCalculating,
             sdefRecorder,
-            &SdefRecorder::closeTempFile);
+            &SdefRecorder::closeTempFile);*/ // Handled by sdefRecorder class
     connect(traceBuffer,
             &TraceBuffer::averageLevelReady,
             traceAnalyzer,
@@ -272,13 +289,14 @@ void MainWindow::setSignals()
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
-    //connect(traceAnalyzer, &TraceAnalyzer::alarm, measurementDevice, &MeasurementDevice::collectIqData); // New
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData); // New
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
+
+    connect(btnTrigRecording, &QPushButton::clicked, config.data(), &Config::incidentRestart); // Manual trig = new filename timestamp
 
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
-
-    connect(sdefRecorder, &SdefRecorder::publishFilename, iqPlot, &IqPlot::setFilename);
+    connect(btnTrigRecording, &QPushButton::clicked, datastreamIf, &DatastreamIf::invalidateHeader);
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamIf, &DatastreamIf::invalidateHeader);
 
     connect(sdefRecorder,
             &SdefRecorder::recordingStarted,
@@ -330,7 +348,7 @@ void MainWindow::setSignals()
     connect(measurementDevice,
             &MeasurementDevice::deviceStreamTimeout,
             sdefRecorder,
-            &SdefRecorder::finishRecording); // stops eventual recording if stream times out (someone takes over meas.device)
+            &SdefRecorder::endRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this]() {
         if (measurementDevice->isConnected() || read1809Data->isRunning()) {
@@ -364,12 +382,12 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer3, &GnssAnalyzer::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
     connect(sdefRecorder, &SdefRecorder::recordingDisabled, this, [this] { recordEnabled(false); });
     connect(sdefRecorder, &SdefRecorder::recordingEnabled, this, [this] { recordEnabled(true); });
+    connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
-    connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
-    //connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
+    connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -540,10 +558,6 @@ void MainWindow::setSignals()
             &SdefRecorder::manualTriggeredRecording);
 
     connect(btnPmrTable, &QPushButton::clicked, pmrTableWdg, &PmrTableWdg::start);
-    sdefRecorderThread->start();
-    notificationsThread->start();
-    waterfallThread->start();
-    //cameraThread->start();
 
     connect(geoLimit, &GeoLimit::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(geoLimit, &GeoLimit::warning, this, &MainWindow::generatePopup);
@@ -595,7 +609,7 @@ void MainWindow::setSignals()
     connect(read1809Data,
             &Read1809Data::playbackRunning,
             sdefRecorder,
-            &SdefRecorder::deviceDisconnected);
+            &SdefRecorder::setDeviceCconnectedState);
     connect(read1809Data,
             &Read1809Data::toIncidentLog,
             notifications,
@@ -642,43 +656,6 @@ void MainWindow::setSignals()
         else
             gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
     });
-    connect(datastreamPScan, &DatastreamPScan::frequencyChanged, customPlotController, &CustomPlotController::freqChanged);
-    connect(datastreamPScan, &DatastreamPScan::frequencyChanged, traceAnalyzer, &TraceAnalyzer::freqChanged);
-    connect(datastreamPScan, &DatastreamPScan::frequencyChanged, aiPtr, &AI::freqChanged);
-    connect(datastreamPScan, &DatastreamPScan::resolutionChanged, customPlotController, &CustomPlotController::resChanged);
-    connect(datastreamPScan, &DatastreamPScan::resolutionChanged, traceAnalyzer, &TraceAnalyzer::resChanged);
-    connect(datastreamPScan, &DatastreamPScan::resolutionChanged, aiPtr, &AI::resChanged);
-
-    connect(datastreamIfPan, &DatastreamIfPan::frequencyChanged, customPlotController, &CustomPlotController::freqChanged);
-    connect(datastreamIfPan, &DatastreamIfPan::frequencyChanged, traceAnalyzer, &TraceAnalyzer::freqChanged);
-    connect(datastreamIfPan, &DatastreamIfPan::frequencyChanged, aiPtr, &AI::freqChanged);
-    connect(datastreamIfPan, &DatastreamPScan::resolutionChanged, customPlotController, &CustomPlotController::resChanged);
-    connect(datastreamIfPan, &DatastreamPScan::resolutionChanged, traceAnalyzer, &TraceAnalyzer::resChanged);
-    connect(datastreamIfPan, &DatastreamPScan::resolutionChanged, aiPtr, &AI::resChanged);
-
-    // Tcp/udp shared pointer signals
-    //connect(tcpStream.data(), &TcpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
-    //connect(udpStream.data(), &UdpDataStream::newFftData, traceBuffer, &TraceBuffer::addTrace);
-    /*connect(tcpStream.data(), &TcpDataStream::freqChanged, this, [this](double a, double b) {
-        customPlotController->freqChanged(a, b);
-        traceAnalyzer->freqChanged(a, b);
-        aiPtr->freqChanged(a, b);
-    });
-    connect(udpStream.data(), &UdpDataStream::freqChanged, this, [this](double a, double b) {
-        customPlotController->freqChanged(a, b);
-        traceAnalyzer->freqChanged(a, b);
-        aiPtr->freqChanged(a, b);
-    });
-    connect(tcpStream.data(), &TcpDataStream::resChanged, this, [this](double a) {
-        customPlotController->resChanged(a);
-        traceAnalyzer->resChanged(a);
-        aiPtr->resChanged(a);
-    });
-    connect(udpStream.data(), &UdpDataStream::resChanged, this, [this](double a) {
-        customPlotController->resChanged(a);
-        traceAnalyzer->resChanged(a);
-        aiPtr->resChanged(a);
-    });*/ /// FIX! New signal from pscan/ifpan class!
 
     connect(read1809Data, &Read1809Data::freqChanged, this, [this](double a, double b) {
         customPlotController->freqChanged(a, b);
@@ -827,8 +804,6 @@ void MainWindow::setSignals()
         }
     });
 
-    connect(iqPlot, &IqPlot::folderDateTimeSet, sdefRecorder, &SdefRecorder::setFolderDateTime);
-    connect(sdefRecorder, &SdefRecorder::folderDateTimeSet, iqPlot, &IqPlot::setFolderDateTime);
     connect(measurementDevice, &MeasurementDevice::skipNextNTraces, sdefRecorder, &SdefRecorder::skipNextNTraces);
 
     // Rebuilt I/Q functions
@@ -943,6 +918,86 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &DataStreamBaseClass::newIfPanData, datastreamIfPan, &DatastreamIfPan::parseData);
     connect(tcpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
     connect(udpStream.data(), &DataStreamBaseClass::newGpsCompassData, datastreamGpsCompass, &DatastreamGpsCompass::parseData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newCwData, datastreamCw, &DatastreamCw::parseData);
+    connect(udpStream.data(), &DataStreamBaseClass::newCwData, datastreamCw, &DatastreamCw::parseData);
 
     connect(datastreamGpsCompass, &DatastreamGpsCompass::gpsdataReady, measurementDevice, &MeasurementDevice::updGpsCompassData);
+
+    connect(audioOptions, &AudioOptions::demodBw, customPlotController, &CustomPlotController::demodBwChanged);
+    connect(datastreamCw, &DatastreamCw::level, this, [this] (int i) {
+        lcdLevel->display((double)i / 10);
+        QString text;
+        QTextStream ts(&text);
+        if (config->getUseDbm()) i -= 1070;
+        ts << "Level " << (double)i / 10 << (config->getUseDbm() ? " dBm" : " dBμV");
+        btnSigLevel->setText(text);
+    });
+    connect(audioOptions, &AudioOptions::demodType, this, [this] (QString s) {
+        btnDemodulator->setText("Demod " + s);
+    });
+    connect(audioOptions, &AudioOptions::demodBw, this, [this] (int i) {
+        QString text;
+        QTextStream ts(&text);
+        ts << "BW " << i << " kHz";
+        btnBw->setText(text);
+    });
+
+    connect(datastreamCw, &DatastreamCw::detector1Changed, this, [this] (int i) {
+        QString d;
+        if (!i) d = "avg";
+        else if (i == 1) d = "peak";
+        else if (i == 2) d = "rms";
+        else d = "avg";
+        btnDetector->setText("Detector " + d);
+    });
+    connect(btnBw, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(btnDemodulator, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(btnDetector, &QPushButton::clicked, audioOptions, &AudioOptions::start);
+    connect(audioOptions, &AudioOptions::detector, measurementDevice, &MeasurementDevice::setDetector);
+    connect(instrDisconnect, &QPushButton::clicked, &audioRecorder, &AudioRecorder::closeFile);
+
+    connect(instrMeasurementTime, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::updScanTime);
+
+    connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+    connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+    connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+    connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+
+    connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
+        traceAnalyzer->freqChanged(a, b);
+        customPlotController->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+        datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
+        datastreamIf->invalidateHeader();
+        traceBuffer->emptyBuffer();
+    });
+    connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
+        traceAnalyzer->freqChanged(a, b);
+        customPlotController->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+        datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
+        datastreamIf->invalidateHeader();
+        traceBuffer->emptyBuffer();
+    });
+    connect(datastreamIfPan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
+        traceAnalyzer->resChanged(a);
+        customPlotController->resChanged(a);
+        aiPtr->resChanged(a);
+        traceBuffer->emptyBuffer();
+    });
+    connect(datastreamPScan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
+        traceAnalyzer->resChanged(a);
+        customPlotController->resChanged(a);
+        aiPtr->resChanged(a);
+        traceBuffer->emptyBuffer();
+    });
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
+    connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
+    connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
+        if (b) config->incidentStarted();
+    });
+    connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
+    connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
+    connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
+    connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::closeTempFile);
 }

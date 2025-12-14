@@ -19,6 +19,7 @@ public:
     void enableRecorder(bool b) { m_recorderEnabled = b; if (m_file.isOpen()) m_file.close();}
     void demodChanged(int freq, int bw, const QString &demodType);
     void setFileLocation(QString s) { m_fileLocation = s;}
+    void closeFile() {m_file.close();}
 
 signals:
 

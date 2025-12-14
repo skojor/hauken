@@ -26,8 +26,8 @@ private slots:
 private:
     bool headerIsRead = false;
     int bytectr = 0;
-    QList<qint16> i;
-    QList<qint16> q;
+    QVector<qint16> i;
+    QVector<qint16> q;
 };
 
 #endif // VIFSTREAMUDP_H

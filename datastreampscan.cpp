@@ -2,7 +2,9 @@
 
 DatastreamPScan::DatastreamPScan(QObject *parent)
 {
-    connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateCachedFreqs);
+    //connect(m_timeoutTimer, &QTimer::timeout, this, &DatastreamPScan::invalidateHeader);
+    connect(m_traceTimer, &QTimer::timeout, this, &DatastreamPScan::calcTracesPerSecond);
+    m_traceTimer->start(1000);
 }
 
 bool DatastreamPScan::checkHeaders()
@@ -16,45 +18,44 @@ bool DatastreamPScan::checkHeaders()
 
 void DatastreamPScan::readData(QDataStream &ds)
 {
-    m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
+    //m_timeoutTimer->start(5000); // 5 secs without data causes changed freq/res signal to be sent. Ususally caused by changed mode
 
-    if (checkHeaders())
+    if (checkHeaders()) {
+        ds.setByteOrder(QDataStream::LittleEndian);
         m_pscanOptHeader.readData(ds, m_attrHeader.optHeaderLength);
-    checkOptHeader();
+        checkOptHeader();
 
-    QList<qint16> tmpBuffer(m_attrHeader.numItems);
-    int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
+        QVector<qint16> tmpBuffer(m_attrHeader.numItems);
+        int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);
 
-    if (readBytes == tmpBuffer.size() * 2) {
-        for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
-            val = qToBigEndian(val);
+        if (readBytes == tmpBuffer.size() * 2) {
+            /*for (auto &val : tmpBuffer) // readRaw makes a mess out of byte order. Reorder manually
+            val = qToBigEndian(val);*/
 
-        m_fft.append(tmpBuffer);
+            m_fft.append(tmpBuffer);
 
-        if (m_waitingForPscanEndMarker && m_fft.last() == 2000) {
-            m_waitingForPscanEndMarker = false;
-            m_fft.clear(); // End of pscan received, but discarding all data since we don't know if the whole trace was received correct. Next complete trace should be correct then
-        }
-
-        if (!m_waitingForPscanEndMarker and !m_fft.isEmpty() and m_fft.last() == 2000) {
-            m_fft.removeLast();
-            int pscanSamplesPerTrace = 1 + ( (m_pscStopFreq - m_pscStartFreq) / m_pscanOptHeader.stepFreq );
-
-            if (m_fft.size() > pscanSamplesPerTrace)
-                m_fft.remove(pscanSamplesPerTrace - 1, m_fft.size() - pscanSamplesPerTrace);
-
-            if (m_fft.size() == pscanSamplesPerTrace)
-                emit traceReady(m_fft);
-
-            m_fft.clear();
-            m_traceCtr++;
-            if (m_traceTimer->isValid() && m_traceCtr >= 10) {
-                emit tracesPerSecond(1e10 / m_traceTimer->nsecsElapsed());
-                m_traceCtr = 0;
-                m_traceTimer->start();
+            if (m_waitingForPscanEndMarker && m_fft.last() == 2000) {
+                m_waitingForPscanEndMarker = false;
+                m_fft.clear(); // End of pscan received, but discarding all data since we don't know if the whole trace was received correct. Next complete trace should be correct then
             }
-            if (!m_traceTimer->isValid())
-                m_traceTimer->start();
+
+            if (!m_waitingForPscanEndMarker and !m_fft.isEmpty() and m_fft.last() == 2000) {
+                m_fft.removeLast();
+                int pscanSamplesPerTrace = 1 + ( (m_pscStopFreq - m_pscStartFreq) / m_pscanOptHeader.stepFreq );
+
+                if (m_fft.size() > pscanSamplesPerTrace)
+                    m_fft.remove(pscanSamplesPerTrace - 1, m_fft.size() - pscanSamplesPerTrace);
+
+                if (m_fft.size() == pscanSamplesPerTrace)
+                    emit traceReady(m_fft);
+
+                m_fft.clear();
+                m_traceCtr++;
+                if (m_traceElapsedTimer->isValid())
+                    traceTime = 1e3 / m_traceElapsedTimer->restart();
+                else
+                    m_traceElapsedTimer->start();
+            }
         }
     }
 }
@@ -72,4 +73,11 @@ void DatastreamPScan::checkOptHeader()
         m_pscRes = m_pscanOptHeader.stepFreq;
         emit resolutionChanged(m_pscRes);
     }
+}
+
+void DatastreamPScan::calcTracesPerSecond()
+{
+    if (m_traceCtr)
+        emit tracesPerSecond(traceTime);
+    m_traceCtr = 0;
 }

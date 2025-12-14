@@ -162,16 +162,16 @@ public slots:
     bool getIqUseDB() { return settings->value("iq/useDB", false).toBool();}
     void setIqUseDB(bool b) { settings->setValue("iq/useDB", b);}
     bool getIqUseWindow() { return settings->value("iq/useWindow", true).toBool(); }
-    void setIqUseWindow(bool b)
-    {
-        settings->setValue("iq/useWindow", b);
-        emit settingsUpdated();
-    }
+    void setIqUseWindow(bool b) { settings->setValue("iq/useWindow", b); emit settingsUpdated(); }
     bool getIqRecordMultipleBands() { return settings->value("iq/recordMultipleBands", false).toBool(); }
     void setIqRecordMultipleBands(bool b) { settings->setValue("iq/recordMultipleBands", b); emit settingsUpdated();}
     QList<double> getIqMultibandCenterFreqs();
     bool getIqRecordAllTrigArea() { return settings->value("iq/recordAllTrigArea", false).toBool();}
     void setIqRecordAllTrigArea(bool b) { settings->setValue("iq/recordAllTrigArea", b);}
+    bool getIqUseAvgForPlot() { return settings->value("iq/useAvgForPlot", true).toBool();}
+    void setIqUseAvgForPlot(bool b) { settings->setValue("iq/useAvgForPlot", b);}
+    bool getIqSaveAs16bit() { return settings->value("iq/saveAs16bit", false).toBool();}
+    void setIqSaveAs16bit(bool b) { settings->setValue("iq/saveAs16bit", b);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
@@ -476,6 +476,16 @@ public slots:
     void setAudioSquelch(bool b) { settings->setValue("audio/squelch", b);}
     int getAudioSquelchLevel() { return settings->value("audio/squelchLevel", 0).toInt();}
     void setAudioSquelchLevel(int i) { settings->setValue("audio/squelchLevel", i);}
+    int getAudioDetector() { return settings->value("audio/detector", 0).toInt();}
+    void setAudioDetector(int i) { settings->setValue("audio/detector", i);}
+
+
+    // Incident filename control
+    void incidentStarted();
+    void incidentEnded();
+    void incidentRestart() { incidentEnded(); incidentStarted();}
+    QString incidentFolder();
+    QDateTime incidentTimestamp() { return incidentDateTime;}
 
 private slots:
 
@@ -485,6 +495,8 @@ private:
     bool ready = false;
     QString measurementDeviceName;
     const int plotResolution = 1200;
+    bool flagIncident = false;
+    QDateTime incidentDateTime;
 };
 
 #endif // CONFIG_H

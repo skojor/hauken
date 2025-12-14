@@ -5,7 +5,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QElapsedTimer>
-#include <QList>
+#include <QVector>
 #include "streamparserbase.h"
 
 class DatastreamGpsCompass : public StreamParserBase
@@ -15,7 +15,7 @@ public:
     explicit DatastreamGpsCompass(QObject *parent = nullptr);
 
 signals:
-    void traceReady(const QList<qint16> &);
+    void traceReady(const QVector<qint16> &);
     void tracesPerSecond(double);
     void gpsdataReady(GpsData &);
 
