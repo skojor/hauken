@@ -285,14 +285,20 @@ void IqPlot::addText(QImage *image, const double secondsAnalyzed, const double s
     QString strFr = QString::number(ffmFrequency, 'f', 6);
     strFr.remove(QRegularExpression("0+$"));
     strFr.remove(QRegularExpression("[\\.,]$")); // Don't show more decimals than needed
+    QString strUpper = QString::number(samplerate / 1.28 / 2e6, 'f', 3);
+    strUpper.remove(QRegularExpression("0+$"));
+    strUpper.remove(QRegularExpression("[\\.,]$"));
+    QString strLower = QString::number(-samplerate / 1.28 / 2e6, 'f', 3);
+    strLower.remove(QRegularExpression("0+$"));
+    strLower.remove(QRegularExpression("[\\.,]$"));
 
     painter.drawText((image->size().width() / 2) - xMinus + 15,
                      yMinus,
                      strFr + " MHz");
-    painter.drawText(0, yMinus, QString::number(-samplerate / 1.28 / 2e6, 'f', 1) + " MHz");
+    painter.drawText(0, yMinus, strLower + " MHz");
     painter.drawText((image->size().width()) - (xMinus + 40),
                      yMinus,
-                     "+ " + QString::number(samplerate / 1.28 / 2e6, 'f', 1) + " MHz");
+                     "+ " + strUpper + " MHz");
 
     int lineDistance = (secondsAnalyzed / 10) / secondsPerLine;
     int microsecCtr = 1e6 * secondsAnalyzed / 10;
