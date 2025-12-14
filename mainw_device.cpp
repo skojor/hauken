@@ -296,10 +296,10 @@ void MainWindow::btnConnectPressed(bool state)
             // IP/hostname written is the same as was already in the list, select this entry instead
             if (config->getInstrIpAddr() == instrIpAddr->currentText()) { // Failsafe in case list changed
                 instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
-                qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+                //qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
             }
             else {
-                qDebug() << "not found" << config->getInstrIpAddr();
+                //qDebug() << "not found" << config->getInstrIpAddr();
                 instrIpAddr->addItem("Unknown", QVariant("127.0.0.1")); // Dummy, choose sth that exists
                 instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1); // Select dummy
             }
@@ -308,16 +308,18 @@ void MainWindow::btnConnectPressed(bool state)
         else {
             // New entry, store it for later
             config->setInstrCustomEntry(instrIpAddr->currentText());
+            instrIpAddr->addItem(instrIpAddr->currentText(), QVariant(instrIpAddr->currentText()));
+            instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1);
             config->setInstrIpAddr(instrIpAddr->currentText());
-            instrIpAddr->setItemData(instrIpAddr->currentIndex(), QVariant());
-            qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+            //instrIpAddr->setItemData(instrIpAddr->currentIndex(), QVariant());
+            //qDebug() << "new" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
 
         }
     }
     if (!instrIpAddr->currentData().isValid()) {
         QHostAddress address;
         if (address.setAddress(instrIpAddr->currentText())) {
-            qDebug() << "valid adr";
+            //qDebug() << "valid adr";
         }
         else {
             statusBar->showMessage("Looking up host " + instrIpAddr->currentText(), 5000);
@@ -339,7 +341,7 @@ void MainWindow::btnConnectPressed(bool state)
         measurementDevice->setAddress(instrIpAddr->currentText());
     //qDebug() << instrIpAddr->currentText() << instrIpAddr->currentData().toString();
 
-    qDebug() << "connecting" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
+    //qDebug() << "connecting" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
     if (state) measurementDevice->instrConnect();
     instrDisconnect->setEnabled(true);
 }

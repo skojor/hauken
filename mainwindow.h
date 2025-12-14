@@ -195,7 +195,7 @@ private slots:
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
-    QWidget *centralWidget = new QWidget;
+    QWidget *centralWidget = new QWidget(this);
     QStatusBar *statusBar = new QStatusBar;
     QProgressBar *progressBar = new QProgressBar;
     QCustomPlot *customPlot;
@@ -380,7 +380,7 @@ private:
     QPushButton *btnSigLevel = new QPushButton("Level");
     QPushButton *btnBw = new QPushButton("BW");
     QPushButton *btnDetector = new QPushButton("Detector");
-    QHBoxLayout *ffmInfoLayout = new QHBoxLayout(this);
+    QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
 
 
 signals:

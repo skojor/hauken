@@ -568,7 +568,7 @@ void SdefRecorder::closeTempFile()
     if (tempFile.isOpen()) {
         tempFile.close();
         tracePerSecondForTempFile = -1;
-        qDebug() << "Temp file" << tempFile.fileName() << "closed";
+        //qDebug() << "Temp file" << tempFile.fileName() << "closed";
     }
 }
 

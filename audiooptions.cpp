@@ -80,8 +80,8 @@ QList<QAudioDevice> AudioOptions::updMediaDevicesList()
 {
     QList<QAudioDevice> audioDevices = QMediaDevices::audioOutputs();
 
-    for (auto && val : audioDevices)
-        qDebug() << val.id() << val.description() << val.isDefault();
+    /*for (auto && val : audioDevices)
+        qDebug() << val.id() << val.description() << val.isDefault();*/
 
     return audioDevices;
 }

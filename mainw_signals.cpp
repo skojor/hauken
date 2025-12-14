@@ -2,6 +2,11 @@
 
 void MainWindow::setSignals()
 {
+    sdefRecorder = new SdefRecorder(config);
+    sdefRecorderThread = new QThread(this);
+    sdefRecorderThread->setObjectName("SdefRecorder");
+    sdefRecorder->moveToThread(sdefRecorderThread);
+
     notifications = new Notifications(config);
     notificationsThread = new QThread(this);
     notificationsThread->setObjectName("Notifications");

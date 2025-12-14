@@ -5,11 +5,6 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    sdefRecorder = new SdefRecorder(config);
-    sdefRecorderThread = new QThread(this);
-    sdefRecorderThread->setObjectName("SdefRecorder");
-    sdefRecorder->moveToThread(sdefRecorderThread);
-
     setStatusBar(statusBar);
     //statusBar->addWidget(progressBar);
     progressBar->setMinimum(0);
@@ -469,7 +464,7 @@ void MainWindow::createLayout()
     QHBoxLayout *statusBox = new QHBoxLayout;
     statusBox->addWidget(rightBox);
 
-    QGridLayout *plotLayout = new QGridLayout(this);
+    QGridLayout *plotLayout = new QGridLayout;
 
     ffmInfoLayout->addWidget(btnBw);
     ffmInfoLayout->addWidget(btnDemodulator);
