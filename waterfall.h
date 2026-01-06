@@ -43,6 +43,13 @@ public slots:
     void updSettings();
     void restartPlot();
     void stopPlot(bool b) { if (!b) updIntervalTimer->stop(); else updIntervalTimer->start(100);}
+    void pausePlot(bool b) {
+        if (b) updIntervalTimer->stop();
+        else {
+            traceCopy.clear();
+            updIntervalTimer->start(100);
+        }
+    }
     void updTimerCallback();
 
 signals:
@@ -68,6 +75,7 @@ private:
     bool greyscale = false;
     QMutex mutex;
     bool timeout = true;
+    bool initial = true;
 };
 
 #endif // WATERFALL_H

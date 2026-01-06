@@ -21,8 +21,10 @@ void Waterfall::receiveTrace(const QVector<double> &trace)
         mutex.lock();
         traceCopy = trace;
         mutex.unlock();
-        if (!updIntervalTimer->isActive())
+        if (initial and !updIntervalTimer->isActive()) {
             updIntervalTimer->start(100); // first call
+            initial = false;
+        }
     }
 }
 

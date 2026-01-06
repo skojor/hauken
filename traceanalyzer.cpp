@@ -68,8 +68,8 @@ void TraceAnalyzer::alarmTriggered()
         alarmEmitted = true;
         QString alarmText;
         if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth)
-            if (!pmrMode) alarmText = "single cont. signal above limit at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 5) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
-            else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 5) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+            if (!pmrMode) alarmText = "single cont. signal above limit at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+            else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
         else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth)
             alarmText = "total signal above limit: " + QString::number((int)khzAboveLimitTotal) + " kHz";
         else

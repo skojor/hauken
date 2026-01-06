@@ -216,9 +216,9 @@ void MeasurementDevice::setFfmFrequencySpan()
 void MeasurementDevice::setMeasurementTime()
 {
     if (connected) {
-        //scpiWrite("abor");
+        scpiWrite("abor");
         scpiWrite("meas:time " + QByteArray::number(measurementTime) + " ms");
-        //scpiWrite("init:imm");
+        scpiWrite("init:imm");
     }
 }
 
@@ -1077,7 +1077,7 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
         modeChanged = true;
         scpiWrite("freq:mode ffm");
     }
-    scpiWrite("freq " + QByteArray::number(frequency, 'f', 6) + " MHz");
+    scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
     scpiWrite("init");
 }
 

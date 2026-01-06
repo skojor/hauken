@@ -996,6 +996,7 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
+    connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
     connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
     connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
