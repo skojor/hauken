@@ -60,8 +60,8 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     ai.cpp ai.h
     arduino.cpp arduino.h
     arduinooptions.cpp arduinooptions.h
-    autorecorderoptions.cpp autorecorderoptions.h
-    cameraoptions.cpp cameraoptions.h
+
+
     camerarecorder.cpp camerarecorder.h
     config.cpp config.h
     customplotcontroller.cpp customplotcontroller.h
@@ -69,7 +69,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     emailoptions.cpp emailoptions.h
     generaloptions.cpp generaloptions.h
     geolimit.cpp geolimit.h
-    geolimitoptions.cpp geolimitoptions.h
+
     gnssanalyzer.cpp gnssanalyzer.h
     gnssdevice.cpp gnssdevice.h
     gnssdisplay.cpp gnssdisplay.h
@@ -84,7 +84,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     mqttoptions.cpp mqttoptions.h
     notifications.cpp notifications.h
     oauthfileuploader.cpp oauthfileuploader.h
-    oauthoptions.cpp oauthoptions.h
+
     optionsbaseclass.cpp optionsbaseclass.h
     pmrtablewdg.cpp pmrtablewdg.h
     positionreport.cpp positionreport.h

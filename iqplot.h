@@ -33,7 +33,7 @@ public slots:
     void parseIqData(const QVector<complexInt16> &iq16, const double frequency); // Data from vifstream class
     void validateHeader(qint64 freq, qint64 bw, qint64 rate);
     void setFfmFrequency(double d) { ffmFrequency = d;}
-    void resetTimer() { lastIqRequestTimer.invalidate();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
+    void resetTimer() { flagOngoingAlarm = false; lastIqRequestTimer->stop();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
     //void setFilename(QString) {}
     bool readAndAnalyzeFile(const QString filename);
     void updSettings();
@@ -81,7 +81,7 @@ private:
     double secsToAnalyze = 500e-6;
     const int fftSize = 64;
     const int imageYSize = fftSize * 16 * 2;
-    QElapsedTimer lastIqRequestTimer;
+    QTimer *lastIqRequestTimer = new QTimer;
     QString filename;
     bool dataFromFile = false;
     QDateTime foldernameDateTime = QDateTime::currentDateTime();
@@ -98,6 +98,7 @@ private:
     int throwFirstSamples = 0;
     QTimer *timeoutTimer = new QTimer;
     double centerFrequency = 0;
+    bool flagOngoingAlarm = false;
 };
 
 #endif // IQPLOT_H
