@@ -48,14 +48,11 @@
 #include "ai.h"
 #include "arduino.h"
 #include "arduinooptions.h"
-#include "autorecorderoptions.h"
-#include "cameraoptions.h"
 #include "camerarecorder.h"
 #include "customplotcontroller.h"
 #include "emailoptions.h"
 #include "generaloptions.h"
 #include "geolimit.h"
-#include "geolimitoptions.h"
 #include "gnssanalyzer.h"
 #include "gnssdevice.h"
 #include "gnssdisplay.h"
@@ -67,7 +64,6 @@
 #include "mqttoptions.h"
 #include "notifications.h"
 #include "oauthfileuploader.h"
-#include "oauthoptions.h"
 #include "pmrtablewdg.h"
 #include "positionreport.h"
 #include "positionreportoptions.h"
@@ -300,13 +296,9 @@ private:
     ReceiverOptions *receiverOptions;
     SdefOptions *sdefOptions;
     EmailOptions *emailOptions;
-    CameraOptions *cameraOptions;
     ArduinoOptions *arduinoOptions;
-    AutoRecorderOptions *autoRecorderOptions;
     PositionReportOptions *positionReportOptions;
-    GeoLimitOptions *geoLimitOptions;
     MqttOptions *mqttOptions;
-    OAuthOptions *oAuthOptions;
     IqOptions *iqOptions;
     AudioOptions *audioOptions;
 

@@ -44,13 +44,9 @@ MainWindow::MainWindow(QWidget *parent)
     receiverOptions = new ReceiverOptions(config);
     sdefOptions = new SdefOptions(config);
     emailOptions = new EmailOptions(config);
-    cameraOptions = new CameraOptions(config);
     arduinoOptions = new ArduinoOptions(config);
-    autoRecorderOptions = new AutoRecorderOptions(config);
     positionReportOptions = new PositionReportOptions(config);
-    geoLimitOptions = new GeoLimitOptions(config);
     mqttOptions = new MqttOptions(config);
-    oAuthOptions = new OAuthOptions(config);
     iqOptions = new IqOptions(config);
     audioOptions = new AudioOptions(config);
 
@@ -219,51 +215,31 @@ void MainWindow::createActions()
     optGnss->setStatusTip(tr("GNSS ports and logging configuration"));
     connect(optGnss, &QAction::triggered, this, &MainWindow::gnssConfig);
 
-    optStream = new QAction(tr("&Receiver options"), this);
+    optStream = new QAction(tr("&Receiver setup"), this);
     optStream->setStatusTip(tr("Measurement receiver device options"));
     connect(optStream, &QAction::triggered, this, &MainWindow::streamConfig);
 
-    optSdef = new QAction(tr("&SDEF (1809 format) options"), this);
-    optSdef->setStatusTip(tr("Configuration of 1809 format and options"));
+    optSdef = new QAction(tr("&Data recording and upload"), this);
+    optSdef->setStatusTip(tr("Configuration of data storage and uploading options"));
     connect(optSdef, &QAction::triggered, this, &MainWindow::sdefConfig);
 
     optEmail = new QAction(tr("&Notifications"), this);
     optEmail->setStatusTip(tr("Setup of email server and notfications"));
     connect(optEmail, &QAction::triggered, this, [this] { this->emailOptions->start(); });
 
-    optCamera = new QAction(tr("&Camera"), this);
-    optCamera->setStatusTip("Setup of camera recording");
-    connect(optCamera, &QAction::triggered, this, [this] { this->cameraOptions->start(); });
-
     optArduino = new QAction(tr("&Arduino"), this);
     optArduino->setStatusTip("Setup of Arduino relay/temperature control");
     connect(optArduino, &QAction::triggered, this, [this] { this->arduinoOptions->start(); });
 
-    optAutoRecorder = new QAction(tr("A&uto recorder"), this);
-    optAutoRecorder->setStatusTip("Setup of Hauken autorecorder");
-    connect(optAutoRecorder, &QAction::triggered, this, [this] {
-        this->autoRecorderOptions->start();
-    });
+    optPositionReport = new QAction(tr("&Instrument list and status reports"), this);
+    optPositionReport->setStatusTip("Setup login and periodic reports with server");
+    connect(optPositionReport, &QAction::triggered, this, [this] { this->positionReportOptions->start(); });
 
-    optPositionReport = new QAction(tr("&Position report"), this);
-    optPositionReport->setStatusTip("Setup of periodic report posts via http(s)");
-    connect(optPositionReport, &QAction::triggered, this, [this] {
-        this->positionReportOptions->start();
-    });
-
-    optGeoLimit = new QAction(tr("&Geographic blocking options"), this);
-    optGeoLimit->setStatusTip(tr("Setup of geographic area where usage is allowed"));
-    connect(optGeoLimit, &QAction::triggered, this, [this] { this->geoLimitOptions->start(); });
-
-    optMqtt = new QAction(tr("&MQTT and webswitch sensor options"), this);
+    optMqtt = new QAction(tr("&MQTT and webswitch sensors"), this);
     optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT and webswitch"));
     connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start(); });
 
-    optOAuth = new QAction(tr("&OAuth options"), this);
-    optOAuth->setStatusTip(tr("Setup authentication using OAuth2 schemes"));
-    connect(optOAuth, &QAction::triggered, this, [this] { this->oAuthOptions->start(); });
-
-    optIq = new QAction(tr("IQ data and plot options"), this);
+    optIq = new QAction(tr("IQ data and plot"), this);
     optIq->setStatusTip(tr("Setup IQ plot and saving raw IQ data to file"));
     connect(optIq, &QAction::triggered, this, [this]() { iqOptions->start(); });
 
@@ -338,14 +314,10 @@ void MainWindow::createMenus()
     optionMenu->addAction(optGnss);
     optionMenu->addAction(optStream);
     optionMenu->addAction(optSdef);
-    optionMenu->addAction(optEmail);
-    optionMenu->addAction(optCamera);
-    optionMenu->addAction(optArduino);
-    optionMenu->addAction(optAutoRecorder);
     optionMenu->addAction(optPositionReport);
-    optionMenu->addAction(optGeoLimit);
+    optionMenu->addAction(optEmail);
+    optionMenu->addAction(optArduino);
     optionMenu->addAction(optMqtt);
-    optionMenu->addAction(optOAuth);
     optionMenu->addAction(optIq);
 
     helpMenu->addAction(aboutAct);
@@ -600,7 +572,7 @@ void MainWindow::setToolTips()
     waterfallTime->setToolTip(
         "Select the time in seconds a signal will be visible in the waterfall");
     btnTrigRecording->setToolTip(
-        "Starts a recording manually. The recording will end after the time specified in SDeF "
+        "Starts a recording manually. The recording will end after the time specified in File recording and upload "
         "options: Recording time after incident,\nunless a real trig happens within this time, as "
         "this will extend the recording further.");
     btnPmrTable->setToolTip("Edit the PMR table in the currently chosen frequency range");
@@ -673,6 +645,7 @@ void MainWindow::setInputsState(const bool state)
     instrStartFreq->setEnabled(state);
     instrStopFreq->setEnabled(state);
     instrResolution->setEnabled(state);
+    instrFfmCenterFreq->setEnabled(state);
     instrMeasurementTime->setEnabled(state);
     instrAtt->setEnabled(state);
     instrAutoAtt->setEnabled(state);

@@ -18,6 +18,11 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
         flagRequestedEndVifConnection = true;
         flagHeaderValidated = false;
     });
+
+    lastIqRequestTimer->setSingleShot(true);
+    connect(lastIqRequestTimer, &QTimer::timeout, this, [this] () {
+        flagOngoingAlarm = false;
+    });
 }
 
 void IqPlot::getIqData(const QVector<complexInt16> &iq16)
@@ -331,10 +336,12 @@ void IqPlot::saveImage(const QImage *image, const double secondsAnalyzed)
 void IqPlot::requestIqData()
 {
     emit reqIqCenterFrequency();
+    lastIqRequestTimer->start(120e3); // Reset timer as long as incident is ongoing
 
-    if (config->getIqCreateFftPlot()
-        && ( !lastIqRequestTimer.isValid() || lastIqRequestTimer.elapsed() > 120e3 ))
+    if (config->getIqCreateFftPlot() && !flagOngoingAlarm) // New alarm signal received
     {
+        flagOngoingAlarm = true;
+
         samplesNeeded = 0; //(int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
 
         listFreqs.clear();
@@ -385,7 +392,6 @@ void IqPlot::requestIqData()
         emit busyRecording(true);
         emit setFfmCenterFrequency(listFreqs.first());
         emit reqVifConnection();
-        lastIqRequestTimer.restart();
         flagRequestedEndVifConnection = false;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS);
     }
