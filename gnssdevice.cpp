@@ -28,6 +28,8 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
 
     connect(tcpSocket, &QTcpSocket::stateChanged, this, &GnssDevice::handleTcpStateChange);
     connect(delayedReportTimer, &QTimer::timeout, this, &GnssDevice::delayedReportHandler);
+    connect(backlogCleanupTimer, &QTimer::timeout, this, &GnssDevice::cleanupBacklog);
+    backlogCleanupTimer->start(1000);
 }
 
 void GnssDevice::start()
@@ -107,7 +109,7 @@ void GnssDevice::handleBuffer()
             }
 
             //qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
-            if (nmeaSize  > 20 && checkChecksum(nmeaSentence)) {
+            if (nmeaSize  > 10 && checkChecksum(nmeaSentence)) {
                 if (nmeaSentence.contains("GGA"))
                     decodeGga(nmeaSentence);
                 else if (nmeaSentence.contains("GSA"))
@@ -118,6 +120,7 @@ void GnssDevice::handleBuffer()
                     decodeGsv(nmeaSentence);
                 else if (nmeaSentence.contains("GNS"))
                     decodeGns(nmeaSentence);
+                updateBacklog(nmeaSentence);
             }
             gnssBuffer.remove(nmeaIndex, nmeaSize+1);
         }
@@ -129,10 +132,12 @@ void GnssDevice::handleBuffer()
                 && (quint8)binarySentence[2] == 0x0a && (quint8)binarySentence[3] == 0x04) {
                 decodeBinary0a04(binarySentence);
                 gnssBuffer.remove(binaryIndex, binarySize);
+                updateBacklog(binarySentence);
             }
             else if (binarySentence.size() == binarySize) {
                 decodeBinary(binarySentence);
                 gnssBuffer.remove(binaryIndex, binarySize);
+                updateBacklog(binarySentence);
             }
         }
 
@@ -393,9 +398,9 @@ void GnssDevice::appendToLogfile(const QByteArray &data)
 {
     if (!logfile.isOpen()) {
         logfile.setFileName(config->getLogFolder() + "/" +
-            QDate::currentDate().toString("yyyyMMdd_") +
-            AsciiTranslator::toAscii(config->getStationName()) +
-            "gnss_" + QString::number(gnssData.id) + ".log");
+                            QDate::currentDate().toString("yyyyMMdd_") +
+                            AsciiTranslator::toAscii(config->getStationName().trimmed()) +
+                            "gnss_" + QString::number(gnssData.id) + ".log");
 
         logfile.open(QIODevice::Append);
         logfileStartedDate = QDate::currentDate();
@@ -541,4 +546,34 @@ QString GnssDevice::createFilename()
        << "_" << "gnss-" << gnssData.id << ".log";
 
     return filename;
+}
+
+void GnssDevice::updateBacklog(QByteArray &data)
+{
+    backlogTimestamp.append(QDateTime::currentDateTime());
+    backlogData.append(data);
+}
+
+void GnssDevice::cleanupBacklog()
+{
+    while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(QDateTime::currentDateTime()) > 120) { // Keep backlog at 120 secs age
+        backlogTimestamp.removeFirst();
+        backlogData.removeFirst();
+    }
+}
+
+void GnssDevice::saveBacklog()
+{
+    if (backlogData.size()) { // Save only if there are any data in buffer (daah)
+        QFile file(createFilename());
+        if (file.open(QIODevice::WriteOnly)) {
+            for (int i = 0; i < backlogData.size(); i++) {
+                file.write(backlogTimestamp[i].toString("yyyyMMddhhmmss,").toLocal8Bit());
+                file.write(backlogData[i]);
+            }
+            file.close();
+        }
+        else
+            qWarning() << "Could not open file" << file.fileName() << "for writing";
+    }
 }

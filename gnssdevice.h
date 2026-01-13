@@ -45,6 +45,7 @@ public slots:
     void reqPosition() { emit positionUpdate(gnssData.posValid, gnssData.latitude, gnssData.longitude);}
     GnssData sendGnssData() { return gnssData;}
     bool isValid() { return gnssData.posValid;}
+    void saveBacklog();
 
 signals:
     void analyzeThisData(GnssData &);
@@ -72,6 +73,8 @@ private slots:
     void decodeBinary0a04(const QByteArray &val);
     void delayedReportHandler();
     QString createFilename();
+    void updateBacklog(QByteArray &data);
+    void cleanupBacklog();
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -92,6 +95,9 @@ private:
     QTcpSocket *tcpSocket = new QTcpSocket;
     int portnumber = 0;
     QSharedPointer<Config> config;
+    QList<QDateTime> backlogTimestamp;
+    QList<QByteArray> backlogData;
+    QTimer *backlogCleanupTimer = new QTimer;
 
     // Config cache
     bool activate = false;

@@ -1001,4 +1001,8 @@ void MainWindow::setSignals()
     connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::closeTempFile);
+
+    connect(notifications, &Notifications::reqTracePlot, gnssDevice1, &GnssDevice::saveBacklog); // Not really what this signal was meant for, but the timing is good...
+    connect(notifications, &Notifications::reqTracePlot, gnssDevice2, &GnssDevice::saveBacklog);
+
 }
