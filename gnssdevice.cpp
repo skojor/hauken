@@ -392,7 +392,11 @@ void GnssDevice::updSettings() // caching these settings in memory since they ar
 void GnssDevice::appendToLogfile(const QByteArray &data)
 {
     if (!logfile.isOpen()) {
-        logfile.setFileName(config->getLogFolder() + "/" + "gnss_" + QString::number(gnssData.id) + QDate::currentDate().toString("_yyyyMMdd.log"));
+        logfile.setFileName(config->getLogFolder() + "/" +
+            QDate::currentDate().toString("yyyyMMdd_") +
+            AsciiTranslator::toAscii(config->getStationName()) +
+            "gnss_" + QString::number(gnssData.id) + ".log");
+
         logfile.open(QIODevice::Append);
         logfileStartedDate = QDate::currentDate();
         qDebug() << "GNSS logfile opened" << logfile.fileName();
@@ -534,9 +538,7 @@ QString GnssDevice::createFilename()
 
     ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
        << "_" << AsciiTranslator::toAscii(config->getStationName())
-       << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
-       << QString::number(1e-3 * stopfreq, 'f', 0)
-       << ".cef";
+       << "_" << "gnss-" << gnssData.id << ".log";
 
     return filename;
 }
