@@ -9,7 +9,7 @@ void Waterfall::start()
 {
     pixmap = new QPixmap;
     updIntervalTimer = new QTimer;
-    updIntervalTimer->setSingleShot(true);
+   // updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
     updSettings();
 }

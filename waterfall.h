@@ -48,6 +48,7 @@ public slots:
         else {
             traceCopy.clear();
             updIntervalTimer->start(100);
+            timeout = true;
         }
     }
     void updTimerCallback();

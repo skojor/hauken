@@ -1004,5 +1004,12 @@ void MainWindow::setSignals()
 
     connect(notifications, &Notifications::reqTracePlot, gnssDevice1, &GnssDevice::saveBacklog); // Not really what this signal was meant for, but the timing is good...
     connect(notifications, &Notifications::reqTracePlot, gnssDevice2, &GnssDevice::saveBacklog);
-
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
+    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
+    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
+    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
+    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
+    connect(gnssDevice1, &GnssDevice::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename);
+    connect(gnssDevice2, &GnssDevice::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename2);
 }

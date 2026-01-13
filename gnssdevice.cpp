@@ -1,5 +1,6 @@
 #include "gnssdevice.h"
 #include "asciitranslator.h"
+#include "qcustomplot.h"
 
 GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
 {
@@ -552,6 +553,10 @@ void GnssDevice::updateBacklog(QByteArray &data)
 {
     backlogTimestamp.append(QDateTime::currentDateTime());
     backlogData.append(data);
+    backlogAgc.append(gnssData.agc);
+    backlogCno.append(gnssData.cno);
+    backlogJam.append(gnssData.jammingIndicator);
+
 }
 
 void GnssDevice::cleanupBacklog()
@@ -559,21 +564,63 @@ void GnssDevice::cleanupBacklog()
     while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(QDateTime::currentDateTime()) > 120) { // Keep backlog at 120 secs age
         backlogTimestamp.removeFirst();
         backlogData.removeFirst();
+        backlogAgc.removeFirst();
+        backlogCno.removeFirst();
+        backlogJam.removeFirst();
     }
 }
 
 void GnssDevice::saveBacklog()
 {
+    backlogCleanupTimer->stop(); // Don't delete data while saving!
+
     if (backlogData.size()) { // Save only if there are any data in buffer (daah)
+        createGnssPlot();
+
         QFile file(createFilename());
         if (file.open(QIODevice::WriteOnly)) {
             for (int i = 0; i < backlogData.size(); i++) {
                 file.write(backlogTimestamp[i].toString("yyyyMMddhhmmss,").toLocal8Bit());
-                file.write(backlogData[i]);
+                file.write(backlogData[i] + "\n");
             }
             file.close();
         }
         else
             qWarning() << "Could not open file" << file.fileName() << "for writing";
     }
+    backlogCleanupTimer->start(1000);
+}
+
+void GnssDevice::createGnssPlot()
+{
+    QCustomPlot *plot = new QCustomPlot;
+    plot->addGraph();
+    plot->addGraph();
+    plot->addGraph();
+    plot->graph(0)->setPen(QPen(Qt::green));
+    plot->graph(1)->setPen(QPen(Qt::red));
+    plot->graph(2)->setPen(QPen(Qt::blue));
+
+    plot->setAutoAddPlottableToLegend(true);
+    plot->graph(0)->setName("C/N0");
+    plot->graph(1)->setName("AGC");
+    plot->graph(2)->setName("Jamming ind");
+    plot->legend->setVisible(true);
+    plot->xAxis->setLabel("Seconds since incident");
+    plot->yAxis->setLabel("Value");
+
+    QVector<double> keyVals;
+    for (auto && timestamp : backlogTimestamp) {
+        keyVals.append(-1 * timestamp.secsTo(incidenceStartedDateTime));
+    }
+    plot->graph(0)->setData(keyVals, backlogCno);
+    plot->graph(1)->setData(keyVals, backlogAgc);
+    plot->graph(2)->setData(keyVals, backlogJam);
+    plot->rescaleAxes();
+    plot->replot();
+    QString filename = createFilename().split(".log")[0] + ".png";
+    plot->savePng(filename);
+    delete plot;
+    incidenceStartedDateTime = QDateTime();
+    emit sendGnssPlotFilename(filename);
 }

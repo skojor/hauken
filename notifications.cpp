@@ -190,26 +190,44 @@ void Notifications::sendMail()
                 for (auto &val : mailRecipients)
                     message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
             }
+            QString data;
+            QTextStream ts(&data);
 
-            mimeHtml->setHtml("<table>" + mailtext +
-                              (config->getSdefAddPosition() && positionValid ?
-                                   tr("<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/") +
-                                       QString::number(latitude, 'f', 5) + "+" +
-                                       QString::number(longitude, 'f', 5) + "/@" +
-                                       QString::number(latitude, 'f', 5) + "," +
-                                       QString::number(longitude, 'f', 5) + ",10z\">" +
-                                       QString::number(latitude, 'f', 5) + " " +
-                                       QString::number(longitude, 'f', 5) +
-                                       tr("</a></td><td>") +
-                                       "<a href=\"https://nais.kystverket.no/point/" +
-                                       QString::number(longitude, 'f', 5) + "_" +
-                                       QString::number(latitude, 'f', 5)  +
-                                       tr("\">Link til Kystverket</td></tr>") : "") +
-                              /* + (predictionReceived ? "AI classification: " + prediction +
+            ts  << "<html><body><table>" << mailtext
+               << (config->getSdefAddPosition() && positionValid ?
+                       "<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/" +
+                           QString::number(latitude, 'f', 5) + "+" +
+                           QString::number(longitude, 'f', 5) + "/@" +
+                           QString::number(latitude, 'f', 5) + "," +
+                           QString::number(longitude, 'f', 5) + ",10z\">" +
+                           QString::number(latitude, 'f', 5) + " " +
+                           QString::number(longitude, 'f', 5) +
+                           tr("</a></td><td>") +
+                           "<a href=\"https://nais.kystverket.no/point/" +
+                           QString::number(longitude, 'f', 5) + "_" +
+                           QString::number(latitude, 'f', 5)  +
+                           tr("\">Link til Kystverket</td></tr>") : "")
+               <<
+                /* + (predictionReceived ? "AI classification: " + prediction +
                                ", probability " + QString::number(probability) + " %" : "") +'/*/
-                              "</table><hr><img src='cid:image1' />   ");
+                "</table><hr><img src='cid:image1'>";
+            int iter = 0;
+            for (auto && iqPlotFilename : iqPlotFilenames) {
+                iter++;
+                if (!iqPlotFilename.isEmpty()) {
+                    ts << "<hr><p>I/Q plott " << iter << "></p><img src='cid:iqplot" << iter << "'>";
+                }
+            }
+
+            ts <<
+                (gnssPlotFilename.isEmpty() ? "" : "<hr><p>GNSS 1 data</p><img src='cid:image2'>") <<
+                (gnssPlotFilename2.isEmpty() ? "" : "<hr><p>GNSS 2 data</p><img src='cid:image3'>") <<
+                "</body></table>   /";
 
             //qDebug() << "mail debug:" << mimeHtml->data();
+
+            mimeHtml->setHtml(data);
+
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
             if (predictionReceived) {
@@ -222,20 +240,26 @@ void Notifications::sendMail()
             image1->setContentType("image/png");
             //message.addPart(&image1);
             emailPictures.append(image1);
-            if (!iqPlotFilename.isEmpty()) {
-                auto image2 = new SimpleMail::MimeInlineFile(new QFile(iqPlotFilename));
+            if (!gnssPlotFilename.isEmpty()) {
+                auto image2 = new SimpleMail::MimeInlineFile(new QFile(gnssPlotFilename));
                 image2->setContentId("image2");
                 image2->setContentType("image/jpg");
-                emailIqPlot.append(image2);
+                emailPictures.append(image2);
             }
-            message.addPart(emailPictures.last());
-            if (!iqPlotFilename.isEmpty()) {
-                message.addPart(emailIqPlot.last());
-                //iqPlotFilename.clear();
+            if (!gnssPlotFilename2.isEmpty()) {
+                auto image3 = new SimpleMail::MimeInlineFile(new QFile(gnssPlotFilename2));
+                image3->setContentId("image3");
+                image3->setContentType("image/jpg");
+                emailPictures.append(image3);
             }
+
+            //message.addPart(emailPictures.last());
+            for (auto && part : emailPictures)
+                message.addPart(part);
 
             //qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
             emailBacklog.append(message);
+            //qDebug() << mimeHtml->html();
             mailtext.clear();
 
             // MS Graph code in here!
@@ -430,6 +454,35 @@ void Notifications::generateGraphEmail()
         att.insert("isInline", "true");
         attachments.append(att);
     }
+    if (!gnssPlotFilename.isEmpty()) {
+        QJsonObject att;
+        QFile picture(gnssPlotFilename);
+        if (picture.open(QIODevice::ReadOnly)) {
+            att.insert("@odata.type", "#microsoft.graph.fileAttachment");
+            att.insert("name", "image2.png");
+            att.insert("contentType", "image/png");
+            att.insert("contentId", "image2");
+            att.insert("contentBytes", QString(picture.readAll().toBase64()));
+            att.insert("isInline", "true");
+            attachments.append(att);
+        }
+        gnssPlotFilename.clear();
+    }
+    if (!gnssPlotFilename2.isEmpty()) {
+        QJsonObject att;
+        QFile picture(gnssPlotFilename2);
+        if (picture.open(QIODevice::ReadOnly)) {
+            att.insert("@odata.type", "#microsoft.graph.fileAttachment");
+            att.insert("name", "image3.png");
+            att.insert("contentType", "image/png");
+            att.insert("contentId", "image3");
+            att.insert("contentBytes", QString(picture.readAll().toBase64()));
+            att.insert("isInline", "true");
+            attachments.append(att);
+        }
+        gnssPlotFilename2.clear();
+    }
+
     int iter = 0;
     for (auto && iqPlotFilename : iqPlotFilenames) {
         iter++;
@@ -440,13 +493,13 @@ void Notifications::generateGraphEmail()
             }
             else {
                 QJsonObject att2;
-                QString filename = iqPlotFilename.split('/').last();
+                //QString filename = iqPlotFilename.split('/').last();
                 att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
-                att2.insert("name", filename);
+                att2.insert("name", "iqplot" + QString::number(iter));
                 att2.insert("contentType", "image/jpg");
                 att2.insert("contentId", "iqplot" + QString::number(iter));
                 att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
-                att2.insert("isInline", "false");
+                att2.insert("isInline", "true");
                 attachments.append(att2);
                 iqPlotFilename.clear();
             }

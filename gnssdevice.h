@@ -46,12 +46,14 @@ public slots:
     GnssData sendGnssData() { return gnssData;}
     bool isValid() { return gnssData.posValid;}
     void saveBacklog();
+    void setIncidenceStartedDateTime()  { if (!incidenceStartedDateTime.isValid()) incidenceStartedDateTime = QDateTime::currentDateTime();}
 
 signals:
     void analyzeThisData(GnssData &);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void positionUpdate(bool b, double lat, double lng);
     void gnssDisabled();
+    void sendGnssPlotFilename(QString);
 
 private slots:
     void handleBuffer();
@@ -75,6 +77,7 @@ private slots:
     QString createFilename();
     void updateBacklog(QByteArray &data);
     void cleanupBacklog();
+    void createGnssPlot();
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -97,7 +100,9 @@ private:
     QSharedPointer<Config> config;
     QList<QDateTime> backlogTimestamp;
     QList<QByteArray> backlogData;
+    QVector<double> backlogCno, backlogAgc, backlogJam;
     QTimer *backlogCleanupTimer = new QTimer;
+    QDateTime incidenceStartedDateTime;
 
     // Config cache
     bool activate = false;
