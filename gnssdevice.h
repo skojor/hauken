@@ -71,6 +71,7 @@ private slots:
     void askUbloxVersion();
     void decodeBinary0a04(const QByteArray &val);
     void delayedReportHandler();
+    QString createFilename();
 
 private:
     QSerialPort *gnss = new QSerialPort;

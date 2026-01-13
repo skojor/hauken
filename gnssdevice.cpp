@@ -1,4 +1,5 @@
 #include "gnssdevice.h"
+#include "asciitranslator.h"
 
 GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
 {
@@ -267,7 +268,7 @@ QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const Q
     if (date.size() == 6 && baTime.size() == 6) {
         dt = QDateTime::fromString(date + baTime, "ddMMyyHHmmss");
         dt = dt.addYears(100);
-        dt.setTimeSpec(Qt::UTC);
+        dt.setTimeZone(QTimeZone::UTC);
     }
     return dt;
 }
@@ -520,4 +521,22 @@ void GnssDevice::delayedReportHandler()
         posInvalidTriggered = false;
         if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), "Position valid");
     }
+}
+
+QString GnssDevice::createFilename()
+{
+    QString dir = config->incidentFolder();
+    QString filename;
+    QTextStream ts(&filename);
+
+    if (!QDir().exists(dir))
+        QDir().mkpath(dir);
+
+    ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
+       << "_" << AsciiTranslator::toAscii(config->getStationName())
+       << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
+       << QString::number(1e-3 * stopfreq, 'f', 0)
+       << ".cef";
+
+    return filename;
 }
