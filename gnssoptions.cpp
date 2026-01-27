@@ -115,6 +115,8 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     mainLayout->addWidget(gnss3GroupBox);
     mainLayout->addWidget(gnss4GroupBox);
 
+    mainLayout->addWidget(new QLabel("<span style='font-size:normal;color:red;'>Restart the program after changing serial ports!</span>"));
+
     connect(btnBox, &QDialogButtonBox::accepted, this, &GnssOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
