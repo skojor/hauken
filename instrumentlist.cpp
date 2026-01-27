@@ -192,12 +192,13 @@ void InstrumentList::parseInstrumentList(const QByteArray &reply)
                 stationInfo[stationIndex].instrumentInfo.append(info);
             }
         }
+        else { // Failed request
+            tmNetworkTimeout->stop();
+            state = FAILED;
+            fetchDataHandler(); // Will deal with error msgs
+        }
     }
-    else { // Failed request
-        tmNetworkTimeout->stop();
-        state = FAILED;
-        fetchDataHandler(); // Will deal with error msgs
-    }
+
     stationIndex++;
     if (stationIndex == stationInfo.size()) {
         state = RECEIVEDINSTRUMENTS;
