@@ -1012,4 +1012,16 @@ void MainWindow::setSignals()
     connect(gnssAnalyzer2, &GnssAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
     connect(gnssDevice1, &GnssDevice::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename);
     connect(gnssDevice2, &GnssDevice::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename2);
+
+    connect(btnNormalize, &QPushButton::clicked, this, [this] () {
+        if (config->getInstrNormalizeSpectrum()) {
+            config->setInstrNormalizeSpectrum(false);
+            btnNormalize->setText("Not normalized");
+        }
+        else {
+            config->setInstrNormalizeSpectrum(true);
+            btnNormalize->setText("Normalized");
+        }
+        traceBuffer->restartCalcAvgLevel(true);
+    });
 }

@@ -464,8 +464,10 @@ void MainWindow::createLayout()
         plotLayout->addWidget(customPlot, 1, 1, 3, 1);
     }
 
+    btnNormalize->setText(( config->getInstrNormalizeSpectrum() ? "Normalized" : "Not normalized" ));
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnRestartAvgCalc);
+    bottomPlotLayout->addWidget(btnNormalize);
     bottomPlotLayout->addWidget(btnTrigRecording);
     //btnTrigRecording->setFixedWidth(100);
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));

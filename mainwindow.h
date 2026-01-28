@@ -223,6 +223,7 @@ private:
     QPushButton *btnRestartAvgCalc = new QPushButton("Restart avg. calc.");
     QPushButton *btnPmrTable = new QPushButton("PMR table");
     QPushButton *btnAudioOpt = new QPushButton("Audio");
+    QPushButton *btnNormalize = new QPushButton;
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
     QDoubleSpinBox *instrTrigBandwidth = new QDoubleSpinBox;
