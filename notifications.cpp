@@ -215,7 +215,7 @@ void Notifications::sendMail()
             for (auto && iqPlotFilename : iqPlotFilenames) {
                 iter++;
                 if (!iqPlotFilename.isEmpty()) {
-                    ts << "<hr><p>I/Q plott " << iter << "></p><img src='cid:iqplot" << iter << "'>";
+                    ts << "<hr><p>I/Q plot " << iter << "</p><img src='cid:iqplot" << iter << "'>";
                 }
             }
 
