@@ -14,7 +14,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, QSharedPointer<Config> c)
 {
     config = c;
     setWindowTitle("Options");
-    resize(600, 500);
+    resize(600, 600);
     auto mainLayout = new QGridLayout(this);
     navList = new QListWidget(this);
     navList->setFixedWidth(180);

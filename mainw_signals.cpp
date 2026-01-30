@@ -1024,5 +1024,6 @@ void MainWindow::setSignals()
         }
         traceBuffer->restartCalcAvgLevel(true);
         customPlotController->doReplot();
+        config->settingsUpdated();
     });
 }
