@@ -64,8 +64,9 @@ public slots:
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
     void recPrediction(QString pred, int prob);
+    void setGnssPlotFilename(QString name) { gnssPlotFilename = name;}
+    void setGnssPlotFilename2(QString name) { gnssPlotFilename2 = name;}
 
-private slots:
     void appendIncidentLog(QDateTime dt, const QString string);
     void appendLogFile(QDateTime dt, const QString string);
     void appendEmailText(QDateTime dt, const QString string);
@@ -127,7 +128,7 @@ private:
     int probability = 0;
     bool predictionReceived = false;
     bool notifyPriorityRecipients = false;
-    QString iqPlotFilename;
+    QString iqPlotFilename, gnssPlotFilename, gnssPlotFilename2;
     QStringList iqPlotFilenames;
 };
 

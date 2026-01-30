@@ -3,6 +3,8 @@
 ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
+
     setWindowTitle("Arduino configuration");
 
     mainLayout->addRow(cbOpt2);
@@ -40,14 +42,29 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("Seconds between ping attempts"), sbOpt1);
     sbOpt1->setToolTip("How long to wait between each ping attempt");
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &ArduinoOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+   /* connect(btnBox, &QDialogButtonBox::accepted, this, &ArduinoOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
 
     mainLayout->addRow(new QLabel("RF relay on text"), leOpt1);
     mainLayout->addRow(new QLabel("RF relay off text"), leOpt2);
 
     mainLayout->addRow(new QLabel("A restart is needed to activate any changes here"));
     mainLayout->addWidget(btnBox);
+
+    comboOpt1->setCurrentIndex(comboOpt1->findText(config->getArduinoSerialName()));
+    comboOpt2->setCurrentIndex(comboOpt2->findText(config->getArduinoBaudrate()));
+    cbOpt1->setChecked(config->getArduinoReadTemperatureAndRelay());
+    cbOpt2->setChecked(config->getArduinoEnable());
+    cbOpt3->setChecked(config->getArduinoReadDHT20());
+    cbOpt4->setChecked(config->getArduinoWatchdogRelay());
+    leOpt1->setText(config->getArduinoRelayOnText());
+    leOpt2->setText(config->getArduinoRelayOffText());
+
+    cbOpt5->setEnabled(cbOpt4->isChecked());
+    cbOpt5->setChecked(config->getArduinoActivateWatchdog());
+
+    leOpt3->setText(config->getArduinoPingAddress());
+    sbOpt1->setValue(config->getArduinoPingInterval());
 
     connect(cbOpt1, &QCheckBox::clicked, this, [this](bool b) {
         this->cbOpt3->setChecked(false);
@@ -91,20 +108,6 @@ QStringList ArduinoOptions::getAvailablePorts()
 
 void ArduinoOptions::start()
 {
-    comboOpt1->setCurrentIndex(comboOpt1->findText(config->getArduinoSerialName()));
-    comboOpt2->setCurrentIndex(comboOpt2->findText(config->getArduinoBaudrate()));
-    cbOpt1->setChecked(config->getArduinoReadTemperatureAndRelay());
-    cbOpt2->setChecked(config->getArduinoEnable());
-    cbOpt3->setChecked(config->getArduinoReadDHT20());
-    cbOpt4->setChecked(config->getArduinoWatchdogRelay());
-    leOpt1->setText(config->getArduinoRelayOnText());
-    leOpt2->setText(config->getArduinoRelayOffText());
-
-    cbOpt5->setEnabled(cbOpt4->isChecked());
-    cbOpt5->setChecked(config->getArduinoActivateWatchdog());
-
-    leOpt3->setText(config->getArduinoPingAddress());
-    sbOpt1->setValue(config->getArduinoPingInterval());
 
     dialog->exec();
 }
@@ -123,5 +126,5 @@ void ArduinoOptions::saveCurrentSettings()
     config->setArduinoPingAddress(leOpt3->text());
     config->setArduinoPingInterval(sbOpt1->value());
 
-    dialog->close();
+    //dialog->close();
 }

@@ -42,12 +42,24 @@ public slots:
     void updSize(QRect s);
     void updSettings();
     void restartPlot();
-    void stopPlot(bool b) { if (!b) updIntervalTimer->stop(); else updIntervalTimer->start(100);}
+    void stopPlot(bool b) {
+        if (!b) {
+            initial = 2;
+            updIntervalTimer->stop();
+        }
+        else {
+            updIntervalTimer->start(100);
+            initial = 2;
+        }
+    }
     void pausePlot(bool b) {
-        if (b) updIntervalTimer->stop();
+        if (b) {
+            updIntervalTimer->stop();
+            initial = 2;
+        }
         else {
             traceCopy.clear();
-            updIntervalTimer->start(100);
+            initial = 2;
         }
     }
     void updTimerCallback();
@@ -74,8 +86,7 @@ private:
     COLORS colorset;
     bool greyscale = false;
     QMutex mutex;
-    bool timeout = true;
-    bool initial = true;
+    int initial = 2;
 };
 
 #endif // WATERFALL_H

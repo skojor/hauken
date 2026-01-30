@@ -3,6 +3,7 @@
 PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
     setWindowTitle("Instrument list and status reports");
 
     QGroupBox *groupBox1 = new QGroupBox("Server authorization");
@@ -76,13 +77,6 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     mainLayout->addWidget(groupBox1);
     mainLayout->addWidget(groupBox2);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &PositionReportOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
-    mainLayout->addWidget(btnBox);
-}
-
-void PositionReportOptions::start()
-{
     leOpt4->setText(config->getSdefUsername());
     leOpt5->setText(config->getSdefPassword());
     leOpt6->setText(config->getSdefAuthAddress());
@@ -99,6 +93,14 @@ void PositionReportOptions::start()
     cbOpt5->setChecked(config->getPosReportAddConnStats());
     cbOpt6->setChecked(config->getPosReportAddSensorData());
     cbOpt7->setChecked(config->getPosReportAddMqttData());
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &PositionReportOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    mainLayout->addWidget(btnBox);*/
+}
+
+void PositionReportOptions::start()
+{
 
     dialog->setMinimumWidth(600);
     dialog->exec();
@@ -123,5 +125,5 @@ void PositionReportOptions::saveCurrentSettings()
     config->setPosreportAddSensorData(cbOpt6->isChecked());
     config->setPosreportAddMqttData(cbOpt7->isChecked());
 
-    dialog->close();
+    //dialog->close();
 }

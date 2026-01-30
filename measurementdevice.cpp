@@ -216,7 +216,7 @@ void MeasurementDevice::setFfmFrequencySpan()
 void MeasurementDevice::setMeasurementTime()
 {
     if (connected) {
-        scpiWrite("abor");
+        //scpiWrite("abor");
         scpiWrite("meas:time " + QByteArray::number(measurementTime) + " ms");
         scpiWrite("init:imm");
     }

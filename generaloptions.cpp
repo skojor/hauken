@@ -108,18 +108,15 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     sbOpt2->setToolTip("Time in seconds to record a video after the incident ended");
     sbOpt2->setRange(1, 86400);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    //connect(btnBox, &QDialogButtonBox::accepted, this, &GeneralOptions::saveCurrentSettings);
+    //connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    auto mainLayout = new QFormLayout(this);
 
     mainLayout->addWidget(groupBox1);
     mainLayout->addWidget(groupBox3);
     mainLayout->addWidget(groupBox4);
     mainLayout->addWidget(groupBox2);
-    mainLayout->addWidget(btnBox);
-}
-
-void GeneralOptions::start()
-{
+    //mainLayout->addWidget(btnBox);
     leOpt1->setText(config->getStationName());
     leOpt2->setText(config->getStnLatitude());
     leOpt3->setText(config->getStnLongitude());
@@ -140,7 +137,11 @@ void GeneralOptions::start()
     cbOpt1->setChecked(config->getCameraDeviceTrigger());
     sbOpt2->setValue(config->getCameraRecordTime());
 
-    dialog->exec();
+}
+
+void GeneralOptions::start()
+{
+    //dialog->exec();
 }
 
 void GeneralOptions::saveCurrentSettings()
@@ -173,5 +174,5 @@ void GeneralOptions::saveCurrentSettings()
     config->setCameraDeviceTrigger(cbOpt1->isChecked());
     config->setCameraRecordTime(sbOpt2->value());
 
-    dialog->close();
+    //dialog->close();
 }

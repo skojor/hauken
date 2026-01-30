@@ -39,15 +39,6 @@ MainWindow::MainWindow(QWidget *parent)
     customPlot->layer("image")->setMode(QCPLayer::lmBuffered);
     qcpImage->setScaled(false);
 
-    generalOptions = new GeneralOptions(config);
-    gnssOptions = new GnssOptions(config);
-    receiverOptions = new ReceiverOptions(config);
-    sdefOptions = new SdefOptions(config);
-    emailOptions = new EmailOptions(config);
-    arduinoOptions = new ArduinoOptions(config);
-    positionReportOptions = new PositionReportOptions(config);
-    mqttOptions = new MqttOptions(config);
-    iqOptions = new IqOptions(config);
     audioOptions = new AudioOptions(config);
 
     arduinoPtr = new Arduino(config);
@@ -207,42 +198,6 @@ void MainWindow::createActions()
                                                              "IQ data (*.iq)"));
     });
 
-    optStation = new QAction(tr("&General setup"), this);
-    optStation->setStatusTip(tr("Basic station setup (position, folders, etc.)"));
-    connect(optStation, &QAction::triggered, this, &MainWindow::stnConfig);
-
-    optGnss = new QAction(tr("G&NSS setup"), this);
-    optGnss->setStatusTip(tr("GNSS ports and logging configuration"));
-    connect(optGnss, &QAction::triggered, this, &MainWindow::gnssConfig);
-
-    optStream = new QAction(tr("&Receiver setup"), this);
-    optStream->setStatusTip(tr("Measurement receiver device options"));
-    connect(optStream, &QAction::triggered, this, &MainWindow::streamConfig);
-
-    optSdef = new QAction(tr("&Data recording and upload"), this);
-    optSdef->setStatusTip(tr("Configuration of data storage and uploading options"));
-    connect(optSdef, &QAction::triggered, this, &MainWindow::sdefConfig);
-
-    optEmail = new QAction(tr("&Notifications"), this);
-    optEmail->setStatusTip(tr("Setup of email server and notfications"));
-    connect(optEmail, &QAction::triggered, this, [this] { this->emailOptions->start(); });
-
-    optArduino = new QAction(tr("&Arduino"), this);
-    optArduino->setStatusTip("Setup of Arduino relay/temperature control");
-    connect(optArduino, &QAction::triggered, this, [this] { this->arduinoOptions->start(); });
-
-    optPositionReport = new QAction(tr("&Instrument list and status reports"), this);
-    optPositionReport->setStatusTip("Setup login and periodic reports with server");
-    connect(optPositionReport, &QAction::triggered, this, [this] { this->positionReportOptions->start(); });
-
-    optMqtt = new QAction(tr("&MQTT and webswitch sensors"), this);
-    optMqtt->setStatusTip(tr("Setup of sensor data input from MQTT and webswitch"));
-    connect(optMqtt, &QAction::triggered, this, [this] { this->mqttOptions->start(); });
-
-    optIq = new QAction(tr("IQ data and plot"), this);
-    optIq->setStatusTip(tr("Setup IQ plot and saving raw IQ data to file"));
-    connect(optIq, &QAction::triggered, this, [this]() { iqOptions->start(); });
-
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -297,7 +252,7 @@ void MainWindow::createMenus()
     helpMenu = new QMenu(tr("&Help"), this);
 
     menuBar()->addMenu(fileMenu);
-    menuBar()->addMenu(optionMenu);
+    menuBar()->addAction("Options", settingsDialog, &SettingsDialog::show);
     menuBar()->addMenu(helpMenu);
 
     fileMenu->addAction(newAct);
@@ -309,16 +264,6 @@ void MainWindow::createMenus()
     fileMenu->addAction(openFolderAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
-
-    optionMenu->addAction(optStation);
-    optionMenu->addAction(optGnss);
-    optionMenu->addAction(optStream);
-    optionMenu->addAction(optSdef);
-    optionMenu->addAction(optPositionReport);
-    optionMenu->addAction(optEmail);
-    optionMenu->addAction(optArduino);
-    optionMenu->addAction(optMqtt);
-    optionMenu->addAction(optIq);
 
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
@@ -464,8 +409,14 @@ void MainWindow::createLayout()
         plotLayout->addWidget(customPlot, 1, 1, 3, 1);
     }
 
+    btnNormalize->setText(( config->getInstrNormalizeSpectrum() ? "Normalized" : "Not normalized" ));
+    btnNormalize->setToolTip("The spectrum will be \"corrected\" for any unlinear responses in the frequency range, "\
+                       "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven "\
+                       "amplifier response");
+
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnRestartAvgCalc);
+    bottomPlotLayout->addWidget(btnNormalize);
     bottomPlotLayout->addWidget(btnTrigRecording);
     //btnTrigRecording->setFixedWidth(100);
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
@@ -716,22 +667,18 @@ void MainWindow::aboutQt()
 
 void MainWindow::stnConfig()
 {
-    generalOptions->start();
 }
 
 void MainWindow::gnssConfig()
 {
-    gnssOptions->start();
 }
 
 void MainWindow::streamConfig()
 {
-    receiverOptions->start();
 }
 
 void MainWindow::sdefConfig()
 {
-    sdefOptions->start();
 }
 
 void MainWindow::newFile()

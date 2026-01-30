@@ -192,12 +192,13 @@ void InstrumentList::parseInstrumentList(const QByteArray &reply)
                 stationInfo[stationIndex].instrumentInfo.append(info);
             }
         }
+        else { // Failed request
+            tmNetworkTimeout->stop();
+            state = FAILED;
+            fetchDataHandler(); // Will deal with error msgs
+        }
     }
-    else { // Failed request
-        tmNetworkTimeout->stop();
-        state = FAILED;
-        fetchDataHandler(); // Will deal with error msgs
-    }
+
     stationIndex++;
     if (stationIndex == stationInfo.size()) {
         state = RECEIVEDINSTRUMENTS;
@@ -306,9 +307,11 @@ void InstrumentList::generateLists()
 
     for (auto &&station : stationInfo) {
         for (auto &&instrument : station.instrumentInfo) {
+            //qDebug() << instrument.type;
             if (instrument.type.contains("EM200") || instrument.type.contains("EM100") || instrument.type.contains("PR200") ||
                 instrument.type.contains("PR100") || instrument.type.contains("EB500") || instrument.type.contains("ESMW") ||
-                instrument.type.contains("ESMB") || instrument.type.contains("USRP") || instrument.type.contains("ESMD"))
+                instrument.type.contains("ESMB") || instrument.type.contains("USRP") || instrument.type.contains("ESMD") ||
+                instrument.type.contains("E310") || instrument.type.contains("DDF255") || instrument.type.contains("ESMD") )
             {
                 usableStnIps.append(instrument.ipAddress);
                 usableStnNames.append(station.officialName);

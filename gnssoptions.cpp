@@ -110,27 +110,19 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     gnss4Layout->addRow(tr("GNSS 2 name"), leOpt2);
     leOpt2->setToolTip(tr("Name will be displayed on separate window, in title"));
 
+    auto mainLayout = new QFormLayout(this);
+
     mainLayout->addWidget(gnss1GroupBox);
     mainLayout->addWidget(gnss2GroupBox);
     mainLayout->addWidget(gnss3GroupBox);
     mainLayout->addWidget(gnss4GroupBox);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &GnssOptions::saveCurrentSettings);
+    mainLayout->addWidget(new QLabel("<span style='font-size:normal;color:red;'>Restart the program after changing serial ports!</span>"));
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &GnssOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
 
-    mainLayout->addWidget(btnBox);
-
-}
-
-QStringList GnssOptions::getAvailablePorts()
-{
-    QStringList list;
-    for (auto &val : QSerialPortInfo::availablePorts())
-        list.append(val.portName());
-    return list;
-}
-void GnssOptions::start()
-{
+    mainLayout->addWidget(btnBox);*/
     cbOpt1->setChecked(config->getGnssSerialPort1Activate());
     comboOpt1->setCurrentIndex(comboOpt1->findText(config->getGnssSerialPort1Name()));
     comboOpt2->setCurrentIndex(comboOpt2->findText(config->getGnssSerialPort1Baudrate()));
@@ -150,8 +142,18 @@ void GnssOptions::start()
     leOpt2->setText(config->getGnss2Name());
     cbOpt14->setChecked(config->getGnssShowNotifications());
     sbOpt1->setValue(config->getGnssTimeFilter());
+}
 
-    dialog->exec();
+QStringList GnssOptions::getAvailablePorts()
+{
+    QStringList list;
+    for (auto &val : QSerialPortInfo::availablePorts())
+        list.append(val.portName());
+    return list;
+}
+void GnssOptions::start()
+{
+    //dialog->exec();
 }
 
 void GnssOptions::saveCurrentSettings()
@@ -177,5 +179,5 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssShowNotifications(cbOpt14->isChecked());
     config->setGnssTimeFilter(sbOpt1->value());
 
-    dialog->close();
+    //dialog->close();
 }

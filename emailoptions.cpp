@@ -3,13 +3,15 @@
 EmailOptions::EmailOptions(QSharedPointer<Config> c)
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
+
     setWindowTitle("Notifications configuration");
 
-    QGroupBox *groupBox1 = new QGroupBox("SMTP server setup");
+    QGroupBox *groupBox1 = new QGroupBox("Email recipients setup");
     QFormLayout *layout1 = new QFormLayout;
     groupBox1->setLayout(layout1);
 
-    layout1->addRow(new QLabel("SMTP server name"), leOpt1);
+    /*layout1->addRow(new QLabel("SMTP server name"), leOpt1);
     leOpt1->setToolTip("Which SMTP server to send mails through");
 
     layout1->addRow(new QLabel("SMTP server port"), leOpt2);
@@ -29,7 +31,7 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     layout1->addRow(new QLabel("AI filtered email recipients"), leOpt10);
     leOpt10->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
                         "Recipients in this list will only receive a notification if signal is classified as a jammer, and probability is higher\n"
-                        "than the above set value");
+                        "than the above set value");*/
 
     layout1->addRow(new QLabel("General email recipients"), leOpt3);
     leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
@@ -96,14 +98,6 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     mainLayout->addWidget(groupBox2);
     mainLayout->addWidget(groupBox3);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
-
-    mainLayout->addWidget(btnBox);
-}
-
-void EmailOptions::start()
-{
     leOpt1->setText(config->getEmailSmtpServer());
     leOpt2->setText(config->getEmailSmtpPort());
     leOpt5->setText(config->getEmailSmtpUser());
@@ -125,6 +119,16 @@ void EmailOptions::start()
     sbOpt2->setValue(config->getNotifyTruncateTime());
     sbOpt4->setValue(config->getEmailJammerProbabilityFilter());
     cbOpt6->setChecked(config->getNotificationLargeFonts());
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    groupBox1->setMinimumWidth(550);
+
+    mainLayout->addWidget(btnBox);*/
+}
+
+void EmailOptions::start()
+{
 
     dialog->exec();
 }
@@ -152,5 +156,5 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailJammerProbabilityFilter(sbOpt4->value());
     config->setNotificationLargeFonts(cbOpt6->isChecked());
 
-    dialog->close();
+    //dialog->close();
 }

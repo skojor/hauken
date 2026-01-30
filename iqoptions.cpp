@@ -4,6 +4,8 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     : OptionsBaseClass {}
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
+
     setWindowTitle(tr("I/Q data and plot options"));
 
     mainLayout->addRow(cbOpt1);
@@ -64,22 +66,6 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt6->setText(tr("Record I/Q samples over the whole trig area"));
     cbOpt6->setToolTip(tr("If enabled the I/Q center frequencies will be decided by the trig area(s), so that all areas are covered by I/Q recordings. Cannot be combined with multiband rec. set above"));
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
-    connect(cbOpt4, &QCheckBox::clicked, this, [this](bool b) {
-        if (b) cbOpt6->setChecked(false);
-    });
-    connect(cbOpt6, &QCheckBox::clicked, this, [this](bool b) {
-        if (b) cbOpt4->setChecked(false);
-    });
-
-    mainLayout->addWidget(btnBox);
-
-}
-
-void IqOptions::start()
-{
-
     cbOpt1->setChecked(config->getIqSaveToFile());
     cbOpt5->setChecked(config->getIqCreateFftPlot());
     sbOpt2->setValue(config->getIqFftPlotLength());
@@ -91,6 +77,23 @@ void IqOptions::start()
     cbOpt6->setChecked(config->getIqRecordAllTrigArea());
     cbOpt7->setChecked(config->getIqUseAvgForPlot());
     cbOpt8->setChecked(config->getIqSaveAs16bit());
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
+    connect(cbOpt4, &QCheckBox::clicked, this, [this](bool b) {
+        if (b) cbOpt6->setChecked(false);
+    });
+    connect(cbOpt6, &QCheckBox::clicked, this, [this](bool b) {
+        if (b) cbOpt4->setChecked(false);
+    });
+
+    //mainLayout->addWidget(btnBox);
+
+}
+
+void IqOptions::start()
+{
+
 
     dialog->exec();
 }
@@ -110,5 +113,5 @@ void IqOptions::saveCurrentSettings()
     config->setIqSaveAs16bit(cbOpt8->isChecked());
 
     emit updSettings();
-    dialog->close();
+    //dialog->close();
 }

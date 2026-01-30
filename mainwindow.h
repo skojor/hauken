@@ -40,6 +40,7 @@
 #include <QBuffer>
 #include <QLCDNumber>
 #include <QFrame>
+#include <QWidget>
 #include "config.h"
 #include "measurementdevice.h"
 #include "qcustomplot.h"
@@ -47,30 +48,30 @@
 #include "accesshandler.h"
 #include "ai.h"
 #include "arduino.h"
-#include "arduinooptions.h"
+//#include "arduinooptions.h"
 #include "camerarecorder.h"
 #include "customplotcontroller.h"
-#include "emailoptions.h"
-#include "generaloptions.h"
+//#include "emailoptions.h"
+//#include "generaloptions.h"
 #include "geolimit.h"
 #include "gnssanalyzer.h"
 #include "gnssdevice.h"
 #include "gnssdisplay.h"
-#include "gnssoptions.h"
+//#include "gnssoptions.h"
 #include "instrumentlist.h"
-#include "iqoptions.h"
+//#include "iqoptions.h"
 #include "led/ledindicator.h"
 #include "mqtt.h"
-#include "mqttoptions.h"
+//#include "mqttoptions.h"
 #include "notifications.h"
 #include "oauthfileuploader.h"
 #include "pmrtablewdg.h"
 #include "positionreport.h"
-#include "positionreportoptions.h"
+//#include "positionreportoptions.h"
 #include "read1809data.h"
-#include "receiveroptions.h"
+//#include "receiveroptions.h"
 #include "restapi.h"
-#include "sdefoptions.h"
+//#include "sdefoptions.h"
 #include "sdefrecorder.h"
 #include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
 #include "traceanalyzer.h"
@@ -90,6 +91,7 @@
 #include "datastreamifpan.h"
 #include "datastreamgpscompass.h"
 #include "datastreamcw.h"
+#include "settingsdialog.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -223,6 +225,7 @@ private:
     QPushButton *btnRestartAvgCalc = new QPushButton("Restart avg. calc.");
     QPushButton *btnPmrTable = new QPushButton("PMR table");
     QPushButton *btnAudioOpt = new QPushButton("Audio");
+    QPushButton *btnNormalize = new QPushButton;
 
     QDoubleSpinBox *instrTrigLevel = new QDoubleSpinBox;
     QDoubleSpinBox *instrTrigBandwidth = new QDoubleSpinBox;
@@ -291,15 +294,7 @@ private:
     QGroupBox *grpIndicator;
     QGroupBox *incBox;
 
-    GeneralOptions *generalOptions;
-    GnssOptions *gnssOptions;
-    ReceiverOptions *receiverOptions;
-    SdefOptions *sdefOptions;
-    EmailOptions *emailOptions;
-    ArduinoOptions *arduinoOptions;
-    PositionReportOptions *positionReportOptions;
-    MqttOptions *mqttOptions;
-    IqOptions *iqOptions;
+    SettingsDialog *settingsDialog = new SettingsDialog(this, config);
     AudioOptions *audioOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);

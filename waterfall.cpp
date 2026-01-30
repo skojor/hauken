@@ -9,29 +9,29 @@ void Waterfall::start()
 {
     pixmap = new QPixmap;
     updIntervalTimer = new QTimer;
-    updIntervalTimer->setSingleShot(true);
+    //updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
     updSettings();
 }
 
 void Waterfall::receiveTrace(const QVector<double> &trace)
 {
-    if (timeout) {
-        timeout = false;
+    if (!initial) {
         mutex.lock();
         traceCopy = trace;
         mutex.unlock();
-        if (initial and !updIntervalTimer->isActive()) {
+        if (!updIntervalTimer->isActive()) {
             updIntervalTimer->start(100); // first call
-            initial = false;
         }
+    }
+    else {
+        initial--;
     }
 }
 
 void Waterfall::updTimerCallback()
 {
     if (!traceCopy.isEmpty()) {
-        timeout = true;
         mutex.lock(); // this needs exclusive access to containers and pixmap
         pixmap->scroll(0, 1, pixmap->rect());
 
@@ -41,8 +41,7 @@ void Waterfall::updTimerCallback()
         int pixmapSize = pixmap->width();
         double ratio = (double) traceCopy.size() / (double) pixmapSize;
         double percent = 0;
-        QElapsedTimer timer;
-        timer.start();
+
         for (int x = 0; x < pixmapSize; x++) {
             percent = (traceCopy.at((int) (ratio * x)) - scaleMin)
                       / (scaleMax - scaleMin); // 0 - 1 range
