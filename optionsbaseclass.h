@@ -75,7 +75,7 @@ public:
 
 
     QDialogButtonBox *btnBox;
-    QFormLayout *mainLayout = new QFormLayout;
+    QFormLayout *mainLayout = new QFormLayout(this);
 
 public slots:
     virtual void start() = 0;

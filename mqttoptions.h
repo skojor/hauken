@@ -21,6 +21,7 @@ private slots:
     void setupWindow();
 
 private:
+    QFormLayout *mainLayout;
     QList<QLineEdit *> subNames, subTopics;
     QList<QCheckBox *> subIncidentlog;
     QList<QGroupBox *> subGroupBoxes;

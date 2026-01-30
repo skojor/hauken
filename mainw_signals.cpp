@@ -1023,5 +1023,6 @@ void MainWindow::setSignals()
             btnNormalize->setText("Normalized");
         }
         traceBuffer->restartCalcAvgLevel(true);
+        customPlotController->doReplot();
     });
 }

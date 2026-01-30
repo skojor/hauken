@@ -4,6 +4,8 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     : OptionsBaseClass {}
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
+
     setWindowTitle(tr("Measurement data storage and upload options"));
 
     QGroupBox *groupBoxFile = new QGroupBox("File creation and storage");
@@ -89,17 +91,6 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     mainLayout->addWidget(groupBoxOAuth);
     mainLayout->addWidget(groupBoxTemp);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
-    connect(cbOpt3, &QCheckBox::toggled, this, [this] (bool b) {
-        comboOpt1->setEnabled(b);
-    });
-
-    mainLayout->addWidget(btnBox);
-}
-
-void SdefOptions::start()
-{
     cbOpt1->setChecked(config->getSdefSaveToFile());
     cbOpt2->setChecked(config->getSdefUploadFile());
     cbOpt3->setChecked(config->getSdefAddPosition());
@@ -119,6 +110,18 @@ void SdefOptions::start()
     cbOpt7->setChecked(config->getAutoRecorderActivate());
     cbOpt8->setChecked(config->getSaveToTempFile());
     sbOpt4->setValue(config->getSaveToTempFileMaxhold());
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
+    connect(cbOpt3, &QCheckBox::toggled, this, [this] (bool b) {
+        comboOpt1->setEnabled(b);
+    });
+
+   // mainLayout->addWidget(btnBox);
+}
+
+void SdefOptions::start()
+{
 
     dialog->setMinimumWidth(600);
     dialog->exec();
@@ -149,5 +152,5 @@ void SdefOptions::saveCurrentSettings()
     config->setSaveToTempFile(cbOpt8->isChecked());
     config->setSaveToTempFileMaxhold(sbOpt4->value());
 
-    dialog->close();
+    //dialog->close();
 }

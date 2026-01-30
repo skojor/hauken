@@ -4,6 +4,8 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
     : OptionsBaseClass {}
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
+
     setWindowTitle(tr("Measurement receiver options"));
 
     mainLayout->addRow(cbOpt1);
@@ -20,11 +22,11 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
                               " and reconnect when possible. Allows other users to temporarily use the device"\
                               " for other purposes. It will also try to reconnect if network is down shortly");
 
-    mainLayout->addRow(cbOpt4);
+    /*
     cbOpt4->setText("Normalize RF spectrum");
     cbOpt4->setToolTip("The spectrum will be \"corrected\" for any unlinear responses in the frequency range, "\
                                   "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven "\
-                                  "amplifier response");
+                                  "amplifier response");*/
 
     mainLayout->addRow(cbOpt5);
     cbOpt5->setText("Remember average noise floor");
@@ -38,20 +40,24 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
                        "Default value is 250. The average calculation will slow down gradually when enough traces are gathered");
     sbOpt1->setRange(0, 1e9);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    mainLayout->addRow(new QLabel("(Normalize RF spectrum option is moved to main window, below spectrum display)"));
 
-    mainLayout->addWidget(btnBox);
-}
 
-void ReceiverOptions::start()
-{
     cbOpt1->setChecked(config->getInstrConnectOnStartup());
     cbOpt2->setChecked(config->getInstrUseTcpDatastream());
     cbOpt3->setChecked(config->getInstrAutoReconnect());
     cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
     sbOpt1->setValue(config->getInstrTracesNeededForAverage());
     cbOpt5->setChecked(config->getInstrRestoreAvgLevels());
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &ReceiverOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+
+    mainLayout->addWidget(btnBox);*/
+}
+
+void ReceiverOptions::start()
+{
 
     dialog->exec();
 }
@@ -67,5 +73,5 @@ void ReceiverOptions::saveCurrentSettings()
 
     emit updSettings();
 
-    dialog->close();
+    //dialog->close();
 }

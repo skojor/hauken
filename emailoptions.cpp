@@ -3,6 +3,8 @@
 EmailOptions::EmailOptions(QSharedPointer<Config> c)
 {
     config = c;
+    auto mainLayout = new QFormLayout(this);
+
     setWindowTitle("Notifications configuration");
 
     QGroupBox *groupBox1 = new QGroupBox("Email recipients setup");
@@ -96,15 +98,6 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     mainLayout->addWidget(groupBox2);
     mainLayout->addWidget(groupBox3);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
-    groupBox1->setMinimumWidth(550);
-
-    mainLayout->addWidget(btnBox);
-}
-
-void EmailOptions::start()
-{
     leOpt1->setText(config->getEmailSmtpServer());
     leOpt2->setText(config->getEmailSmtpPort());
     leOpt5->setText(config->getEmailSmtpUser());
@@ -126,6 +119,16 @@ void EmailOptions::start()
     sbOpt2->setValue(config->getNotifyTruncateTime());
     sbOpt4->setValue(config->getEmailJammerProbabilityFilter());
     cbOpt6->setChecked(config->getNotificationLargeFonts());
+
+    /*connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
+    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    groupBox1->setMinimumWidth(550);
+
+    mainLayout->addWidget(btnBox);*/
+}
+
+void EmailOptions::start()
+{
 
     dialog->exec();
 }
@@ -153,5 +156,5 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailJammerProbabilityFilter(sbOpt4->value());
     config->setNotificationLargeFonts(cbOpt6->isChecked());
 
-    dialog->close();
+    //dialog->close();
 }
