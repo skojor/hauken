@@ -307,9 +307,11 @@ void InstrumentList::generateLists()
 
     for (auto &&station : stationInfo) {
         for (auto &&instrument : station.instrumentInfo) {
+            //qDebug() << instrument.type;
             if (instrument.type.contains("EM200") || instrument.type.contains("EM100") || instrument.type.contains("PR200") ||
                 instrument.type.contains("PR100") || instrument.type.contains("EB500") || instrument.type.contains("ESMW") ||
-                instrument.type.contains("ESMB") || instrument.type.contains("USRP") || instrument.type.contains("ESMD"))
+                instrument.type.contains("ESMB") || instrument.type.contains("USRP") || instrument.type.contains("ESMD") ||
+                instrument.type.contains("E310") || instrument.type.contains("DDF255") || instrument.type.contains("ESMD") )
             {
                 usableStnIps.append(instrument.ipAddress);
                 usableStnNames.append(station.officialName);
