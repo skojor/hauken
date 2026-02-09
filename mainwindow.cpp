@@ -198,6 +198,17 @@ void MainWindow::createActions()
                                                              "IQ data (*.iq)"));
     });
 
+    openFolderIqAct = new QAction(tr("Open I/&Q data in folder (DEBUG)"), this);
+    openFolderIqAct->setStatusTip(
+        tr("Open a folder with I/Q data, for batch I/Q plot analysis/conversion. Don't use unless you know what this will do!"));
+    connect(openFolderIqAct, &QAction::triggered, this, [this] {
+        iqPlot->readFolder(QFileDialog::getExistingDirectory(this,
+                                                                   tr("Open folder"),
+                                                                   config->getLogFolder(),
+                                                                   QFileDialog::ShowDirsOnly));
+    });
+
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -262,6 +273,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(open1809Act);
     fileMenu->addAction(openIqAct);
     fileMenu->addAction(openFolderAct);
+    fileMenu->addAction(openFolderIqAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 

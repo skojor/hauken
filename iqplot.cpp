@@ -1,7 +1,11 @@
 #include "iqplot.h"
 #include "asciitranslator.h"
 #include "fftw3.h"
+#include "gif.h"
 #include <QRegularExpression>
+#include <QtConcurrent>
+//#include "gif.h"
+#include "opencv2/opencv.hpp"
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
@@ -50,7 +54,7 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
 {
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
     if (!samplerate) samplerate = (double) config->getIqFftPlotBw() * 1.28
-                 * 1e3;
+                     * 1e3;
     fillWindow();
 
     QString dir = config->incidentFolder();
@@ -61,32 +65,152 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
 
     filename = dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
                + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
-               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_" +
-               (config->getIqSaveAs16bit() ? "16bit" : "8bit");
+               + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_bw"
+               + QString::number(config->getIqFftPlotBw(), 'f', 0) + "kHz_"
+               + (config->getIqSaveAs16bit() ? "16bit" : "8bit");
 
     if (!dataFromFile && config->getIqSaveToFile() && iq16.size()) {
         (void)QtConcurrent::run(&IqPlot::saveIqData,
-                          this,
-                          iq16);
+                                 this,
+                                 iq16);
     }
-
-    QFuture<void> f1000 = QtConcurrent::run(&IqPlot::receiveIqDataWorker,
-                                            this,
-                                            iq16,
-                                            config->getIqFftPlotLength() / 1e6);
+    (void)QtConcurrent::run(&IqPlot::createPlotsDetached,
+                             this,
+                             iq16);
 }
 
-void IqPlot::receiveIqDataWorker(const QVector<complexInt16> iq, const double secondsToAnalyze)
+void IqPlot::createPlotsDetached(const QVector<complexInt16> &iq)
 {
-    const int fftSize = 64;
-    const int newFftSize = fftSize * 16;
+    receiveIqDataWorker(iq, 5e-4, false, false);
+    receiveIqDataWorker(iq, config->getIqFftPlotLength() / 1e6, true, false);
+    receiveIqDataWorker(iq, config->getIqFftPlotLength() / 1e6, false, true);
+}
 
-    //int imageYSize = samplerate * secondsToAnalyze;//fftSize * 16 * 2;
+void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze, bool addInfo, bool createGif)
+{
+    /*int newFftSize = plan1Size;
+    if (addInfo) newFftSize = plan2Size;*/
 
-    int samplesIterator = analyzeIqStart(iq)
-                          - (samplerate
-                             * (secondsToAnalyze
-                                / 4)); // Hopefully this is just before where sth interesting happens
+    //imageYSize = newFftSize;
+    int samplesIterator = 0;
+    bool repeat = false;
+    fftw_complex *in = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fftSize);
+    fftw_complex *out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fftSize);
+    fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    if (!createGif) // Start at beginning if this should be a gif
+        samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
+    else
+        repeat = true;
+
+    if (samplesIterator < 0)
+        samplesIterator = 0;
+
+    while (samplesIterator > 0
+           && samplesIterator + (samplerate * secondsToAnalyze) + fftSize >= iq.size())
+        samplesIterator--;
+
+    int ySize = samplerate * secondsToAnalyze + samplesIterator;
+
+    double secPerSample = 1.0 / samplerate;
+    int samplesIteratorInc = 12; //;(double) (samplerate * secondsToAnalyze) / (double) imageYSize;
+    /*qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
+             << samplesIterator << "and counts up to" << ySize << ". Total samples analyzed"
+             << ySize - samplesIterator;*/
+
+/*    if ((int) samplesIteratorInc == 0)
+        samplesIteratorInc = 1;*/
+
+    //double secondsPerLine = secPerSample * samplesIteratorInc;
+
+    int removeSamples = 7; // TODO, variable BW/Msps
+        //= 112.0 * (double) newFftSize // Was 84, why?
+         // / 1024.0; // Removing samples to have just above the original sample width visible in the plot
+
+    QVector<double> result;
+    QVector<QVector<double>> iqFftResult;
+    //qDebug() << "Doing" << newFftSize << "FFT transform";
+
+    do {
+        /*for (int i = 0; i < newFftSize; i++) { // Set all input values to 0 initially, used for zero padding
+            in[i][0] = 0;
+            in[i][1] = 0;
+        }*/
+
+        if (iq.size() > ySize) {
+            bool useDB = config->getIqUseDB();
+
+            while (samplesIterator + fftSize < ySize ) {
+                for (int i = 0; i < fftSize; i++) {
+                    in[i][0] = (iq[samplesIterator + i].real * window[i]);
+                    in[i][1] = (iq[samplesIterator + i].imag * window[i]);
+                }
+                fftw_execute(plan); // FFT is done here
+
+                for (int i = (fftSize / 2) + removeSamples; i < fftSize;
+                     i++) { // Find magnitude, normalize, reorder and cut edges
+                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
+                                 * (1.0 / fftSize);
+                    if (val == 0)
+                        val = 1e-9; // log10(0) = -inf
+                    if (useDB)
+                        result.append(10 * log10(val));
+                    else
+                        result.append(val);
+                }
+                for (int i = 0; i < (fftSize / 2) - removeSamples; i++) {
+                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
+                    * (1.0 / fftSize);
+                    if (val == 0)
+                        val = 1e-9; // log10(0) = -inf
+                    if (useDB)
+                        result.append(10 * log10(val));
+                    else
+                        result.append(val);
+                }
+
+                iqFftResult.append(result);
+                result.clear();
+
+                samplesIterator += samplesIteratorInc;
+            }
+            ySize += samplerate * secondsToAnalyze;
+            createIqPlot(iqFftResult, secondsToAnalyze, secPerSample * fftSize, addInfo, createGif);
+            iqFftResult.clear();
+
+            if (samplesIterator + samplerate * secondsToAnalyze > iq.size()) repeat = false;
+            // qDebug() << samplesIterator << iq.size();
+        } else {
+            qDebug() << "Not enough samples to create I/Q plot";
+            repeat = false;
+        }
+    } while(repeat);
+
+    fftw_destroy_plan(plan);
+    fftw_free(in);
+    fftw_free(out);
+
+    createAnimation(QImage(), true); // End file creation
+    //emit workerDone();
+}
+
+/*void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze, bool addInfo, bool createGif)
+{
+    int newFftSize = plan1Size;
+    if (addInfo) newFftSize = plan2Size;
+
+    imageYSize = newFftSize;
+    int samplesIterator = 0;
+    bool repeat = false;
+    fftw_complex *in = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * newFftSize);
+    fftw_complex *out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * newFftSize);
+    fftw_plan plan = fftw_plan_dft_1d(newFftSize, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    if (!createGif) // Start at beginning if this should be a gif
+        samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
+    else
+        repeat = true;
+
     if (samplesIterator < 0)
         samplesIterator = 0;
 
@@ -97,78 +221,88 @@ void IqPlot::receiveIqDataWorker(const QVector<complexInt16> iq, const double se
     int ySize = samplerate * secondsToAnalyze + samplesIterator;
 
     double secPerSample = 1.0 / samplerate;
-    int samplesIteratorInc = (double) (samplerate * secondsToAnalyze) / (double) imageYSize;
+    int samplesIteratorInc = (double) (samplerate * secondsToAnalyze) / (double) imageYSize;*/
     /*qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
              << samplesIterator << "and counts up to" << ySize << ". Total samples analyzed"
              << ySize - samplesIterator;*/
-
+/*
     if ((int) samplesIteratorInc == 0)
         samplesIteratorInc = 1;
 
     double secondsPerLine = secPerSample * samplesIteratorInc;
-    fftw_complex in[newFftSize], out[newFftSize];
-    fftw_plan plan = fftw_plan_dft_1d(newFftSize, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
     int removeSamples
-        = 84.0 * (double) newFftSize
+        = 112.0 * (double) newFftSize // Was 84, why?
           / 1024.0; // Removing samples to have just above the original sample width visible in the plot
 
     QVector<double> result;
     QVector<QVector<double>> iqFftResult;
+    qDebug() << "Doing" << newFftSize << "FFT transform";
 
-    for (int i = 0; i < newFftSize;
-         i++) { // Set all input values to 0 initially, used for zero padding
-        in[i][0] = 0;
-        in[i][1] = 0;
-    }
-
-    if (iq.size() > ySize) {
-        bool useDB = config->getIqUseDB();
-
-        while (samplesIterator < ySize) {
-            for (int i = (newFftSize / 2) - (fftSize / 2), j = 0;
-                 i < (newFftSize / 2) + (fftSize / 2);
-                 i++, j++) {
-                in[i][0] = (iq[samplesIterator + i].real * window[j]);
-                in[i][1] = (iq[samplesIterator + i].imag * window[j]);
-            }
-            fftw_execute(plan); // FFT is done here
-
-            for (int i = (newFftSize / 2) + removeSamples; i < newFftSize;
-                 i++) { // Find magnitude, normalize, reorder and cut edges
-                double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
-                             * (1.0 / newFftSize);
-                if (val == 0)
-                    val = 1e-9; // log10(0) = -inf
-                if (useDB)
-                    result.append(10 * log10(val));
-                else
-                    result.append(val);
-            }
-            for (int i = 0; i < (newFftSize / 2) - removeSamples; i++) {
-                double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
-                * (1.0 / newFftSize);
-                if (val == 0)
-                    val = 1e-9; // log10(0) = -inf
-                if (useDB)
-                    result.append(10 * log10(val));
-                else
-                    result.append(val);
-            }
-
-            iqFftResult.append(result);
-            result.clear();
-
-            samplesIterator += samplesIteratorInc;
+    do {
+        for (int i = 0; i < newFftSize; i++) { // Set all input values to 0 initially, used for zero padding
+            in[i][0] = 0;
+            in[i][1] = 0;
         }
-        fftw_destroy_plan(plan);
 
-        createIqPlot(iqFftResult, secondsToAnalyze, secondsPerLine);
-        //qInfo() << "Plot worker finished";
-    } else {
-        qWarning() << "Not enough samples to create IQ FFT plot, giving up";
-    }
-    emit workerDone();
-}
+        if (iq.size() > ySize) {
+            bool useDB = config->getIqUseDB();
+
+            while (samplesIterator + (newFftSize / 2) + (fftSize / 2) < ySize ) {
+                for (int i = (newFftSize / 2) - (fftSize / 2), j = 0;
+                     i < (newFftSize / 2) + (fftSize / 2);
+                     i++, j++) {
+                    in[i][0] = (iq[samplesIterator + i].real * window[j]);
+                    in[i][1] = (iq[samplesIterator + i].imag * window[j]);
+                }
+                fftw_execute(plan); // FFT is done here
+
+                for (int i = (newFftSize / 2) + removeSamples; i < newFftSize;
+                     i++) { // Find magnitude, normalize, reorder and cut edges
+                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
+                                 * (1.0 / newFftSize);
+                    if (val == 0)
+                        val = 1e-9; // log10(0) = -inf
+                    if (useDB)
+                        result.append(10 * log10(val));
+                    else
+                        result.append(val);
+                }
+                for (int i = 0; i < (newFftSize / 2) - removeSamples; i++) {
+                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
+                    * (1.0 / newFftSize);
+                    if (val == 0)
+                        val = 1e-9; // log10(0) = -inf
+                    if (useDB)
+                        result.append(10 * log10(val));
+                    else
+                        result.append(val);
+                }
+
+                iqFftResult.append(result);
+                result.clear();
+
+                samplesIterator += samplesIteratorInc;
+            }
+            ySize += samplerate * secondsToAnalyze;
+            createIqPlot(iqFftResult, secondsToAnalyze, secondsPerLine, addInfo, createGif);
+            iqFftResult.clear();
+
+            if (samplesIterator + samplerate * secondsToAnalyze > iq.size()) repeat = false;
+           // qDebug() << samplesIterator << iq.size();
+        } else {
+            qDebug() << "Not enough samples to create I/Q plot";
+            repeat = false;
+        }
+    } while(repeat);
+
+    fftw_destroy_plan(plan);
+    fftw_free(in);
+    fftw_free(out);
+
+    createAnimation(QImage(), true); // End file creation
+    //emit workerDone();
+}*/
 
 void IqPlot::saveIqData(const QVector<complexInt16> &iq16)
 {
@@ -187,17 +321,24 @@ void IqPlot::saveIqData(const QVector<complexInt16> &iq16)
 
 void IqPlot::createIqPlot(const QVector<QVector<double>> &iqFftResult,
                           const double secondsAnalyzed,
-                          const double secondsPerLine)
+                          const double secondsPerLine,
+                          bool addInfo , bool createGif)
 {
     double min, max, avg;
-    findIqFftMinMaxAvg(iqFftResult, min, max, avg);
-    //qDebug() << min << max << avg;
-    if (config->getIqUseAvgForPlot()) min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
+    if (iqFftResult.size() > 0)
+        findIqFftMinMaxAvg(iqFftResult, min, max, avg);
+    else
+        return;
 
-    QImage image(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
+    //qDebug() << min << max << avg;
+    if (config->getIqUseAvgForPlot() || !addInfo) min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
+
+    QImage *image = new QImage(QSize(iqFftResult.first().size(), iqFftResult.size()), QImage::Format_ARGB32);
     QColor imgColor;
-    double percent = 0;
+    double percent;
     int x, y = 0;
+    int alpha = 127;
+    //if (!addInfo) alpha = 255;
 
     for (auto &&line : iqFftResult) {
         x = 0;
@@ -207,15 +348,30 @@ void IqPlot::createIqPlot(const QVector<QVector<double>> &iqFftResult,
                 percent = 1;
             else if (percent < 0)
                 percent = 0;
-            imgColor.setHsv(255 - (255 * percent), 255, 127);
-            image.setPixel(x, y, imgColor.rgba());
+            if (addInfo) imgColor.setHsv(255 - (255 * percent), 255, alpha);
+            else imgColor.setHsv(0, 0, 255 * percent);
+            image->setPixel(x, y, imgColor.rgba());
             x++;
         }
         y++;
     }
-    addLines(&image, secondsAnalyzed, secondsPerLine);
-    addText(&image, secondsAnalyzed, secondsPerLine);
-    saveImage(&image, secondsAnalyzed);
+
+    if (addInfo || createGif) {
+        if (!createGif) {
+            *image = image->scaled(512, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation); // To better fit text #FIXME
+            double secondsPerLine = secondsAnalyzed / 512.0;
+            addLines(image, secondsAnalyzed, secondsPerLine);
+            addText(image, secondsAnalyzed, secondsPerLine);
+        }
+        if (!createGif) saveImage(image, secondsAnalyzed);
+        else createAnimation(*image);
+    }
+    else if (!addInfo) {
+        emit rawPlotReady(*image); // For AI classification (rgb -> gray all ch)
+        QImage imgscaled = image->scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        //saveImage(&imgscaled, secondsAnalyzed);
+    }
+    delete image;
 }
 
 void IqPlot::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult,
@@ -258,17 +414,17 @@ void IqPlot::addLines(QImage *image, const double secondsAnalyzed, const double 
     QPainter painter(image);
     pen.setWidth(1);
     pen.setStyle(Qt::DotLine);
-    pen.setColor(Qt::white);
+    pen.setColor(QColor(255, 255, 255, 90));
     painter.setPen(pen);
     int height = image->size().height();
     int width = image->size().width();
     int xMinus = 25;
 
     painter.drawLine(width / 2, 5, width / 2, height);
-    painter.drawLine(xMinus, 5, xMinus, height);
-    painter.drawLine(width - xMinus, 5, width - xMinus, height);
+    //painter.drawLine(xMinus, 5, xMinus, height);
+    //painter.drawLine(width - xMinus, 5, width - xMinus, height);
 
-    int lineDistance = (secondsAnalyzed / 10) / secondsPerLine;
+    int lineDistance = (secondsAnalyzed / 5) / secondsPerLine;
 
     for (int y = 0; y < height; y++) {
         if (y % lineDistance == 0 && y > 0)
@@ -283,11 +439,11 @@ void IqPlot::addText(QImage *image, const double secondsAnalyzed, const double s
     QPainter painter(image);
     pen.setWidth(10);
     pen.setColor(Qt::white);
-    int fontSize = 14, xMinus = 60, yMinus = 25;
+    int fontSize = 7, yMinus = 15;
 
     painter.setFont(QFont("Arial", fontSize));
     painter.setPen(pen);
-    QString strFr = QString::number(ffmFrequency, 'f', 6);
+    QString strFr = QString::number(ffmFrequency, 'f', 0);
     strFr.remove(QRegularExpression("0+$"));
     strFr.remove(QRegularExpression("[\\.,]$")); // Don't show more decimals than needed
     QString strUpper = QString::number(samplerate / 1.28 / 2e6, 'f', 3);
@@ -297,16 +453,16 @@ void IqPlot::addText(QImage *image, const double secondsAnalyzed, const double s
     strLower.remove(QRegularExpression("0+$"));
     strLower.remove(QRegularExpression("[\\.,]$"));
 
-    painter.drawText((image->size().width() / 2) - xMinus + 15,
+    painter.drawText((image->size().width() / 2) - 30,
                      yMinus,
                      strFr + " MHz");
-    painter.drawText(0, yMinus, strLower + " MHz");
-    painter.drawText((image->size().width()) - (xMinus + 40),
+    painter.drawText(2, yMinus, strLower + " MHz");
+    painter.drawText(image->size().width() - 40,
                      yMinus,
                      "+ " + strUpper + " MHz");
 
-    int lineDistance = (secondsAnalyzed / 10) / secondsPerLine;
-    int microsecCtr = 1e6 * secondsAnalyzed / 10;
+    int lineDistance = (secondsAnalyzed / 5) / secondsPerLine;
+    int microsecCtr = 1e6 * secondsAnalyzed / 5;
     for (int y = 0; y < image->size().height(); y++) {
         if (y % lineDistance == 0 && y > 0) {
             painter.drawText(0, y, QString::number(microsecCtr) + " µs");
@@ -418,10 +574,10 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
     parseFilename(fname);
 
     bool int16;
-    if (fname.contains("8bit", Qt::CaseInsensitive))
-        int16 = false;
-    else
+    if (fname.contains("16bit", Qt::CaseInsensitive))
         int16 = true;
+    else
+        int16 = false;
 
     QFile file(fname);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -518,7 +674,7 @@ void IqPlot::updSettings()
 
 }
 
-void IqPlot::validateHeader(qint64 freq, qint64 bw, qint64 rate)
+void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate)
 {
     if (!listFreqs.isEmpty()
         && freq == (quint64)(listFreqs.first() * 1e6)
@@ -556,5 +712,73 @@ void IqPlot::receiverControl()
         if (!flagRequestedEndVifConnection) emit endVifConnection();
         flagRequestedEndVifConnection = true;
         emit busyRecording(false);
+    }
+}
+
+void IqPlot::readFolder(const QString &folder)
+{
+    QDir selFolder(folder);
+    QStringList filelist = selFolder.entryList(QStringList() << "*.iq", QDir::Files);
+    qDebug() << "I/Q ReadFolder: Found these files:" << filelist;
+
+    foreach (QString filename, filelist) {
+        readAndAnalyzeFile(folder + "/" + filename);
+        QThread::sleep(15);
+    }
+}
+
+void IqPlot::createAnimation(const QImage &image, bool lastImage)
+{
+    if (!lastImage && !image.isNull()) {
+        imageVector.append(image.scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    }
+
+    if (lastImage && imageVector.size() > 0) {
+
+        QString filename;
+        filename = config->incidentFolder() + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
+                   + AsciiTranslator::toAscii(config->getStationName()) + "_"
+                   + QString::number(ffmFrequency, 'f', 3) + "MHz_"
+                   + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_bw"
+                   + QString::number(config->getIqFftPlotBw(), 'f', 0) + "kHz_"
+                   + (config->getIqSaveAs16bit() ? "16bit" : "8bit");
+
+        GifWriter gifWriter;
+        int delay = 20; // ms
+
+        if (!GifBegin(&gifWriter, qPrintable(filename + ".gif"), imageVector[0].width(), imageVector[0].height(), delay)) {
+            qWarning() << "Cannot write to gif file";
+            return;
+        }
+        int iter = 0;
+        for (auto &&img : imageVector) {
+            QImage converted = img.convertToFormat(QImage::Format_RGBA8888);
+            if (!converted.isNull())
+                GifWriteFrame(&gifWriter, converted.bits(), converted.width(), converted.height(), delay);
+            if (++iter > 50) break; // To keep gifs small sized
+        }
+        GifEnd(&gifWriter);
+        emit iqPlotReady(filename + ".gif");
+
+        int frameWidth = 256;
+        int frameHeight = 256;
+        int fps = 25;
+        cv::VideoWriter videoWriter;
+        int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+        videoWriter.open(qPrintable(filename + ".mp4"), fourcc, fps, cv::Size(frameWidth, frameHeight));
+        if (!videoWriter.isOpened()) {
+            qDebug() << "Could not open video file for write:" << filename + ".mp4";
+            return;
+        }
+        for (auto &&image : imageVector) {
+            cv::Mat frame(image.height(), image.width(), CV_8UC4,
+                             const_cast<uchar*>(image.constBits()),
+                             image.bytesPerLine());
+            videoWriter.write(frame);
+        }
+        videoWriter.release();
+        qDebug() << "Finished generating video, saved as" << filename + "mp4";
+
+        imageVector.clear();
     }
 }

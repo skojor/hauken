@@ -1,9 +1,10 @@
 #ifndef AI_H
 #define AI_H
 
-#include "opencv2/dnn.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include <QString>
 #include <QDebug>
@@ -16,7 +17,7 @@
 #include <QDateTime>
 #include <QVector>
 #include <QCoreApplication>
-#include <iostream>
+#include <QBuffer>
 #include "config.h"
 #include "typedefs.h"
 
@@ -35,6 +36,7 @@ signals:
 public:
     AI(QSharedPointer<Config> c);
     void receiveBuffer(QVector<QVector<float >> buffer);
+    void receiveImage(const QImage &image);
     void receiveTraceBuffer(const QList<QVector<qint16> > &data);
     void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(45 * 1e3); recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); recordingEnded = false; }
     void recordingHasEnded() { recordingEnded = true; }
@@ -60,6 +62,7 @@ private slots:
     void findMinAvgMax(const QVector<QVector<qint16 >> &buffer, qint16 *min, qint16 *avg, qint16 *max);
     void findTrigRange();
     std::vector<float> sigmoid(const std::vector<float>& m1);
+    std::vector<float> softmax(const std::vector<float>& logits);
 };
 
 #endif // AI_H

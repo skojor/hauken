@@ -74,7 +74,7 @@ void Waterfall::updTimerCallback()
 void Waterfall::restartPlot()
 {
     mutex.lock();
-    *pixmap = QPixmap(pixmap->size());
+    if (pixmap) *pixmap = QPixmap(pixmap->size());
     mutex.unlock();
 }
 
