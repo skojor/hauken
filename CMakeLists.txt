@@ -150,7 +150,6 @@ target_include_directories(Hauken PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/quazip
     ${CMAKE_CURRENT_SOURCE_DIR}/include/msal
     ${CMAKE_CURRENT_SOURCE_DIR}/include/lame
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/onnxruntime
 )
 elseif(UNIX)
   target_include_directories(Hauken PRIVATE
@@ -172,7 +171,6 @@ target_link_libraries(Hauken PRIVATE
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
     optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/libmp3lame.lib
-    optimized ${CMAKE_CURRENT_SOURCE_DIR}/libs/onnxruntime.lib
 )
 
 target_link_libraries(Hauken PRIVATE
@@ -186,7 +184,6 @@ target_link_libraries(Hauken PRIVATE
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/quazip1-qt6d.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/msalruntime.lib
     debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/libmp3lame.lib
-    debug ${CMAKE_CURRENT_SOURCE_DIR}/libs/onnxruntime.lib
 )
 elseif(UNIX)
   target_link_libraries(Hauken PRIVATE
