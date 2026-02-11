@@ -2,10 +2,14 @@
 #include <iostream>
 #include <QImage>
 #include <QThread>
+#include <QtConcurrent/QtConcurrentRun>
+#include <opencv2/core/utils/logger.hpp>
 
 AI::AI(QSharedPointer<Config> c)
 {
     config = c;
+
+    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_ERROR);
 
     QFile checkFile(config->getWorkFolder() + "/model_new.onnx");
     if (checkFile.exists()) {
@@ -37,7 +41,6 @@ AI::AI(QSharedPointer<Config> c)
                 ts >> className;
                 if (!className.isEmpty()) classes.append(className);
             }
-
             qDebug() << "Model using the following classes:" << classes;
         }
         else {
@@ -246,13 +249,19 @@ std::vector<float> AI::sigmoid(const std::vector<float>& m1) {
 
 void AI::receiveImage(const QImage &image)
 {
-    Q_ASSERT(image.allGray());
+    QImage *img = new QImage(image);
+    (void)QtConcurrent::run(&AI::receiveImageWorker, this, img);
+}
+
+void AI::receiveImageWorker(QImage *image)
+{
+    Q_ASSERT(image->allGray());
 
     if (!netLoaded) {
         qDebug() << "AI image classification called without any valid model data, aborting";
         return;
     }
-    QImage resized = image.scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    QImage resized = image->scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     cv::Mat bgra(resized.height(), resized.width(), CV_8UC4,
                  const_cast<uchar*>(resized.constBits()),
                  resized.bytesPerLine());

@@ -37,6 +37,7 @@ public:
     AI(QSharedPointer<Config> c);
     void receiveBuffer(QVector<QVector<float >> buffer);
     void receiveImage(const QImage &image);
+    void receiveImageWorker(QImage *image);
     void receiveTraceBuffer(const QList<QVector<qint16> > &data);
     void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(45 * 1e3); recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); recordingEnded = false; }
     void recordingHasEnded() { recordingEnded = true; }

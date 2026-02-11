@@ -92,7 +92,7 @@ void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double s
     bool repeat = false;
     fftw_complex *in = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fftSize);
     fftw_complex *out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fftSize);
-    fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
 
     if (!createGif) // Start at beginning if this should be a gif
         samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
@@ -109,56 +109,60 @@ void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double s
     int ySize = samplerate * secondsToAnalyze + samplesIterator;
 
     double secPerSample = 1.0 / samplerate;
-    int samplesIteratorInc = 12; //;(double) (samplerate * secondsToAnalyze) / (double) imageYSize;
-    /*qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
+    int samplesIteratorInc = 12;
+
+    qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
              << samplesIterator << "and counts up to" << ySize << ". Total samples analyzed"
-             << ySize - samplesIterator;*/
+             << ySize - samplesIterator << bandwidth << samplerate << centerFrequency;
+
     int removeSamples = 7; // TODO, variable BW/Msps
-    QVector<double> result;
-    QVector<QVector<double>> iqFftResult;
+    QVector<double> result(fftSize - removeSamples * 2);
+    QVector<QVector<double>> iqFftResult( (secondsToAnalyze * samplerate - (fftSize - samplesIteratorInc)) / samplesIteratorInc );
+    bool useDB = config->getIqUseDB();
+    if (!addInfo) useDB = true;
+    double normalize = 1.0 / fftSize;
 
     do {
-        if (iq.size() > ySize) {
-            bool useDB = config->getIqUseDB();
-            if (!addInfo) useDB = true;
-
-            while (samplesIterator + fftSize < ySize ) {
+        if ( iq.size() > ySize ) {
+            int fftIterator = 0, resIterator;
+            while ( samplesIterator <= ySize - fftSize) { // KBO note - 2129 lines to have exact 500 us plot
                 for (int i = 0; i < fftSize; i++) {
                     in[i][0] = (iq[samplesIterator + i].real * window[i]);
                     in[i][1] = (iq[samplesIterator + i].imag * window[i]);
                 }
                 fftw_execute(plan); // FFT is done here
 
+                resIterator = 0;
                 for (int i = (fftSize / 2) + removeSamples; i < fftSize;
                      i++) { // Find magnitude, normalize, reorder and cut edges
-                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
-                                 * (1.0 / fftSize);
-                    if (val == 0)
-                        val = 1e-9; // log10(0) = -inf
-                    if (useDB)
-                        result.append(10 * log10(val));
-                    else
-                        result.append(val);
+                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * normalize;
+                    if (val == 0) val = 1e-9; // log10(0) = -inf
+                    if (useDB) val = 10 * log10(val);
+                    result[resIterator++] = val;
                 }
+
                 for (int i = 0; i < (fftSize / 2) - removeSamples; i++) {
-                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1])
-                    * (1.0 / fftSize);
+                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * normalize;
                     if (val == 0)
-                        val = 1e-9; // log10(0) = -inf
-                    if (useDB)
-                        result.append(10 * log10(val));
-                    else
-                        result.append(val);
+                        val = 1e-9;
+                    if (useDB) val = 10 * log10(val);
+                    result[resIterator++] = val;
                 }
 
-                iqFftResult.append(result);
-                result.clear();
+                if (fftIterator >= iqFftResult.size() || resIterator > fftSize - removeSamples * 2) {
+                    qDebug() << "Some serious math mistake here";
+                    return;
+                }
 
+                iqFftResult[fftIterator++] =result;
                 samplesIterator += samplesIteratorInc;
             }
-            ySize += samplerate * secondsToAnalyze;
+            qDebug() << "sizes" << iqFftResult.first().size() << iqFftResult.size();
+
+            ySize += samplerate * secondsToAnalyze - fftSize;
+            samplesIterator -= samplesIteratorInc; // Go back x samples on repeated runs
             createIqPlot(iqFftResult, secondsToAnalyze, secPerSample * fftSize, addInfo, createGif);
-            iqFftResult.clear();
+            //iqFftResult.clear();
 
             if (samplesIterator + samplerate * secondsToAnalyze > iq.size()) repeat = false;
         } else {
@@ -171,7 +175,7 @@ void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double s
     fftw_free(in);
     fftw_free(out);
 
-    createAnimation(QImage(), true); // End file creation
+    if (createGif) createAnimation(QImage(), true); // End file creation
 }
 
 void IqPlot::saveIqData(const QVector<complexInt16> &iq16)
@@ -238,9 +242,10 @@ void IqPlot::createIqPlot(const QVector<QVector<double>> &iqFftResult,
     }
     else if (!addInfo) {
         emit rawPlotReady(*image); // For AI classification (rgb -> gray all ch)
-        QImage imgscaled = image->scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        //QImage imgscaled = image->scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         //saveImage(&imgscaled, secondsAnalyzed);
     }
+
     delete image;
 }
 
