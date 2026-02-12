@@ -176,7 +176,7 @@ void MainWindow::createActions()
                                  "Disconnect the device before trying to read an 1809 file");
         }
     });
-    openFolderAct = new QAction(tr("Open f&older (DEBUG)"), this);
+    /*openFolderAct = new QAction(tr("Open f&older (DEBUG)"), this);
     openFolderAct->setStatusTip(
         tr("Open a folder with 1809 data, for data conversion (INTERNAL, DON'T USE!"));
     connect(openFolderAct, &QAction::triggered, this, [this] {
@@ -184,7 +184,7 @@ void MainWindow::createActions()
                                                                    tr("Open folder"),
                                                                    config->getLogFolder(),
                                                                    QFileDialog::ShowDirsOnly));
-    });
+    });*/
 
     openIqAct = new QAction(tr("Open &IQ data file..."), this);
     openIqAct->setStatusTip(tr("Read and analyze a raw IQ data file from disk"));
@@ -197,6 +197,17 @@ void MainWindow::createActions()
                                                              config->getLogFolder(),
                                                              "IQ data (*.iq)"));
     });
+
+    openFolderIqAct = new QAction(tr("Open I/&Q data in folder (DEBUG)"), this);
+    openFolderIqAct->setStatusTip(
+        tr("Open a folder with I/Q data, for batch I/Q plot analysis/conversion. Don't use unless you know what this will do!"));
+    connect(openFolderIqAct, &QAction::triggered, this, [this] {
+        iqPlot->readFolder(QFileDialog::getExistingDirectory(this,
+                                                                   tr("Open folder"),
+                                                                   config->getLogFolder(),
+                                                                   QFileDialog::ShowDirsOnly));
+    });
+
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -261,7 +272,8 @@ void MainWindow::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(open1809Act);
     fileMenu->addAction(openIqAct);
-    fileMenu->addAction(openFolderAct);
+    //fileMenu->addAction(openFolderAct);
+    fileMenu->addAction(openFolderIqAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 

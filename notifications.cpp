@@ -496,7 +496,8 @@ void Notifications::generateGraphEmail()
                 //QString filename = iqPlotFilename.split('/').last();
                 att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
                 att2.insert("name", "iqplot" + QString::number(iter));
-                att2.insert("contentType", "image/jpg");
+                if (iqPlotFilename.contains("png")) att2.insert("contentType", "image/png");
+                else if (iqPlotFilename.contains("gif")) att2.insert("contentType", "image/gif");
                 att2.insert("contentId", "iqplot" + QString::number(iter));
                 att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
                 att2.insert("isInline", "true");

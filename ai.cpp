@@ -1,42 +1,53 @@
 #include "ai.h"
+#include <iostream>
+#include <QImage>
+#include <QThread>
+#include <QtConcurrent/QtConcurrentRun>
+#include <opencv2/core/utils/logger.hpp>
 
 AI::AI(QSharedPointer<Config> c)
 {
     config = c;
 
-    QFile checkFile(config->getWorkFolder() + "/model.onnx.disabled");
+    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_ERROR);
+
+    QFile checkFile(config->getWorkFolder() + "/model_new.onnx");
     if (checkFile.exists()) {
         qDebug() << "Using model found at" << config->getWorkFolder();
-        net = cv::dnn::readNet(QString(config->getWorkFolder() +  "/model.onnx").toStdString());
+        net = cv::dnn::readNetFromONNX(checkFile.fileName().toStdString());
         netLoaded = true;
     }
     if (!netLoaded) {
-    checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx");
-    if (checkFile.exists()) {
-        qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
-        net = cv::dnn::readNet(QString(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx").toStdString());
-        netLoaded = true;
-    }
+        checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model_new.onnx");
+        if (checkFile.exists()) {
+            qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
+            net = cv::dnn::readNetFromONNX(checkFile.fileName().toStdString());
+            netLoaded = true;
+        }
     }
     else if (!netLoaded) {
         qDebug() << "Classification model not found";
     }
+    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
-    //classes << "cw" << "jammer" << "other" << "wideband";
-    classes << "jammer" << "other";
-
-    reqTraceBufferTimer->setSingleShot(true);
-    /*connect(reqTraceBufferTimer, &QTimer::timeout, this, [this] {
-        int wait = 120;
-        //if (wait > 120) wait = 120;
-        emit reqTraceBuffer(wait);
-    });*/
-    /*
-    cv::Mat frame;
-    frame = cv::imread("c:/hauken/other1.png", cv::ImreadModes::IMREAD_COLOR);
-    cv::Mat3b conv;
-    frame.convertTo(conv, CV_8UC3);
-    classifyData(conv);*/
+    if (netLoaded) {
+        QFile classFile(config->getWorkFolder() + "/classes.txt");
+        if (classFile.exists()) {
+            classFile.open(QIODevice::ReadOnly);
+            QTextStream ts(&classFile);
+            while (!ts.atEnd()) {
+                QString className;
+                ts >> className;
+                if (!className.isEmpty()) classes.append(className);
+            }
+            qDebug() << "Model using the following classes:" << classes;
+        }
+        else {
+            qDebug() << "Couldn't load classes file for AI classification model" << classFile.fileName();
+            netLoaded = false;
+        }
+    }
 }
 
 
@@ -234,4 +245,70 @@ std::vector<float> AI::sigmoid(const std::vector<float>& m1) {
         output[i] = 1 / (1 + exp(-m1[i]));
     }
     return output;
+}
+
+void AI::receiveImage(const QImage &image)
+{
+    QImage *img = new QImage(image);
+    (void)QtConcurrent::run(&AI::receiveImageWorker, this, img);
+}
+
+void AI::receiveImageWorker(QImage *image)
+{
+    Q_ASSERT(image->allGray());
+
+    if (!netLoaded) {
+        qDebug() << "AI image classification called without any valid model data, aborting";
+        return;
+    }
+    QImage resized = image->scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    cv::Mat bgra(resized.height(), resized.width(), CV_8UC4,
+                 const_cast<uchar*>(resized.constBits()),
+                 resized.bytesPerLine());
+    cv::cvtColor(bgra, bgra, cv::COLOR_BGRA2BGR); // Convert from 4 to 3 channel img
+    bgra.convertTo(bgra, CV_32F, 1.0 / 255.0); // Convert to float vals, 0 - 1 range
+
+    const cv::Scalar mean(0.485, 0.456, 0.406);
+    const cv::Scalar std (0.229, 0.224, 0.225);
+    cv::Mat blob = cv::dnn::blobFromImage(
+        bgra,
+        1.0,                 // no scaling, handled before blobifying
+        cv::Size(224, 224),
+        mean,                // mean
+        false,               // swapRB=false
+        false,               // crop
+        CV_32F               // Store as 32-bit float
+        );
+
+    // Normalize with std matrix here (blobifier cannot do this for some reason)
+    blob /= std;
+
+    CV_Assert(blob.dims == 4);
+    net.setInput(blob);
+    cv::Mat output = net.forward();
+
+    std::vector<float> logits;
+    output.reshape(1, 1).copyTo(logits);
+    auto probs = softmax(logits);
+
+    int classId = int(std::distance(probs.begin(), std::max_element(probs.begin(), probs.end())));
+    float confid = probs[classId] * 100.0f;
+    emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)confid) + " %");
+    emit aiResult(classes[classId], confid);
+}
+
+std::vector<float> AI::softmax(const std::vector<float>& logits)
+{
+    std::vector<float> probs(logits.size());
+
+    float maxLogit = *std::max_element(logits.begin(), logits.end());
+
+    float sum = 0.0f;
+    for (float v : logits)
+        sum += std::exp(v - maxLogit);
+
+    for (size_t i = 0; i < logits.size(); ++i)
+        probs[i] = std::exp(logits[i] - maxLogit) / sum;
+
+    return probs;
 }

@@ -1026,4 +1026,5 @@ void MainWindow::setSignals()
         customPlotController->doReplot();
         config->settingsUpdated();
     });
+    connect(iqPlot, &IqPlot::rawPlotReady, aiPtr, &AI::receiveImage);
 }

@@ -74,7 +74,7 @@ private:
     QTimer *updIntervalTimer;
     QVector<double> traceCopy;
     QSharedPointer<Config> config;
-    QPixmap *pixmap;
+    QPixmap *pixmap = nullptr;
 
     // config cache
     int scaleMin, scaleMax;
