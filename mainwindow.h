@@ -369,7 +369,7 @@ private:
     QPushButton *btnBw = new QPushButton("BW");
     QPushButton *btnDetector = new QPushButton("Detector");
     QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
-
+    bool flagBusyRecordingIQ = false;
 
 signals:
     void stopPlot(bool);

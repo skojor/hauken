@@ -31,6 +31,7 @@ void DatastreamIfPan::readData(QDataStream &ds)
             val = qToBigEndian(val);*/
 
             emit traceReady(tmpBuffer);
+            //qDebug() << "ffm trace" << m_dbgTraces++;
 
             m_traceCtr++;
         }

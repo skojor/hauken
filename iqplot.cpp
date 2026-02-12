@@ -32,7 +32,7 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 void IqPlot::getIqData(const QVector<complexInt16> &iq16)
 {
     dataFromFile = false;
-   if (!samplesNeeded)
+    if (!samplesNeeded)
         samplesNeeded = (int)(config->getIqLogTime() * samplerate);
 
     if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
@@ -66,7 +66,7 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
     filename = dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
                + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
                + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_bw"
-               + QString::number(config->getIqFftPlotBw(), 'f', 0) + "kHz_"
+               + QString::number(bandwidth * 1e-3, 'f', 0) + "kHz_"
                + (config->getIqSaveAs16bit() ? "16bit" : "8bit");
 
     if (!dataFromFile && config->getIqSaveToFile() && iq16.size()) {
@@ -111,11 +111,13 @@ void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double s
     double secPerSample = 1.0 / samplerate;
     int samplesIteratorInc = 12;
 
-    qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
+    /*qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
              << samplesIterator << "and counts up to" << ySize << ". Total samples analyzed"
-             << ySize - samplesIterator << bandwidth << samplerate << centerFrequency;
+             << ySize - samplesIterator << bandwidth << samplerate << headerCenterFreq;*/
 
-    int removeSamples = 7; // TODO, variable BW/Msps
+    if (!bandwidth) bandwidth = samplerate / 1.28; // Failsafe if header is not giving us bw data
+    int removeSamples =  0.5 * ( samplerate - bandwidth ) / ( samplerate / fftSize );
+
     QVector<double> result(fftSize - removeSamples * 2);
     QVector<QVector<double>> iqFftResult( (secondsToAnalyze * samplerate - (fftSize - samplesIteratorInc)) / samplesIteratorInc );
     bool useDB = config->getIqUseDB();
@@ -149,15 +151,13 @@ void IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double s
                     result[resIterator++] = val;
                 }
 
-                if (fftIterator >= iqFftResult.size() || resIterator > fftSize - removeSamples * 2) {
-                    qDebug() << "Some serious math mistake here";
-                    return;
-                }
+                if (fftIterator >= iqFftResult.size()) // FIXME - Calculated vector size is not always correct
+                    iqFftResult.append(result);
+                else iqFftResult[fftIterator++] =result;
 
-                iqFftResult[fftIterator++] =result;
                 samplesIterator += samplesIteratorInc;
             }
-            qDebug() << "sizes" << iqFftResult.first().size() << iqFftResult.size();
+            //qDebug() << "sizes" << iqFftResult.first().size() << iqFftResult.size();
 
             ySize += samplerate * secondsToAnalyze - fftSize;
             samplesIterator -= samplesIteratorInc; // Go back x samples on repeated runs
@@ -321,10 +321,10 @@ void IqPlot::addText(QImage *image, const double secondsAnalyzed, const double s
     QString strFr = QString::number(ffmFrequency, 'f', 0);
     strFr.remove(QRegularExpression("0+$"));
     strFr.remove(QRegularExpression("[\\.,]$")); // Don't show more decimals than needed
-    QString strUpper = QString::number(samplerate / 1.28 / 2e6, 'f', 3);
+    QString strUpper = QString::number(bandwidth / 2e6, 'f', 3);
     strUpper.remove(QRegularExpression("0+$"));
     strUpper.remove(QRegularExpression("[\\.,]$"));
-    QString strLower = QString::number(-samplerate / 1.28 / 2e6, 'f', 3);
+    QString strLower = QString::number(-1 * (bandwidth / 2e6), 'f', 3);
     strLower.remove(QRegularExpression("0+$"));
     strLower.remove(QRegularExpression("[\\.,]$"));
 
@@ -557,6 +557,8 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate)
     {
         flagHeaderValidated = true;
         samplerate = rate;
+        bandwidth = bw;
+        headerCenterFreq = freq;
         //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << samplerate;
     }
     else {
@@ -647,12 +649,12 @@ void IqPlot::createAnimation(const QImage &image, bool lastImage)
         }
         for (auto &&image : imageVector) {
             cv::Mat frame(image.height(), image.width(), CV_8UC4,
-                             const_cast<uchar*>(image.constBits()),
-                             image.bytesPerLine());
+                          const_cast<uchar*>(image.constBits()),
+                          image.bytesPerLine());
             videoWriter.write(frame);
         }
         videoWriter.release();
-        qDebug() << "Finished generating video, saved as" << filename + ".mp4";
+        //qDebug() << "Finished generating video, saved as" << filename + ".mp4";
 
         imageVector.clear();
     }

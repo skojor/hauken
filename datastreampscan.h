@@ -34,7 +34,8 @@ private:
     int m_traceCtr = 0;
     double m_pscStartFreq = 0, m_pscStopFreq = 0;
     double m_pscRes = 0;
-    double traceTime = 0;
+    double m_traceTime = 0;
+    int m_dbgTraces = 0;
 };
 
 #endif // DATASTREAMPSCAN_H

@@ -810,7 +810,6 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setTrigFrequency);
     connect(iqPlot, &IqPlot::reqVifConnection, measurementDevice, &MeasurementDevice::setupVifConnection);
     connect(iqPlot, &IqPlot::setFfmCenterFrequency, measurementDevice, &MeasurementDevice::setVifFreqAndMode);
-    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
     // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
     connect(datastreamIf, &DatastreamIf::headerChanged, iqPlot, &IqPlot::validateHeader);
     //connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
@@ -892,12 +891,6 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, this, [this]() {
         audioRecorder.setFileLocation(config->getLogFolder());
     });
-    connect(iqPlot, &IqPlot::busyRecording, this, [this](bool b) {
-        if (b)
-            measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
-        else if (config->getAudioActivate())
-            audioOptions->report(); // Restore mode when done (if it should be active)
-    });
     connect(customPlotController, &CustomPlotController::centerFrequency, this, [this] (double d) {
         instrFfmCenterFreq->setValue(d);
         if (measurementDevice->currentMode() != Instrument::Mode::FFM) {
@@ -964,39 +957,46 @@ void MainWindow::setSignals()
     connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
 
     connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
-        traceAnalyzer->freqChanged(a, b);
-        customPlotController->freqChanged(a, b);
-        aiPtr->freqChanged(a, b);
-        datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
-        datastreamIf->invalidateHeader();
-        traceBuffer->emptyBuffer();
+        if (!flagBusyRecordingIQ) {
+            traceAnalyzer->freqChanged(a, b);
+            customPlotController->freqChanged(a, b);
+            aiPtr->freqChanged(a, b);
+            datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
+            datastreamIf->invalidateHeader();
+            traceBuffer->emptyBuffer();
+        }
     });
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
-        traceAnalyzer->freqChanged(a, b);
-        customPlotController->freqChanged(a, b);
-        aiPtr->freqChanged(a, b);
-        datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
-        datastreamIf->invalidateHeader();
-        traceBuffer->emptyBuffer();
+        if (!flagBusyRecordingIQ) {
+            traceAnalyzer->freqChanged(a, b);
+            customPlotController->freqChanged(a, b);
+            aiPtr->freqChanged(a, b);
+            datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
+            datastreamIf->invalidateHeader();
+            traceBuffer->emptyBuffer();
+        }
     });
     connect(datastreamIfPan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
-        traceAnalyzer->resChanged(a);
-        customPlotController->resChanged(a);
-        aiPtr->resChanged(a);
-        traceBuffer->emptyBuffer();
+        if (!flagBusyRecordingIQ) {
+            traceAnalyzer->resChanged(a);
+            customPlotController->resChanged(a);
+            aiPtr->resChanged(a);
+            traceBuffer->emptyBuffer();
+        }
     });
     connect(datastreamPScan, &StreamParserBase::resolutionChanged, this, [this] (double a) {
-        traceAnalyzer->resChanged(a);
-        customPlotController->resChanged(a);
-        aiPtr->resChanged(a);
-        traceBuffer->emptyBuffer();
+        if (!flagBusyRecordingIQ) {
+            traceAnalyzer->resChanged(a);
+            customPlotController->resChanged(a);
+            aiPtr->resChanged(a);
+            traceBuffer->emptyBuffer();
+        }
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
-    connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
     connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
     connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
@@ -1027,4 +1027,45 @@ void MainWindow::setSignals()
         config->settingsUpdated();
     });
     connect(iqPlot, &IqPlot::rawPlotReady, aiPtr, &AI::receiveImage);
+
+    // Rebuild I/Q pause/resume after data transfer
+    // Connect/disconnect relevant signals while transferring
+    connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool busy) {
+        if (busy) {
+            flagBusyRecordingIQ = true;
+            disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
+            disconnect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            disconnect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
+            disconnect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioRecorder, &AudioRecorder::receiveAudioData);
+            disconnect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioPlayer, &AudioPlayer::playChunk);
+            disconnect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+            disconnect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+            disconnect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+            disconnect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+        }
+        else {
+            flagBusyRecordingIQ = false;
+            connect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            connect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
+            connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
+            connect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
+            connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioRecorder, &AudioRecorder::receiveAudioData);
+            connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioPlayer, &AudioPlayer::playChunk);
+            connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+            connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+            connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+            connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+        }
+    });
+    connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
+
+    /*connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
+    connect(iqPlot, &IqPlot::busyRecording, this, [this](bool b) {
+        if (b)
+            measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
+        else if (config->getAudioActivate())
+            audioOptions->report(); // Restore mode when done (if it should be active)
+    });*/
+
 }

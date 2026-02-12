@@ -31,7 +31,7 @@ private:
     int m_traceCtr = 0;
     double m_ifPanCenterFreq = 0, m_ifPanSpan = 0;
     double m_ifPanResolution = 0;
-
+    int m_dbgTraces = 0;
 };
 
 #endif // DATASTREAMIFPAN_H
