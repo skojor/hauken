@@ -263,7 +263,7 @@ void Notifications::sendMail()
             mailtext.clear();
 
             // MS Graph code in here!
-            if (msGraphConfigured) {
+            if (msGraphConfigured && recipients.size()) {
                 generateGraphEmail();
                 authGraph(); // try to auth and send immediately
             }
