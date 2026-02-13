@@ -31,6 +31,8 @@ void DatastreamIf::readData(QDataStream &ds)
                     val.real = qToBigEndian(val.real);
                 }*/
                 emit ifDataReady(iqSamples);
+                //m_byteCtr += totalBytes;
+                //qDebug() << "IQ byte ctr" << m_byteCtr;
                 /*qDebug() << ds.atEnd() << iqSamples.size() << m_attrHeader.numItems << m_optHeader.sampleCount << iqSamples.first().imag
                          << iqSamples.first().real << iqSamples.last().imag << iqSamples.last().real << m_attrHeader.optHeaderLength;*/
             }

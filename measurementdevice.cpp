@@ -93,7 +93,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -734,7 +734,7 @@ void MeasurementDevice::fftDataHandler(QVector<qint16> &data)
 
 void MeasurementDevice::handleStreamTimeout()
 {
-    //qDebug() << "Stream timeout triggered" << connected;
+    qDebug() << "Stream timeout triggered" << connected;
 
     if (connected) {
         tcpTimeoutTimer->stop();
@@ -1103,7 +1103,7 @@ void MeasurementDevice::deleteIfStream()
     else {
         setFfmCenterFrequency();
         setFfmFrequencySpan();
-        emit skipNextNTraces(20); // Skip few FFM lines to not mix with old data ##FIXME!
+        //emit skipNextNTraces(20); // Skip few FFM lines to not mix with old data ##FIXME!
     }
     if (useUdpStream) {
         muteNotification = true;

@@ -29,6 +29,7 @@ private:
     quint32 m_samplerate = 0;
     quint64 m_sampleCtr = 0;
     int m_seqNr = 0;
+    int m_byteCtr = 0;
 
 };
 

@@ -46,13 +46,14 @@ void DatastreamPScan::readData(QDataStream &ds)
                 if (m_fft.size() > pscanSamplesPerTrace)
                     m_fft.remove(pscanSamplesPerTrace - 1, m_fft.size() - pscanSamplesPerTrace);
 
-                if (m_fft.size() == pscanSamplesPerTrace)
+                if (m_fft.size() == pscanSamplesPerTrace) {
                     emit traceReady(m_fft);
-
+                    //qDebug() << "PScan trace" << m_dbgTraces++ ;
+                }
                 m_fft.clear();
                 m_traceCtr++;
                 if (m_traceElapsedTimer->isValid())
-                    traceTime = 1e3 / m_traceElapsedTimer->restart();
+                    m_traceTime = 1e3 / m_traceElapsedTimer->restart();
                 else
                     m_traceElapsedTimer->start();
             }
@@ -78,6 +79,6 @@ void DatastreamPScan::checkOptHeader()
 void DatastreamPScan::calcTracesPerSecond()
 {
     if (m_traceCtr)
-        emit tracesPerSecond(traceTime);
+        emit tracesPerSecond(m_traceTime);
     m_traceCtr = 0;
 }

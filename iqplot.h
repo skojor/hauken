@@ -83,6 +83,7 @@ private:
     double ffmFrequency = 0;
     double samplerate = 0;
     quint64 bandwidth = 0;
+    quint64 headerCenterFreq = 0;
     double secsPerLine;
     double secsToAnalyze = 500e-6;
     const int fftSize = 64;
