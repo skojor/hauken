@@ -179,8 +179,7 @@ void Notifications::sendMail()
             message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
             if (predictionReceived &&
-                prediction.contains("jammer", Qt::CaseInsensitive) &&
-                probability >= config->getEmailJammerProbabilityFilter() &&
+                config->getEmailClassificationFilter().contains(prediction, Qt::CaseInsensitive) &&
                 config->getEmailFilteredRecipients().size() > 5) {
                 notifyPriorityRecipients = true;
                 for (auto &val : config->getEmailFilteredRecipients().split(";"))

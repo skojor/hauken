@@ -29,7 +29,7 @@ public:
 
 public slots:
     void requestIqData(); // Function call to set up I/Q transfer
-    void getIqData(const QVector<complexInt16> &iq16); // New, gather parts of data before doing sth with them
+    void getIqData(const QVector<complexInt16> iq16); // New, gather parts of data before doing sth with them
     void parseIqData(const QVector<complexInt16> &iq16, const double frequency); // Data from vifstream class
     void validateHeader(quint64 freq, quint64 bw, quint64 rate);
     void setFfmFrequency(double d) { ffmFrequency = d;}
@@ -43,24 +43,26 @@ public slots:
     void setCurrentFfmBandwidth(quint32 f) { oldFfmBandwidth = f;}
     void setTrigFrequency(double f) { trigFrequency = f;} // Set by trace analyzer class
     void getIqCenterFrequency(double f) { centerFrequency = f; }
+    void start(); // Called by thread
 
 private slots:
     void findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult, double &min, double &max, double &avg);
-    void createIqPlot(const QVector<QVector<double> > &, const double secondsAnalyzed, const double secondsPerLine, bool addInfo = true, bool createGif = false);
     void fillWindow();
-    void addLines(QImage *image, const double secondsAnalyzed, const double secondsPerLine);
-    void addText(QImage *image, const double secondsAnalyzed, const double secondsPerLine);
-    void saveImage(const QImage *image, const double secondsAnalyzed);
-    quint64 analyzeIqStart(const QVector<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
+    void saveImage(const QImage &image, const double secondsAnalyzed);
     void saveIqData(const QVector<complexInt16> &iq);
-    void receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze = 500e-6, bool addInfo = true, bool createGif = false);
+    QVector<QImage> receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze = 500e-6, bool findMaximum = true, int nrOfImages = 1, bool createGray = false);
+    quint64 analyzeIqStart(const QVector<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
+    QImage createIqPlot(const QVector<QVector<double> > &, const double secondsAnalyzed, bool createGray = false);
     const QVector<complexInt8> convertComplex16to8bit(const QVector<complexInt16> &);
     const QVector<complexInt16> convertComplex8to16bit(const QVector<complexInt8> &);
     void findIqMaxValue(const QVector<complexInt16> &, qint16 &max);
     void parseFilename(const QString file);
     void receiverControl();
-    void createPlotsDetached(const QVector<complexInt16> &iq);
-    void createAnimation(const QImage &image, bool lastImage = false);
+    void createMovie(QVector<QImage> images);
+    void createGif(QVector<QImage> images);
+    void createPngWithInfo(QVector<QImage> images, const double secondsAnalyzed = 5e-4);
+    void addLines(QImage &image, const double secondsAnalyzed);
+    void addText(QImage &image, const double secondsAnalyzed);
 
 signals:
     void reqVifConnection(); // This signal goes to meas.device, to set up tcp link
@@ -75,6 +77,7 @@ signals:
     void resetTimeoutTimer(); // To hold TCP/UDP conn. up while gathering I/Q
     void reqIqCenterFrequency();
     void rawPlotReady(const QImage &image);
+    void imagesForClassification(QVector<QImage>);
 
 private:
     QSharedPointer<Config> config;
@@ -87,11 +90,10 @@ private:
     double secsPerLine;
     double secsToAnalyze = 500e-6;
     const int fftSize = 64;
-    //int imageYSize = fftSize * 16 * 2;
-    QTimer *lastIqRequestTimer = new QTimer;
+    QTimer *lastIqRequestTimer;
     QString filename;
     bool dataFromFile = false;
-    QDateTime foldernameDateTime = QDateTime::currentDateTime();
+    QString filenameFromFile;
 
     Instrument::Mode instrMode;
     quint64 oldFfmCenterFrequency;
@@ -103,10 +105,9 @@ private:
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;
     int throwFirstSamples = 0;
-    QTimer *timeoutTimer = new QTimer;
+    QTimer *timeoutTimer;
     double centerFrequency = 0;
     bool flagOngoingAlarm = false;
-    QVector<QImage> imageVector;
 };
 
 #endif // IQPLOT_H

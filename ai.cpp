@@ -4,32 +4,38 @@
 #include <QThread>
 #include <QtConcurrent/QtConcurrentRun>
 #include <opencv2/core/utils/logger.hpp>
+#include <QElapsedTimer>
 
 AI::AI(QSharedPointer<Config> c)
 {
     config = c;
+}
 
+void AI::start()
+{
+    reqTraceBufferTimer = new QTimer;
+    testTimer = new QTimer;
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_ERROR);
 
     QFile checkFile(config->getWorkFolder() + "/model_new.onnx");
     if (checkFile.exists()) {
         qDebug() << "Using model found at" << config->getWorkFolder();
-        net = cv::dnn::readNetFromONNX(checkFile.fileName().toStdString());
+        net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
         netLoaded = true;
     }
     if (!netLoaded) {
         checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model_new.onnx");
         if (checkFile.exists()) {
             qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
-            net = cv::dnn::readNetFromONNX(checkFile.fileName().toStdString());
+            net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
             netLoaded = true;
         }
     }
     else if (!netLoaded) {
         qDebug() << "Classification model not found";
     }
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+    net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     if (netLoaded) {
         QFile classFile(config->getWorkFolder() + "/classes.txt");
@@ -49,7 +55,6 @@ AI::AI(QSharedPointer<Config> c)
         }
     }
 }
-
 
 void AI::receiveBuffer(QVector<QVector<float >> buffer)
 {
@@ -96,9 +101,9 @@ void AI::classifyData(cv::Mat frame)
     if (std.val[0] != 0.0 && std.val[1] != 0.0 && std.val[2] != 0.0) {
         cv::divide(blob, std, blob);
     }
-    net.setInput(blob);
+    net->setInput(blob);
 
-    cv::Mat prob = net.forward();
+    cv::Mat prob = net->forward();
     std::cerr << prob << std::endl;
     // Apply sigmoid
     //cv::Mat probReshaped = prob.reshape(1, (int)prob.total() * prob.channels());
@@ -247,31 +252,29 @@ std::vector<float> AI::sigmoid(const std::vector<float>& m1) {
     return output;
 }
 
-void AI::receiveImage(const QImage &image)
+void AI::receiveImages(QVector<QImage> images)
 {
-    QImage *img = new QImage(image);
-    (void)QtConcurrent::run(&AI::receiveImageWorker, this, img);
-}
-
-void AI::receiveImageWorker(QImage *image)
-{
-    Q_ASSERT(image->allGray());
-
     if (!netLoaded) {
         qDebug() << "AI image classification called without any valid model data, aborting";
         return;
     }
-    QImage resized = image->scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    cv::Mat bgra(resized.height(), resized.width(), CV_8UC4,
-                 const_cast<uchar*>(resized.constBits()),
-                 resized.bytesPerLine());
-    cv::cvtColor(bgra, bgra, cv::COLOR_BGRA2BGR); // Convert from 4 to 3 channel img
-    bgra.convertTo(bgra, CV_32F, 1.0 / 255.0); // Convert to float vals, 0 - 1 range
+    std::vector<cv::Mat> imgVector;
+
+    for (auto && image : images) {
+        QImage resized = image.scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        cv::Mat bgra(resized.height(), resized.width(), CV_8UC4,
+                     const_cast<uchar*>(resized.constBits()),
+                     resized.bytesPerLine());
+        cv::cvtColor(bgra, bgra, cv::COLOR_BGRA2BGR); // Convert from 4 to 3 channel img
+        bgra.convertTo(bgra, CV_32F, 1.0 / 255.0); // Convert to float vals, 0 - 1 range
+        imgVector.push_back(bgra);
+    }
 
     const cv::Scalar mean(0.485, 0.456, 0.406);
     const cv::Scalar std (0.229, 0.224, 0.225);
-    cv::Mat blob = cv::dnn::blobFromImage(
-        bgra,
+
+    cv::Mat blob = cv::dnn::blobFromImages(
+        imgVector,
         1.0,                 // no scaling, handled before blobifying
         cv::Size(224, 224),
         mean,                // mean
@@ -280,21 +283,40 @@ void AI::receiveImageWorker(QImage *image)
         CV_32F               // Store as 32-bit float
         );
 
-    // Normalize with std matrix here (blobifier cannot do this for some reason)
     blob /= std;
+    net->setInput(blob);
+    cv::Mat outputs = net->forward();
 
-    CV_Assert(blob.dims == 4);
-    net.setInput(blob);
-    cv::Mat output = net.forward();
+    std::vector<float> result(outputs.cols, 0);
+    //QVector<int> resultPerImage(imgVector.size(), 0);
+    int imageIterator = 0;
 
-    std::vector<float> logits;
-    output.reshape(1, 1).copyTo(logits);
-    auto probs = softmax(logits);
+    for (int row = 0; row < outputs.rows; row++) {
+        cv::Mat output = outputs.row(row);
+        std::vector<float> logits;
+        output.reshape(1, 1).copyTo(logits);
+        auto probs = softmax(logits);
+        for (int i=0; i<probs.size(); i++)
+            result[i] += probs[i];
+        if (row == 0) { // Weighing first image higher prob than the following
+            for (int i=0; i<probs.size(); i++)
+                result[i] += 2 * probs[i];
+        }
+        /*int classId = int(std::distance(probs.begin(), std::max_element(probs.begin(), probs.end())));
+        resultPerImage[imageIterator++] = classId;*/
+    }
+    for (int i=0; i < result.size(); i++)
+        result[i] /= outputs.rows + 2;
 
-    int classId = int(std::distance(probs.begin(), std::max_element(probs.begin(), probs.end())));
-    float confid = probs[classId] * 100.0f;
+    /*for (auto && res : resultPerImage)
+        qDebug() << "per image classif." << res;*/
+
+    int classId = int(std::distance(result.begin(), std::max_element(result.begin(), result.end())));
+    float confid = result[classId] * 100.0;
     emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)confid) + " %");
     emit aiResult(classes[classId], confid);
+    /*for (int i = 0; i < result.size(); i++)
+        qDebug() << "res" << classes[i] << result[i] * 100.0;*/
 }
 
 std::vector<float> AI::softmax(const std::vector<float>& logits)

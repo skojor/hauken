@@ -22,10 +22,22 @@ void MainWindow::setSignals()
     cameraThread->setObjectName("camera");
     cameraRecorder->moveToThread(cameraThread);
 
+    aiPtr = new AI(config);
+    aiThread = new QThread(this);
+    aiThread->setObjectName("AI");
+    aiPtr->moveToThread(aiThread);
+
+    iqPlot = new IqPlot(config);
+    iqPlotThread = new QThread(this);
+    iqPlotThread->setObjectName("IqPlot");
+    iqPlot->moveToThread(iqPlotThread);
+
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
     cameraThread->start();
+    aiThread->start();
+    iqPlotThread->start();
 
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -388,6 +400,8 @@ void MainWindow::setSignals()
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
     connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
+    connect(aiThread, &QThread::started, aiPtr, &AI::start);
+    connect(iqPlotThread, &QThread::started, iqPlot, &IqPlot::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -1026,7 +1040,7 @@ void MainWindow::setSignals()
         customPlotController->doReplot();
         config->settingsUpdated();
     });
-    connect(iqPlot, &IqPlot::rawPlotReady, aiPtr, &AI::receiveImage);
+    connect(iqPlot, &IqPlot::imagesForClassification, aiPtr, &AI::receiveImages);
 
     // Rebuild I/Q pause/resume after data transfer
     // Connect/disconnect relevant signals while transferring
@@ -1059,13 +1073,4 @@ void MainWindow::setSignals()
         }
     });
     connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
-
-    /*connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
-    connect(iqPlot, &IqPlot::busyRecording, this, [this](bool b) {
-        if (b)
-            measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
-        else if (config->getAudioActivate())
-            audioOptions->report(); // Restore mode when done (if it should be active)
-    });*/
-
 }

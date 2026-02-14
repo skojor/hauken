@@ -42,7 +42,6 @@ MainWindow::MainWindow(QWidget *parent)
     audioOptions = new AudioOptions(config);
 
     arduinoPtr = new Arduino(config);
-    aiPtr = new AI(config);
     read1809Data = new Read1809Data(config);
 
     incidentLog->setAcceptRichText(true);
@@ -122,6 +121,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
     waterfallThread->quit();
     cameraThread->quit();
     sdefRecorderThread->quit();
+    aiThread->quit();
+    iqPlotThread->quit();
+
     gnssDisplay->close();
     if (arduinoPtr->isWatchdogActive())
         arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully

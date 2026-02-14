@@ -30,7 +30,7 @@ void DatastreamIf::readData(QDataStream &ds)
                     val.imag = qToBigEndian(val.imag);
                     val.real = qToBigEndian(val.real);
                 }*/
-                emit ifDataReady(iqSamples);
+                emit ifDataReady(std::move(iqSamples));
                 //m_byteCtr += totalBytes;
                 //qDebug() << "IQ byte ctr" << m_byteCtr;
                 /*qDebug() << ds.atEnd() << iqSamples.size() << m_attrHeader.numItems << m_optHeader.sampleCount << iqSamples.first().imag

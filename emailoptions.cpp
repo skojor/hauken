@@ -22,16 +22,14 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
 
     layout1->addRow(new QLabel("SMTP password (if needed)"), leOpt6);
     leOpt6->setToolTip("If required by the SMTP server, set the password here");
-    leOpt6->setEchoMode(QLineEdit::Password);
+    leOpt6->setEchoMode(QLineEdit::Password);*/
 
-    layout1->addRow(new QLabel("AI jammer probability filter"), sbOpt4);
-    sbOpt4->setRange(0, 100);
-    sbOpt4->setToolTip("Send email to recipients below only if signal is classified as a jammer, and the probability is higher than this value");
+    layout1->addRow(new QLabel("Classification filter"), leOpt11);
+    leOpt11->setToolTip("Send email to recipients below only if signal is classified as one of the mentioned types");
 
-    layout1->addRow(new QLabel("AI filtered email recipients"), leOpt10);
+    layout1->addRow(new QLabel("Classification filtered email recipients"), leOpt10);
     leOpt10->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
-                        "Recipients in this list will only receive a notification if signal is classified as a jammer, and probability is higher\n"
-                        "than the above set value");*/
+                        "Recipients in this list will only receive a notification if signal is classified as one of the above mentioned types");
 
     layout1->addRow(new QLabel("General email recipients"), leOpt3);
     leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
@@ -73,6 +71,14 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     layout2->addRow(cbOpt4);
     cbOpt4->setText("Add image of traceplot and waterfall to email");
     cbOpt4->setToolTip("Includes images of the trace and waterfall in the notification email");
+
+    layout2->addRow(cbOpt7);
+    cbOpt7->setText("Add image(s) of I/Q plot to email (if available)");
+    cbOpt7->setToolTip("Includes images of the I/Q plots. Only generated if there is enough I/Q samples");
+
+    layout2->addRow(cbOpt8);
+    cbOpt8->setText("Add GIF animation of I/Q signal to email (if available)");
+    cbOpt8->setToolTip("Generates a short GIF of the signal. Only generated if there is enough I/Q samples");
 
     layout2->addRow(new QLabel("Delay before taking image snapshots"), sbOpt3);
     sbOpt3->setToolTip("Wait this many seconds before making a snapshot of the trace and the waterfall. Useful to see more waterfall before mail is sent.\nThis value cannot be higher than the double of incident truncation time (because then the email is sent, and it's a little late to include attachments...");
@@ -117,8 +123,11 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt5->setChecked(config->getSoundNotification());
     sbOpt3->setValue(config->getEmailDelayBeforeAddingImages());
     sbOpt2->setValue(config->getNotifyTruncateTime());
-    sbOpt4->setValue(config->getEmailJammerProbabilityFilter());
+    //sbOpt4->setValue(config->getEmailJammerProbabilityFilter());
     cbOpt6->setChecked(config->getNotificationLargeFonts());
+    cbOpt7->setChecked(config->getEmailAddIqPlot());
+    cbOpt8->setChecked(config->getEmailAddGif());
+    leOpt11->setText(config->getEmailClassificationFilter());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -153,8 +162,11 @@ void EmailOptions::saveCurrentSettings()
     config->setEmailGraphSecret(leOpt9->text());
     config->setEmailGraphApplicationId(leOpt7->text());
     config->setEmailFilteredRecipients(leOpt10->text());
-    config->setEmailJammerProbabilityFilter(sbOpt4->value());
+    //config->setEmailJammerProbabilityFilter(sbOpt4->value());
     config->setNotificationLargeFonts(cbOpt6->isChecked());
+    config->setEmailAddIqPlot(cbOpt7->isChecked());
+    config->setEmailAddGif(cbOpt8->isChecked());
+    config->setEmailClassificationFilter(leOpt11->text());
 
     //dialog->close();
 }

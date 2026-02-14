@@ -159,9 +159,9 @@ public slots:
     void setIqFftPlotBw(int i) { settings->setValue("iq/fftPlotBw", i); }
     double getIqLogTime() { return settings->value("iq/logTime", 0.5).toDouble();}
     void setIqLogTime(double d) { settings->setValue("iq/logTime", d);}
-    bool getIqUseDB() { return settings->value("iq/useDB", false).toBool();}
+    bool getIqUseDB() { return settings->value("iq/useDB", true).toBool();}
     void setIqUseDB(bool b) { settings->setValue("iq/useDB", b);}
-    bool getIqUseWindow() { return settings->value("iq/useWindow", true).toBool(); }
+    bool getIqUseWindow() { return true; }; //settings->value("iq/useWindow", true).toBool(); } // REMOVED 130226 - should always be on
     void setIqUseWindow(bool b) { settings->setValue("iq/useWindow", b);  }
     bool getIqRecordMultipleBands() { return settings->value("iq/recordMultipleBands", false).toBool(); }
     void setIqRecordMultipleBands(bool b) { settings->setValue("iq/recordMultipleBands", b); }
@@ -172,6 +172,8 @@ public slots:
     void setIqUseAvgForPlot(bool b) { settings->setValue("iq/useAvgForPlot", b);}
     bool getIqSaveAs16bit() { return settings->value("iq/saveAs16bit", false).toBool();}
     void setIqSaveAs16bit(bool b) { settings->setValue("iq/saveAs16bit", b);}
+    bool getIqGenerateMovie() { return settings->value("iq/generateMovie", false).toBool(); }
+    void setIqGenerateMovie(bool b) { settings->setValue("iq/generateMovie", b);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
@@ -295,12 +297,19 @@ public slots:
     void setEmailGraphSecret(QString s) { settings->setValue("email/graphSecret", simpleEncr(s.simplified().toLocal8Bit())); }
     bool getSoundNotification() { return settings->value("email/soundNotification", false).toBool();}
     void setSoundNotification(bool b) { settings->setValue("email/soundNotification", b); }
+    QString getEmailClassificationFilter() { return settings->value("email/classificationFilter", "PRN, sweep").toString();}
+    void setEmailClassificationFilter(QString s) { settings->setValue("email/classificationFilter", s); }
     QString getEmailFilteredRecipients() { return settings->value("email/filteredRecipients", "").toString();}
     void setEmailFilteredRecipients(QString s) { settings->setValue("email/filteredRecipients", s.trimmed()); }
-    int getEmailJammerProbabilityFilter() { return settings->value("email/jammerProbabilityFilter", 60).toInt();}
-    void setEmailJammerProbabilityFilter(int i) { settings->setValue("email/jammerProbabilityFilter", i); }
+    /*int getEmailJammerProbabilityFilter() { return settings->value("email/jammerProbabilityFilter", 60).toInt();}
+    void setEmailJammerProbabilityFilter(int i) { settings->setValue("email/jammerProbabilityFilter", i); }*/
+
     bool getNotificationLargeFonts() { return settings->value("notify/LargeFonts", false).toBool();}
     void setNotificationLargeFonts(bool b) { settings->setValue("notify/LargeFonts", b); }
+    bool getEmailAddIqPlot() { return settings->value("email/addIqPlot", true).toBool();}
+    void setEmailAddIqPlot(bool b) { settings->setValue("email/addIqPlot", b); }
+    bool getEmailAddGif() { return settings->value("email/addGif", true).toBool();}
+    void setEmailAddGif(bool b) { settings->setValue("email/addGif", b);}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
