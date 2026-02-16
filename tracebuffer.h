@@ -132,6 +132,7 @@ private:
     bool useSavedAvgLevels = false;
     bool init = true;
     int gainControl = 0;
+    int failedTracesCtr = 0;
 };
 
 #endif // TRACEBUFFER_H

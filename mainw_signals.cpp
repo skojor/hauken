@@ -1099,4 +1099,9 @@ void MainWindow::setSignals()
     connect(plotAndAnalyze, &PlotAndAnalyze::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(plotAndAnalyze, &PlotAndAnalyze::analyzerResult, sdefRecorder, &SdefRecorder::recPrediction);
     //connect(plotAndAnalyze, &PlotAndAnalyze::analyzeResult, notifications, &Notifications::recPrediction); // Already included in the incident log
+
+    // Bugfix: Pscan becomes out of sync when measurement time is changed!
+    connect(instrMeasurementTime, &QSpinBox::valueChanged, this, [this] () {
+        datastreamPScan->updWaitForPscanEndMarker(true);
+    });
 }
