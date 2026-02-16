@@ -274,6 +274,9 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
 {
     flagAvgLevelRestarted = true;
     if (!useSavedAvgLevels or startFresh) {
+        QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+        file.remove();
+
         init = true;
         tracesUsedInAvg = 0;
         maxholdBuffer.clear();
