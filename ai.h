@@ -30,6 +30,7 @@ Q_OBJECT
 
 signals:
     void aiResult(QString, int);
+    void aiResultToAnalyzer(int classId, int confid, QStringList classes);
     void reqTraceBuffer(int seconds);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 

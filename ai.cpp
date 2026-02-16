@@ -315,6 +315,8 @@ void AI::receiveImages(QVector<QImage> images)
     float confid = result[classId] * 100.0;
     emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)confid) + " %");
     emit aiResult(classes[classId], confid);
+    emit aiResultToAnalyzer(classId, confid, classes);
+
     /*for (int i = 0; i < result.size(); i++)
         qDebug() << "res" << classes[i] << result[i] * 100.0;*/
 }
