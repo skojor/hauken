@@ -1079,6 +1079,7 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
     }
     scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
     scpiWrite("init");
+    scpiWrite("syst:if:rem:mode short");
 }
 
 /*void MeasurementDevice::setupIfStream()
@@ -1119,7 +1120,6 @@ void MeasurementDevice::setupVifConnection()
     scpiWrite("meas:time 100 ms"); // Slow down trace data transfer while I/Q transfer is running
     scpiWrite("dem:mode IQ");
     scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3)));
-    scpiWrite("syst:if:rem:mode short");
 }
 
 void MeasurementDevice::setGainControl(int index)
