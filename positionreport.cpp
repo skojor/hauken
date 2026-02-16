@@ -38,7 +38,7 @@ PositionReport::PositionReport(QSharedPointer<Config> c)
 
     connect(processTimeoutTimer, &QTimer::timeout, this, [this]() {
         if (curlProcess->isOpen()) curlProcess->close();
-        qDebug() << "curl process timed out";
+       //qDebug() << "curl process timed out";
     });
     processTimeoutTimer->setSingleShot(true);
 
