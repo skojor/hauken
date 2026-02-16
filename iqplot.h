@@ -34,7 +34,6 @@ public slots:
     void validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 timestamp);
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void resetTimer() { flagOngoingAlarm = false; lastIqRequestTimer->stop();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
-    //void setFilename(QString) {}
     bool readAndAnalyzeFile(const QString filename);
     void readFolder(const QString &folder);
     void updSettings();
@@ -46,14 +45,9 @@ public slots:
     void start(); // Called by thread
 
 private slots:
-    void findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult, double &min, double &max, double &avg);
     void fillWindow();
-    //void saveImage(const QImage &image, const double secondsAnalyzed);
     void saveIqData(const QVector<complexInt16> &iq);
     QVector<QVector<double>>  doFft(const QVector<complexInt16> &iq, int samplesToAnalyze = 0);
-    //QVector<QImage> receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze = 500e-6, bool findMaximum = true, int nrOfImages = 1, bool createGray = false);
-    //quint64 analyzeIqStart(const QVector<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
-    QImage createIqPlot(const QVector<QVector<double> > &, const double secondsAnalyzed, bool createGray = false);
     const QVector<complexInt8> convertComplex16to8bit(const QVector<complexInt16> &);
     const QVector<complexInt16> convertComplex8to16bit(const QVector<complexInt8> &);
     void findIqMaxValue(const QVector<complexInt16> &, qint16 &max);

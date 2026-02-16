@@ -4,7 +4,7 @@
 #include <QRegularExpression>
 #include <QtConcurrent>
 #include <QFileInfo>
-#include "opencv2/opencv.hpp"
+//#include "opencv2/opencv.hpp"
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
 {
@@ -42,7 +42,7 @@ void IqPlot::getIqData(const QVector<complexInt16> iq16)
         samplesNeeded = (int)(config->getIqLogTime() * samplerate);
 
     if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
-    qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
+    //qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
     if (flagHeaderValidated and !throwFirstSamples) iqSamples += iq16;
     else if (flagHeaderValidated and throwFirstSamples)
         throwFirstSamples--;
@@ -85,110 +85,9 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
                                  this,
                                  iq16);
     }
-    /*QVector<QImage> images = receiveIqDataWorker(iq16, 5e-4, true, 10, true);
-    for (auto && img : images)
-        img.save("c:/hauken/" + QString::number(QDateTime::currentMSecsSinceEpoch()) + ".png");
-
-    emit imagesForClassification(images);*/
-
-    /*if (config->getEmailAddIqPlot())
-        createJpgWithInfo( receiveIqDataWorker(iq16, config->getIqFftPlotLength() * 1e-6, true, 1, false), config->getIqFftPlotLength() * 1e-6 );
-    if (config->getEmailAddGif())
-        createGif(images);
-    if (config->getIqGenerateMovie())
-        createMovie( receiveIqDataWorker(iq16, config->getIqFftPlotLength() * 1e-6, false, -1) );
-*/
     iqdataReady(iq16, iqMetadata);
     emit fftdataReady( doFft(iq16), iqMetadata );
 }
-
-/*QVector<QImage> IqPlot::receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze, bool findMaximum, int nrOfImages, bool createGray)
-{
-    QVector<QImage> images;
-    int samplesIterator = 0, imageCtr = 0;
-    bool repeat = false;
-    fftw_complex *in = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fftSize);
-    fftw_complex *out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fftSize);
-    fftw_plan plan = fftw_plan_dft_1d(fftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
-
-    if (findMaximum)
-        samplesIterator = analyzeIqStart(iq) - (samplerate * (secondsToAnalyze / 4)); // Hopefully this is just before where sth interesting happens
-
-    if (nrOfImages != 1)
-        repeat = true;
-
-    if (samplesIterator < 0)
-        samplesIterator = 0;
-
-    while (samplesIterator > 0
-           && samplesIterator + (samplerate * secondsToAnalyze) + fftSize >= iq.size())
-        samplesIterator--;
-
-    int ySize = samplerate * secondsToAnalyze + samplesIterator;
-    int samplesIteratorInc = 12 * secondsToAnalyze / 5e-4;
-
-    qDebug() << "FFT plot debug: Samples inc." << (int) samplesIteratorInc << ". Iterator starts at"
-             << samplesIterator << "and counts up to" << ySize << ". Total samples analyzed"
-             << ySize - samplesIterator << bandwidth << samplerate << headerCenterFreq;
-
-    if (!bandwidth) bandwidth = samplerate / 1.28; // Failsafe if header is not giving us bw data
-    int removeSamples =  0.5 * ( samplerate - bandwidth ) / ( samplerate / fftSize );
-
-    QVector<double> result(fftSize - removeSamples * 2);
-    QVector<QVector<double>> iqFftResult( (secondsToAnalyze * samplerate - (fftSize - samplesIteratorInc)) / samplesIteratorInc );
-    bool useDB = config->getIqUseDB();
-    double normalize = 1.0 / fftSize;
-    do {
-        if ( iq.size() > ySize ) {
-            int fftIterator = 0, resIterator;
-            while ( samplesIterator <= ySize - fftSize) { // KBO note - 2129 lines to have exact 500 us plot
-                for (int i = 0; i < fftSize; i++) {
-                    in[i][0] = (iq[samplesIterator + i].real * window[i]);
-                    in[i][1] = (iq[samplesIterator + i].imag * window[i]);
-                }
-                fftw_execute(plan); // FFT is done here
-
-                resIterator = 0;
-                for (int i = (fftSize / 2) + removeSamples; i < fftSize;
-                     i++) { // Find magnitude, normalize, reorder and cut edges
-                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * normalize;
-                    if (val == 0) val = 1e-9; // log10(0) = -inf
-                    if (useDB) val = 10 * log10(val);
-                    result[resIterator++] = val;
-                }
-
-                for (int i = 0; i < (fftSize / 2) - removeSamples; i++) {
-                    double val = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * normalize;
-                    if (val == 0)
-                        val = 1e-9;
-                    if (useDB) val = 10 * log10(val);
-                    result[resIterator++] = val;
-                }
-
-                if (fftIterator >= iqFftResult.size()) // FIXME - Calculated vector size is not always correct for all bw/samplerate combos
-                    iqFftResult.append(result);
-                else iqFftResult[fftIterator++] =result;
-                samplesIterator += samplesIteratorInc;
-            }
-            //qDebug() << "sizes" << iqFftResult.first().size() << iqFftResult.size();
-
-            ySize += samplerate * secondsToAnalyze - fftSize;
-            samplesIterator -= samplesIteratorInc; // Go back x samples on repeated runs
-            images.append(createIqPlot(iqFftResult, secondsToAnalyze, createGray));
-            imageCtr++;
-
-            if (samplesIterator + samplerate * secondsToAnalyze > iq.size()) repeat = false;
-            if (nrOfImages != -1 && imageCtr == nrOfImages) repeat = false;
-        } else {
-            qDebug() << "Not enough samples to create I/Q plot";
-            repeat = false;
-        }
-    } while(repeat);
-    fftw_destroy_plan(plan);
-    fftw_free(in);
-    fftw_free(out);
-    return images;
-}*/
 
 QVector<QVector<double> > IqPlot::doFft(const QVector<complexInt16> &iq, int samplesToAnalyze)
 {
@@ -256,64 +155,6 @@ void IqPlot::saveIqData(const QVector<complexInt16> &iq16)
     }
 }
 
-QImage IqPlot::createIqPlot(const QVector<QVector<double>> &iqFftResult,
-                            const double secondsAnalyzed,
-                            bool createGray)
-{
-    double min, max, avg;
-    if (iqFftResult.size() > 0)
-        findIqFftMinMaxAvg(iqFftResult, min, max, avg);
-    else
-        return QImage();
-
-    //qDebug() << min << max << avg;
-    if (config->getIqUseAvgForPlot()) min = avg; // Minimum from fft produces alot of "noise" in the plot, this works like a filter
-
-    QImage image(iqFftResult.first().size(), iqFftResult.size(), QImage::Format_ARGB32);
-    QColor imgColor;
-    double percent;
-    int x, y = 0;
-    int alpha = 127;
-
-    for (auto &&line : iqFftResult) {
-        x = 0;
-        for (auto &&val : line) {
-            percent = (val - min) / (max - min);
-            if (percent > 1)
-                percent = 1;
-            else if (percent < 0)
-                percent = 0;
-            if (!createGray) imgColor.setHsv(255 - (255 * percent), 255, alpha);
-            else imgColor.setHsv(0, 0, 255 * percent);
-            image.setPixel(x, y, imgColor.rgba());
-            x++;
-        }
-        y++;
-    }
-    return image;
-}
-
-void IqPlot::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult,
-                                double &min,
-                                double &max,
-                                double &avg)
-{
-    min = 99e9;
-    max = -99e9;
-    avg = 0;
-
-    for (const auto &line : iqFftResult) {
-        for (const auto &val : line) {
-            if (val < min)
-                min = val;
-            else if (val > max)
-                max = val;
-            avg += val;
-        }
-    }
-    avg /= iqFftResult.size() * iqFftResult.first().size();
-}
-
 void IqPlot::fillWindow()
 {
     window.resize(fftSize);
@@ -326,23 +167,6 @@ void IqPlot::fillWindow()
             val = 1; // Effectively no window
     }
 }
-
-/*void IqPlot::saveImage(const QImage &image, const double secondsAnalyzed)
-{
-    if (!filename.isEmpty()) {
-        image.save(filename + "_" + QString::number(secondsAnalyzed * 1e6) + "us.jpg", "JPG", 75);
-        emit iqPlotReady(filename + "_" + QString::number(secondsAnalyzed * 1e6) + "us.jpg");
-    } else {
-        image.save(config->getLogFolder() + "/"
-                       + QDateTime::currentDateTime().toString("yyMMddhhmmss") + "_"
-                       + QString::number(secondsAnalyzed * 1e6) + "us.jpg",
-                   "JPG",
-                   75);
-        emit iqPlotReady(config->getLogFolder() + "/"
-                         + QDateTime::currentDateTime().toString("yyMMddhhmmss") + "_"
-                         + QString::number(secondsAnalyzed * 1e6) + "us.jpg");
-    }
-}*/
 
 void IqPlot::requestIqData()
 {
@@ -407,22 +231,6 @@ void IqPlot::requestIqData()
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS);
     }
 }
-
-/*quint64 IqPlot::analyzeIqStart(const QVector<complexInt16> &iq)
-{
-    qint16 max = -32768;
-    quint64 locMax = 0;
-    quint64 iter = 0;
-    for (const auto &val : iq) {
-        int mag = sqrt(val.real * val.real + val.imag * val.imag);
-        if (mag > max) {
-            max = mag;
-            locMax = iter;
-        }
-        iter++;
-    }
-    return locMax;
-}*/
 
 bool IqPlot::readAndAnalyzeFile(const QString fname)
 {

@@ -161,11 +161,9 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
 
 void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringList classes)
 {
-
-    qDebug() << "Model says" << classes[classId] << ", confidence" << confid;
-
+    //qDebug() << "Model says" << classes[classId] << ", confidence" << confid;
     if (classes[classId].contains("sweep", Qt::CaseInsensitive)) {
-        qDebug() << "Spectral density" << m_metadata.spectral << ( m_metadata.spectral > 0.08 ? "Most likely a jammer" : "Most likely a radar sweep");
+        //qDebug() << "Spectral density" << m_metadata.spectral << ( m_metadata.spectral > 0.08 ? "Most likely a jammer" : "Most likely a radar sweep");
         if (m_metadata.spectral > 0.08) createIqDiagram();
         emit toIncidentLog(NOTIFY::TYPE::AI, "", "Classification: " + classes[classId]
                                                      + ", confidence " + QString::number((int)confid) + " %. Spectral intensity "
