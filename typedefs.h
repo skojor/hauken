@@ -975,5 +975,21 @@ struct complexInt16 {
     qint16 imag;
 };
 
+struct IqMetadata {
+    quint64 centerfreq = 0;
+    quint32 bandwidth = 0;
+    quint32 samplerate = 0;
+    int     samplesInc = 12;
+    int     fftSize = 64;
+    double  max = 0;
+    double  min = 0;
+    double  avg = 0;
+    int     maxLoc = 0;
+    double  spectral = 0;
+    bool    fromFile = false;
+    QString filename;
+    quint64 timestamp;
+};
+
 #endif // TYPEDEFS_H
 
