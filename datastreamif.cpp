@@ -55,7 +55,7 @@ void DatastreamIf::checkOptHeader()
         m_frequency = freq;
         m_bandwidth = m_optHeader.bandwidth;
         m_samplerate = m_optHeader.sampleRate;
-        emit headerChanged(m_frequency, m_bandwidth, m_samplerate);
+        emit headerChanged(m_frequency, m_bandwidth, m_samplerate, m_optHeader.startTimestamp);
     }
     if (m_optHeader.sampleCount - m_sampleCtr != m_attrHeader.numItems) {
         //qDebug() << "Lost I/Q samples" << m_eb200Header.seqNumber << m_seqNr << m_optHeader.sampleCount << m_sampleCtr << m_attrHeader.numItems;

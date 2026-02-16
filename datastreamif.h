@@ -15,7 +15,7 @@ public:
 
 signals:
     void ifDataReady(const QVector<complexInt16>);
-    void headerChanged(quint64, quint32, quint32);
+    void headerChanged(quint64, quint32, quint32, quint64);
 
 private:
     void readData(QDataStream &ds);
