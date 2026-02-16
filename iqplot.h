@@ -31,7 +31,7 @@ public slots:
     void requestIqData(); // Function call to set up I/Q transfer
     void getIqData(const QVector<complexInt16> iq16); // New, gather parts of data before doing sth with them
     void parseIqData(const QVector<complexInt16> &iq16, const double frequency); // Data from vifstream class
-    void validateHeader(quint64 freq, quint64 bw, quint64 rate);
+    void validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 timestamp);
     void setFfmFrequency(double d) { ffmFrequency = d;}
     void resetTimer() { flagOngoingAlarm = false; lastIqRequestTimer->stop();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
     //void setFilename(QString) {}
@@ -48,21 +48,17 @@ public slots:
 private slots:
     void findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult, double &min, double &max, double &avg);
     void fillWindow();
-    void saveImage(const QImage &image, const double secondsAnalyzed);
+    //void saveImage(const QImage &image, const double secondsAnalyzed);
     void saveIqData(const QVector<complexInt16> &iq);
-    QVector<QImage> receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze = 500e-6, bool findMaximum = true, int nrOfImages = 1, bool createGray = false);
-    quint64 analyzeIqStart(const QVector<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
+    QVector<QVector<double>>  doFft(const QVector<complexInt16> &iq, int samplesToAnalyze = 0);
+    //QVector<QImage> receiveIqDataWorker(const QVector<complexInt16> &iq, const double secondsToAnalyze = 500e-6, bool findMaximum = true, int nrOfImages = 1, bool createGray = false);
+    //quint64 analyzeIqStart(const QVector<complexInt16> &iq);     // Find where sth happens in data, to not analyze only random noise. Return start point
     QImage createIqPlot(const QVector<QVector<double> > &, const double secondsAnalyzed, bool createGray = false);
     const QVector<complexInt8> convertComplex16to8bit(const QVector<complexInt16> &);
     const QVector<complexInt16> convertComplex8to16bit(const QVector<complexInt8> &);
     void findIqMaxValue(const QVector<complexInt16> &, qint16 &max);
     void parseFilename(const QString file);
     void receiverControl();
-    void createMovie(QVector<QImage> images);
-    void createGif(QVector<QImage> images);
-    void createPngWithInfo(QVector<QImage> images, const double secondsAnalyzed = 5e-4);
-    void addLines(QImage &image, const double secondsAnalyzed);
-    void addText(QImage &image, const double secondsAnalyzed);
 
 signals:
     void reqVifConnection(); // This signal goes to meas.device, to set up tcp link
@@ -78,6 +74,8 @@ signals:
     void reqIqCenterFrequency();
     void rawPlotReady(const QImage &image);
     void imagesForClassification(QVector<QImage>);
+    void iqdataReady(const QVector<complexInt16>, IqMetadata);
+    void fftdataReady(const QVector<QVector<double>> &, const IqMetadata &);
 
 private:
     QSharedPointer<Config> config;
@@ -108,6 +106,7 @@ private:
     QTimer *timeoutTimer;
     double centerFrequency = 0;
     bool flagOngoingAlarm = false;
+    IqMetadata iqMetadata;
 };
 
 #endif // IQPLOT_H

@@ -82,6 +82,7 @@
 #include "datastreamgpscompass.h"
 #include "datastreamcw.h"
 #include "settingsdialog.h"
+#include "plotandanalyze.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -364,6 +365,7 @@ private:
     QPushButton *btnDetector = new QPushButton("Detector");
     QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
     bool flagBusyRecordingIQ = false;
+    PlotAndAnalyze *plotAndAnalyze = new PlotAndAnalyze(config);
 
 signals:
     void stopPlot(bool);

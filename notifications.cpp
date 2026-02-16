@@ -236,7 +236,7 @@ void Notifications::sendMail()
             auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
 
             image1->setContentId("image1");
-            image1->setContentType("image/png");
+            image1->setContentType("image/jpg");
             //message.addPart(&image1);
             emailPictures.append(image1);
             if (!gnssPlotFilename.isEmpty()) {
@@ -328,8 +328,8 @@ void Notifications::setupIncidentTable()
 
 void Notifications::recTracePlot(const QPixmap *pic)
 {
-    lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".png";
-    if (!pic->save(lastPicFilename, "png"))
+    lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".jpg";
+    if (!pic->save(lastPicFilename, "jpg"))
         qDebug() << "Cannot save traceplot to" << lastPicFilename;
     else
         qDebug() << "Traceplot saved as" << lastPicFilename;
@@ -446,8 +446,8 @@ void Notifications::generateGraphEmail()
     else {
         fileOk = true;
         att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-        att.insert("name", "image1.png");
-        att.insert("contentType", "image/png");
+        att.insert("name", "image1.jpg");
+        att.insert("contentType", "image/jpg");
         att.insert("contentId", "image1");
         att.insert("contentBytes", QString(picture.readAll().toBase64()));
         att.insert("isInline", "true");
@@ -458,8 +458,8 @@ void Notifications::generateGraphEmail()
         QFile picture(gnssPlotFilename);
         if (picture.open(QIODevice::ReadOnly)) {
             att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att.insert("name", "image2.png");
-            att.insert("contentType", "image/png");
+            att.insert("name", "image2.jpg");
+            att.insert("contentType", "image/jpg");
             att.insert("contentId", "image2");
             att.insert("contentBytes", QString(picture.readAll().toBase64()));
             att.insert("isInline", "true");
@@ -472,8 +472,8 @@ void Notifications::generateGraphEmail()
         QFile picture(gnssPlotFilename2);
         if (picture.open(QIODevice::ReadOnly)) {
             att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att.insert("name", "image3.png");
-            att.insert("contentType", "image/png");
+            att.insert("name", "image3.jpg");
+            att.insert("contentType", "image/jpg");
             att.insert("contentId", "image3");
             att.insert("contentBytes", QString(picture.readAll().toBase64()));
             att.insert("isInline", "true");
@@ -495,9 +495,14 @@ void Notifications::generateGraphEmail()
                 //QString filename = iqPlotFilename.split('/').last();
                 att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
                 att2.insert("name", "iqplot" + QString::number(iter));
-                if (iqPlotFilename.contains("png")) att2.insert("contentType", "image/png");
-                else if (iqPlotFilename.contains("gif")) att2.insert("contentType", "image/gif");
-                att2.insert("contentId", "iqplot" + QString::number(iter));
+                if (iqPlotFilename.contains("jpg")) {
+                    att2.insert("contentType", "image/jpg");
+                    att2.insert("contentId", "iqplot" + QString::number(iter));
+                }
+                else if (iqPlotFilename.contains("gif")) {
+                    att2.insert("contentType", "image/gif");
+                    att2.insert("contentId", "iqplot" + QString::number(iter));
+                }
                 att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
                 att2.insert("isInline", "true");
                 attachments.append(att2);
