@@ -37,22 +37,10 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     images = createImages(fftVector, 5e-4, meta.maxLoc, 10, true);
     if (!images.isEmpty()) {
         emit imagesReadyForClassification(images);
-        if (m_config->getEmailAddGif())
-            createGif(images);
     }
     else {
         qWarning() << "Not enough I/Q data to generate plot(s)";
         return;
-    }
-
-    // GIF creation here
-    if (m_config->getEmailAddGif()) {
-        images = createImages(fftVector, 5e-4, meta.maxLoc, 50, false);
-        if (!images.isEmpty()) createGif(images);
-        else {
-            qWarning() << "Not enough I/Q data to generate plot(s)";
-            return;
-        }
     }
 
     // Email plot with text/lines generated here
@@ -63,6 +51,17 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
         qWarning() << "Not enough I/Q data to generate plot(s)";
         return;
     }
+
+    // GIF creation here (if enabled)
+    if (m_config->getEmailAddGif()) {
+        images = createImages(fftVector, 5e-4, meta.maxLoc, 50, false);
+        if (!images.isEmpty()) createGif(images);
+        else {
+            qWarning() << "Not enough I/Q data to generate plot(s)";
+            return;
+        }
+    }
+
     // Movie created here (if enabled)
     if (m_config->getIqGenerateMovie()) {
         images = createImages(fftVector, 5e-4, 0, 9999, false);
@@ -188,6 +187,9 @@ void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringLi
         else
             ts << ", most likely a radar.";
     }
+    else if (classes[classId].contains("prn", Qt::CaseInsensitive))
+        emit reportIntentional(text);
+
     emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
     emit analyzerResult(classes[classId], confid);
 }
