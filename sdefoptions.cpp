@@ -26,9 +26,16 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
                         "Ask your IT provider for the configuration values below.\n"\
                         "All fields are mandatory.");
 
+    fileLayout->addRow(cbOpt11);
+    cbOpt11->setText("Upload only files classified as intentional");
+    cbOpt11->setToolTip("If enabled only signals classified as sweep and above threshold for spectral intensity, " \
+                        "or with PRN classification is uploaded. Will only work if IQ plot is activated, " \
+                        "a classification model is found, and the instrument is able to produce IQ samples.");
+
     fileLayout->addRow(cbOpt6);
     cbOpt6->setText("Create a new folder for every incident");
-    cbOpt6->setToolTip("Enabling this will create a folder named after the current date and time for the relevant logfiles");
+    cbOpt6->setToolTip("Enabling this will create a folder named after the current date and time for the relevant logfiles" \
+                       ". Default on since 2.55");
 
     fileLayout->addRow(cbOpt7);
     cbOpt7->setText("Activate recorder on startup (continuous recording)");
@@ -110,6 +117,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt7->setChecked(config->getAutoRecorderActivate());
     cbOpt8->setChecked(config->getSaveToTempFile());
     sbOpt4->setValue(config->getSaveToTempFileMaxhold());
+    cbOpt11->setChecked(config->getSdefUploadIntentionalOnly());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
@@ -151,6 +159,7 @@ void SdefOptions::saveCurrentSettings()
     }
     config->setSaveToTempFile(cbOpt8->isChecked());
     config->setSaveToTempFileMaxhold(sbOpt4->value());
+    config->setSdefUploadIntentionalOnly(cbOpt11->isChecked());
 
     //dialog->close();
 }

@@ -104,7 +104,7 @@ public slots:
     QString getLogFolder() { return settings->value("logFolder",
                                                     findWorkFolderName() + "/logs").toString(); }
     void setLogFolder(QString s) { settings->setValue("logFolder", s); }
-    bool getNewLogFolder() { return settings->value("newLogFolder", false).toBool(); }
+    bool getNewLogFolder() { return true; } // Forced on since v2.55
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); }
     bool getPmrMode() { return settings->value("pmr/mode", false).toBool();}
     void setPmrMode(bool b) { settings->setValue("pmr/mode", b);  }
@@ -204,6 +204,8 @@ public slots:
     void setSdefAuthAddress(QString s) { settings->setValue("sdef/AuthAddress", s); }
     bool getSdefNewMsFormat() { return true;} // Forced on since oct-25
     void setSdefNewMsFormat(bool b) { settings->setValue("sdef/newMsFormat", b); }
+    bool getSdefUploadIntentionalOnly() { return settings->value("sdef/UploadIntentionalOnly", true).toBool();}
+    void setSdefUploadIntentionalOnly(bool b) { settings->setValue("sdef/UploadIntentionalOnly", b);}
 
     // OAuth2 options
     bool getOauth2Enable() { return settings->value("OAuth2/enable").toBool();}

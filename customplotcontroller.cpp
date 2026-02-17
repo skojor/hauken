@@ -444,8 +444,21 @@ void CustomPlotController::resChanged(double a)
 
 void CustomPlotController::reqTracePlot()
 {
+    // New, remove waterfall before making a snapshot
     mutex.lock();
+    customPlotPtr->axisRect()->setBackground(QPixmap(), false);
+    bool flagVisible = false;
+    if (customPlotPtr->graph(2)->visible()) {
+        flagVisible = true;
+        customPlotPtr->graph(2)->setVisible(false);
+    }
+    customPlotPtr->replot();
     *tracePlot = customPlotPtr->toPixmap();
+    if (flagVisible) {
+        customPlotPtr->graph(2)->setVisible(true);
+        customPlotPtr->layer("triggerLayer")->replot();
+        customPlotPtr->replot();
+    }
     mutex.unlock();
     emit retTracePlot(tracePlot);
 }

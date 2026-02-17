@@ -49,15 +49,23 @@ void IqPlot::getIqData(const QVector<complexInt16> iq16)
 
     //qDebug() << iqSamples.size();
     if (iqSamples.size() >= samplesNeeded and !listFreqs.isEmpty()) {
-        ffmFrequency = listFreqs.first(); // Silly, but blame the coder
-        parseIqData(iqSamples, listFreqs.first());
+        iqMetadata.centerfreq = listFreqs.first() * 1e6;
+
+        IqSamplesStruct iqs;
+        iqs.metadata = iqMetadata;
+        iqs.iq = iqSamples;
+
+        iqSamplesVector.append(iqs);
+
         receiverControl(); // Change freq, or end datastream if we are done
         iqSamples.clear();
     }
 }
 
-void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequency)
+void IqPlot::parseIqData(const QVector<complexInt16> &iq16, IqMetadata meta)
 {
+    iqMetadata = meta; // FIXME no need to copy this!
+
     secsToAnalyze = config->getIqFftPlotLength() / 1e6;
     if (!samplerate) samplerate = (double) config->getIqFftPlotBw() * 1.28
                      * 1e3;
@@ -73,7 +81,7 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
 
     if (!iqMetadata.fromFile || filenameFromFile.isEmpty())
         filename = dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
-                   + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(frequency, 'f', 3) + "MHz_"
+                   + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(meta.centerfreq, 'f', 3) + "MHz_"
                    + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_bw"
                    + QString::number(bandwidth * 1e-3, 'f', 0) + "kHz_"
                    + (config->getIqSaveAs16bit() ? "16bit" : "8bit");
@@ -85,8 +93,8 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, const double frequen
                                  this,
                                  iq16);
     }
-    iqdataReady(iq16, iqMetadata);
-    emit fftdataReady( doFft(iq16), iqMetadata );
+    iqdataReady(iq16, meta);
+    emit fftdataReady( doFft(iq16), meta );
 }
 
 QVector<QVector<double> > IqPlot::doFft(const QVector<complexInt16> &iq, int samplesToAnalyze)
@@ -262,7 +270,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
                     val.real = qToBigEndian(val.real);
                     val.imag = qToBigEndian(val.imag);
                 }
-                parseIqData(iq16, ffmFrequency);
+                parseIqData(iq16, iqMetadata);
             }
         } else {
             QVector<complexInt8> iq8;
@@ -270,7 +278,7 @@ bool IqPlot::readAndAnalyzeFile(const QString fname)
             if (file.read((char *) iq8.data(), file.size()) == -1)
                 qWarning() << "IQ8 read failed:" << file.errorString();
             else
-                parseIqData(convertComplex8to16bit(iq8), ffmFrequency);
+                parseIqData(convertComplex8to16bit(iq8), iqMetadata);
         }
         file.close();
         return true;
@@ -320,28 +328,28 @@ void IqPlot::parseFilename(const QString file)
     if (split.size() >= 5) {
         for (const auto &val : split) {
             if (val.contains("MHz", Qt::CaseInsensitive))
-                ffmFrequency = val.split("MHz").first().toDouble();
+                iqMetadata.centerfreq = val.split("MHz").first().toDouble() * 1e6;
             else if (val.contains("Msps", Qt::CaseInsensitive))
                 samplerate = val.split("Msps").first().toDouble() * 1e6;
             else if (val.contains("bw", Qt::CaseInsensitive))
                 bandwidth = val.split("kHz").first().toDouble() * 1e3;
         }
         qInfo() << "IQ file reader: Guessing frequency,sample rate and bandwidth from filename:"
-                << ffmFrequency << samplerate << bandwidth;
+                << iqMetadata.centerfreq << samplerate << bandwidth;
         if (!file.contains("bw", Qt::CaseInsensitive))
             bandwidth = samplerate / 1.28;
 
     } else {
         qWarning() << "IQ filename not parsed, setting standard frequency/samplerate values";
         samplerate = 51.2e6;
-        ffmFrequency = 0;
+        iqMetadata.centerfreq = 0;
         bandwidth = samplerate  / 1.28;
     }
-    iqMetadata.centerfreq = ffmFrequency * 1e6;
     iqMetadata.bandwidth = bandwidth;
     iqMetadata.samplerate = samplerate;
     iqMetadata.fromFile = true;
     iqMetadata.timestamp = 0; // Don't have any timestamp here
+    iqMetadata.trigFrequency = 0; // don't know this one either
 }
 
 void IqPlot::updSettings()
@@ -363,6 +371,7 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         iqMetadata.samplerate = rate;
         iqMetadata.bandwidth = bw;
         iqMetadata.timestamp = timestamp;
+        iqMetadata.trigFrequency = trigFrequency;
         //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << samplerate;
     }
     else {
@@ -380,7 +389,7 @@ void IqPlot::receiverControl()
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
-        throwFirstSamples = 2;// * samplerate / 1e7;
+        throwFirstSamples = 12 * samplerate / 1e7;
         if (!throwFirstSamples) throwFirstSamples = 1;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();
@@ -393,6 +402,9 @@ void IqPlot::receiverControl()
         if (!flagRequestedEndVifConnection) emit endVifConnection();
         flagRequestedEndVifConnection = true;
         emit busyRecording(false);
+        for (auto && iqStruct : iqSamplesVector) {
+            parseIqData(iqStruct.iq, iqStruct.metadata); // NEW: Delay data work until all iq gathering is finished
+        }
     }
 }
 

@@ -179,7 +179,6 @@ void Notifications::sendMail()
             message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
             if (predictionReceived &&
-                config->getEmailClassificationFilter().contains(prediction, Qt::CaseInsensitive) &&
                 config->getEmailFilteredRecipients().size() > 5) {
                 notifyPriorityRecipients = true;
                 for (auto &val : config->getEmailFilteredRecipients().split(";"))
@@ -604,9 +603,9 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
     }
 }
 
-void Notifications::recPrediction(QString pred, int prob)
+void Notifications::recPrediction(const QString &text)
 {
-    prediction = pred;
-    probability = prob;
+    // New, triggered only on intentional signal!
+    prediction = text;
     predictionReceived = true;
 }

@@ -521,10 +521,6 @@ void MainWindow::setSignals()
             this->incidentLog->verticalScrollBar()->maximum());
     });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
-    connect(notifications,
-            &Notifications::reqTracePlot,
-            customPlotController,
-            &CustomPlotController::reqTracePlot); // ask for image
     connect(customPlotController,
             &CustomPlotController::retTracePlot,
             notifications,
@@ -1098,10 +1094,11 @@ void MainWindow::setSignals()
     //connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(plotAndAnalyze, &PlotAndAnalyze::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(plotAndAnalyze, &PlotAndAnalyze::analyzerResult, sdefRecorder, &SdefRecorder::recPrediction);
-    //connect(plotAndAnalyze, &PlotAndAnalyze::analyzeResult, notifications, &Notifications::recPrediction); // Already included in the incident log
-
+    connect(plotAndAnalyze, &PlotAndAnalyze::reportIntentional, notifications, &Notifications::recPrediction);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reportIntentional, sdefRecorder, &SdefRecorder::setIntentional);
     // Bugfix: Pscan becomes out of sync when measurement time is changed!
     connect(instrMeasurementTime, &QSpinBox::valueChanged, this, [this] () {
         datastreamPScan->updWaitForPscanEndMarker(true);
     });
+    connect(notifications,&Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
 }

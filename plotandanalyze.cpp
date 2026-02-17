@@ -33,7 +33,7 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
         return;
     }
 
-    // Classification images generated here. Also used for gif
+    // Classification images generated here.
     images = createImages(fftVector, 5e-4, meta.maxLoc, 10, true);
     if (!images.isEmpty()) {
         emit imagesReadyForClassification(images);
@@ -44,6 +44,17 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
         qWarning() << "Not enough I/Q data to generate plot(s)";
         return;
     }
+
+    // GIF creation here
+    if (m_config->getEmailAddGif()) {
+        images = createImages(fftVector, 5e-4, meta.maxLoc, 50, false);
+        if (!images.isEmpty()) createGif(images);
+        else {
+            qWarning() << "Not enough I/Q data to generate plot(s)";
+            return;
+        }
+    }
+
     // Email plot with text/lines generated here
     images = createImages(fftVector, m_config->getIqFftPlotLength() * 1e-6, meta.maxLoc, 1, false);
     if (!images.isEmpty())
@@ -161,21 +172,24 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
 
 void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringList classes)
 {
-    //qDebug() << "Model says" << classes[classId] << ", confidence" << confid;
+    QString text;
+    QTextStream ts(&text);
+    ts << "Classification: " << classes[classId] << " [confidence " << (int)confid << " %]. ";
+    if (m_metadata.trigFrequency)
+        ts << "Trigger frequency " << m_metadata.trigFrequency << " MHz. ";
+
     if (classes[classId].contains("sweep", Qt::CaseInsensitive)) {
-        //qDebug() << "Spectral density" << m_metadata.spectral << ( m_metadata.spectral > 0.08 ? "Most likely a jammer" : "Most likely a radar sweep");
-        if (m_metadata.spectral > 0.08) createIqDiagram();
-        emit toIncidentLog(NOTIFY::TYPE::AI, "", "Classification: " + classes[classId]
-                                                     + ", confidence " + QString::number((int)confid) + " %. Spectral intensity "
-                                                     + QString::number(m_metadata.spectral, 'f', 2)
-                                                     + ( m_metadata.spectral > 0.08 ? ", most likely a jammer" : ", most likely a chirp radar" ) );
-        QString text = classes[classId] + ( m_metadata.spectral > 0.08 ? ", most likely a jammer" : ", most likely a chirp radar" );
-        emit analyzerResult(text, confid);
+        ts << "Spectral intensity " << QString::number(m_metadata.spectral, 'f', 2);
+        if (m_metadata.spectral > 0.08) {
+            // Sweep jammer detected, report to notification class
+            ts << ", most likely a jammer.";
+            emit reportIntentional(text);
+        }
+        else
+            ts << ", most likely a radar.";
     }
-    else {
-        emit toIncidentLog(NOTIFY::TYPE::AI, "", "Classification: " + classes[classId] + ", confidence " + QString::number((int)confid) + " %");
-        emit analyzerResult(classes[classId], confid);
-    }
+    emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+    emit analyzerResult(classes[classId], confid);
 }
 
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
@@ -197,7 +211,7 @@ void PlotAndAnalyze::createGif(QVector<QImage> &images)
                 GifWriteFrame(&gifWriter, converted.bits(), converted.width(), converted.height(), delay);
         }
         GifEnd(&gifWriter);
-        if (m_config->getEmailAddGif() and !m_metadata.fromFile)
+        if (m_config->getEmailAddGif()) // and !m_metadata.fromFile)
             emit imageReady(m_metadata.filename + ".gif");
     }
 }
@@ -234,7 +248,7 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
     addLines(image, secondsAnalyzed);
     addText(image, secondsAnalyzed);
     image.save(m_metadata.filename + "_info.jpg");
-    if (m_config->getEmailAddIqPlot() and !m_metadata.fromFile)
+    if (m_config->getEmailAddIqPlot())// and !m_metadata.fromFile)
         emit imageReady(m_metadata.filename + "_info.jpg");
     //qDebug() << m_metadata.filename + "_info.jpg";
 }
@@ -250,6 +264,7 @@ void PlotAndAnalyze::createFilename()
         + AsciiTranslator::toAscii(m_config->getStationName()) + "_" + QString::number(m_metadata.centerfreq * 1e-6, 'f', 3) + "MHz_"
             + QString::number(m_metadata.samplerate * 1e-6, 'f', 2) + "Msps_bw"
             + QString::number(m_metadata.bandwidth * 1e-3, 'f', 0) + "kHz_"
+            + QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hhmmsszzz_")
             + (m_config->getIqSaveAs16bit() ? "16bit" : "8bit");
     }
 }

@@ -24,6 +24,7 @@ signals:
     void imageReady(QString);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void analyzerResult(QString, int);
+    void reportIntentional(QString);
 
 private:
     float findMaxMagnitudeAndPosition(const QVector<complexInt16> &iq16, int &pos);

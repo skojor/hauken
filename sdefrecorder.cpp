@@ -56,7 +56,14 @@ void SdefRecorder::start()
     networkManager = new QNetworkAccessManager(this);
 
     connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
-        emit fileReadyForUpload(finishedFilename);
+        if (!config->getSdefUploadIntentionalOnly() ||
+            (config->getSdefUploadIntentionalOnly() and flagUploadIntentionalOnly)
+            )
+        {
+            qDebug() << "Preparing upload of" << finishedFilename << flagUploadIntentionalOnly;
+            emit fileReadyForUpload(finishedFilename);
+            flagUploadIntentionalOnly = false; // Reset for next file
+        }
         finishedFilename.clear();
     });
 

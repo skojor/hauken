@@ -988,7 +988,13 @@ struct IqMetadata {
     double  spectral = 0;
     bool    fromFile = false;
     QString filename;
-    quint64 timestamp;
+    quint64 timestamp = 0;
+    quint64 trigFrequency = 0;
+};
+
+struct IqSamplesStruct {
+    IqMetadata metadata;
+    QVector<complexInt16> iq;
 };
 
 #endif // TYPEDEFS_H

@@ -24,12 +24,12 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     leOpt6->setToolTip("If required by the SMTP server, set the password here");
     leOpt6->setEchoMode(QLineEdit::Password);*/
 
-    layout1->addRow(new QLabel("Classification filter"), leOpt11);
-    leOpt11->setToolTip("Send email to recipients below only if signal is classified as one of the mentioned types");
+    /*layout1->addRow(new QLabel("Classification filter"), leOpt11);
+    leOpt11->setToolTip("Send email to recipients below only if signal is classified as one of the mentioned types");*/
 
     layout1->addRow(new QLabel("Classification filtered email recipients"), leOpt10);
     leOpt10->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
-                        "Recipients in this list will only receive a notification if signal is classified as one of the above mentioned types");
+                        "Recipients in this list will only receive a notification if signal is classified as intentional");
 
     layout1->addRow(new QLabel("General email recipients"), leOpt3);
     leOpt3->setToolTip("Email recipient(s), separate multiple recipients with ;\n"
@@ -127,7 +127,7 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt6->setChecked(config->getNotificationLargeFonts());
     cbOpt7->setChecked(config->getEmailAddIqPlot());
     cbOpt8->setChecked(config->getEmailAddGif());
-    leOpt11->setText(config->getEmailClassificationFilter());
+    //leOpt11->setText(config->getEmailClassificationFilter());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -166,7 +166,7 @@ void EmailOptions::saveCurrentSettings()
     config->setNotificationLargeFonts(cbOpt6->isChecked());
     config->setEmailAddIqPlot(cbOpt7->isChecked());
     config->setEmailAddGif(cbOpt8->isChecked());
-    config->setEmailClassificationFilter(leOpt11->text());
+    //config->setEmailClassificationFilter(leOpt11->text());
 
     //dialog->close();
 }

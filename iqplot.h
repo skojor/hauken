@@ -30,9 +30,9 @@ public:
 public slots:
     void requestIqData(); // Function call to set up I/Q transfer
     void getIqData(const QVector<complexInt16> iq16); // New, gather parts of data before doing sth with them
-    void parseIqData(const QVector<complexInt16> &iq16, const double frequency); // Data from vifstream class
+    void parseIqData(const QVector<complexInt16> &iq16, IqMetadata meta); // Data from vifstream class
     void validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 timestamp);
-    void setFfmFrequency(double d) { ffmFrequency = d;}
+    void setFfmFrequency(double d) { iqMetadata.centerfreq = d;}
     void resetTimer() { flagOngoingAlarm = false; lastIqRequestTimer->stop();} // In case of manual recording request, this will allow < 120 sec between I/Q transfers
     bool readAndAnalyzeFile(const QString filename);
     void readFolder(const QString &folder);
@@ -75,7 +75,7 @@ private:
     QSharedPointer<Config> config;
 
     QVector<double> window;
-    double ffmFrequency = 0;
+    //double ffmFrequency = 0;
     double samplerate = 0;
     quint64 bandwidth = 0;
     quint64 headerCenterFreq = 0;
@@ -93,6 +93,7 @@ private:
     double trigFrequency = 0;
     QVector<double> listFreqs;
     QVector<complexInt16> iqSamples;
+    QVector<IqSamplesStruct> iqSamplesVector;
     quint64 samplesNeeded = 0;
     bool flagRequestedEndVifConnection = false;
     bool flagHeaderValidated = false;

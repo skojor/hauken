@@ -58,6 +58,7 @@ public slots:
     void updResolution(quint32 res);
     void updAntName(QString s) {antName = s.remove(' ');}
     void updScanTime(int i);
+    void setIntentional(QString s) {flagUploadIntentionalOnly = true;} // FIXME - shortcut in code!
 
 private slots:
     QByteArray createHeader(const int saveInterval = 0);
@@ -131,6 +132,8 @@ private:
     bool iqRecordingInProgress = false;
     int skipTraces = 0;
     QString antName = "NA";
+
+    bool flagUploadIntentionalOnly = false;
 
     // Config cache
     bool useNewMsFormat;
