@@ -101,6 +101,19 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
     emit historicData(dateBuffer, databuffer);
 }
 
+QVector<QVector<qint16>> TraceBuffer::retSecondsOfBuffer(int secs)
+{
+    QDateTime currentDateTime = QDateTime::currentDateTime();
+    //QVector<QDateTime> dateBuffer;
+    QVector<QVector<qint16> > databuffer;
+    int iterator = traceBuffer.size() - 1;
+    while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(currentDateTime) < secs) {
+        //dateBuffer.append(datetimeBuffer.at(iterator));
+        databuffer.append(traceBuffer.at(iterator--));
+    }
+    return databuffer;
+}
+
 void TraceBuffer::getAiData(int secs) // secs ignored ftm, just send all you have (2 min)
 {
     (void)secs;

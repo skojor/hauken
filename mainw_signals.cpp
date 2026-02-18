@@ -403,6 +403,7 @@ void MainWindow::setSignals()
     connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
     connect(aiThread, &QThread::started, aiPtr, &AI::start);
     connect(iqPlotThread, &QThread::started, iqPlot, &IqPlot::start);
+    connect(iqPlotThread, &QThread::started, plotAndAnalyze, &PlotAndAnalyze::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -903,6 +904,7 @@ void MainWindow::setSignals()
         if (measurementDevice->currentMode() != Instrument::Mode::FFM) {
             instrMode->setCurrentIndex(instrMode->findText("FFM"));
             instrModeChanged();
+            datastreamIfPan->invalidateHeader();
         }
         instrFfmCenterFreqChanged();
     });
@@ -910,6 +912,7 @@ void MainWindow::setSignals()
         if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
             instrFfmCenterFreq->setValue( ( 1e6 * instrFfmCenterFreq->value() + i * (1e3 * instrFfmSpan->currentText().toDouble() / 40.0) ) / 1e6 );
             instrFfmCenterFreqChanged();
+            datastreamIfPan->invalidateHeader();
         }
     });
     connect(tcpStream.data(), &DataStreamBaseClass::waitForPscanEndMarker, datastreamPScan, &DatastreamPScan::updWaitForPscanEndMarker);
@@ -1101,4 +1104,8 @@ void MainWindow::setSignals()
         datastreamPScan->updWaitForPscanEndMarker(true);
     });
     connect(notifications,&Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
+        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120), customPlot);
+    });
+    connect(sdefRecorder, &SdefRecorder::recordingStarted, plotAndAnalyze, &PlotAndAnalyze::recordingState);
 }

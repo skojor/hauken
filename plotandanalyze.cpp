@@ -1,5 +1,4 @@
 #include "plotandanalyze.h"
-#include "qcustomplot.h"
 #include "asciitranslator.h"
 #include "gif.h"
 #include "opencv2/opencv.hpp"
@@ -8,6 +7,27 @@
 PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
 {
     m_config = c;
+}
+
+void PlotAndAnalyze::start()
+{
+    reqTracedataTimer = new QTimer;
+    sendPlotsTimer = new QTimer;
+    reqTracedataTimer->setSingleShot(true);
+    sendPlotsTimer->setSingleShot(true);
+
+    connect(reqTracedataTimer, &QTimer::timeout, this, [this] () {
+        emit reqTracedata();
+        sendPlotsTimer->start(3000); // Send plots in 3 seconds, wether last plot is ready or not
+    });
+    connect(sendPlotsTimer, &QTimer::timeout, this, [this] () {
+        for (int i = 0; i < plotsToSend.size(); i++) {
+            emit imageReady(plotsToSend[i], plotsDescription[i]);
+            qDebug() << plotsToSend[i] << plotsDescription[i];
+        }
+        plotsToSend.clear();
+        plotsDescription.clear();
+    });
 }
 
 void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, const IqMetadata &meta)
@@ -22,10 +42,10 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     findIqFftMinMaxAvg(fftVector);
 
     // This part looks at spectral density
-    QVector<QImage> images = createImages(fftVector, 2e-3, meta.maxLoc, 1, true);
+    QVector<QImage> images = createImages(fftVector, 2e-3, m_metadata.maxLoc, 1, true);
     QImage img;
     if (!images.isEmpty()) {
-        QImage img = images.first().scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        QImage img = images.first();//.scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         m_metadata.spectral = calculateSpectralStructure(img);
     }
     else {
@@ -44,7 +64,7 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     }
 
     // Email plot with text/lines generated here
-    images = createImages(fftVector, m_config->getIqFftPlotLength() * 1e-6, meta.maxLoc, 1, false);
+    images = createImages(fftVector, m_config->getIqFftPlotLength() * 1e-6, m_metadata.maxLoc, 1, false);
     if (!images.isEmpty())
         createJpgWithInfo(images.first(), m_config->getIqFftPlotLength() * 1e-6);
     else {
@@ -54,8 +74,18 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
 
     // GIF creation here (if enabled)
     if (m_config->getEmailAddGif()) {
-        images = createImages(fftVector, 5e-4, meta.maxLoc, 50, false);
-        if (!images.isEmpty()) createGif(images);
+        images = createImages(fftVector, 5e-4, m_metadata.maxLoc, 50, false);
+        if (!images.isEmpty()) {
+            createGif(images);
+            double delta = (double)m_metadata.maxLoc * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
+            quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
+            //qDebug() << "sure?" << m_metadata.timestamp << m_metadata.maxLoc << QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz") << QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hh:mm:ss.zzz");
+
+            plotsDescription.append("FFT animation from "
+                                    + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
+                                    + ", 500 us per image, total time covered 25 ms");
+
+        }
         else {
             qWarning() << "Not enough I/Q data to generate plot(s)";
             return;
@@ -136,7 +166,6 @@ void PlotAndAnalyze::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftRe
         }
     }
     m_metadata.avg /= iqFftResult.size() * iqFftResult.first().size();
-    qDebug() << "FFT min max osv." << m_metadata.min << m_metadata.max << m_metadata.avg << m_metadata.maxLoc;
 }
 
 double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
@@ -148,6 +177,18 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
     cv::Mat gray;
     cv::cvtColor(bgra, gray, cv::COLOR_BGRA2GRAY);
 
+    cv::Mat floatImg;
+    gray.convertTo(floatImg, CV_32F);
+
+    cv::Mat sorted;
+    floatImg.reshape(1,1).copyTo(sorted);
+    cv::sort(sorted, sorted, cv::SORT_ASCENDING);
+
+    float percentile90 =
+        sorted.at<float>(sorted.cols * 0.95);
+
+    cv::Mat signalMask = floatImg > percentile90;
+
     cv::Mat gradX, gradY;
     cv::Sobel(gray, gradX, CV_32F, 1, 0, 3);
     cv::Sobel(gray, gradY, CV_32F, 0, 1, 3);
@@ -156,17 +197,20 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
     cv::magnitude(gradX, gradY, mag);
 
     cv::Scalar mean, stddev;
-    cv::meanStdDev(mag, mean, stddev);
+    cv::meanStdDev(mag, mean, stddev, signalMask);
 
     double threshold = mean[0] + stddev[0];
 
-    cv::Mat mask = mag > threshold;
+    cv::Mat edgeMask = mag > threshold;
+    edgeMask &= signalMask;
 
-    double active = cv::countNonZero(mask);
-    double total = mag.total();
+    double active = cv::countNonZero(edgeMask);
+    double total  = cv::countNonZero(signalMask);
 
-    double structure = active / total;
-    return structure;
+    if(total == 0)
+        return 0;
+
+    return active / total;
 }
 
 void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringList classes)
@@ -178,14 +222,19 @@ void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringLi
         ts << "Trigger frequency " << m_metadata.trigFrequency << " MHz. ";
 
     if (classes[classId].contains("sweep", Qt::CaseInsensitive)) {
-        ts << "Spectral intensity " << QString::number(m_metadata.spectral, 'f', 2);
-        if (m_metadata.spectral > 0.08) {
+        ts << "Spectral density " << QString::number(m_metadata.spectral, 'f', 2);
+        if (m_metadata.spectral > 0.15) {
             // Sweep jammer detected, report to notification class
             ts << ", most likely a jammer.";
             emit reportIntentional(text);
         }
-        else
+        else {
             ts << ", most likely a radar.";
+            if (m_metadata.trigFrequency > 1210 and
+                m_metadata.trigFrequency < 1300) {
+
+            }
+        }
     }
     else if (classes[classId].contains("prn", Qt::CaseInsensitive))
         emit reportIntentional(text);
@@ -214,7 +263,7 @@ void PlotAndAnalyze::createGif(QVector<QImage> &images)
         }
         GifEnd(&gifWriter);
         if (m_config->getEmailAddGif()) // and !m_metadata.fromFile)
-            emit imageReady(m_metadata.filename + ".gif");
+            plotsToSend.append(m_metadata.filename + ".gif");
     }
 }
 
@@ -250,9 +299,18 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
     addLines(image, secondsAnalyzed);
     addText(image, secondsAnalyzed);
     image.save(m_metadata.filename + "_info.jpg");
-    if (m_config->getEmailAddIqPlot())// and !m_metadata.fromFile)
-        emit imageReady(m_metadata.filename + "_info.jpg");
-    //qDebug() << m_metadata.filename + "_info.jpg";
+    if (m_config->getEmailAddIqPlot()) { // and !m_metadata.fromFile) {
+        double delta = (double)m_metadata.maxLoc * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
+        quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
+
+        plotsToSend.prepend(m_metadata.filename + "_info.jpg");
+        plotsDescription.prepend("Single plot, "
+                                 + QString::number(secondsAnalyzed * 1e6)
+                                 + " us long. Max level "
+                                 + " at timestamp "
+                                 + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz. ")
+                                 + "IQ recording started at " + QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp).toString("hh:mm:ss.zzz"));
+    }
 }
 
 void PlotAndAnalyze::createFilename()
@@ -266,7 +324,7 @@ void PlotAndAnalyze::createFilename()
         + AsciiTranslator::toAscii(m_config->getStationName()) + "_" + QString::number(m_metadata.centerfreq * 1e-6, 'f', 3) + "MHz_"
             + QString::number(m_metadata.samplerate * 1e-6, 'f', 2) + "Msps_bw"
             + QString::number(m_metadata.bandwidth * 1e-3, 'f', 0) + "kHz_"
-            + QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hhmmsszzz_")
+            + QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hhmmss.zzz_")
             + (m_config->getIqSaveAs16bit() ? "16bit" : "8bit");
     }
 }
@@ -284,9 +342,6 @@ void PlotAndAnalyze::addLines(QImage &image, const double secondsAnalyzed)
     int xMinus = 25;
 
     painter.drawLine(width / 2, 5, width / 2, height);
-    //painter.drawLine(xMinus, 5, xMinus, height);
-    //painter.drawLine(width - xMinus, 5, width - xMinus, height);
-
     int lineDistance = (secondsAnalyzed / 5.0) / ( secondsAnalyzed / (double)image.height() );
 
     for (int y = 0; y < height; y++) {
@@ -340,7 +395,7 @@ void PlotAndAnalyze::addText(QImage &image, const double secondsAnalyzed)
 void PlotAndAnalyze::createIqDiagram()
 {
     int startPlotAt = 0, plotThisManyVals = 25600;
-    float maxVal = findMaxMagnitudeAndPosition(iq16, startPlotAt); // Starting plot at max magnitude, plotting next plotThisManyVals vals (or as many as is left)
+    float maxVal = findMaxMagnitudeAndPosition(m_iq16, startPlotAt); // Starting plot at max magnitude, plotting next plotThisManyVals vals (or as many as is left)
 
     QCustomPlot *plot = new QCustomPlot;
     plot->addGraph();
@@ -365,20 +420,21 @@ void PlotAndAnalyze::createIqDiagram()
 
     QVector<double> xAxis, yAxis;
     for (int i = startPlotAt; i < startPlotAt + plotThisManyVals; i++) {
-        if (i < iq16.size()) {
-            xAxis.append(iq16[i].real);
-            yAxis.append(iq16[i].imag);
+        if (i < m_iq16.size()) {
+            xAxis.append(m_iq16[i].real);
+            yAxis.append(m_iq16[i].imag);
         }
         else break;
     }
-    qDebug() << startPlotAt << iq16.size() << maxVal << xAxis.size();
+    qDebug() << startPlotAt << m_iq16.size() << maxVal << xAxis.size();
     plot->graph(0)->setData(xAxis, yAxis);
     //plot->rescaleAxes();
     plot->replot();
-    plot->saveJpg(m_metadata.filename + "_const.jpg", 512, 512, 1.0, 90);
+    plot->saveJpg(m_metadata.filename + "_const.jpg", 512, 512);
 
-    if (m_config->getEmailAddIqPlot() and !m_metadata.fromFile) {
-        emit imageReady(m_metadata.filename + "_const.jpg");
+    if (m_config->getEmailAddIqPlot()) { // and !m_metadata.fromFile) {
+        plotsToSend.append(m_metadata.filename + "_const.jpg");
+        plotsDescription.append("I/Q constellation diagram, 25600 samples plotted from point of maximum signal level");
     }
     delete plot;
 }
@@ -396,4 +452,71 @@ float PlotAndAnalyze::findMaxMagnitudeAndPosition(const QVector<complexInt16> &i
         iter++;
     }
     return maxVal;
+}
+
+void PlotAndAnalyze::receiveTracedata(QVector<QVector<qint16>> data, QCustomPlot *plot)
+{
+    if (data.size() > 20) {
+        int max, min, avg;
+        findTracedataMinMaxAvg(data, min, max, avg);
+        QImage image(data.first().size(), data.size(), QImage::Format_ARGB32);
+        QColor imgColor;
+        double percent;
+        int x, y = 0;
+
+        for (int i = 0; i < data.size(); i++) {
+            x = 0;
+            for (auto &&val : data[i]) {
+                if (max - min) percent = (double)(val - min) / ((double)max - min);
+                else percent = 0;
+                if (percent > 1)
+                    percent = 1;
+                else if (percent < 0)
+                    percent = 0;
+                imgColor.setHsv(0, 0, 255 - (255 * percent));
+                image.setPixel(x, y, imgColor.rgba());
+                x++;
+            }
+            y++;
+        }
+        image = image.scaled(768, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+        mutex.lock();
+        plot->layer("triggerLayer")->setVisible(false);
+        plot->layer("liveGraph")->setVisible(false);
+        plot->replot();
+
+        plot->axisRect()->setBackground(QPixmap::fromImage(image), true);
+        plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 512);
+
+        plot->layer("triggerLayer")->setVisible(true);
+        plot->layer("liveGraph")->setVisible(true);
+        plot->replot();
+
+        mutex.unlock();
+
+        plotsToSend.prepend(m_metadata.filename + "_spectrogram.jpg");
+        plotsDescription.prepend("Spectrogram of " + QString::number(data.size()) + " trace lines");
+    }
+}
+
+void PlotAndAnalyze::recordingState()
+{
+    reqTracedataTimer->start(10 + (m_config->getNotifyTruncateTime() * 1e3));
+}
+
+void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg)
+{
+    min = 32767;
+    max = -32767;
+    quint64 sum = 0;
+
+    for (auto && line : data) {
+        for (auto && val : line) {
+            if (val < min) min = val;
+            else if (val > max) max = val;
+            sum += val;
+        }
+    }
+    avg = sum / ( data.size() * data.first().size() );
 }

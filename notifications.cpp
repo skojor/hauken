@@ -208,13 +208,16 @@ void Notifications::sendMail()
                <<
                 /* + (predictionReceived ? "AI classification: " + prediction +
                                ", probability " + QString::number(probability) + " %" : "") +'/*/
-                "</table><hr><img src='cid:image1'>";
+                "</table><hr><p>"
+                "Maxhold and current signal levels</p>"
+                "<img src='cid:image1'>";
+
             int iter = 0;
             for (auto && iqPlotFilename : iqPlotFilenames) {
-                iter++;
                 if (!iqPlotFilename.isEmpty()) {
-                    ts << "<hr><p>I/Q plot " << iter << "</p><img src='cid:iqplot" << iter << "'>";
+                    ts << "<hr><p>" << iqPlotDescriptions[iter] << "</p><img src='cid:iqplot" << iter << "'>";
                 }
+                iter++;
             }
 
             ts <<
@@ -328,7 +331,8 @@ void Notifications::setupIncidentTable()
 void Notifications::recTracePlot(const QPixmap *pic)
 {
     lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".jpg";
-    if (!pic->save(lastPicFilename, "jpg"))
+    QPixmap pixmap = pic->scaled(768, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (!pixmap.save(lastPicFilename, "jpg"))
         qDebug() << "Cannot save traceplot to" << lastPicFilename;
     else
         qDebug() << "Traceplot saved as" << lastPicFilename;
@@ -483,7 +487,6 @@ void Notifications::generateGraphEmail()
 
     int iter = 0;
     for (auto && iqPlotFilename : iqPlotFilenames) {
-        iter++;
         if (!iqPlotFilename.isEmpty()) {
             QFile picture2(iqPlotFilename);
             if (!picture2.open(QIODevice::ReadOnly)) {
@@ -508,8 +511,10 @@ void Notifications::generateGraphEmail()
                 iqPlotFilename.clear();
             }
         }
+        iter++;
     }
     iqPlotFilenames.clear();
+    iqPlotDescriptions.clear();
 
     message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");
     message.insert("body", body);

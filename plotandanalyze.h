@@ -4,27 +4,32 @@
 #include <QObject>
 #include <QVector>
 #include <QImage>
+#include <QMutex>
 #include "config.h"
 #include <QSharedPointer>
 #include "typedefs.h"
-
+#include "qcustomplot.h"
 
 class PlotAndAnalyze : public QObject
 {
     Q_OBJECT
 public:
     explicit PlotAndAnalyze(QSharedPointer<Config> c);
+    void start();
     void createIqDiagram();
-    void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {iq16 = iq;};
+    void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(int classId, double confid, QStringList classes);
+    void receiveTracedata(QVector<QVector<qint16>> data, QCustomPlot *plot);
+    void recordingState();
 
 signals:
     void imagesReadyForClassification(QVector<QImage>);
-    void imageReady(QString);
+    void imageReady(QString, QString);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void analyzerResult(QString, int);
     void reportIntentional(QString);
+    void reqTracedata();
 
 private:
     float findMaxMagnitudeAndPosition(const QVector<complexInt16> &iq16, int &pos);
@@ -39,10 +44,17 @@ private:
     void addText(QImage &image, const double secondsAnalyzed);
     void addLines(QImage &image, const double secondsAnalyzed);
     void createFilename();
+    void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;
-    QVector<complexInt16> iq16;
+    QVector<complexInt16> m_iq16;
+    bool flagRecordingState = false;
+    QTimer *reqTracedataTimer;
+    QTimer *sendPlotsTimer;
+    QVector<QString> plotsToSend;
+    QVector<QString> plotsDescription;
+    QMutex mutex;
 };
 
 #endif // PLOTANDANALYZE_H
