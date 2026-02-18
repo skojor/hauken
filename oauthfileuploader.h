@@ -17,8 +17,8 @@
 
 
 #define AUTH_TIMEOUT_MS 10000
-#define UPLOAD_TIMEOUT_MS 10000
-#define UPLOAD_RETRY_MS 20 * 60 * 1e3
+#define UPLOAD_TIMEOUT_MS 30000
+#define UPLOAD_RETRY_MS 120 * 60 * 1e3
 
 class OAuthFileUploader : public QObject
 {

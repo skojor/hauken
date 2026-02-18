@@ -618,8 +618,8 @@ void GnssDevice::createGnssPlot()
     plot->graph(2)->setData(keyVals, backlogJam);
     plot->rescaleAxes();
     plot->replot();
-    QString filename = createFilename().split(".log")[0] + ".png";
-    plot->savePng(filename);
+    QString filename = createFilename().split(".log")[0] + ".jpg";
+    plot->saveJpg(filename);
     delete plot;
     incidenceStartedDateTime = QDateTime();
     emit sendGnssPlotFilename(filename);

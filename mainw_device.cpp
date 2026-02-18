@@ -257,6 +257,7 @@ void MainWindow::instrResolutionChanged() // pscan res. change
 {
     //if (measurementDevice->isConnected()) { // save settings only when connected and mode established
     config->setInstrResolution(instrResolution->currentText());
+    datastreamPScan->updWaitForPscanEndMarker(true);
     //}
 }
 

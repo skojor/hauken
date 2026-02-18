@@ -44,36 +44,26 @@
 #include "config.h"
 #include "measurementdevice.h"
 #include "qcustomplot.h"
-//#include "typedefs.h"
 #include "accesshandler.h"
 #include "ai.h"
 #include "arduino.h"
-//#include "arduinooptions.h"
 #include "camerarecorder.h"
 #include "customplotcontroller.h"
-//#include "emailoptions.h"
-//#include "generaloptions.h"
 #include "geolimit.h"
 #include "gnssanalyzer.h"
 #include "gnssdevice.h"
 #include "gnssdisplay.h"
-//#include "gnssoptions.h"
 #include "instrumentlist.h"
-//#include "iqoptions.h"
 #include "led/ledindicator.h"
 #include "mqtt.h"
-//#include "mqttoptions.h"
 #include "notifications.h"
 #include "oauthfileuploader.h"
 #include "pmrtablewdg.h"
 #include "positionreport.h"
-//#include "positionreportoptions.h"
 #include "read1809data.h"
-//#include "receiveroptions.h"
 #include "restapi.h"
-//#include "sdefoptions.h"
 #include "sdefrecorder.h"
-#include "tcpdatastream.h" // Added 300524 - moved classes from measurementDevice
+#include "tcpdatastream.h"
 #include "traceanalyzer.h"
 #include "tracebuffer.h"
 #include "udpdatastream.h"
@@ -92,6 +82,7 @@
 #include "datastreamgpscompass.h"
 #include "datastreamcw.h"
 #include "settingsdialog.h"
+#include "plotandanalyze.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -313,7 +304,9 @@ private:
     Notifications *notifications;
     QThread *notificationsThread;
 
-    IqPlot *iqPlot = new IqPlot(config);
+    IqPlot *iqPlot;
+    QThread *iqPlotThread;
+
     SdefRecorder *sdefRecorder;
     QThread *sdefRecorderThread;
 
@@ -323,8 +316,10 @@ private:
     CameraRecorder *cameraRecorder;
     QThread *cameraThread;
 
-    Arduino *arduinoPtr;
     AI *aiPtr;
+    QThread *aiThread;
+
+    Arduino *arduinoPtr;
     Read1809Data *read1809Data;
     InstrumentList *instrumentList = new InstrumentList(config);
     GnssDisplay *gnssDisplay = new GnssDisplay(config);
@@ -370,6 +365,7 @@ private:
     QPushButton *btnDetector = new QPushButton("Detector");
     QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
     bool flagBusyRecordingIQ = false;
+    PlotAndAnalyze *plotAndAnalyze = new PlotAndAnalyze(config);
 
 signals:
     void stopPlot(bool);

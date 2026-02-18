@@ -120,6 +120,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     datastreamgpscompass.h datastreamgpscompass.cpp
     datastreamcw.h datastreamcw.cpp
     settingsdialog.h settingsdialog.cpp
+    plotandanalyze.h plotandanalyze.cpp
 
 
 

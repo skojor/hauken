@@ -24,13 +24,17 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
 
     mainLayout->addRow(cbOpt2);
     cbOpt2->setText(tr("Use dB scale for FFT values"));
-    cbOpt2->setToolTip(tr("Use dB if lower level signals should become more visible. Default off, useful for CW/chirp signals."));
+    cbOpt2->setToolTip(tr("Use dB if lower level signals should become more visible. Default on. Forced on for AI classification plots."));
 
-    mainLayout->addRow(cbOpt3);
+    /*mainLayout->addRow(cbOpt3);
     cbOpt3->setText(tr("Apply Hann window on FFT plot"));
     cbOpt3->setToolTip(tr("Using a window function on the I/Q data before FFT reduces imaging and "
                           "echos in the plot, "
-                          "but will make the plotted signal look \"smeared\"."));
+                          "but will make the plotted signal look \"smeared\"."));*/
+
+    mainLayout->addRow(cbOpt9);
+    cbOpt9->setText("Generate a movie from all I/Q samples gathered");
+    cbOpt9->setToolTip("Will generate an mp4 movie using all samples gathered from a recording.");
 
     mainLayout->addRow(cbOpt7);
     cbOpt7->setText(tr("Use average signal as low level of plot"));
@@ -77,6 +81,7 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt6->setChecked(config->getIqRecordAllTrigArea());
     cbOpt7->setChecked(config->getIqUseAvgForPlot());
     cbOpt8->setChecked(config->getIqSaveAs16bit());
+    cbOpt9->setChecked(config->getIqGenerateMovie());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
@@ -111,7 +116,8 @@ void IqOptions::saveCurrentSettings()
     config->setIqRecordAllTrigArea(cbOpt6->isChecked());
     config->setIqUseAvgForPlot(cbOpt7->isChecked());
     config->setIqSaveAs16bit(cbOpt8->isChecked());
+    config->setIqGenerateMovie(cbOpt9->isChecked());
 
-    emit updSettings();
+    //emit updSettings();
     //dialog->close();
 }

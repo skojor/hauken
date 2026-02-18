@@ -60,10 +60,10 @@ public slots:
     void updSettings();
     void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
     void recTracePlot(const QPixmap *pic);
-    void recIqPlot(const QString filename) { iqPlotFilenames.append(filename);}
+    void recIqPlot(const QString &filename, const QString &description) { iqPlotFilenames.append(filename); iqPlotDescriptions.append(description);}
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
-    void recPrediction(QString pred, int prob);
+    void recPrediction(const QString &text);
     void setGnssPlotFilename(QString name) { gnssPlotFilename = name;}
     void setGnssPlotFilename2(QString name) { gnssPlotFilename2 = name;}
 
@@ -130,6 +130,7 @@ private:
     bool notifyPriorityRecipients = false;
     QString iqPlotFilename, gnssPlotFilename, gnssPlotFilename2;
     QStringList iqPlotFilenames;
+    QStringList iqPlotDescriptions;
 };
 
 #endif // NOTIFICATIONS_H

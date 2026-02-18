@@ -14,8 +14,8 @@ public:
     void invalidateHeader() { m_frequency = m_bandwidth = m_samplerate = m_sampleCtr = 0; }
 
 signals:
-    void ifDataReady(const QVector<complexInt16> &);
-    void headerChanged(quint64, quint32, quint32);
+    void ifDataReady(const QVector<complexInt16>);
+    void headerChanged(quint64, quint32, quint32, quint64);
 
 private:
     void readData(QDataStream &ds);

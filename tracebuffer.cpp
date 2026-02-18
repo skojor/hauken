@@ -38,44 +38,54 @@ void TraceBuffer::deleteOlderThan()
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
-    if (data.size() != nrOfDataPoints) {
-        emit nrOfDatapointsChanged(data.size());
-        nrOfDataPoints = data.size();
-    }
+    //if (!traceBuffer.isEmpty() )qDebug() << data.size() << traceBuffer.last().size();
 
-    emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
-        if (traceBuffer.last().size() != data.size())  // two different container sizes indicates freq/resolution changed, let's discard the buffer
-            emptyBuffer();
+        if (traceBuffer.last().size() != data.size()) { // two different container sizes indicates freq/resolution changed, let's discard the buffer
+            failedTracesCtr++;
+        }
+        else
+            failedTracesCtr = 0;
     }
+    if (failedTracesCtr > 99)
+        emptyBuffer(); // Failsafe/bugfix: After IQ sampling instrument sends FFM data for some time
 
-    if (normalizeSpectrum) {
-        traceCopy = data;
-        traceBuffer.append(calcNormalizedTrace(data));
-    }
-    else
-        traceBuffer.append(data);
+    if (!failedTracesCtr) {
+        emit traceToAnalyzer(data); // unchanged data going to analyzer, together with unchanged avg. if normalized is on, buffer contains normalized data!
 
-    if (recording)
-        emit traceToRecorder(traceBuffer.last());
+        if (data.size() != nrOfDataPoints) {
+            emit nrOfDatapointsChanged(data.size());
+            nrOfDataPoints = data.size();
+        }
 
-    emit traceData(traceBuffer.last());
+        if (normalizeSpectrum) {
+            traceCopy = data;
+            traceBuffer.append(calcNormalizedTrace(data));
+        }
+        else
+            traceBuffer.append(data);
 
-    datetimeBuffer.append(QDateTime::currentDateTime());
+        if (recording)
+            emit traceToRecorder(traceBuffer.last());
 
-    addDisplayBufferTrace(data);
-    calcMaxhold();
+        emit traceData(traceBuffer.last());
 
-    if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
-        throttleTimer->start();
-        emit newDispTrace(displayBuffer);
-        //emit reqReplot(); // Why this one? Not needed really?
+        datetimeBuffer.append(QDateTime::currentDateTime());
+
+        addDisplayBufferTrace(data);
+        calcMaxhold();
+
+        if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
+            throttleTimer->start();
+            emit newDispTrace(displayBuffer);
+            //emit reqReplot(); // Why this one? Not needed really?
+        }
+
+        if (tracesUsedInAvg < tracesNeededForAvg)
+            calcAvgLevel(data);
     }
     mutex.unlock();
-
-    if (tracesUsedInAvg < tracesNeededForAvg)
-        calcAvgLevel(data);
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
@@ -89,6 +99,19 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
         databuffer.append(traceBuffer.at(iterator--));
     }
     emit historicData(dateBuffer, databuffer);
+}
+
+QVector<QVector<qint16>> TraceBuffer::retSecondsOfBuffer(int secs)
+{
+    QDateTime currentDateTime = QDateTime::currentDateTime();
+    //QVector<QDateTime> dateBuffer;
+    QVector<QVector<qint16> > databuffer;
+    int iterator = traceBuffer.size() - 1;
+    while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(currentDateTime) < secs) {
+        //dateBuffer.append(datetimeBuffer.at(iterator));
+        databuffer.append(traceBuffer.at(iterator--));
+    }
+    return databuffer;
 }
 
 void TraceBuffer::getAiData(int secs) // secs ignored ftm, just send all you have (2 min)
@@ -274,6 +297,9 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
 {
     flagAvgLevelRestarted = true;
     if (!useSavedAvgLevels or startFresh) {
+        QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+        file.remove();
+
         init = true;
         tracesUsedInAvg = 0;
         maxholdBuffer.clear();
@@ -498,7 +524,7 @@ bool TraceBuffer::restoreAvgLevels()
         }
     }
     else {
-        qWarning() << "Could not open file" << config->getWorkFolder() + "/" + AVGFILENAME << "for reading";
+        //qWarning() << "Could not open file" << config->getWorkFolder() + "/" + AVGFILENAME << "for reading";
     }
     return false;
 }

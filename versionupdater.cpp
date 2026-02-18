@@ -23,6 +23,7 @@ VersionUpdater::VersionUpdater(QSharedPointer<Config> c)
     if (config->getOAuth2Scope().contains("access_as_user")) {
         config->setOAuth2Scope(config->getOAuth2Scope().split("/access_as_user").first() + "/.default");
     }
+    config->setNewLogFolder(true); // Default on from v2.55
 }
 
 void VersionUpdater::handleConfigUpdates()

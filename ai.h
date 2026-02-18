@@ -30,26 +30,27 @@ Q_OBJECT
 
 signals:
     void aiResult(QString, int);
+    void aiResultToAnalyzer(int classId, int confid, QStringList classes);
     void reqTraceBuffer(int seconds);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 
 public:
     AI(QSharedPointer<Config> c);
     void receiveBuffer(QVector<QVector<float >> buffer);
-    void receiveImage(const QImage &image);
-    void receiveImageWorker(QImage *image);
+    void receiveImages(QVector<QImage> images);
     void receiveTraceBuffer(const QList<QVector<qint16> > &data);
     void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(45 * 1e3); recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); recordingEnded = false; }
     void recordingHasEnded() { recordingEnded = true; }
     void freqChanged(double a, double b) { startfreq = a; stopfreq = b;}
     void resChanged(double a) { resolution = a;}
     void setTrigCenterFrequency(double a) { trigCenterFrequency = a * 1e6; qDebug() << "trig center" << trigCenterFrequency;}
+    void start(); // Thread calls
 
 private:
     QStringList classes;
-    cv::dnn::Net net;
-    QTimer *reqTraceBufferTimer = new QTimer;
-    QTimer *testTimer = new QTimer;
+    cv::dnn::Net *net;
+    QTimer *reqTraceBufferTimer;
+    QTimer *testTimer;
     bool netLoaded = false;
     bool recordingEnded = true;
     double startfreq, stopfreq, resolution, startrange, stoprange;

@@ -179,8 +179,6 @@ void Notifications::sendMail()
             message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
             if (predictionReceived &&
-                prediction.contains("jammer", Qt::CaseInsensitive) &&
-                probability >= config->getEmailJammerProbabilityFilter() &&
                 config->getEmailFilteredRecipients().size() > 5) {
                 notifyPriorityRecipients = true;
                 for (auto &val : config->getEmailFilteredRecipients().split(";"))
@@ -210,13 +208,16 @@ void Notifications::sendMail()
                <<
                 /* + (predictionReceived ? "AI classification: " + prediction +
                                ", probability " + QString::number(probability) + " %" : "") +'/*/
-                "</table><hr><img src='cid:image1'>";
+                "</table><hr><p>"
+                "Maxhold and current signal levels</p>"
+                "<img src='cid:image1'>";
+
             int iter = 0;
             for (auto && iqPlotFilename : iqPlotFilenames) {
-                iter++;
                 if (!iqPlotFilename.isEmpty()) {
-                    ts << "<hr><p>I/Q plot " << iter << "</p><img src='cid:iqplot" << iter << "'>";
+                    ts << "<hr><p>" << iqPlotDescriptions[iter] << "</p><img src='cid:iqplot" << iter << "'>";
                 }
+                iter++;
             }
 
             ts <<
@@ -237,7 +238,7 @@ void Notifications::sendMail()
             auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
 
             image1->setContentId("image1");
-            image1->setContentType("image/png");
+            image1->setContentType("image/jpg");
             //message.addPart(&image1);
             emailPictures.append(image1);
             if (!gnssPlotFilename.isEmpty()) {
@@ -329,8 +330,9 @@ void Notifications::setupIncidentTable()
 
 void Notifications::recTracePlot(const QPixmap *pic)
 {
-    lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".png";
-    if (!pic->save(lastPicFilename, "png"))
+    lastPicFilename = workFolder + "/.traceplot" + QDateTime::currentDateTime().toString("ddhhmmss") + ".jpg";
+    QPixmap pixmap = pic->scaled(768, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (!pixmap.save(lastPicFilename, "jpg"))
         qDebug() << "Cannot save traceplot to" << lastPicFilename;
     else
         qDebug() << "Traceplot saved as" << lastPicFilename;
@@ -447,8 +449,8 @@ void Notifications::generateGraphEmail()
     else {
         fileOk = true;
         att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-        att.insert("name", "image1.png");
-        att.insert("contentType", "image/png");
+        att.insert("name", "image1.jpg");
+        att.insert("contentType", "image/jpg");
         att.insert("contentId", "image1");
         att.insert("contentBytes", QString(picture.readAll().toBase64()));
         att.insert("isInline", "true");
@@ -459,8 +461,8 @@ void Notifications::generateGraphEmail()
         QFile picture(gnssPlotFilename);
         if (picture.open(QIODevice::ReadOnly)) {
             att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att.insert("name", "image2.png");
-            att.insert("contentType", "image/png");
+            att.insert("name", "image2.jpg");
+            att.insert("contentType", "image/jpg");
             att.insert("contentId", "image2");
             att.insert("contentBytes", QString(picture.readAll().toBase64()));
             att.insert("isInline", "true");
@@ -473,8 +475,8 @@ void Notifications::generateGraphEmail()
         QFile picture(gnssPlotFilename2);
         if (picture.open(QIODevice::ReadOnly)) {
             att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att.insert("name", "image3.png");
-            att.insert("contentType", "image/png");
+            att.insert("name", "image3.jpg");
+            att.insert("contentType", "image/jpg");
             att.insert("contentId", "image3");
             att.insert("contentBytes", QString(picture.readAll().toBase64()));
             att.insert("isInline", "true");
@@ -485,7 +487,6 @@ void Notifications::generateGraphEmail()
 
     int iter = 0;
     for (auto && iqPlotFilename : iqPlotFilenames) {
-        iter++;
         if (!iqPlotFilename.isEmpty()) {
             QFile picture2(iqPlotFilename);
             if (!picture2.open(QIODevice::ReadOnly)) {
@@ -496,17 +497,24 @@ void Notifications::generateGraphEmail()
                 //QString filename = iqPlotFilename.split('/').last();
                 att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
                 att2.insert("name", "iqplot" + QString::number(iter));
-                if (iqPlotFilename.contains("png")) att2.insert("contentType", "image/png");
-                else if (iqPlotFilename.contains("gif")) att2.insert("contentType", "image/gif");
-                att2.insert("contentId", "iqplot" + QString::number(iter));
+                if (iqPlotFilename.contains("jpg")) {
+                    att2.insert("contentType", "image/jpg");
+                    att2.insert("contentId", "iqplot" + QString::number(iter));
+                }
+                else if (iqPlotFilename.contains("gif")) {
+                    att2.insert("contentType", "image/gif");
+                    att2.insert("contentId", "iqplot" + QString::number(iter));
+                }
                 att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
                 att2.insert("isInline", "true");
                 attachments.append(att2);
                 iqPlotFilename.clear();
             }
         }
+        iter++;
     }
     iqPlotFilenames.clear();
+    iqPlotDescriptions.clear();
 
     message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");
     message.insert("body", body);
@@ -600,9 +608,9 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
     }
 }
 
-void Notifications::recPrediction(QString pred, int prob)
+void Notifications::recPrediction(const QString &text)
 {
-    prediction = pred;
-    probability = prob;
+    // New, triggered only on intentional signal!
+    prediction = text;
     predictionReceived = true;
 }

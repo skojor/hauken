@@ -22,10 +22,23 @@ void MainWindow::setSignals()
     cameraThread->setObjectName("camera");
     cameraRecorder->moveToThread(cameraThread);
 
+    aiPtr = new AI(config);
+    aiThread = new QThread(this);
+    aiThread->setObjectName("AI");
+    aiPtr->moveToThread(aiThread);
+
+    iqPlot = new IqPlot(config);
+    iqPlotThread = new QThread(this);
+    iqPlotThread->setObjectName("IqPlot");
+    iqPlot->moveToThread(iqPlotThread);
+    plotAndAnalyze->moveToThread(iqPlotThread); // Run in same thread, to avoid deep copy of data!
+
     sdefRecorderThread->start();
     notificationsThread->start();
     waterfallThread->start();
     cameraThread->start();
+    aiThread->start();
+    iqPlotThread->start();
 
     connect(instrStartFreq,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -388,6 +401,9 @@ void MainWindow::setSignals()
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
     connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
+    connect(aiThread, &QThread::started, aiPtr, &AI::start);
+    connect(iqPlotThread, &QThread::started, iqPlot, &IqPlot::start);
+    connect(iqPlotThread, &QThread::started, plotAndAnalyze, &PlotAndAnalyze::start);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -506,10 +522,6 @@ void MainWindow::setSignals()
             this->incidentLog->verticalScrollBar()->maximum());
     });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
-    connect(notifications,
-            &Notifications::reqTracePlot,
-            customPlotController,
-            &CustomPlotController::reqTracePlot); // ask for image
     connect(customPlotController,
             &CustomPlotController::retTracePlot,
             notifications,
@@ -535,7 +547,6 @@ void MainWindow::setSignals()
             customPlot->replot();
         }
     });
-    connect(iqPlot, &IqPlot::iqPlotReady, notifications, &Notifications::recIqPlot);
 
     connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
     connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
@@ -625,11 +636,8 @@ void MainWindow::setSignals()
             aiPtr,
             &AI::startAiTimer); // will start analyze of data after x seconds
     connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
-    connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData);
+    //connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData); TBR
     connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
-    connect(aiPtr, &AI::aiResult, sdefRecorder, &SdefRecorder::recPrediction);
-    connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
-    connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
 
     connect(instrumentList,
             &InstrumentList::listReady,
@@ -896,6 +904,7 @@ void MainWindow::setSignals()
         if (measurementDevice->currentMode() != Instrument::Mode::FFM) {
             instrMode->setCurrentIndex(instrMode->findText("FFM"));
             instrModeChanged();
+            datastreamIfPan->invalidateHeader();
         }
         instrFfmCenterFreqChanged();
     });
@@ -903,6 +912,7 @@ void MainWindow::setSignals()
         if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
             instrFfmCenterFreq->setValue( ( 1e6 * instrFfmCenterFreq->value() + i * (1e3 * instrFfmSpan->currentText().toDouble() / 40.0) ) / 1e6 );
             instrFfmCenterFreqChanged();
+            datastreamIfPan->invalidateHeader();
         }
     });
     connect(tcpStream.data(), &DataStreamBaseClass::waitForPscanEndMarker, datastreamPScan, &DatastreamPScan::updWaitForPscanEndMarker);
@@ -1026,7 +1036,13 @@ void MainWindow::setSignals()
         customPlotController->doReplot();
         config->settingsUpdated();
     });
-    connect(iqPlot, &IqPlot::rawPlotReady, aiPtr, &AI::receiveImage);
+    connect(instrMode, &QComboBox::currentIndexChanged, this, [this] () {
+        traceBuffer->restartCalcAvgLevel(true);
+        customPlotController->doReplot();
+        config->settingsUpdated();
+    });
+
+    //connect(iqPlot, &IqPlot::imagesForClassification, aiPtr, &AI::receiveImages); TBR
 
     // Rebuild I/Q pause/resume after data transfer
     // Connect/disconnect relevant signals while transferring
@@ -1045,27 +1061,51 @@ void MainWindow::setSignals()
             disconnect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
         }
         else {
-            flagBusyRecordingIQ = false;
+            //flagBusyRecordingIQ = false;
             connect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             connect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
             connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             connect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
             connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioRecorder, &AudioRecorder::receiveAudioData);
             connect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioPlayer, &AudioPlayer::playChunk);
+        }
+    });
+    connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] () {
+
+    });
+    connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] () { // Delay signals about freq/res change just after I/Q rec.
+        if (flagBusyRecordingIQ) {
+            flagBusyRecordingIQ = false;
             connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
             connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
             connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
             connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
         }
     });
+
+    //connect(iqPlot, &IqPlot::iqPlotReady, notifications, &Notifications::recIqPlot);  // TBR
+    connect(plotAndAnalyze, &PlotAndAnalyze::imageReady, notifications, &Notifications::recIqPlot);
     connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
+    connect(iqPlot, &IqPlot::iqdataReady, plotAndAnalyze, &PlotAndAnalyze::receiveIqData);
+    connect(iqPlot, &IqPlot::fftdataReady, plotAndAnalyze, &PlotAndAnalyze::receiveFftData);
+    connect(plotAndAnalyze, &PlotAndAnalyze::imagesReadyForClassification, aiPtr, &AI::receiveImages);
+    connect(aiPtr, &AI::aiResultToAnalyzer, plotAndAnalyze, &PlotAndAnalyze::receiveClassification);
 
-    /*connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
-    connect(iqPlot, &IqPlot::busyRecording, this, [this](bool b) {
-        if (b)
-            measurementDevice->setAudioMode(0); // Disable audio demod while I/Q transfer is running
-        else if (config->getAudioActivate())
-            audioOptions->report(); // Restore mode when done (if it should be active)
-    });*/
-
+    // Rebuild those below to use new PlotAndAnalyze class signal/slots!
+    //connect(aiPtr, &AI::aiResult, sdefRecorder, &SdefRecorder::recPrediction);
+    //connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
+    //connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(plotAndAnalyze, &PlotAndAnalyze::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(plotAndAnalyze, &PlotAndAnalyze::analyzerResult, sdefRecorder, &SdefRecorder::recPrediction);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reportIntentional, notifications, &Notifications::recPrediction);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reportIntentional, sdefRecorder, &SdefRecorder::setIntentional);
+    // Bugfix: Pscan becomes out of sync when measurement time is changed!
+    connect(instrMeasurementTime, &QSpinBox::valueChanged, this, [this] () {
+        datastreamPScan->updWaitForPscanEndMarker(true);
+    });
+    connect(notifications,&Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
+        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120), customPlot);
+    });
+    connect(sdefRecorder, &SdefRecorder::recordingStarted, plotAndAnalyze, &PlotAndAnalyze::recordingState);
 }

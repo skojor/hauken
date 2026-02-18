@@ -56,7 +56,14 @@ void SdefRecorder::start()
     networkManager = new QNetworkAccessManager(this);
 
     connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
-        emit fileReadyForUpload(finishedFilename);
+        if (!config->getSdefUploadIntentionalOnly() ||
+            (config->getSdefUploadIntentionalOnly() and flagUploadIntentionalOnly)
+            )
+        {
+            qDebug() << "Preparing upload of" << finishedFilename << flagUploadIntentionalOnly;
+            emit fileReadyForUpload(finishedFilename);
+            flagUploadIntentionalOnly = false; // Reset for next file
+        }
         finishedFilename.clear();
     });
 
@@ -525,7 +532,7 @@ void SdefRecorder::updFileWithPrediction(const QString filename)
             if (data.contains("Note\n")) { // Found empty note line, editing
                 if (probability > 0)
                     data = "Note " + prediction.toLocal8Bit() + " ["
-                           + QByteArray::number(probability) + " % probability]\n";
+                           + QByteArray::number(probability) + " % confidence]\n";
                 else
                     data = "Note " + prediction.toLocal8Bit() + "\n";
             }

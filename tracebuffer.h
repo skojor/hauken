@@ -35,6 +35,7 @@ public slots:
     void addTrace(const QVector<qint16> &data);
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
+    QVector<QVector<qint16>> retSecondsOfBuffer(int secs = 0);
     void getAiData(int secs = 0);
     void restartCalcAvgLevel(bool startFresh = false);
     void sendDispTrigline()
@@ -132,6 +133,7 @@ private:
     bool useSavedAvgLevels = false;
     bool init = true;
     int gainControl = 0;
+    int failedTracesCtr = 0;
 };
 
 #endif // TRACEBUFFER_H
