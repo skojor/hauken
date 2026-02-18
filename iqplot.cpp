@@ -81,7 +81,7 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, IqMetadata meta)
 
     if (!iqMetadata.fromFile || filenameFromFile.isEmpty())
         filename = dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss_")
-                   + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(meta.centerfreq, 'f', 3) + "MHz_"
+                   + AsciiTranslator::toAscii(config->getStationName()) + "_" + QString::number(meta.centerfreq * 1e-6, 'f', 3) + "MHz_"
                    + QString::number(samplerate * 1e-6, 'f', 2) + "Msps_bw"
                    + QString::number(bandwidth * 1e-3, 'f', 0) + "kHz_"
                    + (config->getIqSaveAs16bit() ? "16bit" : "8bit");
@@ -405,6 +405,7 @@ void IqPlot::receiverControl()
         for (auto && iqStruct : iqSamplesVector) {
             parseIqData(iqStruct.iq, iqStruct.metadata); // NEW: Delay data work until all iq gathering is finished
         }
+        iqSamplesVector.clear();
     }
 }
 
