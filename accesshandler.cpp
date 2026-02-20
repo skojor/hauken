@@ -24,6 +24,7 @@ AccessHandler::AccessHandler(QObject *parent, QSharedPointer<Config> c)
     //m_debugTimer->start(60000);
 }
 
+// Keep local OAuth values synchronized with Config and react to enable/disable transitions.
 void AccessHandler::updSettings()
 {
     m_appId = m_config->getOAuth2ClientId().toStdWString();
@@ -45,6 +46,7 @@ void AccessHandler::updSettings()
     }
 }
 
+// Initialize MSAL and kick off async token flow guarded by timeout + state polling.
 void AccessHandler::login()
 {
     if (m_config->getOauth2Enable()) {
@@ -75,6 +77,7 @@ void AccessHandler::login()
     }
 }
 
+// Drive async MSAL operations as a simple polling state machine.
 void AccessHandler::stateHandler()
 {
     if (m_state == IDLE) { // Start fresh
@@ -138,6 +141,7 @@ void AccessHandler::loggerCallback(const os_char *logMessage,
     }
 }
 
+// Read token/account details from MSAL result and store in shared callback context.
 void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void *callbackData)
 {
     discover_t *ctx = (discover_t *)callbackData;
@@ -183,6 +187,7 @@ void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void
     MSALRUNTIME_ReleaseAuthResult(authResult);
 }
 
+// Select first discovered account and mark async callback as completed.
 void AccessHandler::discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE discoverAccountsResult, void *callbackData)
 {
     discover_t *ctx = (discover_t *)callbackData;
