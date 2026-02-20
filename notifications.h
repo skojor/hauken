@@ -80,7 +80,7 @@ public slots:
     void sendMailWithGraph();
     void generateGraphEmail();
     void curlCallback(int exitCode, QProcess::ExitStatus);
-    void updInstrData(QString s) { m_instrData = s; qDebug() << "got it" << s;}
+    void updInstrData(QString s) { m_instrData = s;}
 
 signals:
     void showIncident(QString);

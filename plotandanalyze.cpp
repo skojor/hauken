@@ -487,7 +487,7 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
         QColor imgColor;
         double percent;
         int x, y = 0;
-        qDebug() << "img size" << image.size();
+
         for (int i = traceData.data.size() - 1; i > 0; i--) {
             x = 0;
             for (int j = 0; j < traceData.data.first().size() - skipSamples; j += skipSamples) {

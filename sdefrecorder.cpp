@@ -64,6 +64,9 @@ void SdefRecorder::start()
             emit fileReadyForUpload(finishedFilename);
             flagUploadIntentionalOnly = false; // Reset for next file
         }
+        else
+            qDebug() << "Classified as non-intentional or no classification received. Not uploading";
+
         finishedFilename.clear();
     });
 
