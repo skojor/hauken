@@ -18,35 +18,13 @@ static inline void replaceBoth(QString& s,
 
 void AsciiTranslator::applyCommonReplacements(QString& s)
 {
-    // Norske
     replaceBoth(s, QStringLiteral("æ"), QStringLiteral("ae"),
-                QStringLiteral("Æ"), QStringLiteral("AE"));
+                QStringLiteral("Æ"), QStringLiteral("Ae"));
     replaceBoth(s, QStringLiteral("ø"), QStringLiteral("oe"),
-                QStringLiteral("Ø"), QStringLiteral("OE"));
+                QStringLiteral("Ø"), QStringLiteral("Oe"));
     replaceBoth(s, QStringLiteral("å"), QStringLiteral("aa"),
-                QStringLiteral("Å"), QStringLiteral("AA"));
+                QStringLiteral("Å"), QStringLiteral("Aa"));
 
-    // Vanlige europeiske
-    replaceBoth(s, QStringLiteral("ß"), QStringLiteral("ss"),
-                QStringLiteral("ẞ"), QStringLiteral("SS"));
-    replaceBoth(s, QStringLiteral("œ"), QStringLiteral("oe"),
-                QStringLiteral("Œ"), QStringLiteral("OE"));
-    replaceBoth(s, QStringLiteral("ñ"), QStringLiteral("n"),
-                QStringLiteral("Ñ"), QStringLiteral("N"));
-    replaceBoth(s, QStringLiteral("ç"), QStringLiteral("c"),
-                QStringLiteral("Ç"), QStringLiteral("C"));
-    replaceBoth(s, QStringLiteral("ł"), QStringLiteral("l"),
-                QStringLiteral("Ł"), QStringLiteral("L"));
-    replaceBoth(s, QStringLiteral("đ"), QStringLiteral("d"),
-                QStringLiteral("Đ"), QStringLiteral("D"));
-    replaceBoth(s, QStringLiteral("þ"), QStringLiteral("th"),
-                QStringLiteral("Þ"), QStringLiteral("TH"));
-    replaceBoth(s, QStringLiteral("ð"), QStringLiteral("d"),
-                QStringLiteral("Ð"), QStringLiteral("D"));
-    replaceBoth(s, QStringLiteral("æ"), QStringLiteral("ae"),
-                QStringLiteral("Æ"), QStringLiteral("AE")); // ok om duplikat
-
-    // Typografiske streker / punkt
     s.replace(QStringLiteral("—"), QStringLiteral("-"));
     s.replace(QStringLiteral("–"), QStringLiteral("-"));
     s.replace(QStringLiteral("•"), QStringLiteral("-"));
@@ -55,10 +33,7 @@ void AsciiTranslator::applyCommonReplacements(QString& s)
 
 void AsciiTranslator::stripCombiningMarks(QString& s)
 {
-    // NFD: base + diakritikk som separate kodepunkter
     QString nfd = s.normalized(QString::NormalizationForm_D);
-
-    // Fjern alle kombinerende markører (Unicode Mn)
     static const QRegularExpression reMn(QStringLiteral("\\p{Mn}+"));
     nfd.remove(reMn);
 
@@ -86,7 +61,6 @@ QString AsciiTranslator::filterToAscii(const QString& s, const Options& opt)
             }
         } else {
             if (opt.replaceUnknownWithQuestionMark) out.append('?');
-            // ellers droppes tegn utenfor ASCII
         }
     }
 
