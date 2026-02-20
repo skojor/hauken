@@ -33,11 +33,13 @@ void AI::start()
     }
     else if (!netLoaded) {
         qDebug() << "Classification model not found";
+        return;
     }
-    net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     if (netLoaded) {
+        net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+
         QFile classFile(config->getWorkFolder() + "/classes.txt");
         if (classFile.exists()) {
             classFile.open(QIODevice::ReadOnly);
