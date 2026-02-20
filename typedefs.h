@@ -997,5 +997,10 @@ struct IqSamplesStruct {
     QVector<complexInt16> iq;
 };
 
+struct TraceDataStruct {
+    QVector<QDateTime>          timestamp;
+    QVector<QVector<qint16>>    data;
+};
+
 #endif // TYPEDEFS_H
 
