@@ -17,7 +17,7 @@
 #include <QSharedPointer>
 #include "config.h"
 
-#define TIMEOUT_MS 15000
+constexpr int kTimeoutMs = 15000;
 
 /*
  * AccessHandler manages OAuth authentication/token retrieval using MSAL Runtime.
@@ -34,21 +34,20 @@
  *  - accessTokenInvalid()/settingsInvalid() on timeout/config/auth issues.
  */
 
-enum STATE_HANDLER {
-    IDLE,
-    DISCOVER_ACCOUNT,
-    DISCOVER_FIRST,
-    ACQUIRE_TOKEN,
-    FINISHED
+enum class StateHandler {
+    Idle,
+    DiscoverAccount,
+    AcquireToken,
+    Finished
 };
 
-typedef struct discover_s {
-    bool called;
-    MSALRUNTIME_ACCOUNT_HANDLE account;
+struct DiscoverContext {
+    bool called = false;
+    MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
     QDateTime expiryTime;
     QString token;
     QString acc;
-} discover_t;
+};
 
 class AccessHandler : public QObject
 {
@@ -56,6 +55,7 @@ class AccessHandler : public QObject
 public:
     explicit AccessHandler(QObject *parent = nullptr,
                            QSharedPointer<Config> c = nullptr);
+    ~AccessHandler() override;
     // Refresh cached OAuth settings from Config.
     // If OAuth was enabled, login is triggered automatically.
     void updSettings();
@@ -74,6 +74,8 @@ signals:
 private:
     // Polling state machine that waits for MSAL async callbacks and advances flow.
     void stateHandler();
+    // Release all active MSAL handles and optionally shutdown runtime.
+    void cleanupMsalResources(bool shutdownRuntime);
     // Optional MSAL logger callback (currently not registered by default).
     static void loggerCallback(const os_char *logMessage, const MSALRUNTIME_LOG_LEVEL logLevel, void *callbackData);
     // Callback for silent token acquisition. Populates token/user info into context.
@@ -84,15 +86,14 @@ private:
     MSALRUNTIME_LOG_CALLBACK_HANDLE m_logHandle = nullptr;
     MSALRUNTIME_AUTH_PARAMETERS_HANDLE m_authParameters = nullptr;
     MSALRUNTIME_ASYNC_HANDLE m_asyncHandle = nullptr;
-    MSALRUNTIME_ACCOUNT_HANDLE m_account = nullptr;
 
     std::wstring m_appId;
     std::wstring m_authority;
     std::wstring m_scope;
     QSharedPointer<Config> m_config;
-    STATE_HANDLER m_state = IDLE;
+    StateHandler m_state = StateHandler::Idle;
     std::wstring m_correlationId;
-    discover_t m_ctx;
+    DiscoverContext m_ctx;
     QTimer *m_stateTimer = new QTimer;
     QTimer *m_timeoutTimer = new QTimer;
     QTimer *m_debugTimer = new QTimer;
@@ -100,5 +101,6 @@ private:
     // Cached setting values/state to control when login should run.
     bool m_loginEnabled = false;
     bool m_initialLogin = true;
+    bool m_msalStarted = false;
 };
 #endif // ACCESSHANDLER_H

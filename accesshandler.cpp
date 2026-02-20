@@ -1,4 +1,4 @@
-#include "AccessHandler.h"
+#include "accesshandler.h"
 
 AccessHandler::AccessHandler(QObject *parent, QSharedPointer<Config> c)
     : QObject(parent)
@@ -8,11 +8,17 @@ AccessHandler::AccessHandler(QObject *parent, QSharedPointer<Config> c)
     else
         qFatal() << "AccessHandler: No config pointer set, giving up";
 
+
+    m_stateTimer->setParent(this);
+    m_timeoutTimer->setParent(this);
+    m_debugTimer->setParent(this);
+
     connect(m_stateTimer, &QTimer::timeout, this, &AccessHandler::stateHandler);
     connect(m_timeoutTimer, &QTimer::timeout, this, [this] () {
         m_timeoutTimer->stop();
         m_stateTimer->stop();
-        m_state = IDLE;
+        cleanupMsalResources(true);
+        m_state = StateHandler::Idle;
         qWarning() << "AccessHandler: Timeout while running authorization routine, retrying later";
         emit accessTokenInvalid("Authorization timed out");
         QTimer::singleShot(5 * 60 * 1000, this, &AccessHandler::login); // 5 min retry
@@ -22,6 +28,14 @@ AccessHandler::AccessHandler(QObject *parent, QSharedPointer<Config> c)
         qDebug() << "AccessHandler debug:" << m_ctx.token << m_ctx.expiryTime.toLocalTime().toString();
     });
     //m_debugTimer->start(60000);
+}
+
+AccessHandler::~AccessHandler()
+{
+    m_timeoutTimer->stop();
+    m_stateTimer->stop();
+    m_debugTimer->stop();
+    cleanupMsalResources(true);
 }
 
 // Keep local OAuth values synchronized with Config and react to enable/disable transitions.
@@ -39,6 +53,7 @@ void AccessHandler::updSettings()
         else {  // Was enabled, now disabled. Stop any renewal timers
             m_timeoutTimer->stop();
             m_stateTimer->stop();
+            cleanupMsalResources(true);
             emit settingsInvalid("OAuth disabled in settings");
             m_ctx.expiryTime = QDateTime::currentDateTime(); // Expired
             m_ctx.token.clear();
@@ -52,8 +67,10 @@ void AccessHandler::login()
     if (m_config->getOauth2Enable()) {
         if (!m_appId.empty() && !m_authority.empty() && !m_scope.empty()) {
             // Init MSAL
+            cleanupMsalResources(true);
             m_correlationId = uuidGen();
             MSALRUNTIME_Startup();
+            m_msalStarted = true;
             MSALRUNTIME_SetIsPiiEnabled(false);
             //MSALRUNTIME_RegisterLogCallback(loggerCallback, nullptr, &m_logHandle);
             MSALRUNTIME_CreateAuthParameters(m_appId.c_str(), m_authority.c_str(), &m_authParameters);
@@ -62,9 +79,9 @@ void AccessHandler::login()
             MSALRUNTIME_SetAdditionalParameter(
                 m_authParameters, L"msal_gui_thread", L"true");
 
-            m_state = IDLE;
+            m_state = StateHandler::Idle;
             m_stateTimer->start(100);
-            m_timeoutTimer->start(TIMEOUT_MS);
+            m_timeoutTimer->start(kTimeoutMs);
             emit reqAccessToken();
         }
         else {
@@ -80,26 +97,24 @@ void AccessHandler::login()
 // Drive async MSAL operations as a simple polling state machine.
 void AccessHandler::stateHandler()
 {
-    if (m_state == IDLE) { // Start fresh
-        m_state = DISCOVER_ACCOUNT;
+    if (m_state == StateHandler::Idle) { // Start fresh
+        m_state = StateHandler::DiscoverAccount;
         m_asyncHandle = nullptr;
-        m_ctx = { 0 };
+        m_ctx = {};
         MSALRUNTIME_DiscoverAccountsAsync(m_appId.c_str(), m_correlationId.c_str(), discoverCallback, &m_ctx, &m_asyncHandle);
     }
-    else if (m_state == DISCOVER_ACCOUNT && m_ctx.called) { // Done, we have first acc. set in ctx
+    else if (m_state == StateHandler::DiscoverAccount && m_ctx.called) { // Done, we have first acc. set in ctx
         MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
-        m_state = ACQUIRE_TOKEN;
+        m_asyncHandle = nullptr;
+        m_state = StateHandler::AcquireToken;
         m_ctx.called = false;
         MSALRUNTIME_AcquireTokenSilentlyAsync(m_authParameters, m_correlationId.c_str(), m_ctx.account, authCallback, &m_ctx, &m_asyncHandle);
     }
-    else if (m_state == ACQUIRE_TOKEN && m_ctx.called) {
-        m_state = FINISHED;
+    else if (m_state == StateHandler::AcquireToken && m_ctx.called) {
+        m_state = StateHandler::Finished;
         m_stateTimer->stop();
         m_timeoutTimer->stop();
-        MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
-        MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
-        MSALRUNTIME_ReleaseLogCallbackHandle(m_logHandle);
-        MSALRUNTIME_Shutdown();
+        cleanupMsalResources(true);
         if (m_ctx.token.isEmpty()) {
             emit accessTokenInvalid("Couldn't retrieve a valid token");
         }
@@ -110,6 +125,34 @@ void AccessHandler::stateHandler()
             else
                 m_initialLogin = false;
         }
+    }
+}
+
+void AccessHandler::cleanupMsalResources(bool shutdownRuntime)
+{
+    if (m_asyncHandle) {
+        MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
+        m_asyncHandle = nullptr;
+    }
+
+    if (m_authParameters) {
+        MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
+        m_authParameters = nullptr;
+    }
+
+    if (m_logHandle) {
+        MSALRUNTIME_ReleaseLogCallbackHandle(m_logHandle);
+        m_logHandle = nullptr;
+    }
+
+    if (m_ctx.account) {
+        MSALRUNTIME_ReleaseAccount(m_ctx.account);
+        m_ctx.account = nullptr;
+    }
+
+    if (shutdownRuntime && m_msalStarted) {
+        MSALRUNTIME_Shutdown();
+        m_msalStarted = false;
     }
 }
 
@@ -144,7 +187,7 @@ void AccessHandler::loggerCallback(const os_char *logMessage,
 // Read token/account details from MSAL result and store in shared callback context.
 void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void *callbackData)
 {
-    discover_t *ctx = (discover_t *)callbackData;
+    auto *ctx = static_cast<DiscoverContext *>(callbackData);
     MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
 
     MSALRUNTIME_GetAccount(authResult, &account);
@@ -190,7 +233,7 @@ void AccessHandler::authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void
 // Select first discovered account and mark async callback as completed.
 void AccessHandler::discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE discoverAccountsResult, void *callbackData)
 {
-    discover_t *ctx = (discover_t *)callbackData;
+    auto *ctx = static_cast<DiscoverContext *>(callbackData);
 
     // fetch the first account available
     MSALRUNTIME_GetDiscoverAccountsAt(discoverAccountsResult, 0, &ctx->account);
