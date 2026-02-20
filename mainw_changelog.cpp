@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.55</td><td>IQ plot classification and notification filter added</td></tr>"
        << "<tr><td>2.54</td><td>Audio demodulation playback and recording added</td></tr>"
        << "<tr><td>2.53</td><td>OAuth login rebuilt to use Microsoft Authentication library</td></tr>"
        << "<tr><td>2.52</td><td>Average noise level now restored if settings are unchanged. Added GNSS filter time for incidents</td></tr>"
