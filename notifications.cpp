@@ -148,10 +148,7 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
     ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>";
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) {
-        mailDelayTimer->start(truncateTime * 2e3); // wait double time of truncate time, to be sure to catch all log lines
-        int delay = config->getEmailDelayBeforeAddingImages();
-        if (delay > truncateTime * 2) delay = (truncateTime * 2) - 1; // no point in requesting an image after the mail is sent...
-        QTimer::singleShot(delay * 1e3, this, [this] { emit reqTracePlot(); }); // also ask for a plot image at this time
+        mailDelayTimer->start(truncateTime * 2e3);
     }
     if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
 }
@@ -192,6 +189,8 @@ void Notifications::sendMail()
             QTextStream ts(&data);
 
             ts  << "<html><body><table>" << mailtext
+               << "<p>Location: " << config->location() << ", "
+               << "instrument: " << ( m_instrData.isEmpty() ? "unknown" : m_instrData ) << ".</p>"
                << (config->getSdefAddPosition() && positionValid ?
                        "<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/" +
                            QString::number(latitude, 'f', 5) + "+" +
@@ -208,22 +207,22 @@ void Notifications::sendMail()
                <<
                 /* + (predictionReceived ? "AI classification: " + prediction +
                                ", probability " + QString::number(probability) + " %" : "") +'/*/
-                "</table><hr><p>"
-                "Maxhold and current signal levels</p>"
-                "<img src='cid:image1'>";
+                "</table><p>";
+                //"Maxhold and current signal levels</p>"
+                //"<img src='cid:image1'>";
 
             int iter = 0;
             for (auto && iqPlotFilename : iqPlotFilenames) {
                 if (!iqPlotFilename.isEmpty()) {
-                    ts << "<hr><p>" << iqPlotDescriptions[iter] << "</p><img src='cid:iqplot" << iter << "'>";
+                    ts << "<br><p>" << iqPlotDescriptions[iter] << "</p><img src='cid:iqplot" << iter << "'>";
                 }
                 iter++;
             }
 
             ts <<
-                (gnssPlotFilename.isEmpty() ? "" : "<hr><p>GNSS 1 data</p><img src='cid:image2'>") <<
-                (gnssPlotFilename2.isEmpty() ? "" : "<hr><p>GNSS 2 data</p><img src='cid:image3'>") <<
-                "</body></table>   /";
+                (gnssPlotFilename.isEmpty() ? "" : "<br><p>GNSS 1 data</p><img src='cid:image2'>") <<
+                (gnssPlotFilename2.isEmpty() ? "" : "<br><p>GNSS 2 data</p><img src='cid:image3'>") <<
+                "<hr></body></table>   /";
 
             //qDebug() << "mail debug:" << mimeHtml->data();
 
@@ -235,12 +234,12 @@ void Notifications::sendMail()
                 predictionReceived = false;
             }
 
-            auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
+            /*auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
 
             image1->setContentId("image1");
             image1->setContentType("image/jpg");
             //message.addPart(&image1);
-            emailPictures.append(image1);
+            emailPictures.append(image1);*/
             if (!gnssPlotFilename.isEmpty()) {
                 auto image2 = new SimpleMail::MimeInlineFile(new QFile(gnssPlotFilename));
                 image2->setContentId("image2");
@@ -441,8 +440,9 @@ void Notifications::generateGraphEmail()
     body.insert("contentType", "html");
     body.insert("content", htmlData);
     QFile picture(lastPicFilename);
-    bool fileOk;
-    if (!picture.open(QIODevice::ReadOnly)) {
+
+    bool fileOk = false;
+    /*if (!picture.open(QIODevice::ReadOnly)) {
         qDebug() << "Cannot open traceplot file" << lastPicFilename << picture.errorString();
         fileOk = false;
     }
@@ -455,8 +455,9 @@ void Notifications::generateGraphEmail()
         att.insert("contentBytes", QString(picture.readAll().toBase64()));
         att.insert("isInline", "true");
         attachments.append(att);
-    }
+    }*/
     if (!gnssPlotFilename.isEmpty()) {
+        fileOk = true;
         QJsonObject att;
         QFile picture(gnssPlotFilename);
         if (picture.open(QIODevice::ReadOnly)) {
@@ -471,6 +472,7 @@ void Notifications::generateGraphEmail()
         gnssPlotFilename.clear();
     }
     if (!gnssPlotFilename2.isEmpty()) {
+        fileOk = true;
         QJsonObject att;
         QFile picture(gnssPlotFilename2);
         if (picture.open(QIODevice::ReadOnly)) {
@@ -493,6 +495,7 @@ void Notifications::generateGraphEmail()
                 qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
             }
             else {
+                fileOk = true;
                 QJsonObject att2;
                 //QString filename = iqPlotFilename.split('/').last();
                 att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
@@ -530,8 +533,8 @@ void Notifications::generateGraphEmail()
     jsonFile.open(QIODevice::WriteOnly);
     jsonFile.write(json.toJson(QJsonDocument::Compact));
     jsonFile.close();
-    if (!picture.remove()) // picture data is now stored in the json code, close and delete file
-        qDebug() << "Couldn't remove traceplot file" << picture.fileName();
+    /*if (!picture.remove()) // picture data is now stored in the json code, close and delete file
+        qDebug() << "Couldn't remove traceplot file" << picture.fileName();*/
 
     graphEmailLog.append(jsonFilename);
     //qDebug() << toRecipients;

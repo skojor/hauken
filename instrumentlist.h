@@ -63,6 +63,7 @@ public:
 public slots:
     void start() { loadFile(); fetchDataHandler(); }
     void updSettings() {}
+    QString queryList(QString ip);
 
 private slots:
     void loadFile();

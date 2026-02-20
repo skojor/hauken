@@ -20,8 +20,11 @@ public:
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(int classId, double confid, QStringList classes);
-    void receiveTracedata(QVector<QVector<qint16>> data, QCustomPlot *plot);
+    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot);
+    void receivePlot(QPixmap *pixmap, QDateTime timestamp);
     void recordingState();
+    void updFrequencies(quint64 a, quint64 b) { m_startfreq = a; m_stopfreq = b;}
+    void updResolution(int a) { m_resolution = a;}
 
 signals:
     void imagesReadyForClassification(QVector<QImage>);
@@ -30,6 +33,7 @@ signals:
     void analyzerResult(QString, int);
     void reportIntentional(QString);
     void reqTracedata();
+    void reqTracePlot();
 
 private:
     float findMaxMagnitudeAndPosition(const QVector<complexInt16> &iq16, int &pos);
@@ -49,12 +53,15 @@ private:
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;
     QVector<complexInt16> m_iq16;
-    bool flagRecordingState = false;
-    QTimer *reqTracedataTimer;
-    QTimer *sendPlotsTimer;
-    QVector<QString> plotsToSend;
-    QVector<QString> plotsDescription;
-    QMutex mutex;
+    bool m_flagRecordingState = false;
+    QTimer *m_reqTracedataTimer;
+    QTimer *m_reqTraceplotTimer;
+    QTimer *m_sendPlotsTimer;
+    QVector<QString> m_plotsToSend;
+    QVector<QString> m_plotsDescription;
+    QMutex m_mutex;
+    quint64 m_startfreq, m_stopfreq;
+    int m_resolution;
 };
 
 #endif // PLOTANDANALYZE_H

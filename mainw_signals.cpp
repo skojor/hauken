@@ -522,10 +522,6 @@ void MainWindow::setSignals()
             this->incidentLog->verticalScrollBar()->maximum());
     });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
-    connect(customPlotController,
-            &CustomPlotController::retTracePlot,
-            notifications,
-            &Notifications::recTracePlot); // be nice and send it then!
     connect(notifications, &Notifications::reqPosition, this, [this] {
         GnssData data;
         data = gnssDevice1->sendGnssData();
@@ -965,6 +961,10 @@ void MainWindow::setSignals()
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
     connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
     connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+    connect(datastreamIfPan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+    connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
+    connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+    connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
 
     connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] (double a, double b) {
         if (!flagBusyRecordingIQ) {
@@ -1057,8 +1057,12 @@ void MainWindow::setSignals()
             disconnect(datastreamAudio, &DatastreamAudio::audioDataReady, &audioPlayer, &AudioPlayer::playChunk);
             disconnect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
             disconnect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+            disconnect(datastreamIfPan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+            disconnect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
             disconnect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
             disconnect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+            disconnect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+            disconnect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
         }
         else {
             //flagBusyRecordingIQ = false;
@@ -1080,6 +1084,10 @@ void MainWindow::setSignals()
             connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
             connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
             connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+            connect(datastreamIfPan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+            connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
+            connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+            connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
         }
     });
 
@@ -1103,7 +1111,12 @@ void MainWindow::setSignals()
     connect(instrMeasurementTime, &QSpinBox::valueChanged, this, [this] () {
         datastreamPScan->updWaitForPscanEndMarker(true);
     });
-    connect(notifications,&Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
+    // PlotAnaAnalyze handles plot requests
+    //connect(notifications,&Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
+    //connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot);
+
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot);
+    connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
         plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120), customPlot);
     });

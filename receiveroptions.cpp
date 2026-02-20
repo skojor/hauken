@@ -46,7 +46,7 @@ ReceiverOptions::ReceiverOptions(QSharedPointer<Config> c)
     cbOpt1->setChecked(config->getInstrConnectOnStartup());
     cbOpt2->setChecked(config->getInstrUseTcpDatastream());
     cbOpt3->setChecked(config->getInstrAutoReconnect());
-    cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
+    //cbOpt4->setChecked(config->getInstrNormalizeSpectrum());
     sbOpt1->setValue(config->getInstrTracesNeededForAverage());
     cbOpt5->setChecked(config->getInstrRestoreAvgLevels());
 
@@ -67,7 +67,7 @@ void ReceiverOptions::saveCurrentSettings()
     config->setInstrConnectOnStartup(cbOpt1->isChecked());
     config->setInstrUseTcpDatastream(cbOpt2->isChecked());
     config->setInstrAutoReconnect(cbOpt3->isChecked());
-    config->setInstrNormalizeSpectrum(cbOpt4->isChecked());
+    //config->setInstrNormalizeSpectrum(cbOpt4->isChecked());
     config->setInstrTracesNeededForAverage(sbOpt1->value());
     config->setInstrRestoreAvgLevels(cbOpt5->isChecked());
 

@@ -88,7 +88,7 @@ public slots:
     void setGnssTimeFilter(int val) { settings->setValue("gnss/timeFilter", val); }
 
     // General options
-    QString getStationName() { return settings->value("station/Name", "").toString(); }
+    QString getStationName() { if (m_location.isEmpty()) return settings->value("station/Name", "").toString(); else return m_location; }
     void setStationName(QString s) { settings->setValue("station/Name", s);  }
     QString getStnLatitude() { return settings->value("station/Latitude", 0).toString(); }
     void setStnLatitude(QString s) { settings->setValue("station/Latitude", s); }
@@ -490,13 +490,14 @@ public slots:
     int getAudioDetector() { return settings->value("audio/detector", 0).toInt();}
     void setAudioDetector(int i) { settings->setValue("audio/detector", i);}
 
-
     // Incident filename control
     void incidentStarted();
     void incidentEnded();
     void incidentRestart() { incidentEnded(); incidentStarted();}
     QString incidentFolder();
     QDateTime incidentTimestamp() { return incidentDateTime;}
+    void setLocation(QString s) { m_location = s;}
+    QString location() { if (!m_location.isEmpty()) return m_location; else return getStationName();}
 
 private slots:
 
@@ -508,6 +509,7 @@ private:
     const int plotResolution = 1200;
     bool flagIncident = false;
     QDateTime incidentDateTime;
+    QString m_location;
 };
 
 #endif // CONFIG_H

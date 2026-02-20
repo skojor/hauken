@@ -80,6 +80,7 @@ public slots:
     void sendMailWithGraph();
     void generateGraphEmail();
     void curlCallback(int exitCode, QProcess::ExitStatus);
+    void updInstrData(QString s) { m_instrData = s; qDebug() << "got it" << s;}
 
 signals:
     void showIncident(QString);
@@ -131,6 +132,8 @@ private:
     QString iqPlotFilename, gnssPlotFilename, gnssPlotFilename2;
     QStringList iqPlotFilenames;
     QStringList iqPlotDescriptions;
+    QString m_instrData;
+
 };
 
 #endif // NOTIFICATIONS_H

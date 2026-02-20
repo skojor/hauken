@@ -69,7 +69,7 @@ private slots:
 signals:
     void reqTrigline();
     void freqSelectionChanged();
-    void retTracePlot(QPixmap *);
+    void retTracePlot(QPixmap *, QDateTime);
     void centerFrequency(double f);
     void scroll(int val);
 
