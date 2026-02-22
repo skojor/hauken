@@ -11,7 +11,7 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     groupBox1->setLayout(layout1);
 
     layout1->addRow(new QLabel("Station name"), leOpt1);
-    leOpt1->setToolTip("Station name is used in email notifications");
+    leOpt1->setToolTip("Station name is used in email notifications, if not found in instrument list from server");
 
     layout1->addRow(new QLabel("Station initials"), leOpt7);
     leOpt7->setToolTip("The initials used in the 1809 file header, your own initals or a designated initial for this station. Also used in http reports.");

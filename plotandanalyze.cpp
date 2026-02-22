@@ -11,22 +11,27 @@ PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
 
 void PlotAndAnalyze::start()
 {
-    reqTracedataTimer = new QTimer;
-    sendPlotsTimer = new QTimer;
-    reqTracedataTimer->setSingleShot(true);
-    sendPlotsTimer->setSingleShot(true);
+    m_reqTracedataTimer = new QTimer;
+    m_sendPlotsTimer = new QTimer;
+    m_reqTraceplotTimer = new QTimer;
+    m_reqTracedataTimer->setSingleShot(true);
+    m_sendPlotsTimer->setSingleShot(true);
+    m_reqTraceplotTimer->setSingleShot(true);
 
-    connect(reqTracedataTimer, &QTimer::timeout, this, [this] () {
+    connect(m_reqTracedataTimer, &QTimer::timeout, this, [this] () {
         emit reqTracedata();
-        sendPlotsTimer->start(3000); // Send plots in 3 seconds, wether last plot is ready or not
     });
-    connect(sendPlotsTimer, &QTimer::timeout, this, [this] () {
-        for (int i = 0; i < plotsToSend.size(); i++) {
-            emit imageReady(plotsToSend[i], plotsDescription[i]);
-            qDebug() << plotsToSend[i] << plotsDescription[i];
+
+    connect(m_sendPlotsTimer, &QTimer::timeout, this, [this] () {
+        for (int i = 0; i < m_plotsToSend.size(); i++) {
+            emit imageReady(m_plotsToSend[i], m_plotsDescription[i]);
         }
-        plotsToSend.clear();
-        plotsDescription.clear();
+        m_plotsToSend.clear();
+        m_plotsDescription.clear();
+    });
+
+    connect(m_reqTraceplotTimer, &QTimer::timeout, this, [this] () {
+        emit reqTracePlot();
     });
 }
 
@@ -41,6 +46,7 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     createFilename();
     findIqFftMinMaxAvg(fftVector);
 
+    qDebug() << "maxloc debug" << m_metadata.maxLoc << fftVector.size();
     // This part looks at spectral density
     QVector<QImage> images = createImages(fftVector, 2e-3, m_metadata.maxLoc, 1, true);
     QImage img;
@@ -77,13 +83,13 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
         images = createImages(fftVector, 5e-4, m_metadata.maxLoc, 50, false);
         if (!images.isEmpty()) {
             createGif(images);
-            double delta = (double)m_metadata.maxLoc * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
+            double delta = (double)m_metadata.imageStartAt * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
             quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
-            //qDebug() << "sure?" << m_metadata.timestamp << m_metadata.maxLoc << QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz") << QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hh:mm:ss.zzz");
 
-            plotsDescription.append("FFT animation from "
+            m_plotsDescription.append("FFT animation from "
                                     + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
-                                    + ", 500 us per image, total time covered 25 ms");
+                                    + ", 500 us per image, total time covered "
+                                    + QString::number(500 * images.size()) + " us");
 
         }
         else {
@@ -108,15 +114,25 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
 {
     QVector<QImage> imageVector;
 
-    // This should be 2129 lines for 500 us long image with a 12 samples increase ctr.
+    // This should be 2129 lines for 500 us long image with a 64 bin fft and 12 samples increase ctr.
     int linesPerImage = 0;
     if (m_metadata.samplesInc)
         linesPerImage =(( (m_metadata.samplerate * lenOfImage) - (m_metadata.fftSize - m_metadata.samplesInc) )) / m_metadata.samplesInc;
     else return imageVector;
 
+    if (startAtPos == m_metadata.maxLoc) { // go back a 1/4 image in time if maxLoc is chosen as starting point
+        startAtPos -= linesPerImage / 4;
+    }
+
     // Minimum from fft produces alot of "noise" in the plot, this works like a filter. Always on for grayscale (used for classification)
     if (m_config->getIqUseAvgForPlot() || grayscale) m_metadata.min = m_metadata.avg;
     int lineIterator = startAtPos;
+    if ( lineIterator + (nrOfImages * linesPerImage) > fftVector.size() ) {
+        // Go back in time to create enough pics if not enough ffts
+        lineIterator = fftVector.size() - (nrOfImages * linesPerImage);
+    }
+    if (lineIterator < 0) lineIterator = 0;
+    m_metadata.imageStartAt = lineIterator;
 
     for (int imageCtr = 0; imageCtr < nrOfImages; imageCtr++) {
         QImage image(fftVector.first().size(), linesPerImage, QImage::Format_ARGB32);
@@ -145,6 +161,7 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
         lineIterator += linesPerImage;
         imageVector.append(image);
     }
+    qDebug() << "img debugging" << imageVector.size() << imageVector.first().size() << m_metadata.maxLoc << m_metadata.imageStartAt << linesPerImage;
     return imageVector;
 }
 
@@ -166,6 +183,8 @@ void PlotAndAnalyze::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftRe
         }
     }
     m_metadata.avg /= iqFftResult.size() * iqFftResult.first().size();
+    //m_metadata.maxLoc -= 533; // Go back 125 us. NO! BAD CODE
+    //if (m_metadata.maxLoc < 0) m_metadata.maxLoc = 0;
 }
 
 double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
@@ -219,7 +238,7 @@ void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringLi
     QTextStream ts(&text);
     ts << "Classification: " << classes[classId] << " [confidence " << (int)confid << " %]. ";
     if (m_metadata.trigFrequency)
-        ts << "Trigger frequency " << m_metadata.trigFrequency << " MHz. ";
+        ts << "Trigger frequency (max)" << m_metadata.trigFrequency << " MHz. ";
 
     if (classes[classId].contains("sweep", Qt::CaseInsensitive)) {
         ts << "Spectral density " << QString::number(m_metadata.spectral, 'f', 2);
@@ -239,7 +258,18 @@ void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringLi
     else if (classes[classId].contains("prn", Qt::CaseInsensitive))
         emit reportIntentional(text);
 
-    emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+    else if (classes[classId].contains("cw", Qt::CaseInsensitive)) { // TODO expand this function with more logic, for now (test) checking just center L1
+        if (abs(m_metadata.trigFrequency * 1e6 - 1.57542e9) < 0.5e6) { // TODO check this, is 1 MHz around center L1 critical?
+            ts << " Within L1 center frequency.";
+            emit reportIntentional(text);
+        }
+    }
+
+    if (m_metadata.fromFile)
+        emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
+    else
+        emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+
     emit analyzerResult(classes[classId], confid);
 }
 
@@ -263,7 +293,7 @@ void PlotAndAnalyze::createGif(QVector<QImage> &images)
         }
         GifEnd(&gifWriter);
         if (m_config->getEmailAddGif()) // and !m_metadata.fromFile)
-            plotsToSend.append(m_metadata.filename + ".gif");
+            m_plotsToSend.append(m_metadata.filename + ".gif");
     }
 }
 
@@ -303,13 +333,14 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
         double delta = (double)m_metadata.maxLoc * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
         quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
-        plotsToSend.prepend(m_metadata.filename + "_info.jpg");
-        plotsDescription.prepend("Single plot, "
+        m_plotsToSend.prepend(m_metadata.filename + "_info.jpg");
+        m_plotsDescription.prepend("Single plot, "
                                  + QString::number(secondsAnalyzed * 1e6)
                                  + " us long. Max level "
                                  + " at timestamp "
                                  + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz. ")
-                                 + "IQ recording started at " + QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp).toString("hh:mm:ss.zzz"));
+                                 + "IQ recording started at "
+                                 + QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hh:mm:ss.zzz"));
     }
 }
 
@@ -387,8 +418,17 @@ void PlotAndAnalyze::addText(QImage &image, const double secondsAnalyzed)
             microsecCtr += 1e6 * secondsAnalyzed / 5;
         }
     }
-    if (m_metadata.timestamp)
-        painter.drawText((image.width() / 2) - 25, image.height() - 5, QDateTime::fromMSecsSinceEpoch(m_metadata.timestamp * 1e-6).toString("hh:mm:ss.zzz"));
+    if (m_metadata.timestamp) {
+        double delta = (double)m_metadata.maxLoc *
+                       (1.0 / m_metadata.samplerate) *
+                       (double)m_metadata.samplesInc;
+        quint64 startingAt = secondsAnalyzed * 1e3 +
+                             m_metadata.timestamp * 1e-6 + delta * 1e3;
+
+        painter.drawText((image.width() / 2) - 25,
+                         image.height() - 5,
+                         QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz"));
+    }
     painter.end();
 }
 
@@ -433,8 +473,8 @@ void PlotAndAnalyze::createIqDiagram()
     plot->saveJpg(m_metadata.filename + "_const.jpg", 512, 512);
 
     if (m_config->getEmailAddIqPlot()) { // and !m_metadata.fromFile) {
-        plotsToSend.append(m_metadata.filename + "_const.jpg");
-        plotsDescription.append("I/Q constellation diagram, 25600 samples plotted from point of maximum signal level");
+        m_plotsToSend.append(m_metadata.filename + "_const.jpg");
+        m_plotsDescription.append("I/Q constellation diagram, 25600 samples plotted from point of maximum signal level");
     }
     delete plot;
 }
@@ -454,62 +494,85 @@ float PlotAndAnalyze::findMaxMagnitudeAndPosition(const QVector<complexInt16> &i
     return maxVal;
 }
 
-void PlotAndAnalyze::receiveTracedata(QVector<QVector<qint16>> data, QCustomPlot *plot)
+void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot)
 {
-    if (data.size() > 20) {
+    if (traceData.data.size() > 20) {
         int max, min, avg;
-        findTracedataMinMaxAvg(data, min, max, avg);
-        QImage image(data.first().size(), data.size(), QImage::Format_ARGB32);
-        QColor imgColor;
-        double percent;
-        int x, y = 0;
+        findTracedataMinMaxAvg(traceData.data, min, max, avg);
 
-        for (int i = 0; i < data.size(); i++) {
-            x = 0;
-            for (auto &&val : data[i]) {
-                if (max - min) percent = (double)(val - min) / ((double)max - min);
-                else percent = 0;
-                if (percent > 1)
-                    percent = 1;
-                else if (percent < 0)
-                    percent = 0;
-                imgColor.setHsv(0, 0, 255 - (255 * percent));
-                image.setPixel(x, y, imgColor.rgba());
-                x++;
+        QImage image(traceData.data.first().size(),
+                     traceData.data.size(),
+                     QImage::Format_ARGB32);
+
+        const int height = traceData.data.size();
+        const int width  = traceData.data.first().size();
+
+        const double range = (max != min) ? double(max - min) : 1.0;
+        const double invRange = 1.0 / range;
+
+        for (int srcY = height - 1, y = 0; srcY > 0; --srcY, ++y)
+        {
+            QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+            const auto& row = traceData.data[srcY];
+
+            for (int x = 0; x < width; ++x)
+            {
+                double p = (row[x] - min) * invRange;
+                //p = pow(p, 0.85);
+                if (p < 0.0) p = 0.0;
+                else if (p > 1.0) p = 1.0;
+                int t = 255 - (p * 255);
+                line[x] = qRgba(t, t, t, 255);
             }
-            y++;
         }
-        image = image.scaled(768, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        image = image.scaled(768, 512);
 
-        mutex.lock();
+        m_mutex.lock();
         plot->layer("triggerLayer")->setVisible(false);
         plot->layer("liveGraph")->setVisible(false);
+        bool flagOverlayOn = plot->layer("overlayLayer")->visible();
+        plot->layer("overlayLayer")->setVisible(false);
+        plot->yAxis->setVisible(false);
         plot->replot();
 
         plot->axisRect()->setBackground(QPixmap::fromImage(image), true);
-        plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 512);
+        plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 400);
 
+        plot->axisRect()->setBackground(QPixmap());
         plot->layer("triggerLayer")->setVisible(true);
         plot->layer("liveGraph")->setVisible(true);
+        plot->layer("overlayLayer")->setVisible(flagOverlayOn);
+        plot->yAxis->setVisible(true);
         plot->replot();
 
-        mutex.unlock();
+        m_mutex.unlock();
 
-        plotsToSend.prepend(m_metadata.filename + "_spectrogram.jpg");
-        plotsDescription.prepend("Spectrogram of " + QString::number(data.size()) + " trace lines");
+        m_plotsToSend.append(m_metadata.filename + "_spectrogram.jpg");
+        m_plotsDescription.append("Spectrogram from " +
+                                 traceData.timestamp.last().toString("hh:mm:ss") +
+                                 " to " +
+                                 traceData.timestamp.first().toString("hh:mm:ss"));
     }
 }
 
 void PlotAndAnalyze::recordingState()
 {
-    reqTracedataTimer->start(10 + (m_config->getNotifyTruncateTime() * 1e3));
+    int traceplotTimeout = (m_config->getPlotMaxholdTime() * 1e3) - 5e3;
+    int tracedataTimeout = 3e4;
+
+    m_reqTracedataTimer->start(tracedataTimeout);
+    m_reqTraceplotTimer->start(traceplotTimeout);
+
+    if (traceplotTimeout > tracedataTimeout) m_sendPlotsTimer->start(traceplotTimeout + 10e3);
+    else m_sendPlotsTimer->start(tracedataTimeout + 10e3);
+
 }
 
 void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg)
 {
     min = 32767;
     max = -32767;
-    quint64 sum = 0;
+    qint64 sum = 0;
 
     for (auto && line : data) {
         for (auto && val : line) {
@@ -519,4 +582,18 @@ void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data
         }
     }
     avg = sum / ( data.size() * data.first().size() );
+}
+
+void PlotAndAnalyze::receivePlot(QPixmap *pix, QDateTime timestamp)
+{
+    QPixmap img = pix->scaled(768, 400, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    img.save(m_metadata.filename + "_trace_maxhold.jpg");
+    m_plotsToSend.prepend(m_metadata.filename + "_trace_maxhold.jpg");
+    m_plotsDescription.prepend("Maxhold and current signal levels at " +
+                             timestamp.toString("hh:mm:ss, ") +
+                             "maxhold time " +
+                             QString::number(m_config->getPlotMaxholdTime()) +
+                             " seconds"
+                             );
+
 }

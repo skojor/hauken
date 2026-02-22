@@ -275,7 +275,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(open1809Act);
     fileMenu->addAction(openIqAct);
     //fileMenu->addAction(openFolderAct);
-    fileMenu->addAction(openFolderIqAct);
+    //fileMenu->addAction(openFolderIqAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 

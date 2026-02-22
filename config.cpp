@@ -92,7 +92,6 @@ QString Config::incidentFolder()
         incidentDateTime = QDateTime::currentDateTime();
         flagIncident = true;
     }
-
     if (getNewLogFolder()) return getLogFolder() + "/" + incidentDateTime.toString("yyyyMMdd_hhmmss_") + AsciiTranslator::toAscii(getStationName());
     else return getLogFolder() + "/";
 

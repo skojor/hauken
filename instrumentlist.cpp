@@ -346,3 +346,12 @@ void InstrumentList::sortList()
         }
     }
 }
+
+QString InstrumentList::queryList(QString ip)
+{
+    for (int i = 0; i < usableStnIps.size(); i++) {
+        if (usableStnIps[i] == ip)
+            return usableStnNames[i];
+    }
+    return QString();
+}

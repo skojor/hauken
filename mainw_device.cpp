@@ -183,6 +183,9 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         instrPscanFreqChanged();
         instrFfmCenterFreqChanged();
         audioOptions->report();
+        config->setLocation(instrumentList->queryList(instrIpAddr->currentData().toString()));
+        notifications->updInstrData(measurementDevice->longId());
+
     } else {
         traceBuffer->deviceDisconnected(); // stops buffer work when not needed
     }

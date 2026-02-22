@@ -23,6 +23,7 @@ enum class TYPE {
     GEOLIMITER,
     PLAYBACK,
     AI,
+    AIDONTNOTIFY,
     MQTT,
     OAUTHFILEUPLOAD
 };
@@ -976,25 +977,31 @@ struct complexInt16 {
 };
 
 struct IqMetadata {
-    quint64 centerfreq = 0;
-    quint32 bandwidth = 0;
-    quint32 samplerate = 0;
-    int     samplesInc = 12;
-    int     fftSize = 64;
-    double  max = 0;
-    double  min = 0;
-    double  avg = 0;
-    int     maxLoc = 0;
-    double  spectral = 0;
-    bool    fromFile = false;
+    quint64 centerfreq      = 0;
+    quint32 bandwidth       = 0;
+    quint32 samplerate      = 0;
+    int     samplesInc      = 0;
+    int     fftSize         = 0;
+    double  max             = 0;
+    double  min             = 0;
+    double  avg             = 0;
+    int     maxLoc          = 0;
+    int     imageStartAt    = 0;
+    double  spectral        = 0;
+    bool    fromFile        = false;
     QString filename;
-    quint64 timestamp = 0;
-    quint64 trigFrequency = 0;
+    quint64 timestamp       = 0;
+    double  trigFrequency   = 0;
 };
 
 struct IqSamplesStruct {
     IqMetadata metadata;
     QVector<complexInt16> iq;
+};
+
+struct TraceDataStruct {
+    QVector<QDateTime>          timestamp;
+    QVector<QVector<qint16>>    data;
 };
 
 #endif // TYPEDEFS_H

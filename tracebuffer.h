@@ -35,7 +35,7 @@ public slots:
     void addTrace(const QVector<qint16> &data);
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
-    QVector<QVector<qint16>> retSecondsOfBuffer(int secs = 0);
+    TraceDataStruct retSecondsOfBuffer(int secs = 0);
     void getAiData(int secs = 0);
     void restartCalcAvgLevel(bool startFresh = false);
     void sendDispTrigline()

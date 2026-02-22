@@ -460,7 +460,7 @@ void CustomPlotController::reqTracePlot()
         customPlotPtr->replot();
     }
     mutex.unlock();
-    emit retTracePlot(tracePlot);
+    emit retTracePlot(tracePlot, QDateTime::currentDateTime());
 }
 
 void CustomPlotController::updOverlayText()
