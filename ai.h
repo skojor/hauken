@@ -36,26 +36,27 @@ signals:
 
 public:
     AI(QSharedPointer<Config> c);
+    ~AI() override;
     void receiveBuffer(QVector<QVector<float >> buffer);
     void receiveImages(QVector<QImage> images);
     void receiveTraceBuffer(const QList<QVector<qint16> > &data);
-    void startAiTimer() { if (recordingEnded && netLoaded && !reqTraceBufferTimer->isActive()) reqTraceBufferTimer->start(45 * 1e3); recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); recordingEnded = false; }
-    void recordingHasEnded() { recordingEnded = true; }
-    void freqChanged(double a, double b) { startfreq = a; stopfreq = b;}
-    void resChanged(double a) { resolution = a;}
-    void setTrigCenterFrequency(double a) { trigCenterFrequency = a * 1e6; qDebug() << "trig center" << trigCenterFrequency;}
+    void startAiTimer() { if (m_recordingEnded && m_netLoaded && m_reqTraceBufferTimer != nullptr && !m_reqTraceBufferTimer->isActive()) m_reqTraceBufferTimer->start(45 * 1e3); m_recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); m_recordingEnded = false; }
+    void recordingHasEnded() { m_recordingEnded = true; }
+    void freqChanged(double a, double b) { m_startfreq = a; m_stopfreq = b;}
+    void resChanged(double a) { m_resolution = a;}
+    void setTrigCenterFrequency(double a) { m_trigCenterFrequency = a * 1e6; qDebug() << "trig center" << m_trigCenterFrequency;}
     void start(); // Thread calls
 
 private:
-    QStringList classes;
-    cv::dnn::Net *net;
-    QTimer *reqTraceBufferTimer;
-    QTimer *testTimer;
-    bool netLoaded = false;
-    bool recordingEnded = true;
-    double startfreq, stopfreq, resolution, startrange, stoprange;
-    double trigCenterFrequency;
-    QSharedPointer<Config> config;
+    QStringList m_classes;
+    cv::dnn::Net *m_net = nullptr;
+    QTimer *m_reqTraceBufferTimer = nullptr;
+    QTimer *m_testTimer = nullptr;
+    bool m_netLoaded = false;
+    bool m_recordingEnded = true;
+    double m_startfreq, m_stopfreq, m_resolution, m_startrange, m_stoprange;
+    double m_trigCenterFrequency;
+    QSharedPointer<Config> m_config;
 
 
 private slots:
