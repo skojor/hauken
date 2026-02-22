@@ -17,38 +17,37 @@
 #include <QSharedPointer>
 #include "config.h"
 
-#define TIMEOUT_MS 15000
+constexpr int kTimeoutMs = 15000;
 
 /*
- * AccessHandler takes care of logging in the user using Microsofts own MSAL library.
- * Neccessary config values are updated via Config class signal (updSettings).
- * Initial login is handled automagically. getToken()
- * returns a valid token, or blank QString if invalid.
+ * AccessHandler manages OAuth authentication/token retrieval using MSAL Runtime.
  *
- * Call login() before asking for a token, to be sure it is valid!
+ * Typical flow:
+ *  1. updSettings() caches OAuth settings from Config and reacts to enable/disable.
+ *  2. login() initializes MSAL and starts a small state machine.
+ *  3. stateHandler() drives async account discovery + silent token acquisition.
+ *  4. getToken() returns the latest cached token (or empty QString if unavailable).
  *
- * Signals when requesting token, when valid (including login name), and
- * eventually invalid if timeout or any error occurs.
- *
- * MSVC / Qt code mix, using QTimer and states to handle async operations
- *
+ * The class is signal-driven and intended to be used from Qt UI code:
+ *  - reqAccessToken() when a token refresh starts.
+ *  - accessTokenValid()/accessTokenReady() when authentication succeeds.
+ *  - accessTokenInvalid()/settingsInvalid() on timeout/config/auth issues.
  */
 
-enum STATE_HANDLER {
-    IDLE,
-    DISCOVER_ACCOUNT,
-    DISCOVER_FIRST,
-    ACQUIRE_TOKEN,
-    FINISHED
+enum class StateHandler {
+    Idle,
+    DiscoverAccount,
+    AcquireToken,
+    Finished
 };
 
-typedef struct discover_s {
-    bool called;
-    MSALRUNTIME_ACCOUNT_HANDLE account;
+struct DiscoverContext {
+    bool called = false;
+    MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
     QDateTime expiryTime;
     QString token;
     QString acc;
-} discover_t;
+};
 
 class AccessHandler : public QObject
 {
@@ -56,8 +55,13 @@ class AccessHandler : public QObject
 public:
     explicit AccessHandler(QObject *parent = nullptr,
                            QSharedPointer<Config> c = nullptr);
+    ~AccessHandler() override;
+    // Refresh cached OAuth settings from Config.
+    // If OAuth was enabled, login is triggered automatically.
     void updSettings();
+    // Start a login/token-refresh attempt if OAuth and required parameters are valid.
     void login();
+    // Return latest cached access token. Caller should ensure login() has been run.
     QString getToken();
 
 signals:
@@ -68,29 +72,35 @@ signals:
     void settingsInvalid(QString);
 
 private:
+    // Polling state machine that waits for MSAL async callbacks and advances flow.
     void stateHandler();
+    // Release all active MSAL handles and optionally shutdown runtime.
+    void cleanupMsalResources(bool shutdownRuntime);
+    // Optional MSAL logger callback (currently not registered by default).
     static void loggerCallback(const os_char *logMessage, const MSALRUNTIME_LOG_LEVEL logLevel, void *callbackData);
+    // Callback for silent token acquisition. Populates token/user info into context.
     static void authCallback(MSALRUNTIME_AUTH_RESULT_HANDLE authResult, void *callbackData);
+    // Callback for account discovery. Captures first account and marks context as ready.
     static void discoverCallback(MSALRUNTIME_DISCOVER_ACCOUNTS_RESULT_HANDLE discoverAccountsResult, void *callbackData);
 
     MSALRUNTIME_LOG_CALLBACK_HANDLE m_logHandle = nullptr;
     MSALRUNTIME_AUTH_PARAMETERS_HANDLE m_authParameters = nullptr;
     MSALRUNTIME_ASYNC_HANDLE m_asyncHandle = nullptr;
-    MSALRUNTIME_ACCOUNT_HANDLE m_account = nullptr;
 
     std::wstring m_appId;
     std::wstring m_authority;
     std::wstring m_scope;
     QSharedPointer<Config> m_config;
-    STATE_HANDLER m_state = IDLE;
+    StateHandler m_state = StateHandler::Idle;
     std::wstring m_correlationId;
-    discover_t m_ctx;
+    DiscoverContext m_ctx;
     QTimer *m_stateTimer = new QTimer;
     QTimer *m_timeoutTimer = new QTimer;
     QTimer *m_debugTimer = new QTimer;
 
-    // Config cache
+    // Cached setting values/state to control when login should run.
     bool m_loginEnabled = false;
     bool m_initialLogin = true;
+    bool m_msalStarted = false;
 };
 #endif // ACCESSHANDLER_H
