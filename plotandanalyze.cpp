@@ -83,7 +83,7 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
         images = createImages(fftVector, 5e-4, m_metadata.maxLoc, 50, false);
         if (!images.isEmpty()) {
             createGif(images);
-            double delta = (double)m_metadata.maxLoc * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
+            double delta = (double)m_metadata.imageStartAt * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
             quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
             m_plotsDescription.append("FFT animation from "
@@ -114,19 +114,25 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
 {
     QVector<QImage> imageVector;
 
-    // This should be 2129 lines for 500 us long image with a 12 samples increase ctr.
+    // This should be 2129 lines for 500 us long image with a 64 bin fft and 12 samples increase ctr.
     int linesPerImage = 0;
     if (m_metadata.samplesInc)
         linesPerImage =(( (m_metadata.samplerate * lenOfImage) - (m_metadata.fftSize - m_metadata.samplesInc) )) / m_metadata.samplesInc;
     else return imageVector;
 
+    if (startAtPos == m_metadata.maxLoc) { // go back a 1/4 image in time if maxLoc is chosen as starting point
+        startAtPos -= linesPerImage / 4;
+    }
+
     // Minimum from fft produces alot of "noise" in the plot, this works like a filter. Always on for grayscale (used for classification)
     if (m_config->getIqUseAvgForPlot() || grayscale) m_metadata.min = m_metadata.avg;
     int lineIterator = startAtPos;
-    while ( lineIterator > 0 && lineIterator + (nrOfImages * linesPerImage) > fftVector.size() ) { // Go back in time to create enough pics if max is at end of ffts
-        lineIterator -= linesPerImage / 4;
+    if ( lineIterator + (nrOfImages * linesPerImage) > fftVector.size() ) {
+        // Go back in time to create enough pics if not enough ffts
+        lineIterator = fftVector.size() - (nrOfImages * linesPerImage);
     }
     if (lineIterator < 0) lineIterator = 0;
+    m_metadata.imageStartAt = lineIterator;
 
     for (int imageCtr = 0; imageCtr < nrOfImages; imageCtr++) {
         QImage image(fftVector.first().size(), linesPerImage, QImage::Format_ARGB32);
@@ -155,6 +161,7 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
         lineIterator += linesPerImage;
         imageVector.append(image);
     }
+    qDebug() << "img debugging" << imageVector.size() << imageVector.first().size() << m_metadata.maxLoc << m_metadata.imageStartAt << linesPerImage;
     return imageVector;
 }
 
@@ -176,8 +183,8 @@ void PlotAndAnalyze::findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftRe
         }
     }
     m_metadata.avg /= iqFftResult.size() * iqFftResult.first().size();
-    m_metadata.maxLoc -= 533; // Go back 125 us
-    if (m_metadata.maxLoc < 0) m_metadata.maxLoc = 0;
+    //m_metadata.maxLoc -= 533; // Go back 125 us. NO! BAD CODE
+    //if (m_metadata.maxLoc < 0) m_metadata.maxLoc = 0;
 }
 
 double PlotAndAnalyze::calculateSpectralStructure(const QImage &image)
@@ -231,7 +238,7 @@ void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringLi
     QTextStream ts(&text);
     ts << "Classification: " << classes[classId] << " [confidence " << (int)confid << " %]. ";
     if (m_metadata.trigFrequency)
-        ts << "Trigger frequency " << m_metadata.trigFrequency << " MHz. ";
+        ts << "Trigger frequency (max)" << m_metadata.trigFrequency << " MHz. ";
 
     if (classes[classId].contains("sweep", Qt::CaseInsensitive)) {
         ts << "Spectral density " << QString::number(m_metadata.spectral, 'f', 2);
@@ -251,7 +258,18 @@ void PlotAndAnalyze::receiveClassification(int classId, double confid, QStringLi
     else if (classes[classId].contains("prn", Qt::CaseInsensitive))
         emit reportIntentional(text);
 
-    emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+    else if (classes[classId].contains("cw", Qt::CaseInsensitive)) { // TODO expand this function with more logic, for now (test) checking just center L1
+        if (abs(m_metadata.trigFrequency * 1e6 - 1.57542e9) < 0.5e6) { // TODO check this, is 1 MHz around center L1 critical?
+            ts << " Within L1 center frequency.";
+            emit reportIntentional(text);
+        }
+    }
+
+    if (m_metadata.fromFile)
+        emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
+    else
+        emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+
     emit analyzerResult(classes[classId], confid);
 }
 
@@ -481,29 +499,33 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
     if (traceData.data.size() > 20) {
         int max, min, avg;
         findTracedataMinMaxAvg(traceData.data, min, max, avg);
-        int skipSamples = traceData.data.size() / 10; // Still 12000 pixels wide for pretty normal span, TODO reduce more to save time
 
-        QImage image(traceData.data.first().size() / skipSamples, traceData.data.size(), QImage::Format_ARGB32);
-        QColor imgColor;
-        double percent;
-        int x, y = 0;
+        QImage image(traceData.data.first().size(),
+                     traceData.data.size(),
+                     QImage::Format_ARGB32);
 
-        for (int i = traceData.data.size() - 1; i > 0; i--) {
-            x = 0;
-            for (int j = 0; j < traceData.data.first().size() - skipSamples; j += skipSamples) {
-                if (max - min) percent = (double)(traceData.data[i][j] - min) / ((double)max - min);
-                else percent = 0;
-                if (percent > 1)
-                    percent = 1;
-                else if (percent < 0)
-                    percent = 0;
-                imgColor.setHsv(0, 0, 255 - (255 * percent));
-                image.setPixel(x, y, imgColor.rgba());
-                x++;
+        const int height = traceData.data.size();
+        const int width  = traceData.data.first().size();
+
+        const double range = (max != min) ? double(max - min) : 1.0;
+        const double invRange = 1.0 / range;
+
+        for (int srcY = height - 1, y = 0; srcY > 0; --srcY, ++y)
+        {
+            QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+            const auto& row = traceData.data[srcY];
+
+            for (int x = 0; x < width; ++x)
+            {
+                double p = (row[x] - min) * invRange;
+                //p = pow(p, 0.85);
+                if (p < 0.0) p = 0.0;
+                else if (p > 1.0) p = 1.0;
+                int t = 255 - (p * 255);
+                line[x] = qRgba(t, t, t, 255);
             }
-            y++;
         }
-        image = image.scaled(768, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        image = image.scaled(768, 512);
 
         m_mutex.lock();
         plot->layer("triggerLayer")->setVisible(false);
