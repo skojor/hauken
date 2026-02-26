@@ -33,6 +33,12 @@ void IqPlot::start()
     });
 }
 
+void IqPlot::end()
+{
+    delete lastIqRequestTimer;
+    delete timeoutTimer;
+}
+
 void IqPlot::getIqData(const QVector<complexInt16> iq16)
 {
     m_iqMetadata.fromFile = false;
@@ -125,7 +131,8 @@ QVector<QVector<double> > IqPlot::doFft(const QVector<complexInt16> &iq, int sam
     fftw_plan plan = fftw_plan_dft_1d(m_iqMetadata.fftSize, in, out, FFTW_FORWARD, FFTW_MEASURE);
 
     QVector<double> result(m_iqMetadata.fftSize - removeSamples * 2);
-    QVector<QVector<double>> iqFftResult( iq.size() / m_iqMetadata.samplesInc );
+    QVector<QVector<double>> iqFftResult;
+    iqFftResult.reserve(iq.size() / m_iqMetadata.samplesInc);
 
     int resIterator, fftResultIterator = 0;
 
@@ -151,7 +158,7 @@ QVector<QVector<double> > IqPlot::doFft(const QVector<complexInt16> &iq, int sam
             val = 10 * log10(val);
             result[resIterator++] = val;
         }
-        iqFftResult[fftResultIterator++] = result;
+        iqFftResult.append(result);
         samplesIterator += m_iqMetadata.samplesInc;
     }
     fftw_destroy_plan(plan);
