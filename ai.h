@@ -30,7 +30,7 @@ Q_OBJECT
 
 signals:
     void aiResult(QString, int);
-    void aiResultToAnalyzer(int classId, int confid, QStringList classes);
+    void aiResultToAnalyzer(QVector<float> result, QStringList classes, IqMetadata);
     void reqTraceBuffer(int seconds);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
 
@@ -38,7 +38,7 @@ public:
     AI(QSharedPointer<Config> c);
     ~AI() override;
     void receiveBuffer(QVector<QVector<float >> buffer);
-    void receiveImages(QVector<QImage> images);
+    void receiveImages(QVector<QImage> images, IqMetadata meta);
     void receiveTraceBuffer(const QList<QVector<qint16> > &data);
     void startAiTimer() { if (m_recordingEnded && m_netLoaded && m_reqTraceBufferTimer != nullptr && !m_reqTraceBufferTimer->isActive()) m_reqTraceBufferTimer->start(45 * 1e3); m_recordingEnded = false;} //getNotifyTruncateTime() * 0.75e3); m_recordingEnded = false; }
     void recordingHasEnded() { m_recordingEnded = true; }

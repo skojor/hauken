@@ -36,6 +36,7 @@ public:
 
 public slots:
     void start();
+    void end();
     void updSettings();
     void triggerRecording(); // to be called as long as incident is happening!
     void manualTriggeredRecording();
