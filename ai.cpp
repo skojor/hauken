@@ -1,5 +1,5 @@
 #include "ai.h"
-#include <iostream>
+//#include <iostream>
 #include <QImage>
 #include <QThread>
 #include <QtConcurrent/QtConcurrentRun>
@@ -8,52 +8,67 @@
 
 AI::AI(QSharedPointer<Config> c)
 {
-    config = c;
+    m_config = c;
+}
+
+AI::~AI()
+{
+    delete m_net;
 }
 
 void AI::start()
 {
-    reqTraceBufferTimer = new QTimer;
-    testTimer = new QTimer;
+    if (m_reqTraceBufferTimer == nullptr) m_reqTraceBufferTimer = new QTimer(this);
+    if (m_testTimer == nullptr) m_testTimer = new QTimer(this);
+    m_classes.clear();
+    m_netLoaded = false;
+    delete m_net;
+    m_net = nullptr;
+
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_ERROR);
 
-    QFile checkFile(config->getWorkFolder() + "/model_new.onnx");
+    QFile checkFile;
+    /*checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx");
     if (checkFile.exists()) {
-        qDebug() << "Using model found at" << config->getWorkFolder();
-        net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
-        netLoaded = true;
+        qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
+        m_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
+        m_netLoaded = true;
     }
-    if (!netLoaded) {
-        checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model_new.onnx");
-        if (checkFile.exists()) {
-            qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
-            net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
-            netLoaded = true;
+    else {*/
+    checkFile.setFileName(m_config->getWorkFolder() + "/model.onnx");
+    if (checkFile.exists()) {
+        try {
+            qDebug() << "Using model found at" << m_config->getWorkFolder();
+            m_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
+            m_netLoaded = true;
+        }
+        catch(...) {
+            qDebug() << "Classification model failed loading from" << m_config->getWorkFolder();
         }
     }
-    else if (!netLoaded) {
+    else {
         qDebug() << "Classification model not found";
         return;
     }
 
-    if (netLoaded) {
-        net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-        net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+    if (m_netLoaded) {
+        m_net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        m_net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
-        QFile classFile(config->getWorkFolder() + "/classes.txt");
+        QFile classFile(m_config->getWorkFolder() + "/classes.txt");
         if (classFile.exists()) {
             classFile.open(QIODevice::ReadOnly);
             QTextStream ts(&classFile);
             while (!ts.atEnd()) {
                 QString className;
                 ts >> className;
-                if (!className.isEmpty()) classes.append(className);
+                if (!className.isEmpty()) m_classes.append(className);
             }
-            qDebug() << "Model using the following classes:" << classes;
+            qDebug() << "Model using the following classes:" << m_classes;
         }
         else {
             qDebug() << "Couldn't load classes file for AI classification model" << classFile.fileName();
-            netLoaded = false;
+            m_netLoaded = false;
         }
     }
 }
@@ -84,14 +99,15 @@ void AI::receiveBuffer(QVector<QVector<float >> buffer)
 
 void AI::classifyData(cv::Mat frame)
 {
+    if (!m_netLoaded || m_net == nullptr) {
+        qDebug() << "AI classification called without a loaded model";
+        return;
+    }
+
     cv::Mat3f convFrame;
 
     frame.convertTo(convFrame, CV_32FC3);
     cv::normalize(convFrame, convFrame, 0, 1, cv::NORM_MINMAX);
-
-    cv::Mat3b conv;
-    convFrame.convertTo(conv, CV_8UC3, 255);
-    cv::imwrite("c:/hauken/test.png", conv);
 
     cv::Mat blob;
     cv::Scalar mean{0.485, 0.456, 0.406};
@@ -103,10 +119,13 @@ void AI::classifyData(cv::Mat frame)
     if (std.val[0] != 0.0 && std.val[1] != 0.0 && std.val[2] != 0.0) {
         cv::divide(blob, std, blob);
     }
-    net->setInput(blob);
+    m_net->setInput(blob);
 
-    cv::Mat prob = net->forward();
-    std::cerr << prob << std::endl;
+    cv::Mat prob = m_net->forward();
+    if (prob.empty() || m_classes.isEmpty()) {
+        qDebug() << "AI classification produced empty output";
+        return;
+    }
     // Apply sigmoid
     //cv::Mat probReshaped = prob.reshape(1, (int)prob.total() * prob.channels());
     //std::vector<float> probVec =
@@ -117,7 +136,11 @@ void AI::classifyData(cv::Mat frame)
     double confidence;
     minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
     int classId = classIdPoint.x;
-    qDebug() << " ID " << classId << " - " << classes[classId] << " confidence " << confidence;
+    if (classId < 0 || classId >= m_classes.size()) {
+        qDebug() << "AI classification produced invalid class index" << classId;
+        return;
+    }
+    qDebug() << " ID " << classId << " - " << m_classes[classId] << " confidence " << confidence;
 
     /*cv::Point classIdPoint;
     cv::minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
@@ -129,16 +152,20 @@ void AI::classifyData(cv::Mat frame)
     minMaxLoc(prob, &minVal, &maxVal, &minLoc, &maxLoc );
 
     double sum = 0;
-    for (int i = 0; i < classes.size(); i++) {
+    for (int i = 0; i < m_classes.size(); i++) {
         sum += prob.at<float>(i);
         //qDebug() << i << prob.at<float>(i);
     }
+    if (sum <= 0) {
+        qDebug() << "AI classification produced invalid probability sum" << sum;
+        return;
+    }
     double probability = maxVal * 100 / sum;
 
-    //qDebug() << "Classification" << classes[classId] << probability;
+    //qDebug() << "Classification" << m_classes[classId] << probability;
     if (classId == 0 && probability >= 39) {
-        emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)probability) + " %");
-        emit aiResult(classes[classId], probability);
+        emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + m_classes[classId] + ", probability " + QString::number((int)probability) + " %");
+        emit aiResult(m_classes[classId], probability);
     }
     else {
         emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: other");
@@ -190,9 +217,9 @@ void AI::receiveTraceBuffer(const QList<QVector<qint16> > &data)
         findMinAvgMax(data, &min, &avg, &max);
         //if (max < 30) max = 30;
         min = avg;
-        double displayResolution = (stopfreq - startfreq) / data.front().size();
-        int jFirst = (startrange - startfreq) / displayResolution;
-        int jLast = data.front().size() - ((stopfreq - stoprange) / displayResolution);
+        double displayResolution = (m_stopfreq - m_startfreq) / data.front().size();
+        int jFirst = (m_startrange - m_startfreq) / displayResolution;
+        int jLast = data.front().size() - ((m_stopfreq - m_stoprange) / displayResolution);
 
         if (jLast - jFirst <= 0) { // sth very wrong happened here
             jFirst = 0;
@@ -220,28 +247,28 @@ void AI::receiveTraceBuffer(const QList<QVector<qint16> > &data)
 
 void AI::findTrigRange()
 {
-    QStringList trigFrequencies = config->getTrigFrequencies();
-    startrange = 0;
-    stoprange = 0;
+    QStringList trigFrequencies = m_config->getTrigFrequencies();
+    m_startrange = 0;
+    m_stoprange = 0;
 
     if (trigFrequencies.size() >= 2) {
         for (int i = 0; i < trigFrequencies.size(); i += 2) {
-            if (trigCenterFrequency >= trigFrequencies[i].toDouble() * 1e6 && trigCenterFrequency <= trigFrequencies[i+1].toDouble() * 1e6) {
-                startrange = trigFrequencies[i].toDouble() * 1e6;
-                stoprange = trigFrequencies[i+1].toDouble() * 1e6;
-                qDebug() << "Trig in the range" << startrange << stoprange;
+            if (m_trigCenterFrequency >= trigFrequencies[i].toDouble() * 1e6 && m_trigCenterFrequency <= trigFrequencies[i+1].toDouble() * 1e6) {
+                m_startrange = trigFrequencies[i].toDouble() * 1e6;
+                m_stoprange = trigFrequencies[i+1].toDouble() * 1e6;
+                qDebug() << "Trig in the range" << m_startrange << m_stoprange;
                 break;
             }
         }
-        if (startrange > 0 && stoprange > 0) { // found a valid range
+        if (m_startrange > 0 && m_stoprange > 0) { // found a valid range
 
         }
     }
-    if ((int)startrange == 0 || (int)stoprange == 0) {
+    if ((int)m_startrange == 0 || (int)m_stoprange == 0) {
         // no trig area set? sth wrong here, but proceed as if we know what we are doing
-        qDebug() << "AI debug: Trig not found in a valid range, proceeding anyway" << startrange << stoprange << startfreq / 1e6 << stopfreq / 1e6;
-        startrange = startfreq;
-        stoprange = stopfreq;
+        qDebug() << "AI debug: Trig not found in a valid range, proceeding anyway" << m_startrange << m_stoprange << m_startfreq / 1e6 << m_stopfreq / 1e6;
+        m_startrange = m_startfreq;
+        m_stoprange = m_stopfreq;
     }
 }
 
@@ -254,9 +281,9 @@ std::vector<float> AI::sigmoid(const std::vector<float>& m1) {
     return output;
 }
 
-void AI::receiveImages(QVector<QImage> images)
+void AI::receiveImages(QVector<QImage> images, IqMetadata meta)
 {
-    if (!netLoaded) {
+    if (!m_netLoaded || m_net == nullptr) {
         qDebug() << "AI image classification called without any valid model data, aborting";
         return;
     }
@@ -286,41 +313,40 @@ void AI::receiveImages(QVector<QImage> images)
         );
 
     blob /= std;
-    net->setInput(blob);
-    cv::Mat outputs = net->forward();
+    m_net->setInput(blob);
+    cv::Mat outputs = m_net->forward();
+    if (outputs.empty() || outputs.cols <= 0 || m_classes.isEmpty()) {
+        qDebug() << "AI image classification produced empty output";
+        return;
+    }
 
-    std::vector<float> result(outputs.cols, 0);
-    //QVector<int> resultPerImage(imgVector.size(), 0);
-    int imageIterator = 0;
+    QVector<float> result(outputs.cols, 0);
 
     for (int row = 0; row < outputs.rows; row++) {
         cv::Mat output = outputs.row(row);
-        std::vector<float> logits;
-        output.reshape(1, 1).copyTo(logits);
-        auto probs = softmax(logits);
-        for (int i=0; i<probs.size(); i++)
+        std::cout << output << std::endl;
+
+        std::vector<float> probs;
+        output.reshape(1, 1).copyTo(probs);
+        for (int i=0; i < probs.size(); i++)
             result[i] += probs[i];
         if (row == 0) { // Weighing first image higher prob than the following
-            for (int i=0; i<probs.size(); i++)
+            for (int i=0; i < probs.size(); i++)
                 result[i] += 2 * probs[i];
         }
-        /*int classId = int(std::distance(probs.begin(), std::max_element(probs.begin(), probs.end())));
-        resultPerImage[imageIterator++] = classId;*/
     }
     for (int i=0; i < result.size(); i++)
         result[i] /= outputs.rows + 2;
 
-    /*for (auto && res : resultPerImage)
-        qDebug() << "per image classif." << res;*/
-
     int classId = int(std::distance(result.begin(), std::max_element(result.begin(), result.end())));
-    float confid = result[classId] * 100.0;
-    emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + classes[classId] + ", probability " + QString::number((int)confid) + " %");
-    emit aiResult(classes[classId], confid);
-    emit aiResultToAnalyzer(classId, confid, classes);
-
-    /*for (int i = 0; i < result.size(); i++)
-        qDebug() << "res" << classes[i] << result[i] * 100.0;*/
+    if (classId < 0 || classId >= m_classes.size()) {
+        qDebug() << "AI image classification produced invalid class index" << classId;
+        return;
+    }
+    //float confid = result[classId] * 100.0;
+    //emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + m_classes[classId] + ", probability " + QString::number((int)confid) + " %");
+    //emit aiResult(m_classes[classId], confid);
+    emit aiResultToAnalyzer(result, m_classes, meta);
 }
 
 std::vector<float> AI::softmax(const std::vector<float>& logits)

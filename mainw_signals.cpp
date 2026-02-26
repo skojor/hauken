@@ -398,12 +398,15 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
 
     connect(sdefRecorderThread, &QThread::started, sdefRecorder, &SdefRecorder::start);
+    connect(sdefRecorderThread, &QThread::finished, sdefRecorder, &SdefRecorder::end);
     connect(notificationsThread, &QThread::started, notifications, &Notifications::start);
     connect(waterfallThread, &QThread::started, waterfall, &Waterfall::start);
     connect(cameraThread, &QThread::started, cameraRecorder, &CameraRecorder::start);
     connect(aiThread, &QThread::started, aiPtr, &AI::start);
     connect(iqPlotThread, &QThread::started, iqPlot, &IqPlot::start);
     connect(iqPlotThread, &QThread::started, plotAndAnalyze, &PlotAndAnalyze::start);
+    connect(iqPlotThread, &QThread::finished, iqPlot, &IqPlot::end);
+    connect(iqPlotThread, &QThread::finished, plotAndAnalyze, &PlotAndAnalyze::end);
 
     connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
     connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
@@ -1075,7 +1078,18 @@ void MainWindow::setSignals()
         }
     });
     connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] () {
-
+        /*if (!flagBusyRecordingIQ) {
+            //flagBusyRecordingIQ = false;
+            connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+            connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+            connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+            connect(datastreamPScan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+            connect(datastreamIfPan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
+            connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
+            connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+            connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+            });
+        }*/
     });
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] () { // Delay signals about freq/res change just after I/Q rec.
         if (flagBusyRecordingIQ) {

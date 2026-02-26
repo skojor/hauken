@@ -80,6 +80,12 @@ void SdefRecorder::start()
     emit recordingEnded();
 }
 
+void SdefRecorder::end()
+{
+    endRecording();
+    process->deleteLater();
+}
+
 void SdefRecorder::updSettings()
 {
     if (autorecorderTimer) { // Don't do anything until thread has started!

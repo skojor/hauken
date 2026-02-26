@@ -43,6 +43,7 @@ public slots:
     void setTrigFrequency(double f) { trigFrequency = f;} // Set by trace analyzer class
     void getIqCenterFrequency(double f) { centerFrequency = f; }
     void start(); // Called by thread
+    void end(); // Called by thread
 
 private slots:
     void fillWindow();

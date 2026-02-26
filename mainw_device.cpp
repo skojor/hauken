@@ -183,7 +183,8 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         instrPscanFreqChanged();
         instrFfmCenterFreqChanged();
         audioOptions->report();
-        config->setLocation(instrumentList->queryList(instrIpAddr->currentData().toString()));
+        if (!instrIpAddr->currentData().toString().isEmpty())
+            config->setLocation(instrumentList->queryList(instrIpAddr->currentData().toString()));
         notifications->updInstrData(measurementDevice->longId());
 
     } else {

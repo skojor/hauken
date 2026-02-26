@@ -992,6 +992,7 @@ struct IqMetadata {
     QString filename;
     quint64 timestamp       = 0;
     double  trigFrequency   = 0;
+    double  periodTime      = 0;
 };
 
 struct IqSamplesStruct {
@@ -1003,6 +1004,10 @@ struct TraceDataStruct {
     QVector<QDateTime>          timestamp;
     QVector<QVector<qint16>>    data;
 };
+
+// GNSS center frequency definitions, TODO: Fill out complete
+#define GPSL1   1.57542e9
+#define GPSL2   1.2276e9
 
 #endif // TYPEDEFS_H
 

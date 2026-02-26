@@ -215,7 +215,7 @@ private:
     double latitude = 0, longitude = 0;
     bool posValid = false;
     bool askForPosition = false;
-    const int scpiThrottleTime = 5; // ms
+    const int scpiThrottleTime = 2; // ms
 
     bool scpiReconnect = false, discPressed = false;
     QTimer *updGnssDisplayTimer = new QTimer, *updFrequencyData = new QTimer, *updStreamsTimer = new QTimer;
