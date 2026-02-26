@@ -149,7 +149,8 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
 
     for (int imageCtr = 0; imageCtr < nrOfImages; imageCtr++) {
         findIqFftMinMaxAvg(fftVector, lineIterator, lineIterator + linesPerImage);       // Find min max avg for each image!
-        if (m_config->getIqUseAvgForPlot() || grayscale) m_metadata.min = m_metadata.avg;
+        double min = m_metadata.min;
+        if (m_config->getIqUseAvgForPlot() || grayscale) min = m_metadata.avg;
         if (increaseRange)
             m_metadata.max += 10;
 
@@ -164,7 +165,7 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
         for (int i = lineIterator; i < lineIterator + linesPerImage; i++) {
             x = 0;
             for (auto &&val : fftVector[i]) {
-                percent = (val - m_metadata.min) / (m_metadata.max - m_metadata.min);
+                percent = (val - min) / (m_metadata.max - min);
                 if (percent > 1)
                     percent = 1;
                 else if (percent < 0)
@@ -820,7 +821,7 @@ void PlotAndAnalyze::writeMetaToDisk(QVector<float> results, QStringList classes
     metadata["maxValue"]       = QString::number(m_metadata.max);
     metadata["minValue"]       = QString::number(m_metadata.min);
     metadata["avgValue"]       = QString::number(m_metadata.avg);
-    metadata["trigFrequency"]  = QString::number(m_metadata.trigFrequency);
+    metadata["trigFrequency"]  = QString::number((quint64)m_metadata.trigFrequency * 1e6);
     metadata["period"]         = QString::number(m_metadata.periodTime);
     metadata["spectral"]       = QString::number(m_metadata.spectral);
     metadata["iqFirstTimestamp"] = QString::number(m_metadata.timestamp);
