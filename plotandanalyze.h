@@ -9,6 +9,10 @@
 #include <QSharedPointer>
 #include "typedefs.h"
 #include "qcustomplot.h"
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QFile>
 
 class PlotAndAnalyze : public QObject
 {
@@ -56,6 +60,7 @@ private:
     void createFilename();
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
     void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
+    void writeMetaToDisk(QVector<float> results, QStringList classes);
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;

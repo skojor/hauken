@@ -2,6 +2,7 @@
 #include "asciitranslator.h"
 #include "gif.h"
 #include "opencv2/opencv.hpp"
+#include "version.h"
 #include <complex>
 
 PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
@@ -347,11 +348,12 @@ void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList c
         emit analyzerResult(classes[classId], confid);
     }
 
-    if (m_metadata.fromFile || !flagReport)
+    if (m_metadata.fromFile)
         emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
     else
         emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
+    if (!m_metadata.fromFile) writeMetaToDisk(results, classes);
 }
 
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
@@ -798,4 +800,49 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
     }
     m_metadata.spectral = 1e3 * (double)binsAboveSquelch / ((to - from) * data.first().size());
     qDebug() << "PRF period/spec" << m_metadata.periodTime << m_metadata.spectral;
+}
+
+void PlotAndAnalyze::writeMetaToDisk(QVector<float> results, QStringList classes)
+{
+    QJsonObject root;
+    QJsonObject metadata;
+    QJsonObject classification;
+
+    root["program"] = "Hauken";
+    root["version"] = QString(PROJECT_VERSION);
+    root["fileCreated"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+
+    metadata["ffmCenterFreq"]  = QString::number(m_metadata.centerfreq);
+    metadata["ffmBandwidth"]   = QString::number(m_metadata.bandwidth);
+    metadata["samplerate"]     = QString::number(m_metadata.samplerate);
+    metadata["sampleIncrement"]= QString::number(m_metadata.samplesInc);
+    metadata["fftBinSize"]     = QString::number(m_metadata.fftSize);
+    metadata["maxValue"]       = QString::number(m_metadata.max);
+    metadata["minValue"]       = QString::number(m_metadata.min);
+    metadata["avgValue"]       = QString::number(m_metadata.avg);
+    metadata["trigFrequency"]  = QString::number(m_metadata.trigFrequency);
+    metadata["period"]         = QString::number(m_metadata.periodTime);
+    metadata["spectral"]       = QString::number(m_metadata.spectral);
+    metadata["iqFirstTimestamp"] = QString::number(m_metadata.timestamp);
+    metadata["startFreq"]      = QString::number(m_startfreq);
+    metadata["stopFreq"]       = QString::number(m_stopfreq);
+    metadata["resolution"]     = QString::number(m_resolution);
+
+    for (int i = 0; i < results.size(); i++)
+        classification[classes[i]] = QString::number(results[i], 'f', 3);
+
+    root["metadata"] = metadata;
+    root["classification"] = classification;
+
+    QJsonDocument doc(root);
+
+    if (!m_metadata.filename.isEmpty()) {
+        QFile file(m_metadata.filename + ".json");
+        if (!file.open(QIODevice::WriteOnly)) {
+            qWarning() << "Couldn't write metadata to file" << file.fileName();
+            return;
+        }
+        file.write(doc.toJson(QJsonDocument::Indented));
+        file.close();
+    }
 }
