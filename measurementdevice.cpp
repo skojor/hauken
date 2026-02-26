@@ -89,11 +89,12 @@ void MeasurementDevice::scpiWrite(QByteArray data)
             if (devicePtr->id.contains("esmb", Qt::CaseInsensitive)) throttle *= 3; // esmb hack, slow interface
             while (scpiThrottleTimer->elapsed() < throttle) { // min. x ms time between scpi commands, to give device time to breathe
                 QCoreApplication::processEvents();
+                //QThread::msleep(throttle - scpiThrottleTimer->elapsed());
             }
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -1077,6 +1078,7 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
         modeChanged = true;
         scpiWrite("freq:mode ffm");
     }
+    else modeChanged = false;
     scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
     //scpiWrite("init");
     scpiWrite("syst:if:rem:mode short");
