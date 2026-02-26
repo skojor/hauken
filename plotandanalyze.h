@@ -15,19 +15,20 @@ class PlotAndAnalyze : public QObject
     Q_OBJECT
 public:
     explicit PlotAndAnalyze(QSharedPointer<Config> c);
-    void start();
+    void start(); // Called by thread
+    void end(); // Called by thread
     void createIqDiagram();
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
-    void receiveClassification(int classId, double confid, QStringList classes);
+    void receiveClassification(QVector<float> results, QStringList classes, IqMetadata meta);
     void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot);
     void receivePlot(QPixmap *pixmap, QDateTime timestamp);
     void recordingState();
-    void updFrequencies(quint64 a, quint64 b) { m_startfreq = a; m_stopfreq = b;}
+    void updFrequencies(quint64 a, quint64 b);
     void updResolution(int a) { m_resolution = a;}
 
 signals:
-    void imagesReadyForClassification(QVector<QImage>);
+    void imagesReadyForClassification(QVector<QImage>, IqMetadata);
     void imageReady(QString, QString);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void analyzerResult(QString, int);
@@ -37,8 +38,13 @@ signals:
 
 private:
     float findMaxMagnitudeAndPosition(const QVector<complexInt16> &iq16, int &pos);
-    QVector<QImage> createImages(const QVector<QVector<double>> &fftVector, double lenOfImage, int startAtPos = 0, int nrOfImages = 1, bool grayscale = false);
-    void findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult);
+    QVector<QImage> createImages(const QVector<QVector<double>> &fftVector,
+                                 double lenOfImage,
+                                 int startAtPos = 0,
+                                 int nrOfImages = 1,
+                                 bool grayscale = false,
+                                 bool increaseRange = false);
+    void findIqFftMinMaxAvg(const QVector<QVector<double> > &iqFftResult, int from = 0, int to = 0, bool findMaxLoc = false);
     double calculateSpectralStructure(const QImage &image);
     void dumpMetadata() { qDebug() << m_metadata.spectral << m_metadata.avg << m_metadata.bandwidth << m_metadata.centerfreq << m_metadata.max
                                    << m_metadata.min << m_metadata.avg << m_metadata.maxLoc << m_metadata.samplerate; }
@@ -49,6 +55,7 @@ private:
     void addLines(QImage &image, const double secondsAnalyzed);
     void createFilename();
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
+    void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;

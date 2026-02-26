@@ -117,12 +117,16 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+
     notificationsThread->quit();
     waterfallThread->quit();
     cameraThread->quit();
     sdefRecorderThread->quit();
     aiThread->quit();
     iqPlotThread->quit();
+
+    iqPlotThread->wait(3000);
+    sdefRecorderThread->wait(3000);
 
     gnssDisplay->close();
     if (arduinoPtr->isWatchdogActive())
