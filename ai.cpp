@@ -28,17 +28,10 @@ void AI::start()
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_ERROR);
 
     QFile checkFile;
-    /*checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model.onnx");
-    if (checkFile.exists()) {
-        qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
-        m_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
-        m_netLoaded = true;
-    }
-    else {*/
-    checkFile.setFileName(m_config->getWorkFolder() + "/model.onnx");
+    checkFile.setFileName(m_config->getWorkFolder() + "/model_v3.onnx");
     if (checkFile.exists()) {
         try {
-            qDebug() << "Using model found at" << m_config->getWorkFolder();
+            qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
             m_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
             m_netLoaded = true;
         }
@@ -47,15 +40,28 @@ void AI::start()
         }
     }
     else {
-        qDebug() << "Classification model not found";
-        return;
+        checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model_v3.onnx");
+        if (checkFile.exists()) {
+            try {
+                qDebug() << "Using model found at" << m_config->getWorkFolder();
+                m_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
+                m_netLoaded = true;
+            }
+            catch(...) {
+                qDebug() << "Classification model failed loading from" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
+            }
+        }
+        else {
+            qDebug() << "Classification model not found";
+            return;
+        }
     }
 
     if (m_netLoaded) {
         m_net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         m_net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
-        QFile classFile(m_config->getWorkFolder() + "/classes.txt");
+        QFile classFile(m_config->getWorkFolder() + "/classes_v3.txt");
         if (classFile.exists()) {
             classFile.open(QIODevice::ReadOnly);
             QTextStream ts(&classFile);
@@ -66,7 +72,23 @@ void AI::start()
             }
             qDebug() << "Model using the following classes:" << m_classes;
         }
+
         else {
+            classFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/classes_v3.txt");
+
+            if (classFile.exists()) {
+                classFile.open(QIODevice::ReadOnly);
+                QTextStream ts(&classFile);
+                while (!ts.atEnd()) {
+                    QString className;
+                    ts >> className;
+                    if (!className.isEmpty()) m_classes.append(className);
+                }
+                qDebug() << "Model using the following classes:" << m_classes;
+            }
+        }
+
+        if (m_classes.isEmpty()) {
             qDebug() << "Couldn't load classes file for AI classification model" << classFile.fileName();
             m_netLoaded = false;
         }
@@ -319,34 +341,7 @@ void AI::receiveImages(QVector<QImage> images, IqMetadata meta)
         qDebug() << "AI image classification produced empty output";
         return;
     }
-
-    QVector<float> result(outputs.cols, 0);
-
-    for (int row = 0; row < outputs.rows; row++) {
-        cv::Mat output = outputs.row(row);
-        std::cout << output << std::endl;
-
-        std::vector<float> probs;
-        output.reshape(1, 1).copyTo(probs);
-        for (int i=0; i < probs.size(); i++)
-            result[i] += probs[i];
-        if (row == 0) { // Weighing first image higher prob than the following
-            for (int i=0; i < probs.size(); i++)
-                result[i] += 2 * probs[i];
-        }
-    }
-    for (int i=0; i < result.size(); i++)
-        result[i] /= outputs.rows + 2;
-
-    int classId = int(std::distance(result.begin(), std::max_element(result.begin(), result.end())));
-    if (classId < 0 || classId >= m_classes.size()) {
-        qDebug() << "AI image classification produced invalid class index" << classId;
-        return;
-    }
-    //float confid = result[classId] * 100.0;
-    //emit toIncidentLog(NOTIFY::TYPE::AI, "", "AI classification: " + m_classes[classId] + ", probability " + QString::number((int)confid) + " %");
-    //emit aiResult(m_classes[classId], confid);
-    emit aiResultToAnalyzer(result, m_classes, meta);
+    emit aiResultToAnalyzer(outputs, m_classes, meta);
 }
 
 std::vector<float> AI::softmax(const std::vector<float>& logits)

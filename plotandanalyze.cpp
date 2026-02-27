@@ -2,6 +2,7 @@
 #include "asciitranslator.h"
 #include "gif.h"
 #include "opencv2/opencv.hpp"
+#include "version.h"
 #include <complex>
 
 PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
@@ -148,7 +149,8 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
 
     for (int imageCtr = 0; imageCtr < nrOfImages; imageCtr++) {
         findIqFftMinMaxAvg(fftVector, lineIterator, lineIterator + linesPerImage);       // Find min max avg for each image!
-        if (m_config->getIqUseAvgForPlot() || grayscale) m_metadata.min = m_metadata.avg;
+        double min = m_metadata.min;
+        if (m_config->getIqUseAvgForPlot() || grayscale) min = m_metadata.avg;
         if (increaseRange)
             m_metadata.max += 10;
 
@@ -163,7 +165,7 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
         for (int i = lineIterator; i < lineIterator + linesPerImage; i++) {
             x = 0;
             for (auto &&val : fftVector[i]) {
-                percent = (val - m_metadata.min) / (m_metadata.max - m_metadata.min);
+                percent = (val - min) / (m_metadata.max - min);
                 if (percent > 1)
                     percent = 1;
                 else if (percent < 0)
@@ -178,7 +180,7 @@ QVector<QImage> PlotAndAnalyze::createImages(const QVector<QVector<double>> &fft
         lineIterator += linesPerImage;
         imageVector.append(image);
     }
-    qDebug() << "FFT plot" << imageVector.size() << imageVector.first().size() << m_metadata.maxLoc << m_metadata.imageStartAt << linesPerImage;
+    //if (!imageVector.isEmpty()) qDebug() << "FFT plot" << imageVector.size() << imageVector.first().size() << m_metadata.maxLoc << m_metadata.imageStartAt << linesPerImage;
     return imageVector;
 }
 
@@ -253,25 +255,63 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image) // Not in
     return active / total;
 }
 
-void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList classes, IqMetadata meta)
+void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta)
 {
     m_metadata = meta; // To ensure metadata follows correct samples in case of async/multi thread
-
+    QVector<float> rfiResults(allResults.cols, 0);
+    QVector<int> imgsWithRfi, imgsWithoutRfi;
     QString text;
     QTextStream ts(&text);
     bool flagReport = false, foundClassifications = false;
 
-    int classId = int(std::distance(results.begin(), std::max_element(results.begin(), results.end())));
-    float confid = results[classId] * 100.0;
-
-    ts << "Center frequency " << QString::number(m_metadata.centerfreq * 1e-6, 'f', 1) << " MHz. ";
-    bool rfiPresent = true;
-    if (results.last() < 0.5) { // Last class should be RFI_present, low value here means no worries
-        rfiPresent = false;
-        ts << "Classification: No RFI present. ";
+    // Look for images with classification other than !rfi
+    for (int row = 0; row < allResults.rows; row++) {
+        cv::Mat output = allResults.row(row);
+        std::vector<float> probs;
+        output.reshape(1, 1).copyTo(probs);
+        for (int classRes = 0; classRes < probs.size(); classRes++) {
+            if (classes[classRes].contains("rfi") and probs[classRes] >= 0.9) {
+                imgsWithRfi.append(row);
+                break;
+            }
+            else if (classes[classRes].contains("rfi") and probs[classRes] < 0.9) {
+                imgsWithoutRfi.append(row);
+                break;
+            }
+        }
     }
 
-    if (rfiPresent) { // Proceed if RFI present.
+    ts << "Center frequency " << QString::number(m_metadata.centerfreq * 1e-6, 'f', 1) << " MHz. ";
+
+    if (imgsWithRfi.isEmpty()) { // If any images contains RFI, continue. If not, false alarm
+        ts << "Classification: No RFI present. ";
+
+        for (auto && row : imgsWithoutRfi) { // Go through every result to find what is in each
+            cv::Mat output = allResults.row(row);
+            std::vector<float> probs;
+            output.reshape(1, 1).copyTo(probs);
+            for (int i = 0; i < probs.size(); i++) {
+                if (probs[i] > 0.9) //
+                    rfiResults[i]++;
+            }
+        }
+        for (int i = 0; i < rfiResults.size() - 1; i++) {
+            if (rfiResults[i]) { // > 0
+                ts << classes[i] << " (" << rfiResults[i] << " of " << allResults.rows << " images). ";
+            }
+        }
+    }
+
+    else {
+        for (auto && row : imgsWithRfi) { // Go through every result to find what is in each
+            cv::Mat output = allResults.row(row);
+            std::vector<float> probs;
+            output.reshape(1, 1).copyTo(probs);
+            for (int i = 0; i < probs.size(); i++) {
+                if (probs[i] > 0.9) //
+                    rfiResults[i]++;
+            }
+        }
 
         if (m_metadata.trigFrequency) { // Second criteria, is this within +- 0.5 MHz of L1 center? TODO - check other bands?
             if (abs(m_metadata.trigFrequency - GPSL1) < 0.5e6) {
@@ -283,11 +323,13 @@ void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList c
             }*/
         }
 
-        for (int i = 0; i < results.size() - 1; i++) {
-            if (results[i] > 0.8) {
+        for (int i = 0; i < rfiResults.size() - 1; i++) {
+            if (rfiResults[i]) { // > 0
                 foundClassifications = true;
-                if (classes[i].contains("sweep")) { // Sweep classification, check freq center and PRF
-                    ts << "Classification: Sweep, repetition rate/period estimate ";
+                if (classes[i].contains("sweep", Qt::CaseInsensitive)) { // Sweep classification, check freq center and PRF
+                    ts << "Classification: Sweep ("
+                       << rfiResults[i] << " of "
+                       << allResults.rows << " images), PRF/period estimate ";
                     if (m_metadata.periodTime > 0) {
                         ts << QString::number(1.0 / m_metadata.periodTime, 'f', 0)
                         << " / "
@@ -298,6 +340,9 @@ void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList c
                     }
                     if (m_metadata.periodTime > 1e-4 && abs(m_metadata.trigFrequency - GPSL2) < 10e6)
                         ts << "Looks like a radar sweep within L2 band. ";
+                    else if (abs(m_metadata.trigFrequency - 1.274e9) < 2e6) { // Radar hack
+                        ts << "Freq. within air radar freq. (1274 MHz)";
+                    }
                     else if (m_metadata.periodTime > 1e-4) {
                         ts << "Looks like a radar sweep. ";
                     }
@@ -317,11 +362,17 @@ void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList c
 
                 }
                 else if (classes[i].contains("prn", Qt::CaseInsensitive)) {
-                    ts << "Classification: Possible PRN signal. ";
+                    ts << "Classification: PRN signal ("
+                       << rfiResults[i] << " of "
+                       << allResults.rows << " images). ";
+                    ;
                     flagReport = true;
                 }
                 else if (classes[i].contains("pulse", Qt::CaseInsensitive)) {
-                    ts << "Classification: Pulsed signal. ";
+                    ts << "Classification: Pulsed signal ("
+                       << rfiResults[i] << " of "
+                       << allResults.rows << " images). ";
+                    ;
                     if (!flagReport && m_metadata.periodTime > 0) // Info not added by sweep already
                         ts << "Repetition rate/period estimate: "
                            << QString::number(1.0 / m_metadata.periodTime, 'f', 0)
@@ -329,13 +380,19 @@ void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList c
                            << QString::number(1e6 * m_metadata.periodTime, 'f', 1)  << " µs. ";
                 }
                 else if (classes[i].contains("nb", Qt::CaseInsensitive)) {
-                    ts << "Classification: Narrowband. ";
+                    ts << "Classification: Narrowband ("
+                       << rfiResults[i] << " of "
+                       << allResults.rows << " images). ";
                 }
                 else if (classes[i].contains("partial", Qt::CaseInsensitive)) {
-                    ts << "Classification: Partial band. ";
+                    ts << "Classification: Partial band ("
+                       << rfiResults[i] << " of "
+                       << allResults.rows << " images). ";
                 }
                 else if (classes[i].contains("full", Qt::CaseInsensitive)) {
-                    ts << "Classification: Full band. ";
+                    ts << "Classification: Full band ("
+                       << rfiResults[i] << " of "
+                       << allResults.rows << " images). ";
                 }
             }
         }
@@ -344,14 +401,15 @@ void PlotAndAnalyze::receiveClassification(QVector<float> results, QStringList c
 
         if (flagReport) emit reportIntentional(text);
 
-        emit analyzerResult(classes[classId], confid);
+        emit analyzerResult(text, 100);
     }
 
-    if (m_metadata.fromFile || !flagReport)
+    if (m_metadata.fromFile)
         emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
     else
         emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
+    if (!m_metadata.fromFile) writeMetaToDisk(allResults, classes);
 }
 
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
@@ -553,7 +611,7 @@ void PlotAndAnalyze::createIqDiagram()
         }
         else break;
     }
-    qDebug() << startPlotAt << m_iq16.size() << maxVal << xAxis.size();
+    //qDebug() << startPlotAt << m_iq16.size() << maxVal << xAxis.size();
     plot->graph(0)->setData(xAxis, yAxis);
     //plot->rescaleAxes();
     plot->replot();
@@ -586,7 +644,7 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
     if (traceData.data.size() > 20) {
         int max, min, avg;
         findTracedataMinMaxAvg(traceData.data, min, max, avg);
-        qDebug() << "Trace debug data" << min << max << avg << "range" << max - min;
+        //qDebug() << "Trace debug data" << min << max << avg << "range" << max - min;
         if (max - min < 400) max += 400 - (max - min);
         QImage image(traceData.data.first().size(),
                      traceData.data.size(),
@@ -673,7 +731,6 @@ void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data
         }
     }
     avg = sum / ( data.size() * data.first().size() );
-    qDebug() << min << max << avg;
 }
 
 void PlotAndAnalyze::receivePlot(QPixmap *pix, QDateTime timestamp)
@@ -785,6 +842,7 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
         if (!timeBetweenLinesAboveSquelch.isEmpty()) avgPeriod /=  timeBetweenLinesAboveSquelch.size();
     }
     m_metadata.periodTime = avgPeriod;
+    if (m_metadata.periodTime < 6e-6) m_metadata.periodTime = 0; // Assume super low period time means wrong measurement
 
     binsAboveSquelch = 0;
     squelch = m_metadata.max - 1;
@@ -797,5 +855,58 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
         }
     }
     m_metadata.spectral = 1e3 * (double)binsAboveSquelch / ((to - from) * data.first().size());
-    qDebug() << "PRF period/spec" << m_metadata.periodTime << m_metadata.spectral;
+    //qDebug() << "PRF period/spec" << m_metadata.periodTime << m_metadata.spectral;
+}
+
+void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
+{
+    QJsonObject root;
+    QJsonObject metadata;
+    QJsonArray classification;
+
+    root["program"] = "Hauken";
+    root["version"] = QString(PROJECT_VERSION);
+    root["fileCreated"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+
+    metadata["ffmCenterFreq"]  = QString::number(m_metadata.centerfreq);
+    metadata["ffmBandwidth"]   = QString::number(m_metadata.bandwidth);
+    metadata["samplerate"]     = QString::number(m_metadata.samplerate);
+    metadata["sampleIncrement"]= QString::number(m_metadata.samplesInc);
+    metadata["fftBinSize"]     = QString::number(m_metadata.fftSize);
+    metadata["maxValue"]       = QString::number(m_metadata.max);
+    metadata["minValue"]       = QString::number(m_metadata.min);
+    metadata["avgValue"]       = QString::number(m_metadata.avg);
+    metadata["trigFrequency"]  = QString::number(m_metadata.trigFrequency * 1e6, 'f', 0);
+    metadata["period"]         = QString::number(m_metadata.periodTime);
+    metadata["spectral"]       = QString::number(m_metadata.spectral);
+    metadata["iqFirstTimestamp"] = QString::number(m_metadata.timestamp);
+    metadata["startFreq"]      = QString::number(m_startfreq);
+    metadata["stopFreq"]       = QString::number(m_stopfreq);
+    metadata["resolution"]     = QString::number(m_resolution);
+
+    for (int row = 0; row < results.rows; row++) {
+        QJsonArray array;
+        cv::Mat output = results.row(row);
+        std::vector<float> probs;
+        output.reshape(1, 1).copyTo(probs);
+        QString res;
+        for (auto && val : probs)
+            array.append(val);
+        classification.append(array);
+    }
+
+    root["metadata"] = metadata;
+    root["classification"] = classification;
+
+    QJsonDocument doc(root);
+
+    if (!m_metadata.filename.isEmpty()) {
+        QFile file(m_metadata.filename + ".json");
+        if (!file.open(QIODevice::WriteOnly)) {
+            qWarning() << "Couldn't write metadata to file" << file.fileName();
+            return;
+        }
+        file.write(doc.toJson(QJsonDocument::Indented));
+        file.close();
+    }
 }

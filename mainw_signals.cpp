@@ -520,9 +520,13 @@ void MainWindow::setSignals()
     connect(positionReport, &PositionReport::reqSensorData, arduinoPtr, &Arduino::returnSensorData);
 
     connect(notifications, &Notifications::showIncident, this, [this](QString s) {
-        this->incidentLog->insertHtml(s);
-        this->incidentLog->verticalScrollBar()->setValue(
-            this->incidentLog->verticalScrollBar()->maximum());
+        QTextCursor cursor = incidentLog->textCursor(); // Text sometimes gets misaligned. Maybe this will help
+        cursor.movePosition(QTextCursor::End);
+        incidentLog->setTextCursor(cursor);
+
+        incidentLog->insertHtml(s);
+        incidentLog->verticalScrollBar()->setValue(this->incidentLog->verticalScrollBar()->maximum());
+
     });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
     connect(notifications, &Notifications::reqPosition, this, [this] {
@@ -1078,8 +1082,8 @@ void MainWindow::setSignals()
         }
     });
     connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] () {
-        /*if (!flagBusyRecordingIQ) {
-            //flagBusyRecordingIQ = false;
+        /*if (flagBusyRecordingIQ) {
+            flagBusyRecordingIQ = false;
             connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
             connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
             connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
@@ -1088,8 +1092,8 @@ void MainWindow::setSignals()
             connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
             connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
             connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
-            });
-        }*/
+            });*/
+        //}
     });
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] () { // Delay signals about freq/res change just after I/Q rec.
         if (flagBusyRecordingIQ) {
