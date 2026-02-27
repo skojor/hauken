@@ -198,7 +198,7 @@ void IqPlot::fillWindow()
 void IqPlot::requestIqData()
 {
     emit reqIqCenterFrequency();
-    lastIqRequestTimer->start(120e3); // Reset timer as long as incident is ongoing
+    lastIqRequestTimer->start(75e3); // Reset timer as long as incident is ongoing
 
     if (config->getIqCreateFftPlot() && !flagOngoingAlarm) // New alarm signal received
     {
