@@ -13,6 +13,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QFile>
+#include "opencv2/core.hpp"
 
 class PlotAndAnalyze : public QObject
 {
@@ -24,7 +25,7 @@ public:
     void createIqDiagram();
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
-    void receiveClassification(QVector<float> results, QStringList classes, IqMetadata meta);
+    void receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta);
     void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot);
     void receivePlot(QPixmap *pixmap, QDateTime timestamp);
     void recordingState();
@@ -60,7 +61,7 @@ private:
     void createFilename();
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
     void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
-    void writeMetaToDisk(QVector<float> results, QStringList classes);
+    void writeMetaToDisk(cv::Mat results, QStringList classes);
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;
