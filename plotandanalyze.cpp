@@ -334,7 +334,8 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
                     else {
                         ts << "inconclusive. ";
                     }
-                    if (m_metadata.periodTime > 1e-4 && abs(m_metadata.trigFrequency - GPSL2) < 10e6)
+                    if ((m_metadata.periodTime > 1e-4 || m_metadata.periodTime <= 0) &&
+                        abs(m_metadata.trigFrequency - GPSL2) < 10e6)
                         ts << "Looks like a radar sweep within L2 band. ";
                     else if (abs(m_metadata.trigFrequency - 1.274e9) < 2e6) { // Radar hack
                         ts << "Freq. within air radar freq. (1274 MHz)";
@@ -343,7 +344,7 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
                         ts << "Looks like a radar sweep. ";
                     }
                     else if (m_metadata.periodTime <= 0 && abs(m_metadata.trigFrequency - GPSL2) < 10e6) {
-                        ts << "Within L2 band, suggests it is a radar sweep. ";
+                        ts << "Within L2 band, could be a radar sweep. ";
                     }
                     else if (m_metadata.periodTime > 0 && m_metadata.periodTime <= 1e-4) {
                         ts << "PRF suggests it could be a jammer. ";
