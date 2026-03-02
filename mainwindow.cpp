@@ -2,6 +2,15 @@
 #include "version.h"
 #include "versionupdater.h"
 
+
+void restartApplication()
+{
+    QString program = QCoreApplication::applicationFilePath();
+    QStringList arguments = QCoreApplication::arguments();
+    QProcess::startDetached(program, arguments);
+    QCoreApplication::quit();
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -725,6 +734,7 @@ void MainWindow::open()
         config->newFileName(fileName);
     getConfigValues();
     updWindowTitle();
+    restartApplication(); // To load new settings
 }
 
 void MainWindow::save()
