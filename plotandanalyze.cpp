@@ -68,10 +68,6 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
 
     if (!images.isEmpty()) {
         emit imagesReadyForClassification(images, m_metadata); // Send copy of metadata to allow async/multi thread op
-        for (int i=0; i<images.size(); i++) {
-            QImage img = images[i].scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-            img.save("c:/hauken/test" + QString::number(i) + ".png");
-        }
     }
     else {
         qWarning() << "Not enough I/Q data to generate plot(s)";
@@ -352,12 +348,12 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
                     else if (m_metadata.periodTime > 0 && m_metadata.periodTime <= 1e-4) {
                         ts << "PRF suggests it could be a jammer. ";
                         if (m_metadata.spectral > 0.15) {
+                            flagReport = true;
                             ts << "Spectral density " << QString::number(m_metadata.spectral, 'f', 2) << " indicates the same. ";
                         }
                         else {
                             ts << "Spectral density low. ";
                         }
-                        flagReport = true;
                     }
 
                 }
@@ -644,8 +640,10 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
     if (traceData.data.size() > 20) {
         int max, min, avg;
         findTracedataMinMaxAvg(traceData.data, min, max, avg);
+        min += 20;
+        max -= 30; // To compress range in image
         //qDebug() << "Trace debug data" << min << max << avg << "range" << max - min;
-        if (max - min < 400) max += 400 - (max - min);
+        //if (max - min < 400) max += 400 - (max - min);
         QImage image(traceData.data.first().size(),
                      traceData.data.size(),
                      QImage::Format_ARGB32);
@@ -842,7 +840,7 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
         if (!timeBetweenLinesAboveSquelch.isEmpty()) avgPeriod /=  timeBetweenLinesAboveSquelch.size();
     }
     m_metadata.periodTime = avgPeriod;
-    if (m_metadata.periodTime < 6e-6) m_metadata.periodTime = 0; // Assume super low period time means wrong measurement
+    if (m_metadata.periodTime < 10e-6) m_metadata.periodTime = 0; // Assume super low period time means wrong measurement
 
     binsAboveSquelch = 0;
     squelch = m_metadata.max - 1;
