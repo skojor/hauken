@@ -366,7 +366,7 @@ void IqPlot::parseFilename(const QString file)
     }
     m_iqMetadata.fromFile = true;
     m_iqMetadata.timestamp = 0; // Don't have any timestamp here
-    m_iqMetadata.trigFrequency = 0; // don't know this one either
+    m_iqMetadata.trigFrequency = m_iqMetadata.centerfreq; // don't know this one either
 }
 
 void IqPlot::updSettings()

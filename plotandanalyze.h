@@ -63,6 +63,9 @@ private:
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
     void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
     void writeMetaToDisk(cv::Mat results, QStringList classes);
+    bool withinL1(quint64 freq) { if (abs(freq - GPSL1) < 0.5e6) return true; else return false;}
+    bool withinL2(quint64 freq) { if (abs(freq - GPSL2) < 5e6) return true; else return false;}
+    bool withinAirRadar(quint64 freq) { if (abs(freq - AIRRADAR) < 2e6) return true; else return false;}
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;
