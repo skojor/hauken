@@ -26,11 +26,12 @@ public:
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta);
-    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot);
+    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot = nullptr);
     void receivePlot(QPixmap *pixmap, QDateTime timestamp);
     void recordingState();
     void updFrequencies(quint64 a, quint64 b);
     void updResolution(int a) { m_resolution = a;}
+    void readFile(QString filename);
 
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);

@@ -179,11 +179,11 @@ void MainWindow::createActions()
     open1809Act->setShortcuts(QKeySequence::Open);
     open1809Act->setStatusTip(tr("Open a previously recorded 1809 file for playback"));
     connect(open1809Act, &QAction::triggered, this, [this] {
-        if (!measurementDevice->isConnected())
-            read1809Data->readFile(QFileDialog::getOpenFileName(this,
-                                                                "Open 1809 file",
-                                                                config->getLogFolder(),
-                                                                "1809 files (*.cef *.zip)"));
+        if (!measurementDevice->isConnected()) {
+            QString name = QFileDialog::getOpenFileName(this, "Open 1809 file", config->getLogFolder(), "1809 files (*.cef *.zip)");
+            read1809Data->readFile(name);
+            plotAndAnalyze->readFile(name);
+        }
         else {
             qDebug() << "Trying to read an 1809 file while connected, bad idea";
             QMessageBox::warning(this,
@@ -218,9 +218,9 @@ void MainWindow::createActions()
         tr("Open a folder with I/Q data, for batch I/Q plot analysis/conversion. Don't use unless you know what this will do!"));
     connect(openFolderIqAct, &QAction::triggered, this, [this] {
         iqPlot->readFolder(QFileDialog::getExistingDirectory(this,
-                                                                   tr("Open folder"),
-                                                                   config->getLogFolder(),
-                                                                   QFileDialog::ShowDirsOnly));
+                                                             tr("Open folder"),
+                                                             config->getLogFolder(),
+                                                             QFileDialog::ShowDirsOnly));
     });
 
 
@@ -420,7 +420,7 @@ void MainWindow::createLayout()
     plotLayout->addLayout(ffmInfoLayout, 0, 1, 1, 1);
     plotLayout->addWidget(plotMinScroll, 3, 0, 1, 1);
 
-   // plotLayout->addLayout(vboxLayout, 0, 0);
+    // plotLayout->addLayout(vboxLayout, 0, 0);
     btnBw->setMaximumHeight(20);
     btnSigLevel->setStyleSheet("font-size: 10px;");
     btnBw->setStyleSheet("font-size: 10px;");
@@ -438,8 +438,8 @@ void MainWindow::createLayout()
 
     btnNormalize->setText(( config->getInstrNormalizeSpectrum() ? "Normalized" : "Not normalized" ));
     btnNormalize->setToolTip("The spectrum will be \"corrected\" for any unlinear responses in the frequency range, "\
-                       "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven "\
-                       "amplifier response");
+                             "and centered around 0 dBuV. Can be used to remove steady noise signals and uneven "\
+                             "amplifier response");
 
     QHBoxLayout *bottomPlotLayout = new QHBoxLayout;
     bottomPlotLayout->addWidget(btnRestartAvgCalc);
@@ -753,7 +753,7 @@ void MainWindow::save()
 
 void MainWindow::saveConfigValues()
 {
- 
+
 }
 
 void MainWindow::showBytesPerSec(int val)

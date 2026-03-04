@@ -641,10 +641,15 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
     if (traceData.data.size() > 20) {
         int max, min, avg;
         findTracedataMinMaxAvg(traceData.data, min, max, avg);
-        min += 20;
-        max -= 30; // To compress range in image
-        //qDebug() << "Trace debug data" << min << max << avg << "range" << max - min;
-        //if (max - min < 400) max += 400 - (max - min);
+        qDebug() << "Trace debug data" << min << max << avg;
+
+        if (plot) { // Use scale of plot window if available
+            max = plot->yAxis->range().upper * 10;
+            min = (plot->yAxis->range().lower + 2) * 10;
+        }
+        else
+            min += 20;
+
         QImage image(traceData.data.first().size(),
                      traceData.data.size(),
                      QImage::Format_ARGB32);
@@ -670,33 +675,37 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
                 line[x] = qRgba(t, t, t, 255);
             }
         }
-        image = image.scaled(768, 512);
 
-        m_mutex.lock();
-        plot->layer("triggerLayer")->setVisible(false);
-        plot->layer("liveGraph")->setVisible(false);
-        bool flagOverlayOn = plot->layer("overlayLayer")->visible();
-        plot->layer("overlayLayer")->setVisible(false);
-        plot->yAxis->setVisible(false);
-        plot->replot();
+        if (plot) {
+            m_mutex.lock();
+            plot->layer("triggerLayer")->setVisible(false);
+            plot->layer("liveGraph")->setVisible(false);
+            bool flagOverlayOn = plot->layer("overlayLayer")->visible();
+            plot->layer("overlayLayer")->setVisible(false);
+            plot->yAxis->setVisible(false);
+            plot->replot();
 
-        plot->axisRect()->setBackground(QPixmap::fromImage(image), true);
-        plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 400);
+            plot->axisRect()->setBackground(QPixmap::fromImage(image), true, Qt::IgnoreAspectRatio);
+            plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 400);
 
-        plot->axisRect()->setBackground(QPixmap());
-        plot->layer("triggerLayer")->setVisible(true);
-        plot->layer("liveGraph")->setVisible(true);
-        plot->layer("overlayLayer")->setVisible(flagOverlayOn);
-        plot->yAxis->setVisible(true);
-        plot->replot();
+            plot->axisRect()->setBackground(QPixmap());
+            plot->layer("triggerLayer")->setVisible(true);
+            plot->layer("liveGraph")->setVisible(true);
+            plot->layer("overlayLayer")->setVisible(flagOverlayOn);
+            plot->yAxis->setVisible(true);
+            plot->replot();
 
-        m_mutex.unlock();
+            m_mutex.unlock();
 
-        m_plotsToSend.append(m_metadata.filename + "_spectrogram.jpg");
-        m_plotsDescription.append("Spectrogram from " +
-                                  traceData.timestamp.last().toString("hh:mm:ss") +
-                                  " to " +
-                                  traceData.timestamp.first().toString("hh:mm:ss"));
+            m_plotsToSend.append(m_metadata.filename + "_spectrogram.jpg");
+            m_plotsDescription.append("Spectrogram from " +
+                                      traceData.timestamp.last().toString("hh:mm:ss") +
+                                      " to " +
+                                      traceData.timestamp.first().toString("hh:mm:ss"));
+        }
+        else {
+            image.save(m_config->getLogFolder() + "/file_spectrogram.jpg");
+        }
     }
 }
 
@@ -908,4 +917,40 @@ void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
         file.write(doc.toJson(QJsonDocument::Indented));
         file.close();
     }
+}
+
+void PlotAndAnalyze::readFile(QString filename)
+{
+    QFile file (filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "PlotAndAnalyze: Could not open" << filename << "for reading";
+        return;
+    }
+    QTextStream ts(&file);
+    TraceDataStruct traceData;
+    bool isMobile = false;
+
+    while (!ts.atEnd()) {
+        QString line = file.readLine();
+        if (line.contains("MobileData")) isMobile = true;
+        QStringList split = line.split(',');
+        if (split.size() > 15) {
+            QDateTime dt = QDateTime::fromString(split[0], "yyyy-MM-dd hh:mm:ss.zzz");
+            if (dt.isValid()) {
+                traceData.timestamp.append(dt);
+                split.removeFirst();
+                if (isMobile) {
+                    split.remove(0, 2); // Remove pos data, don't need it
+                }
+                QVector<qint16> data;
+                for (auto && val : split) {
+                    data.append(val.toInt() * 10);
+                }
+                traceData.data.append(data);
+            }
+        }
+    }
+    if (!traceData.data.isEmpty())
+        receiveTracedata(traceData);
+    file.close();
 }
