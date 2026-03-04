@@ -28,10 +28,10 @@ void AI::start()
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_ERROR);
 
     QFile checkFile;
-    checkFile.setFileName(m_config->getWorkFolder() + "/model_v3.onnx");
+    checkFile.setFileName(m_config->getWorkFolder() + "/model_v4.onnx");
     if (checkFile.exists()) {
         try {
-            qDebug() << "Using model found at" << QDir(QCoreApplication::applicationDirPath()).absolutePath();
+            qDebug() << "Using model found at" << m_config->getWorkFolder();
             m_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(checkFile.fileName().toStdString()));
             m_netLoaded = true;
         }
@@ -40,7 +40,7 @@ void AI::start()
         }
     }
     else {
-        checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model_v3.onnx");
+        checkFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() +  "/model_v4.onnx");
         if (checkFile.exists()) {
             try {
                 qDebug() << "Using model found at" << m_config->getWorkFolder();
@@ -61,7 +61,7 @@ void AI::start()
         m_net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         m_net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
-        QFile classFile(m_config->getWorkFolder() + "/classes_v3.txt");
+        QFile classFile(m_config->getWorkFolder() + "/classes_v4.txt");
         if (classFile.exists()) {
             classFile.open(QIODevice::ReadOnly);
             QTextStream ts(&classFile);
@@ -74,7 +74,7 @@ void AI::start()
         }
 
         else {
-            classFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/classes_v3.txt");
+            classFile.setFileName(QDir(QCoreApplication::applicationDirPath()).absolutePath() + "/classes_v4.txt");
 
             if (classFile.exists()) {
                 classFile.open(QIODevice::ReadOnly);
