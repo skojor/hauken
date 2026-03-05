@@ -297,7 +297,7 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
 {
     flagAvgLevelRestarted = true;
     if (!useSavedAvgLevels or startFresh) {
-        QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+        QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
         file.remove();
 
         init = true;
@@ -440,7 +440,7 @@ void TraceBuffer::incidenceTriggered() // called whenever sth is above trig line
 
 void TraceBuffer::saveAvgLevels()
 {
-    QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+    QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
     if (file.open(QIODevice::WriteOnly)) {
         QBuffer buffer;
         buffer.open(QIODevice::WriteOnly);
@@ -465,13 +465,13 @@ void TraceBuffer::saveAvgLevels()
         file.close();
     }
     else {
-        qWarning() << "Could not open file" << config->getWorkFolder() + "/" + AVGFILENAME << "for writing";
+        qWarning() << "Could not open file" << config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName() << "for writing";
     }
 }
 
 bool TraceBuffer::restoreAvgLevels()
 {
-    QFile file (config->getWorkFolder() + "/" + AVGFILENAME);
+    QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
     if (file.open(QIODevice::ReadOnly)) {
         quint64 a_startfreq, a_stopfreq, a_ffmCenterFreq;
         int a_res, a_sp;
@@ -524,7 +524,7 @@ bool TraceBuffer::restoreAvgLevels()
         }
     }
     else {
-        //qWarning() << "Could not open file" << config->getWorkFolder() + "/" + AVGFILENAME << "for reading";
+        //qWarning() << "Could not open file" << config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName() << "for reading";
     }
     return false;
 }

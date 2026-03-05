@@ -68,10 +68,6 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
 
     if (!images.isEmpty()) {
         emit imagesReadyForClassification(images, m_metadata); // Send copy of metadata to allow async/multi thread op
-        for (int i=0; i<images.size(); i++) {
-            QImage img = images[i].scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-            img.save("c:/hauken/test" + QString::number(i) + ".png");
-        }
     }
     else {
         qWarning() << "Not enough I/Q data to generate plot(s)";
@@ -263,6 +259,13 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     QString text;
     QTextStream ts(&text);
     bool flagReport = false, foundClassifications = false;
+    bool mostLikelyChirpRadar = false;
+    bool mostLikelyWbJammer = false;
+    bool mostLikelyPbJammer = false;
+    bool prnFound = false;
+    bool sweepAndPulse = false;
+    bool nbSweep = false;
+    bool pulseAndWb = false;
 
     // Look for images with classification other than !rfi
     for (int row = 0; row < allResults.rows; row++) {
@@ -270,28 +273,28 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
         std::vector<float> probs;
         output.reshape(1, 1).copyTo(probs);
         for (int classRes = 0; classRes < probs.size(); classRes++) {
-            if (classes[classRes].contains("rfi") and probs[classRes] >= 0.9) {
+            if (classes[classRes].contains("rfi") and probs[classRes] >= 0.5) {
                 imgsWithRfi.append(row);
                 break;
             }
-            else if (classes[classRes].contains("rfi") and probs[classRes] < 0.9) {
+            else if (classes[classRes].contains("rfi") and probs[classRes] < 0.5) {
                 imgsWithoutRfi.append(row);
                 break;
             }
         }
     }
 
-    ts << "Center frequency " << QString::number(m_metadata.centerfreq * 1e-6, 'f', 1) << " MHz. ";
+    ts << "FFM center " << QString::number(m_metadata.centerfreq * 1e-6, 'f', 1) << " MHz. ";
 
     if (imgsWithRfi.isEmpty()) { // If any images contains RFI, continue. If not, false alarm
         ts << "Classification: No RFI present. ";
 
-        for (auto && row : imgsWithoutRfi) { // Go through every result to find what is in each
+        for (auto && row : imgsWithoutRfi) { // Go through every result without rfiPresent to find what is in each
             cv::Mat output = allResults.row(row);
             std::vector<float> probs;
             output.reshape(1, 1).copyTo(probs);
             for (int i = 0; i < probs.size(); i++) {
-                if (probs[i] > 0.9) //
+                if (probs[i] > 0.5) //
                     rfiResults[i]++;
             }
         }
@@ -303,101 +306,94 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     }
 
     else {
-        for (auto && row : imgsWithRfi) { // Go through every result to find what is in each
+        for (auto && row : imgsWithRfi) { // Go through every result with rfiPresent to find what is in each
+            bool sweep = false, pulse = false, wb = false, pb = false, nb = false;
             cv::Mat output = allResults.row(row);
             std::vector<float> probs;
             output.reshape(1, 1).copyTo(probs);
+
             for (int i = 0; i < probs.size(); i++) {
-                if (probs[i] > 0.9) //
+                if (probs[i] > 0.5) {//
                     rfiResults[i]++;
-            }
-        }
-
-        if (m_metadata.trigFrequency) { // Second criteria, is this within +- 0.5 MHz of L1 center? TODO - check other bands?
-            if (abs(m_metadata.trigFrequency - GPSL1) < 0.5e6) {
-                ts << "Signal within L1 center frequency: " << m_metadata.trigFrequency * 1e-6 << " MHz. ";
-                flagReport = true;
-            }
-            /*else {
-                ts << "Signal outside L1 center frequency. ";
-            }*/
-        }
-
-        for (int i = 0; i < rfiResults.size() - 1; i++) {
-            if (rfiResults[i]) { // > 0
-                foundClassifications = true;
-                if (classes[i].contains("sweep", Qt::CaseInsensitive)) { // Sweep classification, check freq center and PRF
-                    ts << "Classification: Sweep ("
-                       << rfiResults[i] << " of "
-                       << allResults.rows << " images), PRF/period estimate ";
-                    if (m_metadata.periodTime > 0) {
-                        ts << QString::number(1.0 / m_metadata.periodTime, 'f', 0)
-                        << " / "
-                        << QString::number(1e6 * m_metadata.periodTime, 'f', 1)  << " µs. ";
-                    }
-                    else {
-                        ts << "inconclusive. ";
-                    }
-                    if (m_metadata.periodTime > 1e-4 && abs(m_metadata.trigFrequency - GPSL2) < 10e6)
-                        ts << "Looks like a radar sweep within L2 band. ";
-                    else if (abs(m_metadata.trigFrequency - 1.274e9) < 2e6) { // Radar hack
-                        ts << "Freq. within air radar freq. (1274 MHz)";
-                    }
-                    else if (m_metadata.periodTime > 1e-4) {
-                        ts << "Looks like a radar sweep. ";
-                    }
-                    else if (m_metadata.periodTime <= 0 && abs(m_metadata.trigFrequency - GPSL2) < 10e6) {
-                        ts << "Within L2 band, suggests it is a radar sweep. ";
-                    }
-                    else if (m_metadata.periodTime > 0 && m_metadata.periodTime <= 1e-4) {
-                        ts << "PRF suggests it could be a jammer. ";
-                        if (m_metadata.spectral > 0.15) {
-                            ts << "Spectral density " << QString::number(m_metadata.spectral, 'f', 2) << " indicates the same. ";
-                        }
-                        else {
-                            ts << "Spectral density low. ";
-                        }
-                        flagReport = true;
-                    }
-
-                }
-                else if (classes[i].contains("prn", Qt::CaseInsensitive)) {
-                    ts << "Classification: PRN signal ("
-                       << rfiResults[i] << " of "
-                       << allResults.rows << " images). ";
-                    ;
-                    flagReport = true;
-                }
-                else if (classes[i].contains("pulse", Qt::CaseInsensitive)) {
-                    ts << "Classification: Pulsed signal ("
-                       << rfiResults[i] << " of "
-                       << allResults.rows << " images). ";
-                    ;
-                    if (!flagReport && m_metadata.periodTime > 0) // Info not added by sweep already
-                        ts << "Repetition rate/period estimate: "
-                           << QString::number(1.0 / m_metadata.periodTime, 'f', 0)
-                           << " / "
-                           << QString::number(1e6 * m_metadata.periodTime, 'f', 1)  << " µs. ";
-                }
-                else if (classes[i].contains("nb", Qt::CaseInsensitive)) {
-                    ts << "Classification: Narrowband ("
-                       << rfiResults[i] << " of "
-                       << allResults.rows << " images). ";
-                }
-                else if (classes[i].contains("partial", Qt::CaseInsensitive)) {
-                    ts << "Classification: Partial band ("
-                       << rfiResults[i] << " of "
-                       << allResults.rows << " images). ";
-                }
-                else if (classes[i].contains("full", Qt::CaseInsensitive)) {
-                    ts << "Classification: Full band ("
-                       << rfiResults[i] << " of "
-                       << allResults.rows << " images). ";
+                    if (classes[i].contains("sweep", Qt::CaseInsensitive)) sweep = true;
+                    else if (classes[i].contains("fullband", Qt::CaseInsensitive)) wb = true;
+                    else if (classes[i].contains("partialband", Qt::CaseInsensitive)) pb = true;
+                    else if (classes[i].contains("nb", Qt::CaseInsensitive)) nb = true;
+                    else if (classes[i].contains("pulse", Qt::CaseInsensitive)) pulse = true;
+                    else if (classes[i].contains("prn", Qt::CaseInsensitive)) prnFound = true;
                 }
             }
+            if (sweep and pulse and wb) mostLikelyChirpRadar = true;
+            else if (sweep and pb) mostLikelyPbJammer = true;
+            else if (sweep and wb) mostLikelyWbJammer = true;
+            else if (sweep and pulse) sweepAndPulse = true;
+            else if (sweep and nb) nbSweep = true;
+            else if (pulse and wb) pulseAndWb = true;
         }
-        if (!foundClassifications)
-            ts << "Classification inconclusive. ";
+
+        if (withinL1(m_metadata.trigFrequency)) { // TODO need to check bw of the whole signal. Can be done with tracedata in other func.
+            ts << "Signal within L1 band (BW 1.023 MHz). ";
+            flagReport = true;
+        }
+        else if (withinL2(m_metadata.trigFrequency)) {
+            ts << "Signal within L2 band. ";
+        }
+
+        if (prnFound) {
+            flagReport = true;
+            ts << "Looks like a PRN modulated signal. ";
+        }
+
+        else if (mostLikelyChirpRadar) {
+            ts << "Looks like a chirp radar signal. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+            if (withinL2(m_metadata.trigFrequency))
+                ts << "Within L2 band. ";
+        }
+
+        else if (mostLikelyWbJammer) {
+            flagReport = true;
+            ts << "Looks like a jammer covering the whole bandwidth. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+        }
+
+        else if (mostLikelyPbJammer) {
+            flagReport = true;
+            ts << "Looks like a jammer covering part of the bandwidth. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+        }
+
+        else if (sweepAndPulse) {
+            ts << "Sweep and pulse signal. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+        }
+
+        else if (nbSweep) {
+            flagReport = true;
+            ts << "Narrowband sweep signal. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+        }
+
+        else if (pulseAndWb) {
+            ts << "Wideband pulse. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+            if (withinAirRadar(m_metadata.trigFrequency))
+                ts << "Could be air radar at 1274 MHz. ";
+        }
+
+        else {
+            ts << "Classification: ";
+            for (int i = 0; i < rfiResults.size() - 1; i++) {
+                if (rfiResults[i] > 0)
+                    ts << classes[i] << ": " << rfiResults[i] << " of " << allResults.rows << " images. ";
+            }
+        }
 
         if (flagReport) emit reportIntentional(text);
 
@@ -644,8 +640,15 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
     if (traceData.data.size() > 20) {
         int max, min, avg;
         findTracedataMinMaxAvg(traceData.data, min, max, avg);
-        //qDebug() << "Trace debug data" << min << max << avg << "range" << max - min;
-        if (max - min < 400) max += 400 - (max - min);
+        qDebug() << "Trace debug data" << min << max << avg;
+
+        if (plot) { // Use scale of plot window if available
+            max = plot->yAxis->range().upper * 10;
+            min = (plot->yAxis->range().lower + 2) * 10;
+        }
+        else
+            min += 20;
+
         QImage image(traceData.data.first().size(),
                      traceData.data.size(),
                      QImage::Format_ARGB32);
@@ -671,33 +674,37 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
                 line[x] = qRgba(t, t, t, 255);
             }
         }
-        image = image.scaled(768, 512);
 
-        m_mutex.lock();
-        plot->layer("triggerLayer")->setVisible(false);
-        plot->layer("liveGraph")->setVisible(false);
-        bool flagOverlayOn = plot->layer("overlayLayer")->visible();
-        plot->layer("overlayLayer")->setVisible(false);
-        plot->yAxis->setVisible(false);
-        plot->replot();
+        if (plot) {
+            m_mutex.lock();
+            plot->layer("triggerLayer")->setVisible(false);
+            plot->layer("liveGraph")->setVisible(false);
+            bool flagOverlayOn = plot->layer("overlayLayer")->visible();
+            plot->layer("overlayLayer")->setVisible(false);
+            plot->yAxis->setVisible(false);
+            plot->replot();
 
-        plot->axisRect()->setBackground(QPixmap::fromImage(image), true);
-        plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 400);
+            plot->axisRect()->setBackground(QPixmap::fromImage(image), true, Qt::IgnoreAspectRatio);
+            plot->saveJpg(m_metadata.filename + "_spectrogram.jpg", 768, 400);
 
-        plot->axisRect()->setBackground(QPixmap());
-        plot->layer("triggerLayer")->setVisible(true);
-        plot->layer("liveGraph")->setVisible(true);
-        plot->layer("overlayLayer")->setVisible(flagOverlayOn);
-        plot->yAxis->setVisible(true);
-        plot->replot();
+            plot->axisRect()->setBackground(QPixmap());
+            plot->layer("triggerLayer")->setVisible(true);
+            plot->layer("liveGraph")->setVisible(true);
+            plot->layer("overlayLayer")->setVisible(flagOverlayOn);
+            plot->yAxis->setVisible(true);
+            plot->replot();
 
-        m_mutex.unlock();
+            m_mutex.unlock();
 
-        m_plotsToSend.append(m_metadata.filename + "_spectrogram.jpg");
-        m_plotsDescription.append("Spectrogram from " +
-                                  traceData.timestamp.last().toString("hh:mm:ss") +
-                                  " to " +
-                                  traceData.timestamp.first().toString("hh:mm:ss"));
+            m_plotsToSend.append(m_metadata.filename + "_spectrogram.jpg");
+            m_plotsDescription.append("Spectrogram from " +
+                                      traceData.timestamp.last().toString("hh:mm:ss") +
+                                      " to " +
+                                      traceData.timestamp.first().toString("hh:mm:ss"));
+        }
+        else {
+            image.save(m_config->getLogFolder() + "/file_spectrogram.jpg");
+        }
     }
 }
 
@@ -842,7 +849,7 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
         if (!timeBetweenLinesAboveSquelch.isEmpty()) avgPeriod /=  timeBetweenLinesAboveSquelch.size();
     }
     m_metadata.periodTime = avgPeriod;
-    if (m_metadata.periodTime < 6e-6) m_metadata.periodTime = 0; // Assume super low period time means wrong measurement
+    if (m_metadata.periodTime < 4e-6) m_metadata.periodTime = 0; // Assume super low period time means wrong measurement
 
     binsAboveSquelch = 0;
     squelch = m_metadata.max - 1;
@@ -909,4 +916,40 @@ void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
         file.write(doc.toJson(QJsonDocument::Indented));
         file.close();
     }
+}
+
+void PlotAndAnalyze::readFile(QString filename)
+{
+    QFile file (filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "PlotAndAnalyze: Could not open" << filename << "for reading";
+        return;
+    }
+    QTextStream ts(&file);
+    TraceDataStruct traceData;
+    bool isMobile = false;
+
+    while (!ts.atEnd()) {
+        QString line = file.readLine();
+        if (line.contains("MobileData")) isMobile = true;
+        QStringList split = line.split(',');
+        if (split.size() > 15) {
+            QDateTime dt = QDateTime::fromString(split[0], "yyyy-MM-dd hh:mm:ss.zzz");
+            if (dt.isValid()) {
+                traceData.timestamp.append(dt);
+                split.removeFirst();
+                if (isMobile) {
+                    split.remove(0, 2); // Remove pos data, don't need it
+                }
+                QVector<qint16> data;
+                for (auto && val : split) {
+                    data.append(val.toInt() * 10);
+                }
+                traceData.data.append(data);
+            }
+        }
+    }
+    if (!traceData.data.isEmpty())
+        receiveTracedata(traceData);
+    file.close();
 }

@@ -22,7 +22,6 @@
  * normalized spectrum and trig level settings
  */
 
-#define AVGFILENAME ".avgdata"
 
 class TraceBuffer : public QObject
 {
@@ -134,6 +133,7 @@ private:
     bool init = true;
     int gainControl = 0;
     int failedTracesCtr = 0;
+    QString avgFilename = ".avgdata";
 };
 
 #endif // TRACEBUFFER_H

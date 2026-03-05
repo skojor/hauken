@@ -1008,6 +1008,7 @@ struct TraceDataStruct {
 // GNSS center frequency definitions, TODO: Fill out complete
 #define GPSL1   1.57542e9
 #define GPSL2   1.2276e9
+#define AIRRADAR 1.274e9
 
 #endif // TYPEDEFS_H
 

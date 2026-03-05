@@ -263,9 +263,9 @@ void Notifications::sendMail()
             mailtext.clear();
 
             // MS Graph code in here!
-            if (msGraphConfigured && recipients.size()) {
+            if (msGraphConfigured) {
                 generateGraphEmail();
-                authGraph(); // try to auth and send immediately
+                if (!graphEmailLog.isEmpty()) authGraph(); // try to auth and send immediately
             }
             else {
                 SimpleMail::ServerReply *reply = server->sendMail(message);
@@ -536,7 +536,12 @@ void Notifications::generateGraphEmail()
     /*if (!picture.remove()) // picture data is now stored in the json code, close and delete file
         qDebug() << "Couldn't remove traceplot file" << picture.fileName();*/
 
-    graphEmailLog.append(jsonFilename);
+    if (!recipients.isEmpty() && !recipients.first().isEmpty())
+        graphEmailLog.append(jsonFilename);
+    else {
+        qDebug() << "No rec., ignoring email";
+        jsonFile.remove();
+    }
     //qDebug() << toRecipients;
 }
 
@@ -556,7 +561,7 @@ void Notifications::sendMailWithGraph()
         //qDebug() << process->arguments();
         process->start();
     }
-    else qDebug() << "Trying to send an empty email?";
+    //else qDebug() << "Trying to send an empty email?";
 }
 
 void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)

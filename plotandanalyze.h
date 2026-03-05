@@ -26,11 +26,12 @@ public:
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta);
-    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot);
+    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot = nullptr);
     void receivePlot(QPixmap *pixmap, QDateTime timestamp);
     void recordingState();
     void updFrequencies(quint64 a, quint64 b);
     void updResolution(int a) { m_resolution = a;}
+    void readFile(QString filename);
 
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);
@@ -62,6 +63,9 @@ private:
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
     void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
     void writeMetaToDisk(cv::Mat results, QStringList classes);
+    bool withinL1(quint64 freq) { if (abs(freq - GPSL1) < 0.5e6) return true; else return false;}
+    bool withinL2(quint64 freq) { if (abs(freq - GPSL2) < 5e6) return true; else return false;}
+    bool withinAirRadar(quint64 freq) { if (abs(freq - AIRRADAR) < 2e6) return true; else return false;}
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;
