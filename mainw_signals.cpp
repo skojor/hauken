@@ -1019,8 +1019,6 @@ void MainWindow::setSignals()
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::closeTempFile);
 
-    connect(notifications, &Notifications::reqTracePlot, gnssDevice1, &GnssDevice::saveBacklog); // Not really what this signal was meant for, but the timing is good...
-    connect(notifications, &Notifications::reqTracePlot, gnssDevice2, &GnssDevice::saveBacklog);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
     connect(gnssAnalyzer1, &GnssAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
@@ -1134,6 +1132,9 @@ void MainWindow::setSignals()
     //connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot);
 
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, gnssDevice1, &GnssDevice::saveBacklog); // Not really what this signal was meant for, but the timing is good...
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, gnssDevice2, &GnssDevice::saveBacklog);
+
     connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
         plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120), customPlot);

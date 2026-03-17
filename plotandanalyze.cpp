@@ -262,6 +262,7 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     bool mostLikelyChirpRadar = false;
     bool mostLikelyWbJammer = false;
     bool mostLikelyPbJammer = false;
+    bool mostLikelyJammer = false;
     bool prnFound = false;
     bool sweepAndPulse = false;
     bool nbSweep = false;
@@ -307,7 +308,7 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
 
     else {
         for (auto && row : imgsWithRfi) { // Go through every result with rfiPresent to find what is in each
-            bool sweep = false, pulse = false, wb = false, pb = false, nb = false;
+            bool sweep = false, pulse = false, wb = false, pb = false, nb = false, wbPbHigherThanNb = false;
             cv::Mat output = allResults.row(row);
             std::vector<float> probs;
             output.reshape(1, 1).copyTo(probs);
@@ -323,9 +324,10 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
                     else if (classes[i].contains("prn", Qt::CaseInsensitive)) prnFound = true;
                 }
             }
-            if (sweep and pulse and wb) mostLikelyChirpRadar = true;
-            else if (sweep and pb) mostLikelyPbJammer = true;
-            else if (sweep and wb) mostLikelyWbJammer = true;
+            if (sweep and pulse and (wb or pb)) mostLikelyChirpRadar = true;
+            else if (sweep and pb and !pulse) mostLikelyPbJammer = true;
+            else if (sweep and wb and !pulse) mostLikelyWbJammer = true;
+            else if (sweep and !pulse) mostLikelyJammer = true;
             else if (sweep and pulse) sweepAndPulse = true;
             else if (sweep and nb) nbSweep = true;
             else if (pulse and wb) pulseAndWb = true;
@@ -362,6 +364,13 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
         else if (mostLikelyPbJammer) {
             flagReport = true;
             ts << "Looks like a jammer covering part of the bandwidth. ";
+            if (m_metadata.periodTime > 4e-6)
+                ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+        }
+
+        else if (mostLikelyJammer) {
+            flagReport = true;
+            ts << "Could be a jammer. ";
             if (m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }

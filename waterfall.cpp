@@ -3,11 +3,11 @@
 Waterfall::Waterfall(QSharedPointer<Config> c)
 {
     config = c;
+    pixmap = new QPixmap;
 }
 
 void Waterfall::start()
 {
-    pixmap = new QPixmap;
     updIntervalTimer = new QTimer;
     //updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);

@@ -32,6 +32,13 @@ enum class UBLOX {
     READY
 };
 
+struct AGCEntry
+{
+    uint8_t frontEnd;
+    int8_t gain;
+    uint8_t ant;
+};
+
 class GnssDevice : public QObject
 {
     Q_OBJECT
@@ -67,6 +74,7 @@ private slots:
     void decodeBinary(const QByteArray &val);
     bool checkBinaryChecksum(const QByteArray &val);
     void appendToLogfile(const QByteArray &data);
+    void appendToBinaryfile(const QByteArray &data);
     void checkPosValid();
     void connectTcpSocket();
     void handleTcpStateChange(QAbstractSocket::SocketState state);
@@ -78,6 +86,7 @@ private slots:
     void updateBacklog(QByteArray &data);
     void cleanupBacklog();
     void createGnssPlot();
+    void decodeSbf4014(const QByteArray &data);
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -88,7 +97,7 @@ private:
     QList<QByteArray> gsvSentences;
     GnssData gnssData;
     int gsvNrOfSentences;
-    QFile logfile;
+    QFile logfile, binaryFile;
     bool logToFile = false;
     QDate logfileStartedDate;
     bool posInvalidTriggered = true; // don't trigger any recording on inital startup
