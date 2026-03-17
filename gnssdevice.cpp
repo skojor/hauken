@@ -10,7 +10,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
     connect(gnss, &QSerialPort::readyRead, this, [this] {
         QByteArray buffer = gnss->readAll();
         gnssBuffer.append(buffer);
-        if (logToFile) appendToLogfile(buffer);
+        //if (logToFile) appendToLogfile(buffer);
         handleBuffer();
     });
 
@@ -23,7 +23,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
     connect(tcpSocket, &QTcpSocket::readyRead, this, [this] {
         QByteArray buffer = tcpSocket->readAll();
         gnssBuffer.append(buffer);
-        if (logToFile) appendToLogfile(buffer);
+        //if (logToFile) appendToLogfile(buffer);
         handleBuffer();
     });
 
@@ -76,21 +76,40 @@ void GnssDevice::connectToPort()
 void GnssDevice::handleBuffer()
 {
     QByteArray binaryHeader = QByteArray::fromHex("b562");
-    QByteArray nmeaSentence, binarySentence;
-    int binaryIndex, nmeaIndex;
+    QByteArray sbfBinHeader = QByteArray::fromHex("2440");
+    QByteArray nmeaSentence, binarySentence, sbfBinSentence;
+    int binaryIndex, sbfBinIndex, nmeaIndex;
     int binarySize, nmeaSize;
+    quint16 sbfBinSize;
     int failsafe = 0;
     do {
         failsafe++;
         nmeaSentence.clear();
         binarySentence.clear();
-        binarySize = 0;
+        sbfBinSentence.clear();
+        binarySize = sbfBinSize = 0;
 
-        binaryIndex = gnssBuffer.indexOf(binaryHeader);
-        if (binaryIndex != -1 && gnssBuffer.size() > binaryIndex + 6)
+        binaryIndex = gnssBuffer.indexOf(binaryHeader); // Check if ublox data
+        sbfBinIndex = gnssBuffer.indexOf(sbfBinHeader); // Check if SBF data
+
+        if (binaryIndex != -1 && gnssBuffer.size() > binaryIndex + 6) {
             binarySize = 8 + (quint8)gnssBuffer.at(binaryIndex + 4) + (gnssBuffer.at(binaryIndex + 5) << 8);
+            if (gnssBuffer.size() > binaryIndex + binarySize) {
+                binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
+                gnssBuffer.remove(binaryIndex, binarySize);
+            }
+        }
 
-        nmeaIndex = gnssBuffer.indexOf("$");
+        else if (sbfBinIndex != -1 && gnssBuffer.size() > sbfBinIndex + 6) {
+            sbfBinSize = qFromLittleEndian<quint16>(reinterpret_cast<const uchar*>(&gnssBuffer[sbfBinIndex + 6]));
+            if (gnssBuffer.size() > sbfBinIndex + sbfBinSize) {
+                sbfBinSentence = gnssBuffer.mid(sbfBinIndex, sbfBinSize);
+                gnssBuffer.remove(sbfBinIndex, sbfBinSize);
+            }
+        }
+
+        nmeaIndex = gnssBuffer.indexOf("$G");
+
         if (nmeaIndex != -1 && gnssBuffer.contains('\n')) {
             int i = 0;
             do {
@@ -106,10 +125,8 @@ void GnssDevice::handleBuffer()
             }
             if (nmeaIndex > 0 && binaryIndex == -1) {   // somehow leftover data has ended up before the nmea sentence, looks like nothing. deleting
                 gnssBuffer.remove(0, nmeaIndex);
-                //qDebug() << "GNSS: Leftover data, cleaning";
             }
 
-            //qDebug() << "NMEA:" << nmeaSentence << nmeaSize << nmeaIndex;
             if (nmeaSize  > 10 && checkChecksum(nmeaSentence)) {
                 if (nmeaSentence.contains("GGA"))
                     decodeGga(nmeaSentence);
@@ -124,25 +141,37 @@ void GnssDevice::handleBuffer()
                 updateBacklog(nmeaSentence);
             }
             gnssBuffer.remove(nmeaIndex, nmeaSize+1);
+            if (logToFile) appendToLogfile(nmeaSentence + '\n');
         }
-        if (binaryIndex != -1) {
-            if (gnssBuffer.size() >= binaryIndex + binarySize) binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
 
+        if (binaryIndex != -1 && !binarySentence.isEmpty()) {
             if (binarySentence.size() == binarySize
                 && checkBinaryChecksum(binarySentence)
                 && (quint8)binarySentence[2] == 0x0a && (quint8)binarySentence[3] == 0x04) {
                 decodeBinary0a04(binarySentence);
-                gnssBuffer.remove(binaryIndex, binarySize);
                 updateBacklog(binarySentence);
             }
             else if (binarySentence.size() == binarySize) {
                 decodeBinary(binarySentence);
-                gnssBuffer.remove(binaryIndex, binarySize);
                 updateBacklog(binarySentence);
             }
+            if (logToFile) {
+                appendToBinaryfile(binarySentence);
+            }
         }
+        if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty()) {
+            quint16 id = qFromLittleEndian<quint16>(reinterpret_cast<const uchar*>(sbfBinSentence.constData() + 4));
+            id = id & 0x1fff;
+            updateBacklog(sbfBinSentence);
+            if (id == 4014)
+                decodeSbf4014(sbfBinSentence);
 
+            if (logToFile) {
+                appendToBinaryfile(sbfBinSentence);
+            }
+        }
     } while ((binaryIndex != -1 || nmeaIndex != -1) && (binarySentence.size() > 0 || nmeaSentence.size() > 0) && failsafe < 50);
+
     if (failsafe >= 50) {
         //qDebug() << "Panic!" << gnssBuffer.size();
         gnssBuffer.clear();
@@ -416,6 +445,27 @@ void GnssDevice::appendToLogfile(const QByteArray &data)
     }
 }
 
+void GnssDevice::appendToBinaryfile(const QByteArray &data)
+{
+    if (!binaryFile.isOpen()) {
+        binaryFile.setFileName(config->getLogFolder() + "/" +
+                               QDate::currentDate().toString("yyyyMMdd_") +
+                               AsciiTranslator::toAscii(config->getStationName().trimmed()) +
+                               "gnss_" + QString::number(gnssData.id) + ".bin");
+
+        binaryFile.open(QIODevice::Append);
+        logfileStartedDate = QDate::currentDate();
+        qDebug() << "GNSS logfile opened" << binaryFile.fileName();
+    }
+    binaryFile.write(data);
+    binaryFile.flush();
+
+    if (logfileStartedDate.daysTo(QDate::currentDate())) {
+        binaryFile.close();
+        qDebug() << "GNSS logfile closed, starting new";
+    }
+}
+
 void GnssDevice::checkPosValid()
 {
     QString msg;
@@ -623,4 +673,27 @@ void GnssDevice::createGnssPlot()
     delete plot;
     incidenceStartedDateTime = QDateTime();
     emit sendGnssPlotFilename(filename);
+}
+
+void GnssDevice::decodeSbf4014(const QByteArray &data)
+{
+    const uchar* p = reinterpret_cast<const uchar*>(data.constData());
+
+    uint8_t N = p[28];
+    uint8_t sbLen = p[29];
+    const uchar* sb = p + 32;
+    int avgAgc = 0, ctr = 0;
+    for (int i = 0; i < N; i++) {
+        AGCEntry e;
+        e.frontEnd = (uint8_t)sb[0] & 0x1f;
+        e.gain = (int8_t)sb[1];
+        e.ant = (uint8_t)sb[0] >> 5;
+        if (e.ant == 0) {
+            avgAgc += e.gain;
+            ctr++;
+        }
+        sb += sbLen;
+    }
+    if (ctr) avgAgc /= ctr;
+    gnssData.agc = avgAgc;
 }
