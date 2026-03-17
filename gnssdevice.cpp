@@ -31,6 +31,15 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
     connect(delayedReportTimer, &QTimer::timeout, this, &GnssDevice::delayedReportHandler);
     connect(backlogCleanupTimer, &QTimer::timeout, this, &GnssDevice::cleanupBacklog);
     backlogCleanupTimer->start(1000);
+
+    QDir dir(config->getLogFolder() + "/gnssLogs");
+    if (!dir.exists()) {
+        if (!dir.mkdir(config->getLogFolder() + "/gnssLogs")) {
+            qWarning() << "Couldn't create folder" << config->getLogFolder() + "/gnssLogs";
+            return;
+        }
+    }
+
 }
 
 void GnssDevice::start()
@@ -427,12 +436,16 @@ void GnssDevice::updSettings() // caching these settings in memory since they ar
 void GnssDevice::appendToLogfile(const QByteArray &data)
 {
     if (!logfile.isOpen()) {
-        logfile.setFileName(config->getLogFolder() + "/" +
+        logfile.setFileName(config->getLogFolder() + "/gnssLogs/" +
                             QDate::currentDate().toString("yyyyMMdd_") +
                             AsciiTranslator::toAscii(config->getStationName().trimmed()) +
-                            "gnss_" + QString::number(gnssData.id) + ".log");
+                            "_gnss_" + QString::number(gnssData.id) +
+                            "_nmea.log");
 
-        logfile.open(QIODevice::Append);
+        if (!logfile.open(QIODevice::Append)) {
+            qWarning() << "Could not open GNSS log file" << binaryFile.fileName();
+            return;
+        }
         logfileStartedDate = QDate::currentDate();
         qDebug() << "GNSS logfile opened" << logfile.fileName();
     }
@@ -446,14 +459,18 @@ void GnssDevice::appendToLogfile(const QByteArray &data)
 }
 
 void GnssDevice::appendToBinaryfile(const QByteArray &data)
-{
+{    
     if (!binaryFile.isOpen()) {
-        binaryFile.setFileName(config->getLogFolder() + "/" +
+        binaryFile.setFileName(config->getLogFolder() + "/gnssLogs/" +
                                QDate::currentDate().toString("yyyyMMdd_") +
                                AsciiTranslator::toAscii(config->getStationName().trimmed()) +
-                               "gnss_" + QString::number(gnssData.id) + ".bin");
+                               "_gnss_" + QString::number(gnssData.id) +
+                               "_binary.log");
 
-        binaryFile.open(QIODevice::Append);
+        if (!binaryFile.open(QIODevice::Append)) {
+            qWarning() << "Could not open GNSS log file" << binaryFile.fileName();
+            return;
+        }
         logfileStartedDate = QDate::currentDate();
         qDebug() << "GNSS logfile opened" << binaryFile.fileName();
     }
@@ -529,6 +546,16 @@ void GnssDevice::decodeBinary0a04(const QByteArray &val)
         qDebug() << "uBlox: M8 chip identified";
         uBloxID = "M8";
     }
+    else if (val.contains("ZED-X20P")) {
+        qDebug() << "uBlox: X20P chip identified";
+        uBloxID = "X20P";
+    }
+
+    else if (val.contains("M10")) { // Cool, this is a very fancy GPS chip!
+        qDebug() << "uBlox: M10 chip identified";
+        uBloxID = "M10";
+    }
+
     if (uBloxID.isEmpty()) {
         qDebug() << "Unknown GPS chip, trying to proceed anyway" << val;
         uBloxState = UBLOX::READY; // skip programming, we have no idea what to do
@@ -541,8 +568,8 @@ void GnssDevice::decodeBinary0a04(const QByteArray &val)
 
 void GnssDevice::setupUbloxDevice()
 {
-    if (uBloxID.contains("M9")) {
-        qDebug() << "uBlox M9 configuration called";
+    if (uBloxID.contains("M9") || uBloxID.contains("M10")) {
+        qDebug() << "uBlox M9/M10 configuration called";
         gnss->write(QByteArray::fromHex("b56206090c000000000000000000ffffffff1785")); // load defaults
         gnss->write(QByteArray::fromHex("b562068a0900000100005c03912001abfd")); // ubx-mon-rf on
         gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
@@ -554,12 +581,26 @@ void GnssDevice::setupUbloxDevice()
     }
 
     else if (uBloxID.contains("M8")) {
+        qDebug() << "uBlox M8 configuration called";
         gnss->write(QByteArray::fromHex("b56206010300f00100fb11")); // GLL OFF
         gnss->write(QByteArray::fromHex("b562060103000a09011e70")); // mon-hw on
         gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
         gnss->write(QByteArray::fromHex("b56206390800f3ac62ad231e000036ea")); // itfm on (interference/jamming
         gnss->write(QByteArray::fromHex("b56206010800f00d0101010101011293")); // gns on
     }
+
+    else if (uBloxID.contains("X20P")) {
+        qDebug() << "uBlox X20P configuration called";
+        gnss->write(QByteArray::fromHex("b56206090c000000000000000000ffffffff1785")); // load defaults
+        gnss->write(QByteArray::fromHex("b562068a0900000100005c03912001abfd")); // ubx-mon-rf on
+        gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
+        gnss->write(QByteArray::fromHex("b562068a090000010000cc009120001720")); // gll off
+        gnss->write(QByteArray::fromHex("b562068a090000010000b80091200104bd")); // gns on
+        gnss->write(QByteArray::fromHex("b562068a0900000100000d00411001f956")); // itfm on (interference/jamming
+        gnss->write(QByteArray::fromHex("b562068a09000001000010004120020d86")); // itfm active ant.
+        gnss->write(QByteArray::fromHex("b562068a0900000100008e03912001ddf7")); // mon-span on (spectrum)
+    }
+
     uBloxState = UBLOX::READY;
 }
 
