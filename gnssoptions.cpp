@@ -32,7 +32,7 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt3->setToolTip("When checked all NMEA sentences will be logged to a logfile.\nA new logfile is started every day");
 
     gnss1Layout->addRow(cbOpt4);
-    cbOpt4->setText("U-blox M8/M9 and Septentrio support");
+    cbOpt4->setText("U-blox M8/M9/M10/X20P and Septentrio support");
     cbOpt4->setToolTip("If checked the GPS will be configured as a uBlox receiver with enhanced binary protocol. \n"\
                        "Will enable several cool features, for now AGC and jamming indicator levels.\n"\
                        "Of course this will only work if the connected GNSS device is a uBlox. Use at your own risk!\n" \
