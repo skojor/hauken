@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.56</td><td>Septentrio SBF protocol preliminary support added</td></tr>"
        << "<tr><td>2.55</td><td>IQ plot classification and notification filter added</td></tr>"
        << "<tr><td>2.54</td><td>Audio demodulation playback and recording added</td></tr>"
        << "<tr><td>2.53</td><td>OAuth login rebuilt to use Microsoft Authentication library</td></tr>"
