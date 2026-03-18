@@ -94,7 +94,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -1079,9 +1079,11 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
         scpiWrite("freq:mode ffm");
     }
     else modeChanged = false;
+    ifStreamOff();
+    scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3))); // Needed to reset iq start timestamp!
     scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
     //scpiWrite("init");
-    scpiWrite("syst:if:rem:mode short");
+    ifStreamOn();
 }
 
 /*void MeasurementDevice::setupIfStream()
@@ -1095,7 +1097,7 @@ void MeasurementDevice::deleteIfStream()
 {
     /*scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()));*/
-    scpiWrite("syst:if:rem:mode off");
+    ifStreamOff();
     //setMeasurementTime(); // Set to prev. value
     if (centerFrequencies.size() > 0 && config->getIqRecordMultipleBands()) {
     }
@@ -1117,7 +1119,7 @@ void MeasurementDevice::deleteIfStream()
 
 void MeasurementDevice::setupVifConnection()
 {
-/*    scpiWrite("trac:tcp:tag:on \"" +
+    /*    scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");*/
     //scpiWrite("meas:time 100 ms"); // Slow down trace data transfer while I/Q transfer is running

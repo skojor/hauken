@@ -56,6 +56,7 @@ signals:
     //void resChanged(double);
     void iqFfmFreqChanged(double);
     void skipNextNTraces(int);
+    void ifStreamRequested();
 
 public slots:
     void start();
@@ -116,6 +117,8 @@ public slots:
     void resetFreqSettings();
     void setupVifConnection();
     void deleteIfStream();
+    void ifStreamOn() { scpiWrite("syst:if:rem:mode short"); emit ifStreamRequested(); }
+    void ifStreamOff() { scpiWrite("syst:if:rem:mode off"); }
     void setGainControl(int index);
     bool deviceHasGainControl() { return devicePtr->hasGainControl; }
     void setVifFreqAndMode(const double frequency);
