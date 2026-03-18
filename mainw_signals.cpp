@@ -833,6 +833,7 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::reqIqCenterFrequency, this, [this]() {
         iqPlot->getIqCenterFrequency(measurementDevice->retIqCenterFrequency());
     });
+    connect(measurementDevice, &MeasurementDevice::ifStreamRequested, iqPlot, &IqPlot::ifStreamStarted);
 
     connect(instrIpAddr, &MyComboBox::enterPressed, this, [this]() {
         btnConnectPressed(true);

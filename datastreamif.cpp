@@ -18,6 +18,8 @@ void DatastreamIf::readData(QDataStream &ds)
     if (checkHeaders()) {
         ds.setByteOrder(QDataStream::LittleEndian);
         m_optHeader.readData(ds, m_attrHeader.optHeaderLength);
+        //qDebug() << "Timestamp read at" << QDateTime::fromMSecsSinceEpoch(1e-6 * m_optHeader.startTimestamp);
+
         checkOptHeader();
 
         if (m_optHeader.frameLength == 4) {

@@ -66,6 +66,11 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     images += createImages(fftVector, 5e-4, m_metadata.maxLoc, 10, true);
     if (images.size() > 1) images.removeAt(1); // First and second img is the same if enough I/Q data available, remove
 
+    /*for (auto && img : images) {
+        QImage scl = img.scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        scl.save("c:/hauken/" + QString::number(QDateTime::currentMSecsSinceEpoch()) + ".jpg");
+    }*/ //DEBUG INFO
+
     if (!images.isEmpty()) {
         emit imagesReadyForClassification(images, m_metadata); // Send copy of metadata to allow async/multi thread op
     }
@@ -267,6 +272,9 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     bool sweepAndPulse = false;
     bool nbSweep = false;
     bool pulseAndWb = false;
+    int imgsWithJammerInRow = 0, imgsWithJammerTotal = 0;
+    int imgsWithPrnTotal = 0;
+    bool prevImgWasJammer = true;
 
     // Look for images with classification other than !rfi
     for (int row = 0; row < allResults.rows; row++) {
@@ -331,7 +339,19 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
             else if (sweep and pulse) sweepAndPulse = true;
             else if (sweep and nb) nbSweep = true;
             else if (pulse and wb) pulseAndWb = true;
+
+            if (mostLikelyJammer or mostLikelyPbJammer or mostLikelyWbJammer) {
+                imgsWithJammerTotal++;
+                if (prevImgWasJammer) {
+                    imgsWithJammerInRow++;
+                }
+            }
+            else
+                prevImgWasJammer = false;
+            if (prnFound)
+                imgsWithPrnTotal++;
         }
+        qDebug() << "Jammer counters in row/total/prn" << imgsWithJammerInRow << imgsWithJammerTotal << imgsWithPrnTotal;
 
         if (withinL1(m_metadata.trigFrequency)) { // TODO need to check bw of the whole signal. Can be done with tracedata in other func.
             ts << "Signal within L1 band (BW 1.023 MHz). ";
@@ -414,7 +434,8 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     else
         emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
-    if (!m_metadata.fromFile) writeMetaToDisk(allResults, classes);
+    //if (!m_metadata.fromFile)
+    writeMetaToDisk(allResults, classes);
 }
 
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
