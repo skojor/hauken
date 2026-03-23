@@ -286,7 +286,7 @@ private:
     QGroupBox *grpIndicator;
     QGroupBox *incBox;
 
-    SettingsDialog *settingsDialog = new SettingsDialog(this, config);
+    SettingsDialog *settingsDialog = nullptr;
     AudioOptions *audioOptions;
 
     PmrTableWdg *pmrTableWdg = new PmrTableWdg(config);
@@ -321,16 +321,16 @@ private:
 
     Arduino *arduinoPtr;
     Read1809Data *read1809Data;
-    InstrumentList *instrumentList = new InstrumentList(config);
-    GnssDisplay *gnssDisplay = new GnssDisplay(config);
+    InstrumentList *instrumentList = nullptr;
+    GnssDisplay *gnssDisplay = nullptr;
 
     int gnssLastDisplayedId = 0;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
     bool dispWaterfall;
 
-    PositionReport *positionReport = new PositionReport(config);
-    GeoLimit *geoLimit = new GeoLimit(config);
-    Mqtt *mqtt = new Mqtt(config);
+    PositionReport *positionReport = nullptr;
+    GeoLimit *geoLimit = nullptr;
+    Mqtt *mqtt = nullptr;
     QLineEdit *antPortLineEdit = new QLineEdit;
 
     bool traceAlarmRaised = false, recordAlarmRaised = true, gnssAlarmRaised = true, recordDisabledRaised = false;
@@ -350,10 +350,10 @@ private:
     DatastreamCw *datastreamCw = new DatastreamCw;
 
     double tracesPerSecond = 0;
-    AccessHandler *accessHandler = new AccessHandler(this, config);
-    OAuthFileUploader *oauthFileUploader = new OAuthFileUploader(config);
-    RestApi *restApi = new RestApi(config);
-    Network *ptrNetwork = new Network(config);
+    AccessHandler *accessHandler = nullptr;
+    OAuthFileUploader *oauthFileUploader = nullptr;
+    RestApi *restApi = nullptr;
+    Network *ptrNetwork = nullptr;
     bool useDbm;
     bool measDeviceFinished = false;
     AudioPlayer audioPlayer;
