@@ -1138,7 +1138,15 @@ void MainWindow::setSignals()
 
     connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
-        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120), customPlot);
+        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120),
+                                         customPlot,
+                                         traceBuffer->retAvgLevel());
+    });
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqMaxholdData, this, [this] () {
+        plotAndAnalyze->findFreqsAboveAvgLevel(traceBuffer->retMaxhold(),
+                                               traceBuffer->retAvgDispLevel(),
+                                               customPlot->xAxis->range().lower,
+                                               customPlot->xAxis->range().upper);
     });
     connect(sdefRecorder, &SdefRecorder::recordingStarted, plotAndAnalyze, &PlotAndAnalyze::recordingState);
 }

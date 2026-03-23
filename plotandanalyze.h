@@ -26,12 +26,16 @@ public:
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta);
-    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot = nullptr);
+    void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot = nullptr, QVector<qint16> avglevel = QVector<qint16>());
     void receivePlot(QPixmap *pixmap, QDateTime timestamp);
     void recordingState();
     void updFrequencies(quint64 a, quint64 b);
     void updResolution(int a) { m_resolution = a;}
     void readFile(QString filename);
+    void findFreqsAboveAvgLevel(const QVector<double> maxholdData,
+                                const QVector<double> avgData,
+                                double startfreq,
+                                double stopfreq);
 
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);
@@ -41,6 +45,7 @@ signals:
     void reportIntentional(QString);
     void reqTracedata();
     void reqTracePlot();
+    void reqMaxholdData();
 
 private:
     float findMaxMagnitudeAndPosition(const QVector<complexInt16> &iq16, int &pos);
