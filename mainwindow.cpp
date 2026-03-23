@@ -14,6 +14,18 @@ void restartApplication()
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    qInfo() << "MainWindow: constructing core services";
+    settingsDialog = new SettingsDialog(this, config);
+    instrumentList = new InstrumentList(config);
+    gnssDisplay = new GnssDisplay(config);
+    positionReport = new PositionReport(config);
+    geoLimit = new GeoLimit(config);
+    mqtt = new Mqtt(config);
+    accessHandler = new AccessHandler(this, config);
+    oauthFileUploader = new OAuthFileUploader(config);
+    restApi = new RestApi(config);
+    ptrNetwork = new Network(config);
+
     setStatusBar(statusBar);
     //statusBar->addWidget(progressBar);
     progressBar->setMinimum(0);
@@ -72,14 +84,18 @@ MainWindow::MainWindow(QWidget *parent)
     }
 #endif
 
+    qInfo() << "MainWindow: building UI";
     createActions();
     createMenus();
     createLayout();
     setToolTips();
     setValidators();
+
+    qInfo() << "MainWindow: wiring signals";
     setSignals();
     instrumentList->start(); // check if instrument server is available
 
+    qInfo() << "MainWindow: applying config and startup state";
     getConfigValues();
     btnConnectPressed(false); // Read and select instr. from list before any connections are made
     instrConnected(false); // to set initial inputs state
@@ -122,6 +138,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     lcdLevel->setDigitCount(3);
     lcdLevel->setSmallDecimalPoint(true);
+    qInfo() << "MainWindow: startup finished";
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
