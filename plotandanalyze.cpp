@@ -96,7 +96,8 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
             double delta = (double)m_metadata.imageStartAt * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
             quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
-            m_plotsDescription.append("FFT animation from "
+            m_plotsDescription.append(QString::number(m_metadata.centerfreq * 1e-6)
+                                      + " MHz. FFT animation from "
                                       + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
                                       + ", 500 us per image, total time covered "
                                       + QString::number(500 * images.size()) + " us");
@@ -258,7 +259,7 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image) // Not in
 
 void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta)
 {
-    QTimer::singleShot(5000, this, &PlotAndAnalyze::reqMaxholdData);
+    //QTimer::singleShot(5000, this, &PlotAndAnalyze::reqMaxholdData); // TEST, REMOVE
     m_metadata = meta; // To ensure metadata follows correct samples in case of async/multi thread
     QVector<float> rfiResults(allResults.cols, 0);
     QVector<int> imgsWithRfi, imgsWithoutRfi;
@@ -507,7 +508,8 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
         quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
         m_plotsToSend.prepend(m_metadata.filename + "_info.jpg");
-        m_plotsDescription.prepend("Single plot, "
+        m_plotsDescription.prepend(QString::number(m_metadata.centerfreq * 1e-6)
+                                   + " MHz. Single plot, "
                                    + QString::number(secondsAnalyzed * 1e6)
                                    + " us long. Max level "
                                    + " at timestamp "
@@ -935,8 +937,8 @@ void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
         std::vector<float> probs;
         output.reshape(1, 1).copyTo(probs);
         QString res;
-        for (auto && val : probs)
-            array.append(val);
+        for (int i = 0; i < probs.size(); i++)
+            array.append(classes[i] + ": " + QString::number(probs[i], 'f', 2));
         classification.append(array);
     }
 
@@ -1002,6 +1004,8 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
         return;
     }
 
+    QStringList trigAreas = m_config->getTrigFrequencies();
+
     double triglevel = m_config->getInstrTrigLevel();
     double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
     QPair<double, double> startStop(-999, -999);
@@ -1016,9 +1020,17 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
                 startStop.second = startfreq + res * i;
         }
         if (startStop.first > -990 and startStop.second > -990) {
-            qDebug() << "Range above thrs" << startStop << "MHGz";
-            if (startStop.first * 1e6 >= GPSL1 or startStop.second * 1e6 <= GPSL2)
-                qDebug() << "L1 maan!";
+            if (startStop.first * 1e6 >= GPSL1 and startStop.second * 1e6 <= GPSL1) {
+                // TODO
+            }
+            else if (trigAreas.size()) {
+                for (int i = 0; i < trigAreas.size(); i++) {
+                    if (startStop.first >= trigAreas[i].toDouble() and startStop.second <= trigAreas[i+1].toDouble()) {
+                        //TODO
+                    }
+                }
+            }
+
             startStop = { -999, -999 };
         }
     }

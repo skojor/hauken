@@ -391,7 +391,7 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         m_iqMetadata.samplerate = rate;
         m_iqMetadata.bandwidth = bw;
         m_iqMetadata.centerfreq = freq;
-        m_iqMetadata.timestamp = timestamp;
+        m_iqMetadata.timestamp = QDateTime::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
         m_iqMetadata.trigFrequency = trigFrequency;
         qDebug() << "Timestamp set at" << QDateTime::fromMSecsSinceEpoch(1e-6 * m_iqMetadata.timestamp);
         //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << rate << freq << bw << timestamp;
