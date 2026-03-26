@@ -266,6 +266,10 @@ void MeasurementDevice::setMode()
     if (connected && !autoReconnectInProgress) {
         if (devicePtr->mode == Instrument::Mode::PSCAN) {
             if (devicePtr->hasPscan) {
+                if (devicePtr->id.contains("esmw", Qt::CaseInsensitive) or
+                    devicePtr->id.contains("em200", Qt::CaseInsensitive) or
+                    devicePtr->id.contains("pr200", Qt::CaseInsensitive))
+                    setApplRx();
                 scpiWrite("freq:mode psc");
             }
             else if (devicePtr->hasDscan) {
