@@ -528,3 +528,15 @@ bool TraceBuffer::restoreAvgLevels()
     }
     return false;
 }
+
+QVector<double> TraceBuffer::retMaxhold()
+{
+    QVector<double> maxhold(maxholdBuffer.first().size(), -999);
+    for (auto && line : maxholdBuffer) {
+        for (int i = 0; i < maxhold.size(); i++) {
+            if (line[i] > maxhold[i])
+                maxhold[i] = line[i];
+        }
+    }
+    return maxhold;
+}

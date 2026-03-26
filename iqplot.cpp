@@ -15,8 +15,10 @@ void IqPlot::start()
 {
     lastIqRequestTimer = new QTimer;
     timeoutTimer = new QTimer;
+    stopIqStreamTimer = new QTimer;
 
     timeoutTimer->setSingleShot(true);
+    stopIqStreamTimer->setSingleShot(true);
 
     connect(timeoutTimer, &QTimer::timeout, this, [this]() {
         qWarning() << "I/Q transfer timed out." << iqSamples.size() << flagRequestedEndVifConnection << flagHeaderValidated;
@@ -31,6 +33,11 @@ void IqPlot::start()
     connect(lastIqRequestTimer, &QTimer::timeout, this, [this] () {
         flagOngoingAlarm = false;
     });
+
+    /*connect(stopIqStreamTimer, &QTimer::timeout, this, [this] () {
+        qDebug() << "STOP";
+        receiverControl(); // Stops iq stream or changes ffm center and starts new after given time
+    });*/
 }
 
 void IqPlot::end()
@@ -46,12 +53,12 @@ void IqPlot::getIqData(const QVector<complexInt16> iq16)
         samplesNeeded = (int)(config->getIqLogTime() * m_iqMetadata.samplerate);
 
     if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
-    //qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
     if (flagHeaderValidated and !throwFirstSamples) iqSamples += iq16;
     else if (flagHeaderValidated and throwFirstSamples)
         throwFirstSamples--;
+    //qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
 
-    //qDebug() << iqSamples.size();
+    //qDebug() << iqSamples.size() ;
     if (iqSamples.size() >= samplesNeeded and !listFreqs.isEmpty()) {
         m_iqMetadata.centerfreq = listFreqs.first() * 1e6;
 
@@ -60,7 +67,7 @@ void IqPlot::getIqData(const QVector<complexInt16> iq16)
         iqs.iq = iqSamples;
 
         iqSamplesVector.append(iqs);
-
+        flagHeaderValidated = false;
         receiverControl(); // Change freq, or end datastream if we are done
         iqSamples.clear();
     }
@@ -384,13 +391,14 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         m_iqMetadata.samplerate = rate;
         m_iqMetadata.bandwidth = bw;
         m_iqMetadata.centerfreq = freq;
-        m_iqMetadata.timestamp = timestamp;
+        m_iqMetadata.timestamp = QDateTime::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
         m_iqMetadata.trigFrequency = trigFrequency;
-        //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << samplerate;
+        qDebug() << "Timestamp set at" << QDateTime::fromMSecsSinceEpoch(1e-6 * m_iqMetadata.timestamp);
+        //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << rate << freq << bw << timestamp;
     }
     else {
         flagHeaderValidated = false;
-        //qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << samplerate;
+        //qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << rate;
 
     }
 }
@@ -399,7 +407,6 @@ void IqPlot::receiverControl()
 {
     flagHeaderValidated = false; // Assume future data to be invalid for now
 
-    //qDebug() << throwFirstSamples;
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do

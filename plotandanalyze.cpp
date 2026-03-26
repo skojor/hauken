@@ -66,6 +66,11 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     images += createImages(fftVector, 5e-4, m_metadata.maxLoc, 10, true);
     if (images.size() > 1) images.removeAt(1); // First and second img is the same if enough I/Q data available, remove
 
+    /*for (auto && img : images) {
+        QImage scl = img.scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        scl.save("c:/hauken/" + QString::number(QDateTime::currentMSecsSinceEpoch()) + ".jpg");
+    }*/ //DEBUG INFO
+
     if (!images.isEmpty()) {
         emit imagesReadyForClassification(images, m_metadata); // Send copy of metadata to allow async/multi thread op
     }
@@ -91,7 +96,8 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
             double delta = (double)m_metadata.imageStartAt * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
             quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
-            m_plotsDescription.append("FFT animation from "
+            m_plotsDescription.append(QString::number(m_metadata.centerfreq * 1e-6)
+                                      + " MHz. FFT animation from "
                                       + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
                                       + ", 500 us per image, total time covered "
                                       + QString::number(500 * images.size()) + " us");
@@ -253,6 +259,7 @@ double PlotAndAnalyze::calculateSpectralStructure(const QImage &image) // Not in
 
 void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta)
 {
+    //QTimer::singleShot(5000, this, &PlotAndAnalyze::reqMaxholdData); // TEST, REMOVE
     m_metadata = meta; // To ensure metadata follows correct samples in case of async/multi thread
     QVector<float> rfiResults(allResults.cols, 0);
     QVector<int> imgsWithRfi, imgsWithoutRfi;
@@ -267,6 +274,9 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     bool sweepAndPulse = false;
     bool nbSweep = false;
     bool pulseAndWb = false;
+    int imgsWithJammerInRow = 0, imgsWithJammerTotal = 0;
+    int imgsWithPrnTotal = 0;
+    bool prevImgWasJammer = true;
 
     // Look for images with classification other than !rfi
     for (int row = 0; row < allResults.rows; row++) {
@@ -331,7 +341,21 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
             else if (sweep and pulse) sweepAndPulse = true;
             else if (sweep and nb) nbSweep = true;
             else if (pulse and wb) pulseAndWb = true;
+
+            if (mostLikelyJammer or mostLikelyPbJammer or mostLikelyWbJammer) {
+                imgsWithJammerTotal++;
+                if (prevImgWasJammer) {
+                    imgsWithJammerInRow++;
+                }
+            }
+            else
+                prevImgWasJammer = false;
+
+            if (prnFound)
+                imgsWithPrnTotal++;
         }
+        if (imgsWithJammerTotal)
+            qDebug() << "Jammer counters in row/total/prn" << imgsWithJammerInRow << imgsWithJammerTotal << imgsWithPrnTotal;
 
         if (withinL1(m_metadata.trigFrequency)) { // TODO need to check bw of the whole signal. Can be done with tracedata in other func.
             ts << "Signal within L1 band (BW 1.023 MHz). ";
@@ -343,36 +367,41 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
 
         if (prnFound) {
             flagReport = true;
-            ts << "Looks like a PRN modulated signal. ";
+            ts << "Classified as a PRN modulated signal. ";
         }
 
         else if (mostLikelyChirpRadar) {
-            ts << "Looks like a chirp radar signal. ";
+            ts << "Classified as a chirp radar signal. ";
             if (m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
             if (withinL2(m_metadata.trigFrequency))
                 ts << "Within L2 band. ";
         }
 
-        else if (mostLikelyWbJammer) {
+        else if (mostLikelyWbJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
-            ts << "Looks like a jammer covering the whole bandwidth. ";
+            ts << "Classified as a wide band jammer. ";
             if (m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
-        else if (mostLikelyPbJammer) {
+        else if (mostLikelyPbJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
-            ts << "Looks like a jammer covering part of the bandwidth. ";
+            ts << "Classified as a partial band jammer. ";
             if (m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
-        else if (mostLikelyJammer) {
+        else if (mostLikelyJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Could be a jammer. ";
             if (m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
+        }
+
+        else if ((mostLikelyJammer or mostLikelyPbJammer or mostLikelyWbJammer)
+                 and (imgsWithJammerInRow < 3 or imgsWithJammerTotal < 6)) {
+            ts << "Classification inconclusive. ";
         }
 
         else if (sweepAndPulse) {
@@ -414,7 +443,8 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     else
         emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
-    if (!m_metadata.fromFile) writeMetaToDisk(allResults, classes);
+    //if (!m_metadata.fromFile)
+    writeMetaToDisk(allResults, classes);
 }
 
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
@@ -478,7 +508,8 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
         quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
         m_plotsToSend.prepend(m_metadata.filename + "_info.jpg");
-        m_plotsDescription.prepend("Single plot, "
+        m_plotsDescription.prepend(QString::number(m_metadata.centerfreq * 1e-6)
+                                   + " MHz. Single plot, "
                                    + QString::number(secondsAnalyzed * 1e6)
                                    + " us long. Max level "
                                    + " at timestamp "
@@ -644,7 +675,7 @@ float PlotAndAnalyze::findMaxMagnitudeAndPosition(const QVector<complexInt16> &i
     return maxVal;
 }
 
-void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot)
+void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot, QVector<qint16> avglevel)
 {
     if (traceData.data.size() > 20) {
         int max, min, avg;
@@ -906,8 +937,8 @@ void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
         std::vector<float> probs;
         output.reshape(1, 1).copyTo(probs);
         QString res;
-        for (auto && val : probs)
-            array.append(val);
+        for (int i = 0; i < probs.size(); i++)
+            array.append(classes[i] + ": " + QString::number(probs[i], 'f', 2));
         classification.append(array);
     }
 
@@ -961,4 +992,46 @@ void PlotAndAnalyze::readFile(QString filename)
     if (!traceData.data.isEmpty())
         receiveTracedata(traceData);
     file.close();
+}
+
+void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
+                                            const QVector<double> avgData,
+                                            double startfreq,
+                                            double stopfreq)
+{
+    if (maxholdData.size() != avgData.size()) {
+        qDebug() << "Trace data and average level data mismatch, something very wrong here";
+        return;
+    }
+
+    QStringList trigAreas = m_config->getTrigFrequencies();
+
+    double triglevel = m_config->getInstrTrigLevel();
+    double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
+    QPair<double, double> startStop(-999, -999);
+
+    qDebug() << m_metadata.trigFrequency << maxholdData.size() << triglevel << res << avgData[22] << maxholdData[22];
+    for (int i = 0; i < avgData.size(); i++) {
+        if (maxholdData[i] > avgData[i] + triglevel) {
+            if (startStop.first < -990) startStop.first = startfreq + res * i;
+        }
+        else if (startStop.first > -999) { // End of freq range above trig?
+            if ((int)(startfreq + res * i) > startStop.first)
+                startStop.second = startfreq + res * i;
+        }
+        if (startStop.first > -990 and startStop.second > -990) {
+            if (startStop.first * 1e6 >= GPSL1 and startStop.second * 1e6 <= GPSL1) {
+                // TODO
+            }
+            else if (trigAreas.size()) {
+                for (int i = 0; i < trigAreas.size(); i++) {
+                    if (startStop.first >= trigAreas[i].toDouble() and startStop.second <= trigAreas[i+1].toDouble()) {
+                        //TODO
+                    }
+                }
+            }
+
+            startStop = { -999, -999 };
+        }
+    }
 }

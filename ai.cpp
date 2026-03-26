@@ -341,7 +341,7 @@ void AI::receiveImages(QVector<QImage> images, IqMetadata meta)
         qDebug() << "AI image classification produced empty output";
         return;
     }
-    emit aiResultToAnalyzer(outputs, m_classes, meta);
+    emit aiResultToAnalyzer(outputs.clone(), m_classes, meta); // Clone to avoid reference to result!
 }
 
 std::vector<float> AI::softmax(const std::vector<float>& logits)

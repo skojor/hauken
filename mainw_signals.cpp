@@ -833,6 +833,7 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::reqIqCenterFrequency, this, [this]() {
         iqPlot->getIqCenterFrequency(measurementDevice->retIqCenterFrequency());
     });
+    connect(measurementDevice, &MeasurementDevice::ifStreamRequested, iqPlot, &IqPlot::ifStreamStarted);
 
     connect(instrIpAddr, &MyComboBox::enterPressed, this, [this]() {
         btnConnectPressed(true);
@@ -1137,7 +1138,15 @@ void MainWindow::setSignals()
 
     connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
-        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120), customPlot);
+        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120),
+                                         customPlot,
+                                         traceBuffer->retAvgLevel());
+    });
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqMaxholdData, this, [this] () {
+        plotAndAnalyze->findFreqsAboveAvgLevel(traceBuffer->retMaxhold(),
+                                               traceBuffer->retAvgDispLevel(),
+                                               customPlot->xAxis->range().lower,
+                                               customPlot->xAxis->range().upper);
     });
     connect(sdefRecorder, &SdefRecorder::recordingStarted, plotAndAnalyze, &PlotAndAnalyze::recordingState);
 }

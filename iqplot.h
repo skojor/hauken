@@ -44,6 +44,7 @@ public slots:
     void getIqCenterFrequency(double f) { centerFrequency = f; }
     void start(); // Called by thread
     void end(); // Called by thread
+    void ifStreamStarted(){} // { stopIqStreamTimer->start(500 + config->getIqLogTime() * 8e3);}
 
 private slots:
     void fillWindow();
@@ -79,6 +80,7 @@ private:
     double secsPerLine;
     double secsToAnalyze = 500e-6;
     QTimer *lastIqRequestTimer;
+    QTimer *stopIqStreamTimer;
     QString filename;
     bool dataFromFile = false;
     QString filenameFromFile;
