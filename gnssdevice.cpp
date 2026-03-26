@@ -671,7 +671,7 @@ void GnssDevice::saveBacklog()
         QFile file(createFilename());
         if (file.open(QIODevice::WriteOnly)) {
             for (int i = 0; i < backlogData.size(); i++) {
-                file.write(backlogTimestamp[i].toString("yyyyMMddhhmmss,").toLocal8Bit());
+                //file.write(backlogTimestamp[i].toString("yyyyMMddhhmmss,").toLocal8Bit());
                 file.write(backlogData[i] + "\n");
             }
             file.close();
