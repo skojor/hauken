@@ -94,7 +94,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -816,14 +816,14 @@ void MeasurementDevice::updSettings()
     if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive) &&
         devicePtr->mode != Instrument::Mode::PSCAN) {
         devicePtr->mode = Instrument::Mode::PSCAN;
-        //setMode();
+        setMode();
         setPscanFrequency();
         setPscanResolution();
     }
     else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive) &&
              devicePtr->mode != Instrument::Mode::FFM) {
         devicePtr->mode = Instrument::Mode::FFM;
-        //setMode();
+        setMode();
         setFfmCenterFrequency();
         setFfmFrequencySpan();
     }

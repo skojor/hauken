@@ -176,7 +176,7 @@ private slots:
     void checkFfmFreq(const QByteArray buffer);
     void checkFfmSpan(const QByteArray buffer);
     void initializeDevicePtr();
-    void setApplRx() { scpiWrite("meas:app rx"); }
+    void setApplRx() { scpiWrite("meas:appl rx"); }
 
 private:
     bool connected = false;
