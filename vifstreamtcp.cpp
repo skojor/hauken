@@ -1,4 +1,4 @@
-#include "vifstreamtcp.h"
+    #include "vifstreamtcp.h"
 
 VifStreamTcp::VifStreamTcp()
 {
@@ -20,53 +20,66 @@ void VifStreamTcp::closeListener()
 
 void VifStreamTcp::connectionStateChanged(QAbstractSocket::SocketState state)
 {
-    //qDebug() << "VIF TCP stream state" << state;
-    //    if (state == QAbstractSocket::UnconnectedState)
-    }
+    qDebug() << "VIF TCP stream state" << state;
+}
 
 void VifStreamTcp::newDataHandler()
 {
-    QByteArray data = tcpSocket->readAll();
-    ifBufferTcp.append(data);
+    timeoutTimer->start();
+    QByteArray buf = tcpSocket->readAll();
+    //qDebug() << buf.size();
+    byteCtr += buf.size();
+    tcpBuffer.append(buf);
+    HeaderType type = readHeadersSimplified(tcpBuffer);
 
-    if (ifBufferTcp.size() > 127) {
-        if (!headerIsRead) {
-            headerIsRead = true;
-            readHeader(ifBufferTcp);
+    if (tcpBuffer.size() and
+        (type == HeaderType::AMMOS or type == HeaderType::AMMOSINV)
+        and
+        tcpBuffer.size() >= locateAmmosHeader(tcpBuffer) + 26 * 4) // 26 words header
+    {
+        if (!m_sampleCtr) {
+            m_sampleCtr = (quint64)ammosHeader.sampleCounterHigh << 32 | ammosHeader.sampleCounterLow;
+        }
+        else {
+            quint64 newSamplesCtr = (quint64)ammosHeader.sampleCounterHigh << 32 | ammosHeader.sampleCounterLow;
+            m_sampleCtr = newSamplesCtr;
         }
 
-        if (headerIsRead && ifBufferTcp.size() >= nrOfWords * 4) {
-            if (packetClassCode == 0x0001) {
-                int readbytes = parseDataPacket(ifBufferTcp);
-                if (readbytes > 0 && ifBufferTcp.size() >= readbytes) {
-                    ifBufferTcp.remove(0, readbytes);
-                }
-                else {
-                    ifBufferTcp.clear();
-                }
-            }
-            else if (packetClassCode == 0x0002) {
-                headerIsRead = false;
-                int readbytes = parseContextPacket(ifBufferTcp);
+        quint64 headerFreq = (quint64)ammosHeader.freqHigh << 32 | ammosHeader.freqLow;
 
-                if (readbytes > 0 && ifBufferTcp.size() >= readbytes) {
-                    ifBufferTcp.remove(0, readbytes);
-                }
-                else {
-                    ifBufferTcp.clear();
-                }
-            }
-            else {
-                qDebug() << "Unknown packet class, deleting buffer";
-                ifBufferTcp.clear();
-            }
-            headerIsRead = false;
+        if (m_freq != headerFreq or
+            m_bw != ammosHeader.bandwidth or
+            m_samplerate != ammosHeader.samplerate) {
+            m_freq = headerFreq;
+            m_bw = ammosHeader.bandwidth;
+            m_samplerate = ammosHeader.samplerate;
+            quint64 timestamp = (quint64)ammosHeader.startTimestampHigh | ammosHeader.startTimestampLow;
+            emit headerChanged(m_freq, m_bw, m_samplerate, timestamp);
+            //rqDebug() << "new header" << m_freq << m_bw;
         }
-        if (ifBufferTcp.size() > 1e6) { // Should never happen
-            ifBufferTcp.clear();
-            headerIsRead = false;
-            qDebug() << "Failsafe triggered, VIF stream buffer > 1 Mbyte!";
+        tcpBuffer.remove(locateAmmosHeader(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
+    }
+    readIfData();
+
+}
+
+void VifStreamTcp::readIfData()
+{
+    if (tcpBuffer.size() and locateAmmosHeader(tcpBuffer) == -1) { // Copy data only if there is no header info inside
+        const int16_t* src = reinterpret_cast<const int16_t*>(tcpBuffer.constData());
+        int count = tcpBuffer.size() / 4;
+
+        QVector<complexInt16> samples(count);
+
+        for (int i = 0; i < count; ++i) {
+            samples[i].real = src[2*i]; // I
+            samples[i].imag = src[2*i + 1];     // Q
         }
+        //iqSamples.append(samples);
+        //qDebug() << "Added" << iqSamples.size() << "data points";
+        emit ifDataReady(samples);
+        //qDebug() << "new iq data" << samples.size();
+        tcpBuffer.clear();
     }
 }
 

@@ -310,6 +310,9 @@ void MainWindow::setSignals()
     connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
     connect(btnTrigRecording, &QPushButton::clicked, datastreamIf, &DatastreamIf::invalidateHeader);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamIf, &DatastreamIf::invalidateHeader);
+    connect(btnTrigRecording, &QPushButton::clicked, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
+
 
     connect(sdefRecorder,
             &SdefRecorder::recordingStarted,
@@ -823,10 +826,14 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::setFfmCenterFrequency, measurementDevice, &MeasurementDevice::setVifFreqAndMode);
     // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
     connect(datastreamIf, &DatastreamIf::headerChanged, iqPlot, &IqPlot::validateHeader);
+    connect(datastreamAmmos, &DatastreamAmmos::headerChanged, iqPlot, &IqPlot::validateHeader);
     //connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
     connect(iqPlot, &IqPlot::endVifConnection, measurementDevice, &MeasurementDevice::deleteIfStream);
     // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
     connect(datastreamIf, &DatastreamIf::ifDataReady, iqPlot, &IqPlot::getIqData);
+    connect(datastreamAmmos, &DatastreamAmmos::ifDataReady, iqPlot, &IqPlot::getIqData);
+    connect(vifStreamTcp.data(), &VifStreamTcp::ifDataReady, iqPlot, &IqPlot::getIqData);
+    connect(vifStreamTcp.data(), &VifStreamTcp::headerChanged, iqPlot, &IqPlot::validateHeader);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, tcpStream.data(), &TcpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, measurementDevice, &MeasurementDevice::restartTcpTimeoutTimer);
@@ -874,6 +881,10 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &DataStreamBaseClass::newAudioData, datastreamAudio, &DatastreamAudio::parseData);
     connect(tcpStream.data(), &DataStreamBaseClass::newIfData, datastreamIf, &DatastreamIf::parseData);
     connect(udpStream.data(), &DataStreamBaseClass::newIfData, datastreamIf, &DatastreamIf::parseData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newVifData, datastreamVif, &DatastreamVif::parseVifData);
+    connect(udpStream.data(), &DataStreamBaseClass::newVifData, datastreamVif, &DatastreamVif::parseVifData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseVifData);
+    connect(udpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseVifData);
     connect(tcpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
     connect(udpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
 
@@ -909,6 +920,7 @@ void MainWindow::setSignals()
             instrMode->setCurrentIndex(instrMode->findText("FFM"));
             instrModeChanged();
             datastreamIfPan->invalidateHeader();
+            vifStreamTcp->invalidateHeader();
         }
         instrFfmCenterFreqChanged();
     });
@@ -917,6 +929,7 @@ void MainWindow::setSignals()
             instrFfmCenterFreq->setValue( ( 1e6 * instrFfmCenterFreq->value() + i * (1e3 * instrFfmSpan->currentText().toDouble() / 40.0) ) / 1e6 );
             instrFfmCenterFreqChanged();
             datastreamIfPan->invalidateHeader();
+            vifStreamTcp->invalidateHeader();
         }
     });
     connect(tcpStream.data(), &DataStreamBaseClass::waitForPscanEndMarker, datastreamPScan, &DatastreamPScan::updWaitForPscanEndMarker);
@@ -981,6 +994,7 @@ void MainWindow::setSignals()
             aiPtr->freqChanged(a, b);
             datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
             datastreamIf->invalidateHeader();
+            vifStreamTcp->invalidateHeader();
             traceBuffer->emptyBuffer();
         }
     });
@@ -991,6 +1005,7 @@ void MainWindow::setSignals()
             aiPtr->freqChanged(a, b);
             datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
             datastreamIf->invalidateHeader();
+            vifStreamTcp->invalidateHeader();
             traceBuffer->emptyBuffer();
         }
     });
@@ -1071,7 +1086,7 @@ void MainWindow::setSignals()
             disconnect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
         }
         else {
-            //flagBusyRecordingIQ = false;
+            flagBusyRecordingIQ = false;
             connect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             connect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
             connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
@@ -1081,8 +1096,8 @@ void MainWindow::setSignals()
         }
     });
     connect(datastreamIfPan, &StreamParserBase::frequencyChanged, this, [this] () {
-        /*if (flagBusyRecordingIQ) {
-            flagBusyRecordingIQ = false;
+        if (!flagBusyRecordingIQ) {
+            //flagBusyRecordingIQ = false;
             connect(datastreamIfPan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies); // sdefRecorder runs in own thread, must be called by signal/slot!
             connect(datastreamPScan, &StreamParserBase::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
             connect(datastreamIfPan, &StreamParserBase::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
@@ -1091,8 +1106,7 @@ void MainWindow::setSignals()
             connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
             connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
             connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
-            });*/
-        //}
+            };
     });
     connect(datastreamPScan, &StreamParserBase::frequencyChanged, this, [this] () { // Delay signals about freq/res change just after I/Q rec.
         if (flagBusyRecordingIQ) {
@@ -1108,7 +1122,6 @@ void MainWindow::setSignals()
         }
     });
 
-    //connect(iqPlot, &IqPlot::iqPlotReady, notifications, &Notifications::recIqPlot);  // TBR
     connect(plotAndAnalyze, &PlotAndAnalyze::imageReady, notifications, &Notifications::recIqPlot);
     connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
     connect(iqPlot, &IqPlot::iqdataReady, plotAndAnalyze, &PlotAndAnalyze::receiveIqData);
@@ -1116,10 +1129,6 @@ void MainWindow::setSignals()
     connect(plotAndAnalyze, &PlotAndAnalyze::imagesReadyForClassification, aiPtr, &AI::receiveImages);
     connect(aiPtr, &AI::aiResultToAnalyzer, plotAndAnalyze, &PlotAndAnalyze::receiveClassification);
 
-    // Rebuild those below to use new PlotAndAnalyze class signal/slots!
-    //connect(aiPtr, &AI::aiResult, sdefRecorder, &SdefRecorder::recPrediction);
-    //connect(aiPtr, &AI::aiResult, notifications, &Notifications::recPrediction);
-    //connect(aiPtr, &AI::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(plotAndAnalyze, &PlotAndAnalyze::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(plotAndAnalyze, &PlotAndAnalyze::analyzerResult, sdefRecorder, &SdefRecorder::recPrediction);
     connect(plotAndAnalyze, &PlotAndAnalyze::reportIntentional, notifications, &Notifications::recPrediction);

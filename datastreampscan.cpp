@@ -24,6 +24,7 @@ void DatastreamPScan::readData(QDataStream &ds)
         ds.setByteOrder(QDataStream::LittleEndian);
         m_pscanOptHeader.readData(ds, m_attrHeader.optHeaderLength);
         checkOptHeader();
+       // qDebug() << "pscan numItems" << m_attrHeader.numItems;
 
         QVector<qint16> tmpBuffer(m_attrHeader.numItems);
         int readBytes = ds.readRawData((char *) tmpBuffer.data(), tmpBuffer.size() * 2);

@@ -39,9 +39,11 @@ public:
     QUdpSocket *udpSocket = new QUdpSocket;
     int byteCtr = 0;
     QTimer *bytesPerSecTimer = new QTimer;
-    QByteArray tcpBuffer, udpBuffer;
+    QByteArray tcpBuffer, udpBuffer, vitaBuffer;
     QSharedPointer<Device> devicePtr;
     Eb200Header header;
+    Vita49DataHeader vitaHeader;
+    AmmosHeader ammosHeader;
     AttrHeaderCombined attrHeader;
     EsmbOptHeaderDScan esmbOptHeader; // FIX
     QTimer *timeoutTimer = new QTimer;
@@ -64,12 +66,18 @@ public:
     virtual void newDataHandler() = 0;
     void processData(const QByteArray &);
     bool readHeaders(const QByteArray &buf);
-    bool readHeadersSimplified(const QByteArray &buf);
+    HeaderType readHeadersSimplified(const QByteArray &buf);
+    int locateEb200Header(const QByteArray &buf);
+    int locateVitaHeader(const QByteArray &buf);
+    int locateAmmosHeader(const QByteArray &buf);
+    int locateAmmosHeaderInv(const QByteArray &buf);
+    bool readHeaderVita(const QByteArray &buf);
     void readDscanOptHeader(QDataStream &ds); //FIX
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
     virtual void restartTimeoutTimer() = 0;
     void calcBytesPerSecond();
+    void swapAmmosHeader();
 
 signals:
     void connectedState(bool);
@@ -77,6 +85,8 @@ signals:
     void newIqData(const QVector<complexInt16>&);
     void newAudioData(const QByteArray &);
     void newIfData(const QByteArray &);
+    void newVifData(const QByteArray &);
+    void newAmmosData(const QByteArray &);
     void newPscanData(const QByteArray &);
     void newIfPanData(const QByteArray &);
     void newGpsCompassData(const QByteArray &);

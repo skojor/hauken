@@ -17,7 +17,6 @@ public slots:
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newDataHandler();
     void restartTimeoutTimer() { timeoutTimer->stop();} ///??
-
 signals:
 
 private:

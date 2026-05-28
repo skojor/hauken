@@ -52,21 +52,81 @@ bool DataStreamBaseClass::readHeaders(const QByteArray &buf)
     return false;
 }
 
-bool DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
+HeaderType DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
 {
-    if (buf.size() > 17) {
-        memcpy(&header.magicNumber, buf.constData(), sizeof(header.magicNumber));
+    int loc = locateEb200Header(buf);
+    if (loc > -1 and buf.size() > loc + 17) {
+        memcpy(&header.magicNumber, buf.constData() + loc, sizeof(header.magicNumber));
         header.magicNumber = qToBigEndian(header.magicNumber);
-        memcpy(&header.seqNumber, buf.constData() + 8, sizeof(header.seqNumber));
+        memcpy(&header.seqNumber, buf.constData() + loc + 8, sizeof(header.seqNumber));
         header.seqNumber = qToBigEndian(header.seqNumber);
-        memcpy(&header.dataSize, buf.constData() + 12, sizeof(header.dataSize));
+        memcpy(&header.dataSize, buf.constData() + loc + 12, sizeof(header.dataSize));
         header.dataSize = qToBigEndian(header.dataSize);
-        memcpy(&attrHeader.tag, buf.constData() + 16, sizeof(attrHeader.tag));
+        memcpy(&attrHeader.tag, buf.constData() + loc + 16, sizeof(attrHeader.tag));
         attrHeader.tag = qToBigEndian(attrHeader.tag);
+        return HeaderType::EB200;
+    }
+    loc = locateAmmosHeader(buf);
+    if (loc > -1 and buf.size() > loc + 21*4) {
+        memcpy(&ammosHeader, buf.constData() + loc, sizeof(ammosHeader));
+        return HeaderType::AMMOS;
+    }
+    loc = locateAmmosHeaderInv(buf);
+    if (loc > -1 and buf.size() > loc + 21*4) {
+        memcpy(&ammosHeader, buf.constData() + loc, sizeof(ammosHeader));
+        swapAmmosHeader();
+        return HeaderType::AMMOS;
+    }
+    return HeaderType::UNKNOWN;
+}
 
-        if (header.magicNumber == 0x000eb200) return true;
+bool DataStreamBaseClass::readHeaderVita(const QByteArray &buf)
+{
+    quint16 infClassCode, packetClassCode;
+    memcpy(&vitaHeader, buf.constData(), sizeof(vitaHeader));
+
+    if (qToBigEndian(vitaHeader.infClassCode) == 1
+        && (qToBigEndian(vitaHeader.packetClassCode) == 1 || qToBigEndian(vitaHeader.packetClassCode) == 2)) {
+        return true;
     }
     return false;
+}
+
+int DataStreamBaseClass::locateEb200Header(const QByteArray &buf)
+{
+    QByteArray be;
+    be.append(char(0x00));
+    be.append(char(0x0e));
+    be.append(char(0xb2));
+    be.append(char(0x00));
+    return buf.indexOf(be);
+}
+
+int DataStreamBaseClass::locateVitaHeader(const QByteArray &buf)
+{
+    return -1;
+}
+
+int DataStreamBaseClass::locateAmmosHeader(const QByteArray &buf)
+{
+    QByteArray pattern;
+    pattern.append(char(0x72));
+    pattern.append(char(0x65));
+    pattern.append(char(0x74));
+    pattern.append(char(0xfb));
+    //qDebug() << buf.first(4).toHex(' ' );
+    return buf.indexOf(pattern);
+}
+
+int DataStreamBaseClass::locateAmmosHeaderInv(const QByteArray &buf)
+{
+    QByteArray pattern;
+    pattern.append(char(0xfb));
+    pattern.append(char(0x74));
+    pattern.append(char(0x65));
+    pattern.append(char(0x72));
+    //qDebug() << buf.first(4).toHex(' ' );
+    return buf.indexOf(pattern);
 }
 
 void DataStreamBaseClass::readDscanOptHeader(QDataStream &ds)
@@ -87,4 +147,35 @@ void DataStreamBaseClass::calcBytesPerSecond()
     bytesPerSecTimer->start();
     emit bytesPerSecond(byteCtr);
     byteCtr = 0;
+}
+
+void DataStreamBaseClass::swapAmmosHeader()
+{
+    ammosHeader.magicWord = qbswap(ammosHeader.magicWord);
+    ammosHeader.frameLength = qbswap(ammosHeader.frameLength);
+    ammosHeader.frameCount = qbswap(ammosHeader.frameCount);
+    ammosHeader.frameType = qbswap(ammosHeader.frameType);
+    ammosHeader.dataHeaderLength = qbswap(ammosHeader.dataHeaderLength);
+    ammosHeader.reserved = qbswap(ammosHeader.reserved);
+    ammosHeader.datablockCount = qbswap(ammosHeader.datablockCount);
+    ammosHeader.datablockLength = qbswap(ammosHeader.dataHeaderLength);
+    ammosHeader.timetampLow = qbswap(ammosHeader.timetampLow);
+    ammosHeader.timestampHigh = qbswap(ammosHeader.timestampHigh);
+    ammosHeader.statusWord = qbswap(ammosHeader.statusWord);
+    ammosHeader.signalSourceId = qbswap(ammosHeader.signalSourceId);
+    ammosHeader.signalSourceState = qbswap(ammosHeader.signalSourceState);
+    ammosHeader.freqLow = qbswap(ammosHeader.freqLow);
+    ammosHeader.freqHigh = qbswap(ammosHeader.freqHigh);
+    ammosHeader.bandwidth = qbswap(ammosHeader.bandwidth);
+    ammosHeader.samplerate = qbswap(ammosHeader.samplerate);
+    ammosHeader.interpolation = qbswap(ammosHeader.interpolation);
+    ammosHeader.decimation = qbswap(ammosHeader.decimation);
+    ammosHeader.intAntennaVoltageRef = qbswap(ammosHeader.intAntennaVoltageRef);
+    ammosHeader.startTimestampLow = qbswap(ammosHeader.startTimestampHigh);
+    ammosHeader.startTimestampHigh = qbswap(ammosHeader.startTimestampLow);
+    ammosHeader.sampleCounterLow = qbswap(ammosHeader.sampleCounterLow);
+    ammosHeader.sampleCounterHigh = qbswap(ammosHeader.sampleCounterHigh);
+    ammosHeader.kFactor = qbswap(ammosHeader.kFactor);
+    ammosHeader.datablockStatus = qbswap(ammosHeader.datablockStatus);
+
 }
