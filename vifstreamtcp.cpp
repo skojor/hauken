@@ -55,7 +55,7 @@ void VifStreamTcp::newDataHandler()
             m_samplerate = ammosHeader.samplerate;
             quint64 timestamp = (quint64)ammosHeader.startTimestampHigh | ammosHeader.startTimestampLow;
             emit headerChanged(m_freq, m_bw, m_samplerate, timestamp);
-            //rqDebug() << "new header" << m_freq << m_bw;
+            //qDebug() << "new header" << m_freq << m_bw;
         }
         tcpBuffer.remove(locateAmmosHeader(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
     }
