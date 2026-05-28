@@ -1086,9 +1086,10 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
     }
     else modeChanged = false;
     //ifStreamOff();
+    scpiWrite("meas:time 500 ms"); // Slow down other data transfer
     scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3))); // Needed to reset iq start timestamp!
     scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
-    //scpiWrite("init");
+    scpiWrite("init:imm");
     ifStreamOn();
 }
 
@@ -1233,5 +1234,6 @@ void MeasurementDevice::ifStreamOff()
               QByteArray::number(vifStreamTcp->getTcpPort()) +
               ", AIF");
     vifStreamTcp->invalidateHeader(); // To ensure updated header is sent next time data is requested
+    setMeasurementTime();
     //vifStreamTcp->closeListener();
 }
