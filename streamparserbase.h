@@ -16,6 +16,8 @@ public:
     virtual bool readOptHeader(QDataStream &ds) = 0;
 
     void parseData(const QByteArray &data);
+    void parseVifData(const QByteArray &data);
+    void parseAmmosData(const QByteArray &data);
 
     Eb200Header m_eb200Header;
     AttrHeaderCombined m_attrHeader;

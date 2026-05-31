@@ -52,21 +52,48 @@ bool DataStreamBaseClass::readHeaders(const QByteArray &buf)
     return false;
 }
 
-bool DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
+HeaderType DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
 {
-    if (buf.size() > 17) {
-        memcpy(&header.magicNumber, buf.constData(), sizeof(header.magicNumber));
+    int loc = locateEb200Header(buf);
+    if (loc > -1 and buf.size() > loc + 17) {
+        memcpy(&header.magicNumber, buf.constData() + loc, sizeof(header.magicNumber));
         header.magicNumber = qToBigEndian(header.magicNumber);
-        memcpy(&header.seqNumber, buf.constData() + 8, sizeof(header.seqNumber));
+        memcpy(&header.seqNumber, buf.constData() + loc + 8, sizeof(header.seqNumber));
         header.seqNumber = qToBigEndian(header.seqNumber);
-        memcpy(&header.dataSize, buf.constData() + 12, sizeof(header.dataSize));
+        memcpy(&header.dataSize, buf.constData() + loc + 12, sizeof(header.dataSize));
         header.dataSize = qToBigEndian(header.dataSize);
-        memcpy(&attrHeader.tag, buf.constData() + 16, sizeof(attrHeader.tag));
+        memcpy(&attrHeader.tag, buf.constData() + loc + 16, sizeof(attrHeader.tag));
         attrHeader.tag = qToBigEndian(attrHeader.tag);
+        return HeaderType::EB200;
+    }
+    return HeaderType::UNKNOWN;
+}
 
-        if (header.magicNumber == 0x000eb200) return true;
+bool DataStreamBaseClass::readHeaderVita(const QByteArray &buf)
+{
+    quint16 infClassCode, packetClassCode;
+    memcpy(&vitaHeader, buf.constData(), sizeof(vitaHeader));
+
+    if (qToBigEndian(vitaHeader.infClassCode) == 1
+        && (qToBigEndian(vitaHeader.packetClassCode) == 1 || qToBigEndian(vitaHeader.packetClassCode) == 2)) {
+        return true;
     }
     return false;
+}
+
+int DataStreamBaseClass::locateEb200Header(const QByteArray &buf)
+{
+    QByteArray be;
+    be.append(char(0x00));
+    be.append(char(0x0e));
+    be.append(char(0xb2));
+    be.append(char(0x00));
+    return buf.indexOf(be);
+}
+
+int DataStreamBaseClass::locateVitaHeader(const QByteArray &buf)
+{
+    return -1;
 }
 
 void DataStreamBaseClass::readDscanOptHeader(QDataStream &ds)

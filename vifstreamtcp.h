@@ -3,6 +3,10 @@
 
 #include "datastreambaseclass.h"
 
+/*
+ * TCP socket receiver for AMMOS formatted IF data.
+ * Protocol parsing is handled by DatastreamAmmos.
+ */
 
 class VifStreamTcp : public DataStreamBaseClass
 {
@@ -14,28 +18,12 @@ public:
     void closeListener();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void newDataHandler();
-    void setSamplesNeeded(int i) { samplesNeeded = i;}
     void restartTimeoutTimer() {}
-    void setHeaderValidated(bool b) { headerValidated = b;}
+    void invalidateHeader() { emit headerInvalidated(); }
+    bool isOpen() { return tcpSocket->isOpen(); }
 
 signals:
-    void newFfmCenterFrequency(double);
-    void iqHeaderData(qint64, qint64, qint64);
-
-private slots:
-    quint32 calcStreamIdentifier();
-    bool readHeader(const QByteArray &data);
-    int parseDataPacket(const QByteArray &data);
-    int parseContextPacket(const QByteArray &data);
-
-private:
-    int samplesNeeded;
-    qint16 nrOfWords = 0, infClassCode = 0, packetClassCode = 0;
-    quint32 readStreamId = 0;
-    QVector<complexInt16> iqSamples;
-    bool headerValidated = false;
-    bool headerIsRead = false;
-
+    void headerInvalidated();
 };
 
 #endif // VIFSTREAMTCP_H

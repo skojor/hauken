@@ -81,6 +81,8 @@
 #include "datastreamifpan.h"
 #include "datastreamgpscompass.h"
 #include "datastreamcw.h"
+#include "datastreamvif.h"
+#include "datastreamammos.h"
 #include "settingsdialog.h"
 #include "plotandanalyze.h"
 
@@ -348,6 +350,8 @@ private:
     DatastreamIfPan *datastreamIfPan = new DatastreamIfPan;
     DatastreamGpsCompass *datastreamGpsCompass = new DatastreamGpsCompass;
     DatastreamCw *datastreamCw = new DatastreamCw;
+    DatastreamVif *datastreamVif = new DatastreamVif;
+    DatastreamAmmos *datastreamAmmos = new DatastreamAmmos;
 
     double tracesPerSecond = 0;
     AccessHandler *accessHandler = nullptr;
@@ -372,5 +376,6 @@ signals:
     void antennaNameEdited(const int index, const QString name);
     void antennaPortChanged();
     void antennaNameChanged(QString);
+    void ffmCenterFrequencyChanged(double frequencyHz);
 };
 #endif // MAINWINDOW_H

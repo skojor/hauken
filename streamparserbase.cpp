@@ -11,3 +11,15 @@ void StreamParserBase::parseData(const QByteArray &data)
         m_attrHeader.readData(ds))
         readData(ds);
 }
+
+void StreamParserBase::parseVifData(const QByteArray &data)
+{
+    QDataStream ds(data);
+    readData(ds);
+}
+
+void StreamParserBase::parseAmmosData(const QByteArray &data)
+{
+    QDataStream ds(data);
+    readData(ds);
+}

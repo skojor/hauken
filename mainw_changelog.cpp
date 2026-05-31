@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.57</td><td>Changed baseband transfer protocol to R&S AMMOS (up to 160 Msps transfer rate on 1 Gbps interface)</td></tr>"
        << "<tr><td>2.56</td><td>Ublox M10 + X20P and Septentrio SBF protocol preliminary support added</td></tr>"
        << "<tr><td>2.55</td><td>IQ plot classification and notification filter added</td></tr>"
        << "<tr><td>2.54</td><td>Audio demodulation playback and recording added</td></tr>"

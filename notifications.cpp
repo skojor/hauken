@@ -87,11 +87,9 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     appendLogFile(dt, msg);
     if (config->getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
         appendEmailText(dt,  msg);
-    else if (config->getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER)
+    else if (config->getEmailNotifyMeasurementDeviceHighLevel() && (type == NOTIFY::TYPE::TRACEANALYZER or type == NOTIFY::TYPE::AI))
         appendEmailText(dt, msg);
     else if (config->getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
-        appendEmailText(dt, msg);
-    else if (type == NOTIFY::TYPE::AI)
         appendEmailText(dt, msg);
 }
 

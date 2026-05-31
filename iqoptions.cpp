@@ -54,7 +54,7 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
                                       << "2.4" << "2.7" << "3.1" << "4" << "4.8" << "6" << "8.333" << "9" << "12" << "15" << "25"
                                       << "30" << "50" << "75" << "120" << "150" << "250" << "300" << "500" << "800" << "1000"
                                       << "1250" << "1500" << "2000" << "5000" << "8000" << "10000" << "12500"
-                                      << "15000" << "20000" << "40000");
+                                      << "15000" << "20000" << "40000" << "80000" << "125000");
 
     mainLayout->addRow(new QLabel(tr("I/Q prerecord time (seconds)")), leOpt1);
     leOpt1->setToolTip(tr("Decides how long Hauken will gather I/Q data before analyzing." \
