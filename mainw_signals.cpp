@@ -697,6 +697,7 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &UdpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
     connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setFfmFrequency);
     connect(measurementDevice, &MeasurementDevice::iqFfmFreqChanged, iqPlot, &IqPlot::setFfmFrequency);
+    connect(this, &MainWindow::ffmCenterFrequencyChanged, iqPlot, &IqPlot::getIqCenterFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
         if (gnssDevice1->isValid())

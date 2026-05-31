@@ -376,5 +376,6 @@ signals:
     void antennaNameEdited(const int index, const QString name);
     void antennaPortChanged();
     void antennaNameChanged(QString);
+    void ffmCenterFrequencyChanged(double frequencyHz);
 };
 #endif // MAINWINDOW_H
