@@ -697,7 +697,6 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &UdpDataStream::timeout, measurementDevice, &MeasurementDevice::handleStreamTimeout);
     connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setFfmFrequency);
     connect(measurementDevice, &MeasurementDevice::iqFfmFreqChanged, iqPlot, &IqPlot::setFfmFrequency);
-    connect(vifStreamTcp.data(), &VifStreamTcp::newFfmCenterFrequency, iqPlot, &IqPlot::setFfmFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
         if (gnssDevice1->isValid())
@@ -824,16 +823,11 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::trigRegistered, iqPlot, &IqPlot::setTrigFrequency);
     connect(iqPlot, &IqPlot::reqVifConnection, measurementDevice, &MeasurementDevice::setupVifConnection);
     connect(iqPlot, &IqPlot::setFfmCenterFrequency, measurementDevice, &MeasurementDevice::setVifFreqAndMode);
-    // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::iqHeaderData, iqPlot, &IqPlot::validateHeader);
     connect(datastreamIf, &DatastreamIf::headerChanged, iqPlot, &IqPlot::validateHeader);
     connect(datastreamAmmos, &DatastreamAmmos::headerChanged, iqPlot, &IqPlot::validateHeader);
-    //connect(iqPlot, &IqPlot::headerValidated, vifStreamTcp.data(), &VifStreamTcp::setHeaderValidated);
     connect(iqPlot, &IqPlot::endVifConnection, measurementDevice, &MeasurementDevice::deleteIfStream);
-    // REPLACED BY R&S IF! connect(vifStreamTcp.data(), &VifStreamTcp::newIqData, iqPlot, &IqPlot::getIqData);
     connect(datastreamIf, &DatastreamIf::ifDataReady, iqPlot, &IqPlot::getIqData);
     connect(datastreamAmmos, &DatastreamAmmos::ifDataReady, iqPlot, &IqPlot::getIqData);
-    connect(vifStreamTcp.data(), &VifStreamTcp::ifDataReady, iqPlot, &IqPlot::getIqData);
-    connect(vifStreamTcp.data(), &VifStreamTcp::headerChanged, iqPlot, &IqPlot::validateHeader);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, tcpStream.data(), &TcpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, udpStream.data(), &UdpDataStream::restartTimeoutTimer);
     connect(iqPlot, &IqPlot::resetTimeoutTimer, measurementDevice, &MeasurementDevice::restartTcpTimeoutTimer);
@@ -883,8 +877,10 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &DataStreamBaseClass::newIfData, datastreamIf, &DatastreamIf::parseData);
     connect(tcpStream.data(), &DataStreamBaseClass::newVifData, datastreamVif, &DatastreamVif::parseVifData);
     connect(udpStream.data(), &DataStreamBaseClass::newVifData, datastreamVif, &DatastreamVif::parseVifData);
-    connect(tcpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseVifData);
-    connect(udpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseVifData);
+    connect(tcpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseAmmosData);
+    connect(udpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseAmmosData);
+    connect(vifStreamTcp.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseAmmosData);
+    connect(vifStreamTcp.data(), &VifStreamTcp::headerInvalidated, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
     connect(tcpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
     connect(udpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
 
@@ -920,7 +916,7 @@ void MainWindow::setSignals()
             instrMode->setCurrentIndex(instrMode->findText("FFM"));
             instrModeChanged();
             datastreamIfPan->invalidateHeader();
-            vifStreamTcp->invalidateHeader();
+            datastreamAmmos->invalidateHeader();
         }
         instrFfmCenterFreqChanged();
     });
@@ -929,7 +925,7 @@ void MainWindow::setSignals()
             instrFfmCenterFreq->setValue( ( 1e6 * instrFfmCenterFreq->value() + i * (1e3 * instrFfmSpan->currentText().toDouble() / 40.0) ) / 1e6 );
             instrFfmCenterFreqChanged();
             datastreamIfPan->invalidateHeader();
-            vifStreamTcp->invalidateHeader();
+            datastreamAmmos->invalidateHeader();
         }
     });
     connect(tcpStream.data(), &DataStreamBaseClass::waitForPscanEndMarker, datastreamPScan, &DatastreamPScan::updWaitForPscanEndMarker);
@@ -994,7 +990,7 @@ void MainWindow::setSignals()
             aiPtr->freqChanged(a, b);
             datastreamPScan->invalidateHeader();  // Be sure header is sent again if mode changes rapidly
             datastreamIf->invalidateHeader();
-            vifStreamTcp->invalidateHeader();
+            datastreamAmmos->invalidateHeader();
             traceBuffer->emptyBuffer();
         }
     });
@@ -1005,7 +1001,7 @@ void MainWindow::setSignals()
             aiPtr->freqChanged(a, b);
             datastreamIfPan->invalidateHeader(); // Be sure header is sent again if mode changes rapidly
             datastreamIf->invalidateHeader();
-            vifStreamTcp->invalidateHeader();
+            datastreamAmmos->invalidateHeader();
             traceBuffer->emptyBuffer();
         }
     });

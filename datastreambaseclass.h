@@ -43,7 +43,6 @@ public:
     QSharedPointer<Device> devicePtr;
     Eb200Header header;
     Vita49DataHeader vitaHeader;
-    AmmosHeader ammosHeader;
     AttrHeaderCombined attrHeader;
     EsmbOptHeaderDScan esmbOptHeader; // FIX
     QTimer *timeoutTimer = new QTimer;
@@ -69,15 +68,12 @@ public:
     HeaderType readHeadersSimplified(const QByteArray &buf);
     int locateEb200Header(const QByteArray &buf);
     int locateVitaHeader(const QByteArray &buf);
-    int locateAmmosHeader(const QByteArray &buf);
-    int locateAmmosHeaderInv(const QByteArray &buf);
     bool readHeaderVita(const QByteArray &buf);
     void readDscanOptHeader(QDataStream &ds); //FIX
     void timeoutCallback();
     void readGpscompassData(const QByteArray &buf);
     virtual void restartTimeoutTimer() = 0;
     void calcBytesPerSecond();
-    void swapAmmosHeader();
 
 signals:
     void connectedState(bool);
