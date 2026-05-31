@@ -35,7 +35,8 @@ void VifStreamTcp::newDataHandler()
     if (tcpBuffer.size() and
         (type == HeaderType::AMMOS or type == HeaderType::AMMOSINV)
         and
-        tcpBuffer.size() >= locateAmmosHeader(tcpBuffer) + 26 * 4) // 26 words header
+        (tcpBuffer.size() >= locateAmmosHeader(tcpBuffer) + 26 * 4 or // 26 words header
+             tcpBuffer.size() >= locateAmmosHeaderInv(tcpBuffer) + 26 * 4))
     {
         if (!m_sampleCtr) {
             m_sampleCtr = (quint64)ammosHeader.sampleCounterHigh << 32 | ammosHeader.sampleCounterLow;
@@ -57,13 +58,18 @@ void VifStreamTcp::newDataHandler()
             emit headerChanged(m_freq, m_bw, m_samplerate, timestamp);
             //qDebug() << "new header" << m_freq << m_bw;
         }
-        tcpBuffer.remove(locateAmmosHeader(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
+        if (type == HeaderType::AMMOS) {
+            tcpBuffer.remove(locateAmmosHeader(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
+            readIfData(false);
+        }
+        else {
+            tcpBuffer.remove(locateAmmosHeaderInv(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
+            readIfData(true);
+        }
     }
-    readIfData();
-
 }
 
-void VifStreamTcp::readIfData()
+void VifStreamTcp::readIfData(bool inverted)
 {
     if (tcpBuffer.size() and locateAmmosHeader(tcpBuffer) == -1) { // Copy data only if there is no header info inside
         const int16_t* src = reinterpret_cast<const int16_t*>(tcpBuffer.constData());
@@ -71,9 +77,17 @@ void VifStreamTcp::readIfData()
 
         QVector<complexInt16> samples(count);
 
-        for (int i = 0; i < count; ++i) {
+        if (!inverted) {
+            for (int i = 0; i < count; ++i) {
             samples[i].real = src[2*i]; // I
             samples[i].imag = src[2*i + 1];     // Q
+            }
+        }
+        else {
+            for (int i = 0; i < count; ++i) {
+                samples[i].real = src[2*i + 1];
+                samples[i].imag = src[2*i];
+            }
         }
         //iqSamples.append(samples);
         //qDebug() << "Added" << iqSamples.size() << "data points";

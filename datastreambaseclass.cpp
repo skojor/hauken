@@ -67,15 +67,15 @@ HeaderType DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
         return HeaderType::EB200;
     }
     loc = locateAmmosHeader(buf);
-    if (loc > -1 and buf.size() > loc + 21*4) {
+    if (loc > -1 and buf.size() > loc + 26 * 4) {
         memcpy(&ammosHeader, buf.constData() + loc, sizeof(ammosHeader));
         return HeaderType::AMMOS;
     }
     loc = locateAmmosHeaderInv(buf);
-    if (loc > -1 and buf.size() > loc + 21*4) {
+    if (loc > -1 and buf.size() > loc + 26 * 4) {
         memcpy(&ammosHeader, buf.constData() + loc, sizeof(ammosHeader));
         swapAmmosHeader();
-        return HeaderType::AMMOS;
+        return HeaderType::AMMOSINV;
     }
     return HeaderType::UNKNOWN;
 }
