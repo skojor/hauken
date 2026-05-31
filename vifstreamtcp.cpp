@@ -110,8 +110,10 @@ void VifStreamTcp::readIfData(bool inverted, qsizetype bytesToRead)
         }
         else {
             for (int i = 0; i < count; ++i) {
-                samples[i].real = src[2*i + 1];
-                samples[i].imag = src[2*i];
+                // AMMOSINV data is 32-bit swapped: Q bytes arrive before I bytes,
+                // and each 16-bit sample is byte-swapped inside the word.
+                samples[i].real = qbswap(src[2*i + 1]);
+                samples[i].imag = qbswap(src[2*i]);
             }
         }
         //iqSamples.append(samples);
