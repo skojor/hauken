@@ -66,16 +66,18 @@ HeaderType DataStreamBaseClass::readHeadersSimplified(const QByteArray &buf)
         attrHeader.tag = qToBigEndian(attrHeader.tag);
         return HeaderType::EB200;
     }
-    loc = locateAmmosHeader(buf);
+    const int ammosLoc = locateAmmosHeader(buf);
+    const int ammosInvLoc = locateAmmosHeaderInv(buf);
+    const bool ammosInv = ammosLoc == -1 or (ammosInvLoc > -1 and ammosInvLoc < ammosLoc);
+    loc = ammosInv ? ammosInvLoc : ammosLoc;
+
     if (loc > -1 and buf.size() > loc + 26 * 4) {
         memcpy(&ammosHeader, buf.constData() + loc, sizeof(ammosHeader));
+        if (ammosInv) {
+            swapAmmosHeader();
+            return HeaderType::AMMOSINV;
+        }
         return HeaderType::AMMOS;
-    }
-    loc = locateAmmosHeaderInv(buf);
-    if (loc > -1 and buf.size() > loc + 26 * 4) {
-        memcpy(&ammosHeader, buf.constData() + loc, sizeof(ammosHeader));
-        swapAmmosHeader();
-        return HeaderType::AMMOSINV;
     }
     return HeaderType::UNKNOWN;
 }
@@ -158,7 +160,7 @@ void DataStreamBaseClass::swapAmmosHeader()
     ammosHeader.dataHeaderLength = qbswap(ammosHeader.dataHeaderLength);
     ammosHeader.reserved = qbswap(ammosHeader.reserved);
     ammosHeader.datablockCount = qbswap(ammosHeader.datablockCount);
-    ammosHeader.datablockLength = qbswap(ammosHeader.dataHeaderLength);
+    ammosHeader.datablockLength = qbswap(ammosHeader.datablockLength);
     ammosHeader.timetampLow = qbswap(ammosHeader.timetampLow);
     ammosHeader.timestampHigh = qbswap(ammosHeader.timestampHigh);
     ammosHeader.statusWord = qbswap(ammosHeader.statusWord);
@@ -171,8 +173,9 @@ void DataStreamBaseClass::swapAmmosHeader()
     ammosHeader.interpolation = qbswap(ammosHeader.interpolation);
     ammosHeader.decimation = qbswap(ammosHeader.decimation);
     ammosHeader.intAntennaVoltageRef = qbswap(ammosHeader.intAntennaVoltageRef);
-    ammosHeader.startTimestampLow = qbswap(ammosHeader.startTimestampHigh);
-    ammosHeader.startTimestampHigh = qbswap(ammosHeader.startTimestampLow);
+    const quint32 startTimestampLow = ammosHeader.startTimestampLow;
+    ammosHeader.startTimestampLow = qbswap(startTimestampLow);
+    ammosHeader.startTimestampHigh = qbswap(ammosHeader.startTimestampHigh);
     ammosHeader.sampleCounterLow = qbswap(ammosHeader.sampleCounterLow);
     ammosHeader.sampleCounterHigh = qbswap(ammosHeader.sampleCounterHigh);
     ammosHeader.kFactor = qbswap(ammosHeader.kFactor);
