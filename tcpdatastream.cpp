@@ -46,8 +46,6 @@ void TcpDataStream::newDataHandler()
            readHeadersSimplified(tcpBuffer) == HeaderType::EB200 and
            tcpBuffer.size() >= header.dataSize + (pos = locateEb200Header(tcpBuffer)))
     {
-        //qDebug() << "eb200" << pos << header.dataSize << header.seqNumber << tcpBuffer.size()<< locateEb200Header(tcpBuffer) << locateAmmosHeader(tcpBuffer);
-
         if (header.seqNumber == sequenceNr + 1) {
             processData(tcpBuffer.mid(pos, header.dataSize));
         }
@@ -58,19 +56,6 @@ void TcpDataStream::newDataHandler()
         tcpBuffer = tcpBuffer.remove(pos, header.dataSize);
         sequenceNr = header.seqNumber;
     }
-
-    /*while (tcpBuffer.size() and
-           readHeadersSimplified(tcpBuffer) == HeaderType::AMMOS and
-           tcpBuffer.size() >= ammosHeader.frameLength * 4 + (pos = locateAmmosHeader(tcpBuffer)))
-    {
-        qDebug() << "ammos" << pos << ammosHeader.frameLength << ammosHeader.bandwidth << tcpBuffer.size()<< locateEb200Header(tcpBuffer) << locateAmmosHeader(tcpBuffer);
-        emit newAmmosData(tcpBuffer);
-        tcpBuffer = tcpBuffer.remove(pos, ammosHeader.frameLength * 4);
-    }
-    if (tcpBuffer.size() > 24 and readHeadersSimplified(tcpBuffer) != HeaderType::AMMOS and readHeadersSimplified(tcpBuffer) != HeaderType::EB200) {
-        qDebug() << "unclear" << locateEb200Header(tcpBuffer) << locateAmmosHeader(tcpBuffer);// << tcpBuffer.toHex(' ');
-        tcpBuffer.clear();
-    }*/
 
     /*#ifdef Q_OS_WIN
     while (tcpBuffer.size() > 127 && !readHeaders(tcpBuffer)) { // out of sync
