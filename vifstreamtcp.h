@@ -37,7 +37,7 @@ private slots:
     bool readHeader(const QByteArray &data);
     int parseDataPacket(const QByteArray &data);
     int parseContextPacket(const QByteArray &data);
-    void readIfData(bool inverted = false);
+    void readIfData(bool inverted = false, qsizetype bytesToRead = -1);
 
 private:
     int samplesNeeded;
