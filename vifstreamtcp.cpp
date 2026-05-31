@@ -1,4 +1,6 @@
-    #include "vifstreamtcp.h"
+#include "vifstreamtcp.h"
+
+#include <limits>
 
 VifStreamTcp::VifStreamTcp()
 {
@@ -27,17 +29,37 @@ void VifStreamTcp::newDataHandler()
 {
     timeoutTimer->start();
     QByteArray buf = tcpSocket->readAll();
-    //qDebug() << buf.size();
     byteCtr += buf.size();
     tcpBuffer.append(buf);
-    HeaderType type = readHeadersSimplified(tcpBuffer);
 
-    if (tcpBuffer.size() and
-        (type == HeaderType::AMMOS or type == HeaderType::AMMOSINV)
-        and
-        (tcpBuffer.size() >= locateAmmosHeader(tcpBuffer) + 26 * 4 or // 26 words header
-             tcpBuffer.size() >= locateAmmosHeaderInv(tcpBuffer) + 26 * 4))
-    {
+    constexpr qsizetype headerBytes = sizeof(AmmosHeader);
+
+    while (tcpBuffer.size()) {
+        HeaderType type = readHeadersSimplified(tcpBuffer);
+        if (type != HeaderType::AMMOS and type != HeaderType::AMMOSINV)
+            break;
+
+        const bool inverted = type == HeaderType::AMMOSINV;
+        const int headerPos = inverted ? locateAmmosHeaderInv(tcpBuffer) : locateAmmosHeader(tcpBuffer);
+        if (headerPos < 0)
+            break;
+
+        if (headerPos > 0) {
+            tcpBuffer.remove(0, headerPos);
+            continue;
+        }
+
+        const quint64 payloadBytes = quint64(ammosHeader.datablockLength) * sizeof(complexInt16);
+        if (payloadBytes > quint64(std::numeric_limits<qsizetype>::max())) {
+            qDebug() << "AMMOS payload too large" << payloadBytes;
+            tcpBuffer.clear();
+            break;
+        }
+
+        const qsizetype frameBytes = headerBytes + qsizetype(payloadBytes);
+        if (tcpBuffer.size() < frameBytes)
+            break;
+
         if (!m_sampleCtr) {
             m_sampleCtr = (quint64)ammosHeader.sampleCounterHigh << 32 | ammosHeader.sampleCounterLow;
         }
@@ -54,33 +76,36 @@ void VifStreamTcp::newDataHandler()
             m_freq = headerFreq;
             m_bw = ammosHeader.bandwidth;
             m_samplerate = ammosHeader.samplerate;
-            quint64 timestamp = (quint64)ammosHeader.startTimestampHigh | ammosHeader.startTimestampLow;
+            quint64 timestamp = (quint64)ammosHeader.startTimestampHigh << 32 | ammosHeader.startTimestampLow;
             emit headerChanged(m_freq, m_bw, m_samplerate, timestamp);
-            //qDebug() << "new header" << m_freq << m_bw;
         }
-        if (type == HeaderType::AMMOS) {
-            tcpBuffer.remove(locateAmmosHeader(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
-            readIfData(false);
-        }
-        else {
-            tcpBuffer.remove(locateAmmosHeaderInv(tcpBuffer), 26 * 4); // Remove header and copy IQ data below
-            readIfData(true);
-        }
+
+        tcpBuffer.remove(0, headerBytes);
+        readIfData(inverted, qsizetype(payloadBytes));
     }
 }
 
-void VifStreamTcp::readIfData(bool inverted)
+void VifStreamTcp::readIfData(bool inverted, qsizetype bytesToRead)
 {
-    if (tcpBuffer.size() and locateAmmosHeader(tcpBuffer) == -1) { // Copy data only if there is no header info inside
+    if (bytesToRead < 0) {
+        const int normalHeader = locateAmmosHeader(tcpBuffer);
+        const int invertedHeader = locateAmmosHeaderInv(tcpBuffer);
+        if (normalHeader >= 0 or invertedHeader >= 0)
+            return;
+        bytesToRead = tcpBuffer.size();
+    }
+
+    bytesToRead -= bytesToRead % sizeof(complexInt16);
+    if (bytesToRead > 0 and tcpBuffer.size() >= bytesToRead) {
         const int16_t* src = reinterpret_cast<const int16_t*>(tcpBuffer.constData());
-        int count = tcpBuffer.size() / 4;
+        int count = bytesToRead / sizeof(complexInt16);
 
         QVector<complexInt16> samples(count);
 
         if (!inverted) {
             for (int i = 0; i < count; ++i) {
-            samples[i].real = src[2*i]; // I
-            samples[i].imag = src[2*i + 1];     // Q
+                samples[i].real = src[2*i]; // I
+                samples[i].imag = src[2*i + 1];     // Q
             }
         }
         else {
@@ -93,7 +118,7 @@ void VifStreamTcp::readIfData(bool inverted)
         //qDebug() << "Added" << iqSamples.size() << "data points";
         emit ifDataReady(samples);
         //qDebug() << "new iq data" << samples.size();
-        tcpBuffer.clear();
+        tcpBuffer.remove(0, bytesToRead);
     }
 }
 
