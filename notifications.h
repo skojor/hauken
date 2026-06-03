@@ -135,7 +135,7 @@ private:
     QString m_instrData;
 
     bool shouldAppendPosition(NOTIFY::TYPE type) const;
-    QString appendPosition(QString text);
+    QString appendPosition(const QString &text);
 
 };
 

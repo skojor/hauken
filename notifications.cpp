@@ -82,17 +82,19 @@ bool Notifications::shouldAppendPosition(NOTIFY::TYPE type) const
            (type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER);
 }
 
-QString Notifications::appendPosition(QString text)
+QString Notifications::appendPosition(const QString &text)
 {
     emit reqPosition();
 
-    text.append(positionValid ?
-                    QString(". Position %1 %2")
-                        .arg(latitude, 0, 'f', 5)
-                        .arg(longitude, 0, 'f', 5) :
-                    QString(". Position invalid"));
+    QString positionedText = text + QString(". Position %1 %2")
+                                      .arg(latitude, 0, 'f', 5)
+                                      .arg(longitude, 0, 'f', 5);
 
-    return text;
+    if (!positionValid) {
+        positionedText.append(" (position invalid or set manually)");
+    }
+
+    return positionedText;
 }
 
 void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QString string, QDateTime dt)
