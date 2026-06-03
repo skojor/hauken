@@ -532,16 +532,25 @@ void MainWindow::setSignals()
 
     });
     connect(notifications, &Notifications::warning, this, &MainWindow::generatePopup);
-    connect(notifications, &Notifications::reqPosition, this, [this] {
-        GnssData data;
-        data = gnssDevice1->sendGnssData();
-        if (!data.posValid)
-            data = gnssDevice2->sendGnssData();
-        if (!data.posValid)
-            data = measurementDevice->sendGnssData();
+    connect(notifications,
+            &Notifications::reqPosition,
+            this,
+            [this] {
+                GnssData data;
+                const QString gpsSource = config->getSdefGpsSource();
 
-        notifications->getLatitudeLongitude(data.posValid, data.latitude, data.longitude);
-    });
+                if (gpsSource == "InstrumentGnss")
+                    data = measurementDevice->sendGnssData();
+                else if (gpsSource.contains("1"))
+                    data = gnssDevice1->sendGnssData();
+                else if (gpsSource.contains("2"))
+                    data = gnssDevice2->sendGnssData();
+                else
+                    data = measurementDevice->sendGnssData();
+
+                notifications->getLatitudeLongitude(data.posValid, data.latitude, data.longitude);
+            },
+            Qt::BlockingQueuedConnection);
 
     connect(waterfall, &Waterfall::imageReady, customPlot, [&](QPixmap *pixmap) {
         if (dispWaterfall) {
