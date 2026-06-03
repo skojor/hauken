@@ -1,10 +1,16 @@
 #include "customplotcontroller.h"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <QMenu>
+
 CustomPlotController::CustomPlotController(QCustomPlot *ptr, QSharedPointer<Config> c)
 {
     customPlotPtr = ptr;
     config = c;
     connect(customPlotPtr, &QCustomPlot::mouseMove, this, &CustomPlotController::showToolTip);
+    connect(customPlotPtr, &QCustomPlot::mousePress, this, &CustomPlotController::onMousePress);
     connect(customPlotPtr->selectionRect(), &QCPSelectionRect::accepted, this, &CustomPlotController::showSelectionMenu);
     connect(customPlotPtr, &QCustomPlot::mouseRelease, this, &CustomPlotController::onMouseClick);
     connect(flashTimer, &QTimer::timeout, this, &CustomPlotController::flashRoutine);
@@ -114,16 +120,24 @@ void CustomPlotController::setupBasics()
         tmpLine->point2->setCoords( gnssBandCenterFreq[i], -200);
         gnssCenterLine.append(tmpLine);
     }
+
+    customPlotPtr->addLayer("markerLayer");
+    customPlotPtr->layer("markerLayer")->setMode(QCPLayer::lmBuffered);
+    initializeSpectrumMarkers();
+
     toggleOverlay();
     updTextLabelPositions();
 }
 
 void CustomPlotController::plotTrace(const QVector<double> &data)
 {
+    currentTraceData = data;
     if (keyValues.isEmpty()) reCalc();
     if (!keyValues.isEmpty() and !data.isEmpty()) {
         customPlotPtr->graph(0)->setData(keyValues, data);
+        updateSpectrumMarkerLabels();
         customPlotPtr->layer("liveGraph")->replot();
+        customPlotPtr->layer("markerLayer")->replot();
     }
 }
 
@@ -179,6 +193,7 @@ void CustomPlotController::reCalc()
             }
             readTrigSelectionFromConfig();
             customPlotPtr->graph(3)->setData(keyValues, fill);
+            updateSpectrumMarkerLabels();
             customPlotPtr->layer("triggerLayer")->replot();
         }
     }
@@ -186,6 +201,12 @@ void CustomPlotController::reCalc()
 
 void CustomPlotController::showToolTip(QMouseEvent *event)
 {
+    if (draggedSpectrumMarker >= 0) {
+        setSpectrumMarkerFrequency(draggedSpectrumMarker, customPlotPtr->xAxis->pixelToCoord(event->pos().x()));
+        customPlotPtr->layer("markerLayer")->replot();
+        return;
+    }
+
     double x = customPlotPtr->xAxis->pixelToCoord(event->pos().x());
     double y = customPlotPtr->yAxis->pixelToCoord(event->pos().y());
 
@@ -195,12 +216,40 @@ void CustomPlotController::showToolTip(QMouseEvent *event)
     customPlotPtr->setToolTip(text);
 }
 
+void CustomPlotController::onMousePress(QMouseEvent *event)
+{
+    if (event->button() != Qt::LeftButton) return;
+
+    draggedSpectrumMarker = spectrumMarkerAt(event->pos());
+    if (draggedSpectrumMarker >= 0) {
+        customPlotPtr->setInteraction(QCP::iRangeDrag, false);
+        setSpectrumMarkerFrequency(draggedSpectrumMarker, customPlotPtr->xAxis->pixelToCoord(event->pos().x()));
+        customPlotPtr->layer("markerLayer")->replot();
+    }
+}
+
 void CustomPlotController::onMouseClick(QMouseEvent *event)
 {
-    (void)event;
-    if (event->button() == Qt::RightButton) {
+    if (event->button() == Qt::LeftButton && draggedSpectrumMarker >= 0) {
+        draggedSpectrumMarker = -1;
+        customPlotPtr->setInteraction(QCP::iRangeDrag, true);
+        return;
+    }
+
+    if (event->button() == Qt::RightButton && customPlotPtr->axisRect()->rect().contains(event->pos())) {
+        const double clickedFrequencyMhz = customPlotPtr->xAxis->pixelToCoord(event->pos().x());
 
         QMenu menu;
+        for (int i = 0; i < spectrumMarkers.size(); ++i) {
+            const QString actionText = QString("%1 marker %2 at %3 MHz")
+                                           .arg(spectrumMarkers[i].visible ? "Hide" : "Show")
+                                           .arg(i + 1)
+                                           .arg(clickedFrequencyMhz, 0, 'f', 3);
+            menu.addAction(actionText, this, [this, i, clickedFrequencyMhz]() {
+                toggleSpectrumMarker(i, clickedFrequencyMhz);
+            });
+        }
+        menu.addSeparator();
         menu.addAction("Exclude all trigger frequencies", this, &CustomPlotController::trigExcludeAll);
         menu.addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
 
@@ -349,6 +398,7 @@ void CustomPlotController::updSettings()
     customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
 
     reCalc();
+    updateSpectrumMarkerLabels();
     customPlotPtr->replot();
     updOverlayText();
     emit reqTrigline(); // to update trig line drawing with new values
@@ -418,6 +468,142 @@ void CustomPlotController::updOverlay()
 
 }
 
+
+void CustomPlotController::initializeSpectrumMarkers()
+{
+    const QVector<QColor> markerColors = { QColor(0, 90, 255), QColor(220, 120, 0), QColor(160, 0, 200) };
+    spectrumMarkers.clear();
+    spectrumMarkers.reserve(markerColors.size());
+
+    for (int i = 0; i < markerColors.size(); ++i) {
+        SpectrumMarker marker;
+        marker.color = markerColors[i];
+
+        QPen markerPen(marker.color);
+        markerPen.setWidth(2);
+        marker.line = new QCPItemStraightLine(customPlotPtr);
+        marker.line->setPen(markerPen);
+        marker.line->setSelectedPen(markerPen);
+        marker.line->setLayer("markerLayer");
+        marker.line->setSelectable(false);
+        marker.line->setVisible(false);
+        marker.line->point1->setCoords(0, -200);
+        marker.line->point2->setCoords(0, 200);
+
+        marker.label = new QCPItemText(customPlotPtr);
+        marker.label->setLayer("markerLayer");
+        marker.label->setSelectable(false);
+        marker.label->setVisible(false);
+        marker.label->setColor(marker.color);
+        marker.label->setPen(QPen(marker.color));
+        marker.label->setBrush(config->getDarkMode() ? QColor(30, 30, 30, 210) : QColor(255, 255, 255, 220));
+        marker.label->setPadding(QMargins(4, 2, 4, 2));
+        marker.label->setPositionAlignment(Qt::AlignLeft | Qt::AlignTop);
+        marker.label->setTextAlignment(Qt::AlignLeft);
+        marker.label->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
+
+        spectrumMarkers.append(marker);
+    }
+}
+
+void CustomPlotController::toggleSpectrumMarker(int markerIndex, double frequencyMhz)
+{
+    if (markerIndex < 0 || markerIndex >= spectrumMarkers.size()) return;
+
+    SpectrumMarker &marker = spectrumMarkers[markerIndex];
+    marker.visible = !marker.visible;
+    marker.line->setVisible(marker.visible);
+    marker.label->setVisible(marker.visible);
+
+    if (marker.visible) {
+        setSpectrumMarkerFrequency(markerIndex, frequencyMhz);
+    }
+
+    customPlotPtr->replot();
+}
+
+void CustomPlotController::setSpectrumMarkerFrequency(int markerIndex, double frequencyMhz, bool clampToRange)
+{
+    if (markerIndex < 0 || markerIndex >= spectrumMarkers.size()) return;
+
+    if (clampToRange) {
+        const QCPRange range = customPlotPtr->xAxis->range();
+        frequencyMhz = std::max(range.lower, std::min(range.upper, frequencyMhz));
+    }
+
+    SpectrumMarker &marker = spectrumMarkers[markerIndex];
+    marker.frequencyMhz = frequencyMhz;
+    marker.line->point1->setCoords(frequencyMhz, customPlotPtr->yAxis->range().lower);
+    marker.line->point2->setCoords(frequencyMhz, customPlotPtr->yAxis->range().upper);
+    updateSpectrumMarkerLabel(markerIndex);
+}
+
+void CustomPlotController::updateSpectrumMarkerLabel(int markerIndex)
+{
+    if (markerIndex < 0 || markerIndex >= spectrumMarkers.size()) return;
+
+    SpectrumMarker &marker = spectrumMarkers[markerIndex];
+    const double level = spectrumMarkerLevel(marker.frequencyMhz);
+    const QString levelText = std::isnan(level) ? QStringLiteral("--") : QString::number(level, 'f', 1);
+    const QString unit = config->getUseDbm() ? QStringLiteral("dBm") : QStringLiteral("dBμV");
+    marker.label->setText(QString("M%1  %2 MHz\n%3 %4")
+                              .arg(markerIndex + 1)
+                              .arg(marker.frequencyMhz, 0, 'f', 6)
+                              .arg(levelText)
+                              .arg(unit));
+
+    const QCPRange yRange = customPlotPtr->yAxis->range();
+    const double verticalOffset = yRange.size() * (0.04 + 0.10 * markerIndex);
+    marker.label->position->setCoords(marker.frequencyMhz, yRange.upper - verticalOffset);
+}
+
+void CustomPlotController::updateSpectrumMarkerLabels()
+{
+    for (int i = 0; i < spectrumMarkers.size(); ++i) {
+        if (spectrumMarkers[i].visible) {
+            setSpectrumMarkerFrequency(i, spectrumMarkers[i].frequencyMhz, false);
+        }
+    }
+}
+
+double CustomPlotController::spectrumMarkerLevel(double frequencyMhz) const
+{
+    if (keyValues.isEmpty() || currentTraceData.isEmpty()) return std::numeric_limits<double>::quiet_NaN();
+
+    const int sampleCount = std::min(keyValues.size(), currentTraceData.size());
+    if (sampleCount <= 0) return std::numeric_limits<double>::quiet_NaN();
+    if (frequencyMhz <= keyValues.first()) return currentTraceData.first();
+    if (frequencyMhz >= keyValues.at(sampleCount - 1)) return currentTraceData.at(sampleCount - 1);
+
+    const auto begin = keyValues.constBegin();
+    const auto end = begin + sampleCount;
+    const auto it = std::lower_bound(begin, end, frequencyMhz);
+    const int upperIndex = static_cast<int>(it - begin);
+    if (upperIndex <= 0) return currentTraceData.first();
+
+    const int lowerIndex = upperIndex - 1;
+    const double lowerFrequency = keyValues.at(lowerIndex);
+    const double upperFrequency = keyValues.at(upperIndex);
+    if (upperFrequency <= lowerFrequency) return currentTraceData.at(lowerIndex);
+
+    const double ratio = (frequencyMhz - lowerFrequency) / (upperFrequency - lowerFrequency);
+    return currentTraceData.at(lowerIndex) + ratio * (currentTraceData.at(upperIndex) - currentTraceData.at(lowerIndex));
+}
+
+int CustomPlotController::spectrumMarkerAt(const QPoint &pos) const
+{
+    if (!customPlotPtr->axisRect()->rect().contains(pos)) return -1;
+
+    for (int i = 0; i < spectrumMarkers.size(); ++i) {
+        if (!spectrumMarkers[i].visible) continue;
+
+        const int markerX = customPlotPtr->xAxis->coordToPixel(spectrumMarkers[i].frequencyMhz);
+        if (std::abs(markerX - pos.x()) <= 6) return i;
+    }
+
+    return -1;
+}
+
 void CustomPlotController::freqChanged(double a, double b)
 {
     stopFreq = b;
@@ -467,6 +653,10 @@ void CustomPlotController::updOverlayText()
 {
     for (auto && row : gnssTextLabels) {
         row->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
+    }
+    for (auto && marker : spectrumMarkers) {
+        marker.label->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
+        marker.label->setBrush(config->getDarkMode() ? QColor(30, 30, 30, 210) : QColor(255, 255, 255, 220));
     }
     customPlotPtr->replot();
 }
