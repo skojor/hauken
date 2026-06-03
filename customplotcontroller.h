@@ -2,6 +2,7 @@
 #define CUSTOMPLOTCONTROLLER_H
 
 #include <QDebug>
+#include <QMouseEvent>
 #include <QMutex>
 #include <QObject>
 #include <QPen>
@@ -51,6 +52,7 @@ public slots:
 private slots:
     void setupBasics();
     void showToolTip(QMouseEvent *event);
+    void onMousePress(QMouseEvent *event);
     void onMouseClick(QMouseEvent *event);
     void showSelectionMenu(const QRect &rect, QMouseEvent *event);
     void trigInclude();
@@ -65,7 +67,6 @@ private slots:
     void updOverlayText();
     void doubleClickEvent(QMouseEvent *event);
     void mouseWheel(QWheelEvent *event);
-
 signals:
     void reqTrigline();
     void freqSelectionChanged();
@@ -105,6 +106,31 @@ private:
     QList<double> gnssBandCenterFreq;
     QCPItemStraightLine *centerFreqLine = nullptr;
     quint32 m_bandwidth;
+
+    void addSpectrumMarker(double frequencyMhz);
+    void removeSpectrumMarker(int markerIndex);
+    void setSpectrumMarkerFrequency(int markerIndex, double frequencyMhz, bool clampToRange = true);
+    void updateSpectrumMarkerLabel(int markerIndex);
+    void updateSpectrumMarkerLabels();
+    double spectrumMarkerLevel(double frequencyMhz) const;
+    int spectrumMarkerAt(const QPoint &pos) const;
+    int spectrumMarkerFontSize() const;
+
+    struct SpectrumMarker
+    {
+        QCPItemStraightLine *line = nullptr;
+        QCPItemText *label = nullptr;
+        double frequencyMhz = 0;
+        QColor color;
+    };
+
+    QVector<SpectrumMarker> spectrumMarkers;
+    QVector<double> currentTraceData;
+    int draggedSpectrumMarker = -1;
+    QPoint leftMousePressPos;
+    QPoint markerDragStartPos;
+    bool markerDragMoved = false;
+    QCP::SelectionRectMode markerDragSelectionRectMode = QCP::srmCustom;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H

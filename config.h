@@ -222,6 +222,8 @@ public slots:
     void setOAuth2UploadAddress(QString s) { settings->setValue("OAuth2/UploadAddress", s); }
     QString getOauth2OperatorAddress() { return settings->value("OAuth2/OperatorAddress").toString();}
     void setOAuth2OperatorAddress(QString s) { settings->setValue("OAuth2/OperatorAddress", s); }
+    bool getOAuth2StartDataProcessingAfterUpload() { return settings->value("OAuth2/StartDataProcessingAfterUpload", false).toBool();}
+    void setOAuth2StartDataProcessingAfterUpload(bool b) { settings->setValue("OAuth2/StartDataProcessingAfterUpload", b); }
 
     // GNSS options
     QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}

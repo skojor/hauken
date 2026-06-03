@@ -53,6 +53,7 @@ void Notifications::start()
 void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string)
 {
     bool truncateThis = false;
+    const QString msg = shouldAppendPosition(type) ? appendPosition(string) : string;
 
     if (truncateTime && (type == NOTIFY::TYPE::TRACEANALYZER)) { // check if certain notifications should be truncated
         if (!truncateList.isEmpty()) { // check if we recently got a notification from the same type of notifier
@@ -60,19 +61,40 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
                 if (truncateList.at(i).type == type && truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) < truncateTime) { // found one, it seems we should truncate this
                     truncateThis = true;
                     truncateList.removeAt(i);
-                    truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, string)); // remove the previous buffer line and insert the last one, then wait truncateTime seconds before ev. posting
+                    truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, msg)); // remove the previous buffer line and insert the last one, then wait truncateTime seconds before ev. posting
                     truncateTimer->start(1000);
                 }
             }
         }
         else { // not been questioned for truncating before, adding this one
-            truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, string));
+            truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, msg));
         }
     }
 
     if (!truncateThis) {
-        generateMsg(type, name, string, QDateTime::currentDateTime());
+        generateMsg(type, name, msg, QDateTime::currentDateTime());
     }
+}
+
+bool Notifications::shouldAppendPosition(NOTIFY::TYPE type) const
+{
+    return config->getSdefAddPosition() &&
+           (type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER);
+}
+
+QString Notifications::appendPosition(const QString &text)
+{
+    emit reqPosition();
+
+    QString positionedText = text + QString(". Position %1 %2")
+                                      .arg(latitude, 0, 'f', 5)
+                                      .arg(longitude, 0, 'f', 5);
+
+    if (!positionValid) {
+        positionedText.append(" (position invalid or set manually)");
+    }
+
+    return positionedText;
 }
 
 void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QString string, QDateTime dt)
