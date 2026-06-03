@@ -134,6 +134,9 @@ private:
     QStringList iqPlotDescriptions;
     QString m_instrData;
 
+    bool shouldAppendPosition(NOTIFY::TYPE type) const;
+    QString appendPosition(const QString &text);
+
 };
 
 #endif // NOTIFICATIONS_H
