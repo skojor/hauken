@@ -41,7 +41,9 @@ OAuthFileUploader::OAuthFileUploader(QSharedPointer<Config> c)
         qDebug() << "OAuthUploader: Auth required!" << reply->errorString();
     });
     //etworkAccessManager->setAutoDeleteReplies(true);
-    m_networkAccessManager->setTransferTimeout(5000);
+    // Keep Qt's network idle timeout aligned with the uploader timeout. A 5 s
+    // transfer timeout canceled valid uploads during short stalls/server-side processing.
+    m_networkAccessManager->setTransferTimeout(UPLOAD_TIMEOUT_MS);
 }
 
 void OAuthFileUploader::fileUploadRequest(const QString filename)
@@ -205,12 +207,13 @@ void OAuthFileUploader::networkReplyFinishedHandler(QNetworkReply *networkReply)
     if (requestType == UploadRequestType::Unknown) return;
 
     m_uploadTimeoutTimer->stop();
-    QByteArray reply = networkReply->readAll();
 
     if (networkReply->error() != QNetworkReply::NoError) {
         abortCurrentUpload(networkReply->errorString());
         return;
     }
+
+    const QByteArray reply = networkReply->readAll();
 
     if (requestType == UploadRequestType::Block) {
         updateBlockSize(m_blockUploadTimer.elapsed());
