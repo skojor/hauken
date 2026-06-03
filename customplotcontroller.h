@@ -108,7 +108,8 @@ private:
     quint32 m_bandwidth;
 
     void initializeSpectrumMarkers();
-    void toggleSpectrumMarker(int markerIndex, double frequencyMhz);
+    void addSpectrumMarker(double frequencyMhz);
+    void removeSpectrumMarker(int markerIndex);
     void setSpectrumMarkerFrequency(int markerIndex, double frequencyMhz, bool clampToRange = true);
     void updateSpectrumMarkerLabel(int markerIndex);
     void updateSpectrumMarkerLabels();
@@ -121,12 +122,14 @@ private:
         QCPItemText *label = nullptr;
         double frequencyMhz = 0;
         QColor color;
-        bool visible = false;
     };
 
     QVector<SpectrumMarker> spectrumMarkers;
     QVector<double> currentTraceData;
     int draggedSpectrumMarker = -1;
+    QPoint leftMousePressPos;
+    QPoint markerDragStartPos;
+    bool markerDragMoved = false;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H
