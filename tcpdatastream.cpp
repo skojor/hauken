@@ -28,7 +28,7 @@ void TcpDataStream::closeListener()
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
     //qDebug() << "TCP stream state" << state;
-   /* if (state == QAbstractSocket::UnconnectedState) // Whaat, why?
+    /* if (state == QAbstractSocket::UnconnectedState) // Whaat, why?
         timeoutTimer->stop();*/
     if (state == QAbstractSocket::ConnectedState) // Update Meas.Dev. class to check if user is this instance
         emit streamInfo(tcpSocket->localAddress(), tcpSocket->localPort());
@@ -40,22 +40,24 @@ void TcpDataStream::newDataHandler()
     QByteArray buf = tcpSocket->readAll();
     byteCtr += buf.size();
     tcpBuffer.append(buf);
+    int pos;
 
-    while (!tcpBuffer.isEmpty() && readHeadersSimplified(tcpBuffer) && tcpBuffer.size() >= (int)header.dataSize) {
+    while (tcpBuffer.size() and
+           readHeadersSimplified(tcpBuffer) == HeaderType::EB200 and
+           tcpBuffer.size() >= header.dataSize + (pos = locateEb200Header(tcpBuffer)))
+    {
         if (header.seqNumber == sequenceNr + 1) {
-            processData(tcpBuffer.first(header.dataSize));
+            processData(tcpBuffer.mid(pos, header.dataSize));
         }
         else {
-            ///qDebug() << "ooo" << header.seqNumber << sequenceNr << attrHeader.length;
+            qDebug() << "ooo" << header.seqNumber << sequenceNr << attrHeader.length;
             emit waitForPscanEndMarker(true);
         }
-        tcpBuffer = tcpBuffer.sliced(header.dataSize);
+        tcpBuffer = tcpBuffer.remove(pos, header.dataSize);
         sequenceNr = header.seqNumber;
     }
-    if (tcpBuffer.size() > 24 and !readHeadersSimplified(tcpBuffer))
-        tcpBuffer.clear(); // Buffer contains unreadable data, clear and continue
 
-/*#ifdef Q_OS_WIN
+    /*#ifdef Q_OS_WIN
     while (tcpBuffer.size() > 127 && !readHeaders(tcpBuffer)) { // out of sync
         tcpBuffer.removeFirst();
         qDebug() << "Whoops";

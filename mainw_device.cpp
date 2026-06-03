@@ -116,21 +116,25 @@ void MainWindow::instrPscanFreqChanged()
 
 void MainWindow::instrFfmCenterFreqChanged()
 {
+    const double centerFrequencyMHz = instrFfmCenterFreq->value();
+    const double centerFrequencyHz = 1e6 * centerFrequencyMHz;
+
     if (measurementDevice->currentMode() == Instrument::Mode::FFM) {
-        config->setInstrFfmCenterFreq(1e6 * instrFfmCenterFreq->value());
-        measurementDevice->setFfmCenterFrequency(1e6 * instrFfmCenterFreq->value());
-        ptrNetwork->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2,
-                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);
-        /*sdefRecorder->updFrequencies(1e6 * instrFfmCenterFreq->value() - instrFfmSpan->currentText().toDouble() * 5e2, // Handled by signal directly from datastream pscan / ffm
-                                   1e6 * instrFfmCenterFreq->value() + instrFfmSpan->currentText().toDouble() * 5e2);*/
+        config->setInstrFfmCenterFreq(centerFrequencyHz);
+        measurementDevice->setFfmCenterFrequency(centerFrequencyHz);
+        ptrNetwork->updFrequencies(centerFrequencyHz - instrFfmSpan->currentText().toDouble() * 5e2,
+                                   centerFrequencyHz + instrFfmSpan->currentText().toDouble() * 5e2);
+        /*sdefRecorder->updFrequencies(centerFrequencyHz - instrFfmSpan->currentText().toDouble() * 5e2, // Handled by signal directly from datastream pscan / ffm
+                                   centerFrequencyHz + instrFfmSpan->currentText().toDouble() * 5e2);*/
     }
 
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
         waterfall->restartPlot();
     }
-    iqPlot->setFfmFrequency(instrFfmCenterFreq->value()); // Sent as MHz, used for image text
-    customPlotController->ffmCenterFreqChanged(1e6 * instrFfmCenterFreq->value()); // Displays center line in FFM mode
+    emit ffmCenterFrequencyChanged(centerFrequencyHz);
+    iqPlot->setFfmFrequency(centerFrequencyMHz); // Sent as MHz, used for image text
+    customPlotController->ffmCenterFreqChanged(centerFrequencyHz); // Displays center line in FFM mode
 }
 
 void MainWindow::instrFfmSpanChanged()

@@ -34,6 +34,7 @@ void DatastreamGpsCompass::readData(QDataStream &ds)
             gpsData.altitude = m_gpsCompassData.altitude;
             gpsData.dop = m_gpsCompassData.dilution;
             gpsData.sog = (float) ( (m_gpsCompassData.sog) / 10.0 ) * 1.94384449;
+            gpsData.cog = m_gpsCompassData.tmg / 10.0;
             gpsData.timestamp = QDateTime::fromMSecsSinceEpoch(m_gpsCompassData.gpsTimestamp / 1e6);
             gpsData.sats = m_gpsCompassData.noOfSatInView;
             gpsData.valid = (bool)m_gpsCompassData.gpsValid;

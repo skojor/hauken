@@ -755,6 +755,7 @@ void PlotAndAnalyze::recordingState()
 
     int traceplotTimeout = (m_config->getPlotMaxholdTime() * 1e3) - 5e3;
     int tracedataTimeout = 3e4;
+    if (traceplotTimeout > 45e3) traceplotTimeout = 45e3;
 
     m_reqTracedataTimer->start(tracedataTimeout);
     m_reqTraceplotTimer->start(traceplotTimeout);

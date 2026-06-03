@@ -1005,6 +1005,92 @@ struct TraceDataStruct {
     QVector<QVector<qint16>>    data;
 };
 
+struct Vita49DataHeader {
+    quint16 packetHeader;
+    quint16 packetSize;
+    quint32 streamId;
+    quint32 oui;
+    quint16 infClassCode;
+    quint16 packetClassCode;
+    quint32 intSecondsTimestamp;
+    quint32 fractSecondsTimestampHigh;
+    quint32 fractSecondsTimestampLow;
+};
+
+struct Vita49ContextHeader {
+    quint16 packetHeader;
+    quint16 packetSize;
+    quint32 streamId;
+    quint32 oui;
+    quint16 infClassCode;
+    quint16 packetClassCode;
+    quint32 intSecondsTimestamp;
+    quint32 fractSecondsTimestampHigh;
+    quint32 fractSecondsTimestampLow;
+    quint32 contextInd;
+    quint32 bwHigh;
+    quint32 bwLow;
+    quint32 freqHigh;
+    quint32 freqLow;
+    quint32 refLevel;
+    quint32 samplerateHigh;
+    quint32 samplerateLow;
+    quint32 timestampCalTime;
+    quint32 manufacturerOui;
+    quint32 deviceCode;
+    quint32 enablersIndicators;
+    quint32 itemFormats;
+    quint32 repeatCountVectorSize;
+    quint32 gpsManufacturerOui;
+    quint32 intSecondsGpsFix;
+    quint32 factSecondsGpsFixHigh;
+    quint32 factSecondsGpsFixLow;
+    quint32 latitude;
+    quint32 longitude;
+    quint32 altitude;
+    quint32 sog;
+    quint32 hdgAngle;
+    quint32 trkAngle;
+    quint32 magnVariation;
+};
+
+enum class HeaderType {
+    UNKNOWN,
+    EB200,
+    AMMOS,
+    AMMOSINV,
+    VITA49
+};
+
+struct AmmosHeader {
+    quint32 magicWord;
+    quint32 frameLength;
+    quint32 frameCount;
+    quint32 frameType;
+    quint32 dataHeaderLength;
+    quint32 reserved;
+    quint32 datablockCount;
+    quint32 datablockLength;
+    quint32 timetampLow;
+    quint32 timestampHigh;
+    quint32 statusWord;
+    quint32 signalSourceId;
+    quint32 signalSourceState;
+    quint32 freqLow;
+    quint32 freqHigh;
+    quint32 bandwidth;
+    quint32 samplerate;
+    quint32 interpolation;
+    quint32 decimation;
+    qint32  intAntennaVoltageRef;
+    quint32 startTimestampLow;
+    quint32 startTimestampHigh;
+    quint32 sampleCounterLow;
+    quint32 sampleCounterHigh;
+    qint32  kFactor;
+    quint32 datablockStatus;
+};
+
 // GNSS center frequency definitions, TODO: Fill out complete
 #define GPSL1   1.57542e9
 #define GPSL2   1.2276e9

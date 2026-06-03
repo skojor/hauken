@@ -53,9 +53,15 @@ void IqPlot::getIqData(const QVector<complexInt16> iq16)
         samplesNeeded = (int)(config->getIqLogTime() * m_iqMetadata.samplerate);
 
     if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
-    if (flagHeaderValidated and !throwFirstSamples) iqSamples += iq16;
-    else if (flagHeaderValidated and throwFirstSamples)
+    if (flagHeaderValidated and !throwFirstSamples) {
+        iqSamples += iq16;
+        //qDebug() << "Gathering I/Q cnt" << iqSamples.size();
+    }
+    else if (flagHeaderValidated and throwFirstSamples) {
+        //qDebug() << "Throwing samples" << throwFirstSamples;
         throwFirstSamples--;
+
+    }
     //qDebug() << flagHeaderValidated << throwFirstSamples << iq16.size() << iqSamples.size();
 
     //qDebug() << iqSamples.size() ;
@@ -112,6 +118,14 @@ QVector<QVector<double> > IqPlot::doFft(const QVector<complexInt16> &iq, int sam
     int samplesIterator = 0;
 
     switch (m_iqMetadata.samplerate) {
+    case 102400000:
+        m_iqMetadata.fftSize = 128;
+        m_iqMetadata.samplesInc = 24;
+        break;
+    case 160000000:
+        m_iqMetadata.fftSize = 256;
+        m_iqMetadata.samplesInc = 48;
+        break;
     case 25600000:
         m_iqMetadata.fftSize = 32;
         m_iqMetadata.samplesInc = 6;
@@ -410,7 +424,7 @@ void IqPlot::receiverControl()
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
-        throwFirstSamples = 12 * m_iqMetadata.samplerate / 1e7;
+        throwFirstSamples = 5 * m_iqMetadata.samplerate / 1e7;
         if (!throwFirstSamples) throwFirstSamples = 1;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();
