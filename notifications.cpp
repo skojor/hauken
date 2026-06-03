@@ -86,13 +86,11 @@ QString Notifications::appendPosition(QString text)
 {
     emit reqPosition();
 
-    text.append(QString(". Position %1 %2")
-                    .arg(latitude, 0, 'f', 5)
-                    .arg(longitude, 0, 'f', 5));
-
-    if (!positionValid) {
-        text.append(" (position invalid or set manually)");
-    }
+    text.append(positionValid ?
+                    QString(". Position %1 %2")
+                        .arg(latitude, 0, 'f', 5)
+                        .arg(longitude, 0, 'f', 5) :
+                    QString(". Position invalid"));
 
     return text;
 }
