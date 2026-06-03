@@ -7,13 +7,7 @@
 #include <utility>
 
 namespace {
-constexpr qint64 PROBE_BLOCK_SIZE_BYTES = 4 * 1024 * 1024;
-constexpr qint64 MIN_BLOCK_SIZE_BYTES = 4 * 1024 * 1024;
-constexpr qint64 MAX_BLOCK_SIZE_BYTES = 95 * 1024 * 1024;
-constexpr double BLOCK_OVERHEAD_SECONDS = 0.3;
-constexpr double TARGET_BLOCK_UPLOAD_SECONDS = 60;
-constexpr double SLOW_BLOCK_UPLOAD_SECONDS = 150;
-constexpr double ROLLING_AVERAGE_WEIGHT = 0.3;
+constexpr qint64 BLOCK_SIZE_BYTES = 4 * 1024 * 1024;
 constexpr int REQUEST_TYPE_ATTRIBUTE = QNetworkRequest::User;
 
 QString percentEncodedPathSegment(const QString &value)
@@ -104,6 +98,29 @@ void OAuthFileUploader::startNextUpload()
              << formatBytes(m_currentFileSize) << "initial block size:" << formatBytes(m_currentBlockSize);
     emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "",
                        "OAuth: Starting upload of " + m_currentUploadName + " (" + formatBytes(m_currentFileSize) + ")");
+
+void OAuthFileUploader::startNextUpload()
+{
+    if (m_uploadBacklog.isEmpty()) return;
+
+    m_uploadInProgress = true;
+    m_currentFilePath = m_uploadBacklog.first();
+    m_currentFile = new QFile(m_currentFilePath, this);
+
+    if (!m_currentFile->open(QIODevice::ReadOnly)) {
+        qDebug() << "OAuthUploader: Couldn't read from file" << m_currentFilePath << ", aborting";
+        abortCurrentUpload("Could not read file");
+        return;
+    }
+
+    m_currentFileSize = m_currentFile->size();
+    m_uploadedBytes = 0;
+    m_nextBlockNumber = 0;
+    m_blockIds.clear();
+    m_currentUploadName = currentUploadFilename();
+
+    qDebug() << "OAuthUploader: Uploading" << m_currentUploadName << "as Azure block blob in"
+             << BLOCK_SIZE_BYTES << "byte blocks";
     uploadNextBlock();
 }
 
@@ -119,8 +136,7 @@ void OAuthFileUploader::uploadNextBlock()
         return;
     }
 
-    const qint64 bytesLeft = m_currentFileSize - m_currentFile->pos();
-    const QByteArray blockData = m_currentFile->read(qMin(m_currentBlockSize, bytesLeft));
+    const QByteArray blockData = m_currentFile->read(BLOCK_SIZE_BYTES);
     if (blockData.isEmpty()) {
         abortCurrentUpload("Could not read next upload block");
         return;
@@ -133,9 +149,6 @@ void OAuthFileUploader::uploadNextBlock()
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
     request.setAttribute(static_cast<QNetworkRequest::Attribute>(REQUEST_TYPE_ATTRIBUTE),
                          static_cast<int>(UploadRequestType::Block));
-
-    m_currentBlockBytes = blockData.size();
-    m_blockUploadTimer.start();
 
     QNetworkReply *networkReply = m_networkAccessManager->put(request, blockData);
     m_uploadTimeoutTimer->start(UPLOAD_TIMEOUT_MS);
@@ -213,7 +226,6 @@ void OAuthFileUploader::networkReplyFinishedHandler(QNetworkReply *networkReply)
     }
 
     if (requestType == UploadRequestType::Block) {
-        updateBlockSize(m_blockUploadTimer.elapsed());
         m_uploadedBytes = m_currentFile != nullptr ? m_currentFile->pos() : m_uploadedBytes;
         if (m_currentFileSize > 0) {
             emit uploadProgress(static_cast<int>((m_uploadedBytes * 100) / m_currentFileSize));
@@ -325,9 +337,6 @@ void OAuthFileUploader::abortCurrentUpload(const QString &reason)
     m_blockIds.clear();
     m_currentFileSize = 0;
     m_uploadedBytes = 0;
-    m_currentBlockSize = 0;
-    m_currentBlockBytes = 0;
-    m_averageUploadSpeedBytesPerSecond = 0;
     m_nextBlockNumber = 0;
     m_uploadInProgress = false;
 
@@ -340,12 +349,7 @@ void OAuthFileUploader::abortCurrentUpload(const QString &reason)
 void OAuthFileUploader::finalizeSuccessfulUpload(const QString &uploadedFilename, const QString &status)
 {
     emit uploadProgress(100);
-
-    const double totalSeconds = m_fileUploadTimer.isValid() ? m_fileUploadTimer.elapsed() / 1000.0 : 0;
-    const double averageSpeed = totalSeconds > 0 ? m_currentFileSize / totalSeconds : m_averageUploadSpeedBytesPerSecond;
-    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "",
-                       "OAuth: File " + status + " (" + uploadedFilename + ", size " +
-                           formatBytes(m_currentFileSize) + ", average upload speed " + formatSpeed(averageSpeed) + ")");
+    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File " + status + " (" + uploadedFilename + ")");
 
     if (m_currentFile != nullptr) {
         m_currentFile->deleteLater();
@@ -359,9 +363,6 @@ void OAuthFileUploader::finalizeSuccessfulUpload(const QString &uploadedFilename
     m_blockIds.clear();
     m_currentFileSize = 0;
     m_uploadedBytes = 0;
-    m_currentBlockSize = 0;
-    m_currentBlockBytes = 0;
-    m_averageUploadSpeedBytesPerSecond = 0;
     m_nextBlockNumber = 0;
     m_uploadInProgress = false;
 
@@ -437,7 +438,7 @@ QUrl OAuthFileUploader::uploadedNotificationUrl() const
     url.setQuery(QString());
     return url;
 }
-
+  
 void OAuthFileUploader::updateBlockSize(qint64 elapsedMs)
 {
     const double elapsedSeconds = elapsedMs / 1000.0;
