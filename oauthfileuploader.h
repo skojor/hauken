@@ -2,13 +2,12 @@
 #define OAUTHFILEUPLOADER_H
 
 #include <QObject>
-#include <QHttpMultiPart>
-#include <QHttpPart>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QUrl>
 #include <QTimer>
+#include <QFile>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -36,6 +35,10 @@ signals:
 private slots:
     void networkReplyFinishedHandler(QNetworkReply *networkReply);
     void networkReplyProgressHandler(qint64, qint64);
+    void startNextUpload();
+    void uploadNextBlock();
+    void finishBlockListUpload();
+    void notifyFileUploaded();
     void authTimeoutHandler();
     void uploadTimeoutHandler();
     void setOperator(QString id, QString token);
@@ -47,6 +50,30 @@ private:
     QTimer *m_authTimeoutTimer, *m_uploadTimeoutTimer;
     QString m_accessToken;
     QStringList m_uploadBacklog;
+    enum class UploadRequestType {
+        Unknown = 0,
+        Block,
+        BlockList,
+        UploadedNotification
+    };
+
+    void abortCurrentUpload(const QString &reason);
+    void finalizeSuccessfulUpload(const QString &uploadedFilename, const QString &status);
+    QNetworkRequest makeAuthorizedRequest(const QUrl &url) const;
+    QUrl blockUploadUrl(const QString &filename, const QString &blockId) const;
+    QUrl blockListUrl(const QString &filename) const;
+    QUrl uploadedNotificationUrl() const;
+    QString currentUploadFilename() const;
+    QString makeBlockId(int blockNumber) const;
+
+    QFile *m_currentFile = nullptr;
+    QString m_currentFilePath;
+    QString m_currentUploadName;
+    QStringList m_blockIds;
+    qint64 m_currentFileSize = 0;
+    qint64 m_uploadedBytes = 0;
+    int m_nextBlockNumber = 0;
+    bool m_uploadInProgress = false;
     int m_retries = 0;
 };
 
