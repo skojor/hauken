@@ -175,7 +175,7 @@ void OAuthFileUploader::notifyFileUploaded()
 
     QJsonObject jsonObject;
     jsonObject.insert("filename", m_currentUploadName);
-    jsonObject.insert("showMeasurementDataOnUpload", true);
+    jsonObject.insert("showMeasurementDataOnUpload", config->getOAuth2StartDataProcessingAfterUpload());
     QJsonDocument doc(jsonObject);
 
     QNetworkReply *networkReply = m_networkAccessManager->post(request, doc.toJson(QJsonDocument::Compact));
