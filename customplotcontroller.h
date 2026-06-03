@@ -107,7 +107,6 @@ private:
     QCPItemStraightLine *centerFreqLine = nullptr;
     quint32 m_bandwidth;
 
-    void initializeSpectrumMarkers();
     void addSpectrumMarker(double frequencyMhz);
     void removeSpectrumMarker(int markerIndex);
     void setSpectrumMarkerFrequency(int markerIndex, double frequencyMhz, bool clampToRange = true);

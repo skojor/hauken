@@ -123,7 +123,6 @@ void CustomPlotController::setupBasics()
 
     customPlotPtr->addLayer("markerLayer");
     customPlotPtr->layer("markerLayer")->setMode(QCPLayer::lmBuffered);
-    initializeSpectrumMarkers();
 
     toggleOverlay();
     updTextLabelPositions();
@@ -257,6 +256,16 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
     if (event->button() == Qt::LeftButton && customPlotPtr->axisRect()->rect().contains(event->pos()) &&
         (event->pos() - leftMousePressPos).manhattanLength() <= 4) {
         const double clickedFrequencyMhz = customPlotPtr->xAxis->pixelToCoord(event->pos().x());
+
+        QMenu menu;
+        menu.addAction("Add marker", this, [this, clickedFrequencyMhz]() {
+            addSpectrumMarker(clickedFrequencyMhz);
+        });
+        menu.exec(customPlotPtr->mapToGlobal(event->pos()));
+        return;
+    }
+
+    if (event->button() == Qt::RightButton) {
 
         QMenu menu;
         menu.addAction("Add marker", this, [this, clickedFrequencyMhz]() {
@@ -496,11 +505,6 @@ void CustomPlotController::updOverlay()
 
 }
 
-
-void CustomPlotController::initializeSpectrumMarkers()
-{
-    spectrumMarkers.clear();
-}
 
 void CustomPlotController::addSpectrumMarker(double frequencyMhz)
 {
