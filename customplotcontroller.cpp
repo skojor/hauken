@@ -228,6 +228,8 @@ void CustomPlotController::onMousePress(QMouseEvent *event)
     markerDragMoved = false;
 
     if (draggedSpectrumMarker >= 0) {
+        markerDragSelectionRectMode = customPlotPtr->selectionRectMode();
+        customPlotPtr->setSelectionRectMode(QCP::srmNone);
         customPlotPtr->setInteraction(QCP::iRangeDrag, false);
     }
 }
@@ -236,7 +238,9 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && draggedSpectrumMarker >= 0) {
         const int markerIndex = draggedSpectrumMarker;
+        markerDragMoved = markerDragMoved || (event->pos() - markerDragStartPos).manhattanLength() > 4;
         draggedSpectrumMarker = -1;
+        customPlotPtr->setSelectionRectMode(markerDragSelectionRectMode);
         customPlotPtr->setInteraction(QCP::iRangeDrag, true);
 
         if (markerDragMoved) {
@@ -526,7 +530,7 @@ void CustomPlotController::addSpectrumMarker(double frequencyMhz)
     marker.label->setPadding(QMargins(4, 2, 4, 2));
     marker.label->setPositionAlignment(Qt::AlignLeft | Qt::AlignTop);
     marker.label->setTextAlignment(Qt::AlignLeft);
-    marker.label->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
+    marker.label->setFont(QFont(QFont().family(), spectrumMarkerFontSize()));
 
     spectrumMarkers.append(marker);
     setSpectrumMarkerFrequency(markerIndex, frequencyMhz);
@@ -574,7 +578,7 @@ void CustomPlotController::updateSpectrumMarkerLabel(int markerIndex)
     const QString levelText = std::isnan(level) ? QStringLiteral("--") : QString::number(level, 'f', 1);
     const QString unit = config->getUseDbm() ? QStringLiteral("dBm") : QStringLiteral("dBμV");
     marker.label->setText(QString("%1 MHz\n%2 %3")
-                              .arg(marker.frequencyMhz, 0, 'f', 6)
+                              .arg(marker.frequencyMhz, 0, 'f', 3)
                               .arg(levelText)
                               .arg(unit));
 
@@ -612,6 +616,12 @@ double CustomPlotController::spectrumMarkerLevel(double frequencyMhz) const
 
     const double ratio = (frequencyMhz - lowerFrequency) / (upperFrequency - lowerFrequency);
     return currentTraceData.at(lowerIndex) + ratio * (currentTraceData.at(upperIndex) - currentTraceData.at(lowerIndex));
+}
+
+
+int CustomPlotController::spectrumMarkerFontSize() const
+{
+    return std::max(1, static_cast<int>(std::round(config->getOverlayFontSize() * 0.7)));
 }
 
 int CustomPlotController::spectrumMarkerAt(const QPoint &pos) const
@@ -680,7 +690,7 @@ void CustomPlotController::updOverlayText()
         row->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
     }
     for (auto && marker : spectrumMarkers) {
-        marker.label->setFont(QFont(QFont().family(), config->getOverlayFontSize()));
+        marker.label->setFont(QFont(QFont().family(), spectrumMarkerFontSize()));
         marker.label->setBrush(config->getDarkMode() ? QColor(30, 30, 30, 210) : QColor(255, 255, 255, 220));
     }
     customPlotPtr->replot();

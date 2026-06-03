@@ -114,6 +114,7 @@ private:
     void updateSpectrumMarkerLabels();
     double spectrumMarkerLevel(double frequencyMhz) const;
     int spectrumMarkerAt(const QPoint &pos) const;
+    int spectrumMarkerFontSize() const;
 
     struct SpectrumMarker
     {
@@ -129,6 +130,7 @@ private:
     QPoint leftMousePressPos;
     QPoint markerDragStartPos;
     bool markerDragMoved = false;
+    QCP::SelectionRectMode markerDragSelectionRectMode = QCP::srmCustom;
 };
 
 #endif // CUSTOMPLOTCONTROLLER_H
