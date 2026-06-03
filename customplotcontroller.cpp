@@ -253,10 +253,11 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
         return;
     }
 
-    if (event->button() == Qt::LeftButton && customPlotPtr->axisRect()->rect().contains(event->pos()) &&
-        (event->pos() - leftMousePressPos).manhattanLength() <= 4) {
-        const double clickedFrequencyMhz = customPlotPtr->xAxis->pixelToCoord(event->pos().x());
+    if (!customPlotPtr->axisRect()->rect().contains(event->pos())) return;
 
+    const double clickedFrequencyMhz = customPlotPtr->xAxis->pixelToCoord(event->pos().x());
+
+    if (event->button() == Qt::LeftButton && (event->pos() - leftMousePressPos).manhattanLength() <= 4) {
         QMenu menu;
         menu.addAction("Add marker", this, [this, clickedFrequencyMhz]() {
             addSpectrumMarker(clickedFrequencyMhz);
@@ -266,24 +267,16 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
     }
 
     if (event->button() == Qt::RightButton) {
+        const int markerIndex = spectrumMarkerAt(event->pos());
 
         QMenu menu;
-        menu.addAction("Add marker", this, [this, clickedFrequencyMhz]() {
-            addSpectrumMarker(clickedFrequencyMhz);
-        });
-        menu.exec(customPlotPtr->mapToGlobal(event->pos()));
-        return;
-    }
-
-    if (event->button() == Qt::RightButton) {
-        QMenu menu;
-        for (int i = 0; i < spectrumMarkers.size(); ++i) {
-            const QString actionText = QString("%1 marker %2 at %3 MHz")
-                                           .arg(spectrumMarkers[i].visible ? "Hide" : "Show")
-                                           .arg(i + 1)
-                                           .arg(clickedFrequencyMhz, 0, 'f', 3);
-            menu.addAction(actionText, this, [this, i, clickedFrequencyMhz]() {
-                toggleSpectrumMarker(i, clickedFrequencyMhz);
+        if (markerIndex >= 0) {
+            menu.addAction("Remove marker", this, [this, markerIndex]() {
+                removeSpectrumMarker(markerIndex);
+            });
+        } else {
+            menu.addAction("Add marker", this, [this, clickedFrequencyMhz]() {
+                addSpectrumMarker(clickedFrequencyMhz);
             });
         }
         menu.addSeparator();
