@@ -80,6 +80,10 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     oauthLayout->addRow(new QLabel("File upload address"), leOpt13);
     leOpt13->setToolTip("The address to use for uploading measurement files.");
 
+    oauthLayout->addRow(cbOpt12);
+    cbOpt12->setText("Start data processing at server after upload");
+    cbOpt12->setToolTip("If checked the server is asked to start processing measurement data after upload completes.");
+
     QGroupBox *groupBoxTemp = new QGroupBox("Temp file/TCP forward");
     QFormLayout *tempLayout = new QFormLayout;
     groupBoxTemp->setLayout(tempLayout);
@@ -118,6 +122,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt8->setChecked(config->getSaveToTempFile());
     sbOpt4->setValue(config->getSaveToTempFileMaxhold());
     cbOpt11->setChecked(config->getSdefUploadIntentionalOnly());
+    cbOpt12->setChecked(config->getOAuth2StartDataProcessingAfterUpload());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &SdefOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
@@ -160,6 +165,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSaveToTempFile(cbOpt8->isChecked());
     config->setSaveToTempFileMaxhold(sbOpt4->value());
     config->setSdefUploadIntentionalOnly(cbOpt11->isChecked());
+    config->setOAuth2StartDataProcessingAfterUpload(cbOpt12->isChecked());
 
     //dialog->close();
 }
