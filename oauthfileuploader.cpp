@@ -86,6 +86,35 @@ void OAuthFileUploader::startNextUpload()
 
     m_currentFileSize = m_currentFile->size();
     m_uploadedBytes = 0;
+    m_currentBlockSize = PROBE_BLOCK_SIZE_BYTES;
+    m_currentBlockBytes = 0;
+    m_averageUploadSpeedBytesPerSecond = 0;
+    m_nextBlockNumber = 0;
+    m_blockIds.clear();
+    m_currentUploadName = currentUploadFilename();
+    m_fileUploadTimer.start();
+
+    qDebug() << "OAuthUploader: Uploading" << m_currentUploadName << "as Azure block blob. File size:"
+             << formatBytes(m_currentFileSize) << "initial block size:" << formatBytes(m_currentBlockSize);
+    emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "",
+                       "OAuth: Starting upload of " + m_currentUploadName + " (" + formatBytes(m_currentFileSize) + ")");
+
+void OAuthFileUploader::startNextUpload()
+{
+    if (m_uploadBacklog.isEmpty()) return;
+
+    m_uploadInProgress = true;
+    m_currentFilePath = m_uploadBacklog.first();
+    m_currentFile = new QFile(m_currentFilePath, this);
+
+    if (!m_currentFile->open(QIODevice::ReadOnly)) {
+        qDebug() << "OAuthUploader: Couldn't read from file" << m_currentFilePath << ", aborting";
+        abortCurrentUpload("Could not read file");
+        return;
+    }
+
+    m_currentFileSize = m_currentFile->size();
+    m_uploadedBytes = 0;
     m_nextBlockNumber = 0;
     m_blockIds.clear();
     m_currentUploadName = currentUploadFilename();
@@ -408,6 +437,61 @@ QUrl OAuthFileUploader::uploadedNotificationUrl() const
     url.setPath(path);
     url.setQuery(QString());
     return url;
+}
+  
+void OAuthFileUploader::updateBlockSize(qint64 elapsedMs)
+{
+    const double elapsedSeconds = elapsedMs / 1000.0;
+    const double effectiveSeconds = qMax(0.001, elapsedSeconds - BLOCK_OVERHEAD_SECONDS);
+    const double blockSpeed = m_currentBlockBytes / effectiveSeconds;
+
+    if (m_averageUploadSpeedBytesPerSecond <= 0) {
+        m_averageUploadSpeedBytesPerSecond = blockSpeed;
+    }
+    else {
+        m_averageUploadSpeedBytesPerSecond =
+            (m_averageUploadSpeedBytesPerSecond * (1 - ROLLING_AVERAGE_WEIGHT)) + (blockSpeed * ROLLING_AVERAGE_WEIGHT);
+    }
+
+    if (elapsedSeconds > SLOW_BLOCK_UPLOAD_SECONDS) {
+        m_currentBlockSize = qMax(MIN_BLOCK_SIZE_BYTES, m_currentBlockSize / 2);
+    }
+    else {
+        m_currentBlockSize = qBound(MIN_BLOCK_SIZE_BYTES,
+                                    static_cast<qint64>(m_averageUploadSpeedBytesPerSecond * TARGET_BLOCK_UPLOAD_SECONDS),
+                                    MAX_BLOCK_SIZE_BYTES);
+    }
+
+    qDebug() << "OAuthUploader: Uploaded block" << m_nextBlockNumber << "of" << m_currentUploadName
+             << "in" << QString::number(elapsedSeconds, 'f', 1) << "seconds. Speed:"
+             << formatSpeed(blockSpeed) << "rolling average:" << formatSpeed(m_averageUploadSpeedBytesPerSecond)
+             << "next block size:" << formatBytes(m_currentBlockSize);
+}
+
+QString OAuthFileUploader::formatBytes(qint64 bytes) const
+{
+    double value = bytes;
+    QString unit = "B";
+
+    if (value >= 1024) {
+        value /= 1024;
+        unit = "KiB";
+    }
+    if (value >= 1024) {
+        value /= 1024;
+        unit = "MiB";
+    }
+    if (value >= 1024) {
+        value /= 1024;
+        unit = "GiB";
+    }
+
+    return QString::number(value, 'f', unit == "B" ? 0 : 1) + " " + unit;
+}
+
+QString OAuthFileUploader::formatSpeed(double bytesPerSecond) const
+{
+    return formatBytes(static_cast<qint64>(bytesPerSecond)) + "/s";
 }
 
 QString OAuthFileUploader::currentUploadFilename() const
