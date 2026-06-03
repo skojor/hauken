@@ -268,6 +268,25 @@ void CustomPlotController::onMouseClick(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
 
         QMenu menu;
+        menu.addAction("Add marker", this, [this, clickedFrequencyMhz]() {
+            addSpectrumMarker(clickedFrequencyMhz);
+        });
+        menu.exec(customPlotPtr->mapToGlobal(event->pos()));
+        return;
+    }
+
+    if (event->button() == Qt::RightButton) {
+        QMenu menu;
+        for (int i = 0; i < spectrumMarkers.size(); ++i) {
+            const QString actionText = QString("%1 marker %2 at %3 MHz")
+                                           .arg(spectrumMarkers[i].visible ? "Hide" : "Show")
+                                           .arg(i + 1)
+                                           .arg(clickedFrequencyMhz, 0, 'f', 3);
+            menu.addAction(actionText, this, [this, i, clickedFrequencyMhz]() {
+                toggleSpectrumMarker(i, clickedFrequencyMhz);
+            });
+        }
+        menu.addSeparator();
         menu.addAction("Exclude all trigger frequencies", this, &CustomPlotController::trigExcludeAll);
         menu.addAction("Include all trigger frequencies", this, &CustomPlotController::trigIncludeAll);
 
