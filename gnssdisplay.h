@@ -17,6 +17,8 @@
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QGroupBox>
+#include <QEvent>
+#include <QGridLayout>
 #include "config.h"
 #include "typedefs.h"
 
@@ -39,6 +41,7 @@ public:
     void updText();
     void updGnssData(GnssData data, int id);
     void reqGnssData();
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void setupWidget();
@@ -46,7 +49,7 @@ private slots:
 private:
     QWidget *wdg = new QWidget;
     QFormLayout *mainLayout = new QFormLayout;
-    GnssData gnss1, gnss2;
+    GnssData gnss1, gnss2, instrumentGnss;
     bool isClosing = false;
     QGroupBox *gnss1LeftGroupBox = new QGroupBox;
     QGroupBox *gnss1RightGroupBox = new QGroupBox;
@@ -71,6 +74,8 @@ private:
 
     QTimer *updateGnssDataTimer = new QTimer;
     QString gnss1Name, gnss2Name;
+
+    void updateReceiverVisibility();
 
     QSharedPointer<Config> config;
 
