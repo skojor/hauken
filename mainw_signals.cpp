@@ -667,9 +667,25 @@ void MainWindow::setSignals()
                 if (!config->getInstrCustomEntry().isEmpty())
                     instrIpAddr->addItem(config->getInstrCustomEntry());
 
-                int index = instrIpAddr->findData(config->getInstrIpAddr());
+                const QString savedInstrAddress = config->getInstrIpAddr().trimmed();
+                int index = instrIpAddr->findData(savedInstrAddress);
                 if (index == -1)
-                    index = instrIpAddr->findText(config->getInstrIpAddr());
+                    index = instrIpAddr->findText(savedInstrAddress);
+
+                if (index == -1) {
+                    for (int i = 0; i < instrIpAddr->count(); i++) {
+                        const QString itemAddress = instrIpAddr->itemData(i).toString().trimmed();
+                        const QString itemText = instrIpAddr->itemText(i).trimmed();
+
+                        if (itemAddress == savedInstrAddress ||
+                            itemText == savedInstrAddress ||
+                            (!savedInstrAddress.isEmpty() && itemText.contains(savedInstrAddress))) {
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+
                 if (index != -1)
                     instrIpAddr->setCurrentIndex(index);
                 connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);

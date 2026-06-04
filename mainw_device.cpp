@@ -305,13 +305,17 @@ void MainWindow::btnConnectPressed(bool state)
                                         : instrIpAddr->currentText();
 
     if (currentInstrAddress != config->getInstrIpAddr()) { // Custom text written
-        if (instrIpAddr->findText(instrIpAddr->currentText()) != -1) {
+        const int savedIndex = instrIpAddr->findData(config->getInstrIpAddr().trimmed());
+        if (savedIndex != -1) {
+            instrIpAddr->setCurrentIndex(savedIndex);
+        }
+        else if (instrIpAddr->findText(instrIpAddr->currentText()) != -1) {
             // IP/hostname written is the same as was already in the list, select this entry instead
             if (config->getInstrIpAddr() == currentInstrAddress) { // Failsafe in case list changed
                 instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
                 //qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
             }
-            else {
+            else if (state) {
                 //qDebug() << "not found" << config->getInstrIpAddr();
                 instrIpAddr->addItem("Unknown", QVariant("127.0.0.1")); // Dummy, choose sth that exists
                 instrIpAddr->setCurrentIndex(instrIpAddr->count() - 1); // Select dummy
