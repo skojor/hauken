@@ -3,6 +3,7 @@
 
 #include <QTimer>
 #include <QMutex>
+#include <QMutexLocker>
 #include <math.h>
 #include "config.h"
 #include "typedefs.h"
@@ -19,6 +20,8 @@ public slots:
     void getData(GnssData &data);
     void updSettings();
     void updStateInstrumentGnss(bool b) { stateInstrumentGnss = b; if (!b) updDisplayTimer->stop(); }
+    void traceIncidentStarted();
+    void traceIncidentEnded();
 
 signals:
     void alarm();
@@ -40,6 +43,7 @@ private slots:
     void checkAgcOffset(GnssData &data);
     void checkJammingIndicator(GnssData &data);
     void tests();
+    bool shouldPauseSignalAverages();
 
 private:
     QMutex mutex;
@@ -63,6 +67,9 @@ private:
     const double DEG_TO_RAD = 0.017453292519943295769236907684886;
 
     bool stateInstrumentGnss = true; // goes false if instrumentGnss is used and stream disappears
+    bool traceIncidentActive = false;
+    QElapsedTimer traceIncidentGraceTimer;
+    const int traceIncidentAverageGraceTimeMs = 60000;
 
     const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
     QSharedPointer<Config> config;

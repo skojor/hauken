@@ -24,7 +24,9 @@ void GnssAnalyzer::getData(GnssData &data)
 
 void GnssAnalyzer::calcAvgs(GnssData &data)
 {
-    if (data.cno > 0) {
+    const bool pauseSignalAverages = shouldPauseSignalAverages();
+
+    if (!pauseSignalAverages && data.cno > 0) {
         data.avgCnoArray.append(data.cno);
         data.avgCno = 0;
         for (auto &val : data.avgCnoArray)
@@ -33,7 +35,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgCnoArray.size() > 300)
             data.avgCnoArray.pop_front();
     }
-    if (data.agc > 0) {
+    if (!pauseSignalAverages && data.agc > 0) {
         data.avgAgcArray.append(data.agc);
         data.avgAgc = 0;
         for (auto &val : data.avgAgcArray)
@@ -52,6 +54,32 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
             data.avgJammingIndicatorArray.pop_front();
     }
 
+}
+
+void GnssAnalyzer::traceIncidentStarted()
+{
+    QMutexLocker locker(&mutex);
+    traceIncidentActive = true;
+    traceIncidentGraceTimer.invalidate();
+}
+
+void GnssAnalyzer::traceIncidentEnded()
+{
+    QMutexLocker locker(&mutex);
+    traceIncidentActive = false;
+    traceIncidentGraceTimer.start();
+}
+
+bool GnssAnalyzer::shouldPauseSignalAverages()
+{
+    if (traceIncidentActive) return true;
+
+    if (!traceIncidentGraceTimer.isValid()) return false;
+
+    if (traceIncidentGraceTimer.elapsed() < traceIncidentAverageGraceTimeMs) return true;
+
+    traceIncidentGraceTimer.invalidate();
+    return false;
 }
 
 void GnssAnalyzer::analyze(GnssData &data)

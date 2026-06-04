@@ -650,6 +650,12 @@ void MainWindow::setSignals()
             &TraceAnalyzer::alarm,
             aiPtr,
             &AI::startAiTimer); // will start analyze of data after x seconds
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer1, &GnssAnalyzer::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer1, &GnssAnalyzer::traceIncidentEnded);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer2, &GnssAnalyzer::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer2, &GnssAnalyzer::traceIncidentEnded);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer3, &GnssAnalyzer::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer3, &GnssAnalyzer::traceIncidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
     //connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData); TBR
     connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
