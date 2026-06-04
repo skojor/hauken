@@ -6,6 +6,7 @@
 #include <QElapsedTimer>
 #include <QList>
 #include <QPair>
+#include <QtGlobal>
 #include "config.h"
 #include "typedefs.h"
 
@@ -37,6 +38,7 @@ signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString,const QString);
     void trigRegistered(double centerfreq);
     void maxLevelMeasured(double);
+    void signalStatisticsUpdated(bool signalAboveThreshold, bool l1Interference);
 
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);

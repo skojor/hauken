@@ -743,6 +743,7 @@ void MainWindow::setSignals()
             cameraRecorder->updPosition(measurementDevice->sendGnssData());
     });
     connect(traceAnalyzer, &TraceAnalyzer::maxLevelMeasured, cameraRecorder, &CameraRecorder::receivedSignalLevel);
+    connect(traceAnalyzer, &TraceAnalyzer::signalStatisticsUpdated, notifications, &Notifications::recSignalStatistics);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, cameraRecorder, &CameraRecorder::startRecorder);
 
     connect(oauthFileUploader, &OAuthFileUploader::toIncidentLog, notifications, &Notifications::toIncidentLog);

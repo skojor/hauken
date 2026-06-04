@@ -314,6 +314,8 @@ public slots:
     void setEmailAddIqPlot(bool b) { settings->setValue("email/addIqPlot", b); }
     bool getEmailAddGif() { return settings->value("email/addGif", true).toBool();}
     void setEmailAddGif(bool b) { settings->setValue("email/addGif", b);}
+    bool getEmailCreateDailySummary() { return settings->value("email/createDailySummary", false).toBool();}
+    void setEmailCreateDailySummary(bool b) { settings->setValue("email/createDailySummary", b);}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}
