@@ -402,6 +402,25 @@ void Notifications::sendDailySummary()
     scheduleDailySummaryTimer();
 }
 
+void Notifications::sendDailySummaryToIncidentLog()
+{
+    const QDateTime summaryTime = QDateTime::currentDateTime();
+    const auto snapshot = dailySummaryStatistics.createSnapshot(summaryTime);
+    const QString logLine = dailySummaryStatistics.toLogLine(snapshot, config->location(), m_instrData);
+
+    appendIncidentLog(summaryTime, logLine);
+    appendLogFile(summaryTime, logLine);
+}
+
+void Notifications::sendDailySummaryEmailReport()
+{
+    const QDateTime summaryTime = QDateTime::currentDateTime();
+    const auto snapshot = dailySummaryStatistics.createSnapshot(summaryTime);
+    const QString html = dailySummaryStatistics.toHtmlReport(snapshot, config->location(), m_instrData);
+
+    sendHtmlEmail("Daily summary from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")", html);
+}
+
 void Notifications::scheduleDailySummaryTimer()
 {
     if (!dailySummaryTimer) {

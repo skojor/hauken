@@ -38,16 +38,34 @@ void DailySummaryStatistics::recordSignalState(const QDateTime &dt, bool signalA
     m_lastL1Interference = l1Interference;
 }
 
-DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshotAndReset(const QDateTime &periodEnd)
+DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshot(const QDateTime &periodEnd) const
 {
-    recordSignalState(periodEnd, m_lastSignalAboveThreshold, m_lastL1Interference);
-
     Snapshot snapshot;
     snapshot.periodEnd = periodEnd;
     snapshot.periodStart = m_periodStart.isValid() ? m_periodStart : periodEnd.addMSecs(-MsecsPerDay);
     snapshot.incidentCount = m_incidentCount;
     snapshot.signalAboveThresholdMsecs = m_signalAboveThresholdMsecs;
     snapshot.l1InterferenceMsecs = m_l1InterferenceMsecs;
+
+    if (m_lastSignalStateUpdate.isValid()) {
+        const qint64 elapsed = m_lastSignalStateUpdate.msecsTo(periodEnd);
+        if (elapsed > 0) {
+            if (m_lastSignalAboveThreshold) {
+                snapshot.signalAboveThresholdMsecs += elapsed;
+            }
+            if (m_lastL1Interference) {
+                snapshot.l1InterferenceMsecs += elapsed;
+            }
+        }
+    }
+
+    return snapshot;
+}
+
+DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshotAndReset(const QDateTime &periodEnd)
+{
+    recordSignalState(periodEnd, m_lastSignalAboveThreshold, m_lastL1Interference);
+    const Snapshot snapshot = createSnapshot(periodEnd);
 
     m_periodStart = periodEnd;
     m_lastSignalStateUpdate = periodEnd;
