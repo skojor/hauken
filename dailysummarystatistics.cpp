@@ -118,10 +118,7 @@ QString DailySummaryStatistics::formatDuration(qint64 milliseconds) const
     const qint64 minutes = (totalSeconds % 3600) / 60;
     const qint64 seconds = totalSeconds % 60;
 
-    return QString("%1 seconds / %2 minutes / %3 hours (%4:%5:%6)")
-        .arg(totalSeconds)
-        .arg(QString::number(totalSeconds / 60.0, 'f', 2))
-        .arg(QString::number(totalSeconds / 3600.0, 'f', 2))
+    return QString("%1:%2:%3")
         .arg(hours, 2, 10, QLatin1Char('0'))
         .arg(minutes, 2, 10, QLatin1Char('0'))
         .arg(seconds, 2, 10, QLatin1Char('0'));
