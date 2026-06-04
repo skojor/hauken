@@ -258,6 +258,28 @@ void MainWindow::createActions()
     exitAct->setShortcut(QKeySequence::Close);
     connect(exitAct, &QAction::triggered, qApp, &QApplication::exit);
 
+    triggerDailySummaryLog->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R));
+    triggerDailySummaryLog->setShortcutContext(Qt::ApplicationShortcut);
+    triggerDailySummaryLog->setStatusTip(tr("Write the current daily summary to the incident log"));
+    addAction(triggerDailySummaryLog);
+    connect(triggerDailySummaryLog, &QAction::triggered, this, [this] {
+        if (notifications) {
+            QMetaObject::invokeMethod(notifications, "sendDailySummaryToIncidentLog", Qt::QueuedConnection);
+            updateStatusLine(tr("Daily summary written to incident log"));
+        }
+    });
+
+    triggerDailySummaryEmail->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_E));
+    triggerDailySummaryEmail->setShortcutContext(Qt::ApplicationShortcut);
+    triggerDailySummaryEmail->setStatusTip(tr("Send the current daily summary email report"));
+    addAction(triggerDailySummaryEmail);
+    connect(triggerDailySummaryEmail, &QAction::triggered, this, [this] {
+        if (notifications) {
+            QMetaObject::invokeMethod(notifications, "sendDailySummaryEmailReport", Qt::QueuedConnection);
+            updateStatusLine(tr("Daily summary email report triggered"));
+        }
+    });
+
     connect(hideShowControls, &QAction::triggered, this, [this] {
         instrGroupBox->setVisible(!instrGroupBox->isVisible());
         config->setShowReceiverControls(instrGroupBox->isVisible());

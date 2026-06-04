@@ -18,6 +18,7 @@ public:
 
     void recordIncident(const QDateTime &dt);
     void recordSignalState(const QDateTime &dt, bool signalAboveThreshold, bool l1Interference);
+    Snapshot createSnapshot(const QDateTime &periodEnd) const;
     Snapshot createSnapshotAndReset(const QDateTime &periodEnd);
     QString toHtmlReport(const Snapshot &snapshot, const QString &location, const QString &instrument) const;
     QString toLogLine(const Snapshot &snapshot, const QString &location, const QString &instrument) const;

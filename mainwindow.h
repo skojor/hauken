@@ -297,6 +297,8 @@ private:
     QAction *hideShowStatusIndicator = new QAction("Hide/show status indicators");
     QAction *hideShowGnssWindow = new QAction("Hide/show GNSS status window");
     QAction *hideShowIncidentlog = new QAction("Hide/show incident log");
+    QAction *triggerDailySummaryLog = new QAction("Trigger daily summary in incident log");
+    QAction *triggerDailySummaryEmail = new QAction("Trigger daily summary email report");
     QAction *toggleDarkMode = new QAction("Toogle dark mode");
     QAction *aboutAct;
     QAction *aboutQtAct;

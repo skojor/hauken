@@ -76,6 +76,8 @@ public slots:
     bool simpleParametersCheck();
     void sendMail();
     void sendDailySummary();
+    void sendDailySummaryToIncidentLog();
+    void sendDailySummaryEmailReport();
     void recSignalStatistics(bool signalAboveThreshold, bool l1Interference);
     void checkTruncate();
     void generateMsg(NOTIFY::TYPE t, const QString name, const QString string, QDateTime dt = QDateTime::currentDateTime());
