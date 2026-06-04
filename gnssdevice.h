@@ -53,7 +53,7 @@ public slots:
     GnssData sendGnssData() { return gnssData;}
     bool isValid() { return gnssData.posValid;}
     void saveBacklog();
-    void setIncidenceStartedDateTime()  { if (!incidenceStartedDateTime.isValid()) incidenceStartedDateTime = QDateTime::currentDateTime();}
+    void setIncidenceStartedDateTime();
 
 signals:
     void analyzeThisData(GnssData &);
