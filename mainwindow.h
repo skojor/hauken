@@ -6,15 +6,19 @@
 #define slots Q_SLOTS*/
 
 #include <QAction>
+#include <QAbstractItemView>
+#include <algorithm>
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
 #include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileDialog>
+#include <QFontMetrics>
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QHostAddress>
+#include <QKeyEvent>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QProgressBar>
@@ -23,6 +27,7 @@
 #include <QRegularExpressionValidator>
 #include <QSharedPointer>
 #include <QSpinBox>
+#include <QStyle>
 #include <QStandardPaths>
 #include <QString>
 #include <QStyleHints>
@@ -92,6 +97,21 @@ public:
     using QComboBox::QComboBox;
 
 protected:
+    void showPopup() override {
+        const QFontMetrics metrics(font());
+        int popupWidth = width();
+
+        for (int i = 0; i < count(); ++i)
+            popupWidth = std::max(popupWidth, metrics.horizontalAdvance(itemText(i)));
+
+        popupWidth += style()->pixelMetric(QStyle::PM_ScrollBarExtent)
+                      + style()->pixelMetric(QStyle::PM_ComboBoxFrameWidth) * 2
+                      + 12;
+        view()->setMinimumWidth(popupWidth);
+
+        QComboBox::showPopup();
+    }
+
     void keyPressEvent(QKeyEvent *event) override {
         if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
             emit enterPressed(currentText());
