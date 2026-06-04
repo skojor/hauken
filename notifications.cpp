@@ -24,6 +24,7 @@ void Notifications::start()
     truncateTimer = new QTimer;
     mailDelayTimer = new QTimer;
     retryEmailsTimer = new QTimer;
+    dailySummaryTimer = new QTimer;
 
     updSettings();
     setupIncidentTable();
@@ -31,6 +32,7 @@ void Notifications::start()
     connect(truncateTimer, &QTimer::timeout, this, &Notifications::checkTruncate);
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
     connect(retryEmailsTimer, &QTimer::timeout, this, &Notifications::retryEmails);
+    connect(dailySummaryTimer, &QTimer::timeout, this, &Notifications::sendDailySummary);
 
     //truncateTimer->setSingleShot(true);
     mailDelayTimer->setSingleShot(true);
@@ -38,6 +40,7 @@ void Notifications::start()
     timeBetweenEmailsTimer = new QTimer;
     timeBetweenEmailsTimer->setSingleShot(true);
     retryEmailsTimer->setSingleShot(true);
+    dailySummaryTimer->setSingleShot(true);
 
     // Housekeeping
     QDirIterator it(workFolder, {".traceplot*"});
@@ -107,6 +110,10 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
+    if ((type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER || type == NOTIFY::TYPE::AI)
+        && !msg.contains("Normal signal levels", Qt::CaseInsensitive)) {
+        dailySummaryStatistics.recordIncident(dt);
+    }
     if (config->getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
         appendEmailText(dt,  msg);
     else if (config->getEmailNotifyMeasurementDeviceHighLevel() && (type == NOTIFY::TYPE::TRACEANALYZER or type == NOTIFY::TYPE::AI))
@@ -171,6 +178,62 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
         mailDelayTimer->start(truncateTime * 2e3);
     }
     if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
+}
+
+void Notifications::sendHtmlEmail(const QString &subject, const QString &html, bool usePriorityRecipients)
+{
+    if (!simpleParametersCheck() || html.isEmpty()) {
+        emit warning("Email notifications is enabled, but one or more of the parameters are missing. Check your configuration!");
+        return;
+    }
+
+    auto server = new SimpleMail::Server;
+    server->setHost(mailserverAddress);
+    server->setPort(mailserverPort.toUInt());
+
+    if (!smtpUser.isEmpty() || !smtpPass.isEmpty()) {
+        server->setUsername(smtpUser);
+        server->setPassword(smtpPass);
+    }
+
+    const QStringList mailRecipients = (usePriorityRecipients ? config->getEmailFilteredRecipients() : recipients).split(';', Qt::SkipEmptyParts);
+
+    auto mimeHtml = new SimpleMail::MimeHtml;
+    mimeHtml->setHtml(html);
+
+    SimpleMail::MimeMessage message;
+    message.setSubject(subject);
+    message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
+    for (auto &val : mailRecipients) {
+        const QString recipient = val.simplified();
+        message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
+    }
+    message.addPart(mimeHtml);
+
+    emailBacklog.append(message);
+    htmlData = mimeHtml->html();
+    currentEmailSubject = subject;
+    notifyPriorityRecipients = usePriorityRecipients;
+
+    if (msGraphConfigured) {
+        generateGraphEmail();
+        if (!graphEmailLog.isEmpty()) authGraph();
+    }
+    else {
+        SimpleMail::ServerReply *reply = server->sendMail(message);
+        connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
+                {
+                    qDebug() << "ServerReply finished" << reply->error() << reply->responseText();
+                    if (reply->error()) {
+                        toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Email notification failed, trying again later");
+                        this->retryEmailsTimer->start(90 * 1e3);
+                    }
+                    else {
+                        this->emailBacklog.removeLast();
+                    }
+                    reply->deleteLater();
+                });
+    }
 }
 
 void Notifications::sendMail()
@@ -250,6 +313,7 @@ void Notifications::sendMail()
 
             message.addPart(mimeHtml);
             htmlData = mimeHtml->html();
+            currentEmailSubject = message.subject();
             if (predictionReceived) {
                 predictionReceived = false;
             }
@@ -315,6 +379,43 @@ void Notifications::sendMail()
     }
 }
 
+void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interference)
+{
+    dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference);
+}
+
+void Notifications::sendDailySummary()
+{
+    if (dailySummaryEnabled) {
+        const auto snapshot = dailySummaryStatistics.createSnapshotAndReset(QDateTime::currentDateTime());
+        const QString html = dailySummaryStatistics.toHtmlReport(snapshot, config->location(), m_instrData);
+        sendHtmlEmail("Daily summary from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")", html);
+    }
+
+    scheduleDailySummaryTimer();
+}
+
+void Notifications::scheduleDailySummaryTimer()
+{
+    if (!dailySummaryTimer) {
+        return;
+    }
+
+    if (!dailySummaryEnabled) {
+        dailySummaryTimer->stop();
+        return;
+    }
+
+    const QDateTime now = QDateTime::currentDateTime();
+    QDateTime nextMidnight(now.date().addDays(1), QTime(0, 0));
+    qint64 msecsToMidnight = now.msecsTo(nextMidnight);
+    if (msecsToMidnight <= 0) {
+        msecsToMidnight = 24LL * 60LL * 60LL * 1000LL;
+    }
+
+    dailySummaryTimer->start(static_cast<int>(msecsToMidnight));
+}
+
 bool Notifications::simpleParametersCheck()
 {
     if (!msGraphConfigured) {
@@ -375,10 +476,13 @@ void Notifications::updSettings()
         msGraphTenantId = config->getEmailGraphTenantId();
         msGraphApplicationId = config->getEmailGraphApplicationId();
         msGraphSecret = config->getEmailGraphSecret();
-
-        if (!msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty()) {
-            msGraphConfigured = true;
+        const bool newDailySummaryEnabled = config->getEmailCreateDailySummary();
+        if (newDailySummaryEnabled != dailySummaryEnabled) {
+            dailySummaryEnabled = newDailySummaryEnabled;
+            scheduleDailySummaryTimer();
         }
+
+        msGraphConfigured = !msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty();
     }
 }
 
@@ -539,7 +643,7 @@ void Notifications::generateGraphEmail()
     iqPlotFilenames.clear();
     iqPlotDescriptions.clear();
 
-    message.insert("subject", "Notification from " + config->getStationName().toUtf8() + " (" + config->getSdefStationInitals() + ")");
+    message.insert("subject", currentEmailSubject.isEmpty() ? "Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")" : currentEmailSubject);
     message.insert("body", body);
     message.insert("toRecipients", toRecipients);
     if (fileOk) message.insert("attachments", attachments);

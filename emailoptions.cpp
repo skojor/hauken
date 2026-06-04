@@ -100,6 +100,10 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt6->setText("Use large fonts and UTC in incident log");
     cbOpt6->setToolTip("Incident log font size is increased, and times are reported as UTC (Jammertest mode)");
 
+    layout3->addRow(cbOpt9);
+    cbOpt9->setText("Create daily summary of incidents and L1 interference");
+    cbOpt9->setToolTip("Sends an email summary at midnight with incident count, total signal threshold time, and GPS L1 interference statistics");
+
     mainLayout->addWidget(groupBox1);
     mainLayout->addWidget(groupBox2);
     mainLayout->addWidget(groupBox3);
@@ -127,6 +131,7 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt6->setChecked(config->getNotificationLargeFonts());
     cbOpt7->setChecked(config->getEmailAddIqPlot());
     cbOpt8->setChecked(config->getEmailAddGif());
+    cbOpt9->setChecked(config->getEmailCreateDailySummary());
     //leOpt11->setText(config->getEmailClassificationFilter());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &EmailOptions::saveCurrentSettings);
@@ -166,6 +171,7 @@ void EmailOptions::saveCurrentSettings()
     config->setNotificationLargeFonts(cbOpt6->isChecked());
     config->setEmailAddIqPlot(cbOpt7->isChecked());
     config->setEmailAddGif(cbOpt8->isChecked());
+    config->setEmailCreateDailySummary(cbOpt9->isChecked());
     //config->setEmailClassificationFilter(leOpt11->text());
 
     //dialog->close();

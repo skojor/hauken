@@ -6,6 +6,7 @@
 #include <QTextStream>
 #include <QDate>
 #include <QDateTime>
+#include <QTime>
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QDebug>
@@ -16,6 +17,7 @@
 #include "config.h"
 #include "typedefs.h"
 #include "SimpleMail/SimpleMail"
+#include "dailysummarystatistics.h"
 #include <QProcess>
 #include <QDir>
 #include <QDataStream>
@@ -73,6 +75,8 @@ public slots:
     void setupIncidentTable();
     bool simpleParametersCheck();
     void sendMail();
+    void sendDailySummary();
+    void recSignalStatistics(bool signalAboveThreshold, bool l1Interference);
     void checkTruncate();
     void generateMsg(NOTIFY::TYPE t, const QString name, const QString string, QDateTime dt = QDateTime::currentDateTime());
     void retryEmails();
@@ -94,6 +98,7 @@ private:
     QString mailtext;
     QTimer *timeBetweenEmailsTimer;
     QTimer *retryEmailsTimer;
+    QTimer *dailySummaryTimer;
     QList<SimpleMail::MimeInlineFile *> emailPictures;
     QList<SimpleMail::MimeInlineFile *> emailIqPlot;
     QList<SimpleMail::MimeMessage> emailBacklog;
@@ -103,6 +108,7 @@ private:
     QByteArray mimeData;
     bool graphMailInProgress = false;
     QString htmlData;
+    QString currentEmailSubject;
     QList<QString> graphEmailLog;
     bool positionValid = false;
     double latitude = 0, longitude = 0;
@@ -133,6 +139,11 @@ private:
     QStringList iqPlotFilenames;
     QStringList iqPlotDescriptions;
     QString m_instrData;
+    DailySummaryStatistics dailySummaryStatistics;
+    bool dailySummaryEnabled = false;
+
+    void scheduleDailySummaryTimer();
+    void sendHtmlEmail(const QString &subject, const QString &html, bool usePriorityRecipients = false);
 
     bool shouldAppendPosition(NOTIFY::TYPE type) const;
     QString appendPosition(const QString &text);

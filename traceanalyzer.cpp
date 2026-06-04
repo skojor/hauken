@@ -13,16 +13,20 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
         khzAboveLimit = khzAboveLimitTotal = singleTrigCenterFrequency = 0;
         maxLevel = -999;
         int valuesAboveLimit = 0, valuesAboveLimitTotal = 0;
+        bool l1Interference = false;
         if (averageData.size() == data.size()) {
             for (int i=0; i<data.size(); i++) {
-                if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                        && data.at(i) > averageData.at(i) + trigLevel * 10) { // * 10 because we have values in 1/10 dBuV!
+                const double frequency = startFreq + (resolution/1e3 * i);
+                const bool signalAboveLimit = checkIfFrequencyIsInTrigArea(frequency)
+                        && data.at(i) > averageData.at(i) + trigLevel * 10; // * 10 because we have values in 1/10 dBuV!
+                if (signalAboveLimit) {
                     valuesAboveLimit++;
                     valuesAboveLimitTotal++;
+                    if (qAbs(frequency * 1e6 - GPSL1) <= (resolution * 500.0)) {
+                        l1Interference = true;
+                    }
                 }
-                else if ((valuesAboveLimit && !checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))) ||
-                         (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                         && data.at(i) < averageData.at(i) + trigLevel * 10)) { // previously trace point high, not this one. reset counter and calc BW of signal
+                else if (valuesAboveLimit) { // previously trace point high, not this one. reset counter and calc BW of signal
                     double khzOfIncident = valuesAboveLimit * resolution;
                     if (khzOfIncident > khzAboveLimit) {
                         khzAboveLimit = khzOfIncident;
@@ -37,6 +41,7 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
                 if (data[i] > maxLevel) maxLevel = data[i];
             }
             khzAboveLimitTotal = valuesAboveLimitTotal * resolution;
+            emit signalStatisticsUpdated(valuesAboveLimitTotal > 0, l1Interference);
         }
 
         emit maxLevelMeasured((double)maxLevel * 0.1);
