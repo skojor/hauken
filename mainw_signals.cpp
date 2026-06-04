@@ -700,8 +700,10 @@ void MainWindow::setSignals()
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)
             gnssDisplay->updGnssData(gnssDevice1->sendGnssData(), 1);
-        else
+        else if (id == 2)
             gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
+        else
+            gnssDisplay->updGnssData(measurementDevice->sendGnssData(), 3);
     });
 
     connect(read1809Data, &Read1809Data::freqChanged, this, [this](double a, double b) {
