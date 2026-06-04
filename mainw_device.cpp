@@ -300,10 +300,14 @@ void MainWindow::setDeviceFftModes()
 
 void MainWindow::btnConnectPressed(bool state)
 {
-    if (instrIpAddr->currentText() != config->getInstrIpAddr()) { // Custom text written
+    const QString currentInstrAddress = instrIpAddr->currentData().isValid()
+                                        ? instrIpAddr->currentData().toString()
+                                        : instrIpAddr->currentText();
+
+    if (currentInstrAddress != config->getInstrIpAddr()) { // Custom text written
         if (instrIpAddr->findText(instrIpAddr->currentText()) != -1) {
             // IP/hostname written is the same as was already in the list, select this entry instead
-            if (config->getInstrIpAddr() == instrIpAddr->currentText()) { // Failsafe in case list changed
+            if (config->getInstrIpAddr() == currentInstrAddress) { // Failsafe in case list changed
                 instrIpAddr->setCurrentIndex(instrIpAddr->findText(instrIpAddr->currentText()));
                 //qDebug() << "found" << instrIpAddr->currentText() << instrIpAddr->currentData() << config->getInstrIpAddr();
             }
@@ -357,8 +361,12 @@ void MainWindow::btnConnectPressed(bool state)
 
 void MainWindow::instrIpChanged()
 {
-    config->setInstrIpAddr(instrIpAddr->currentText());
-    qDebug() << "saving" << instrIpAddr->currentText();
+    const QString currentInstrAddress = instrIpAddr->currentData().isValid()
+                                        ? instrIpAddr->currentData().toString()
+                                        : instrIpAddr->currentText();
+
+    config->setInstrIpAddr(currentInstrAddress);
+    qDebug() << "saving" << currentInstrAddress;
 }
 
 void MainWindow::btnDisconnectPressed()

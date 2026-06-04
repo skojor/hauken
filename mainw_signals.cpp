@@ -663,11 +663,13 @@ void MainWindow::setSignals()
 
 
                 for (int i = 0; i < ip.size(); i++)
-                    instrIpAddr->addItem(name[i] + " (" + type[i] + ")", QVariant(ip[i]));
+                    instrIpAddr->addItem(name[i] + " " + ip[i] + " " + type[i], QVariant(ip[i]));
                 if (!config->getInstrCustomEntry().isEmpty())
                     instrIpAddr->addItem(config->getInstrCustomEntry());
 
-                int index = instrIpAddr->findText(config->getInstrIpAddr());
+                int index = instrIpAddr->findData(config->getInstrIpAddr());
+                if (index == -1)
+                    index = instrIpAddr->findText(config->getInstrIpAddr());
                 if (index != -1)
                     instrIpAddr->setCurrentIndex(index);
                 connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
