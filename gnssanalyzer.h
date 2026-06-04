@@ -74,7 +74,11 @@ private:
     const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
     QSharedPointer<Config> config;
 
+    bool anyOffsetTriggered() const;
+    void emitAlarmEndedIfNoOffsetTriggered();
+
     QElapsedTimer posOffsetTimer, altOffsetTimer, cnoTimer, agcTimer, timeOffsetTimer, jamIndTimer;
+    QElapsedTimer posOffsetFilterTimer, altOffsetFilterTimer, cnoFilterTimer, agcFilterTimer, timeOffsetFilterTimer, jamIndFilterTimer;
     GnssData testData;
 };
 
