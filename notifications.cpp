@@ -26,9 +26,6 @@ void Notifications::start()
     retryEmailsTimer = new QTimer;
     dailySummaryTimer = new QTimer;
 
-    updSettings();
-    setupIncidentTable();
-
     connect(truncateTimer, &QTimer::timeout, this, &Notifications::checkTruncate);
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
     connect(retryEmailsTimer, &QTimer::timeout, this, &Notifications::retryEmails);
@@ -41,6 +38,10 @@ void Notifications::start()
     timeBetweenEmailsTimer->setSingleShot(true);
     retryEmailsTimer->setSingleShot(true);
     dailySummaryTimer->setSingleShot(true);
+
+    updSettings();
+    setupIncidentTable();
+    scheduleDailySummaryTimer();
 
     // Housekeeping
     QDirIterator it(workFolder, {".traceplot*"});
@@ -386,8 +387,14 @@ void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interf
 
 void Notifications::sendDailySummary()
 {
+    const QDateTime summaryTime = QDateTime::currentDateTime();
+    const auto snapshot = dailySummaryStatistics.createSnapshotAndReset(summaryTime);
+    const QString logLine = dailySummaryStatistics.toLogLine(snapshot, config->location(), m_instrData);
+
+    appendIncidentLog(summaryTime, logLine);
+    appendLogFile(summaryTime, logLine);
+
     if (dailySummaryEnabled) {
-        const auto snapshot = dailySummaryStatistics.createSnapshotAndReset(QDateTime::currentDateTime());
         const QString html = dailySummaryStatistics.toHtmlReport(snapshot, config->location(), m_instrData);
         sendHtmlEmail("Daily summary from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")", html);
     }
@@ -398,11 +405,6 @@ void Notifications::sendDailySummary()
 void Notifications::scheduleDailySummaryTimer()
 {
     if (!dailySummaryTimer) {
-        return;
-    }
-
-    if (!dailySummaryEnabled) {
-        dailySummaryTimer->stop();
         return;
     }
 
@@ -476,11 +478,7 @@ void Notifications::updSettings()
         msGraphTenantId = config->getEmailGraphTenantId();
         msGraphApplicationId = config->getEmailGraphApplicationId();
         msGraphSecret = config->getEmailGraphSecret();
-        const bool newDailySummaryEnabled = config->getEmailCreateDailySummary();
-        if (newDailySummaryEnabled != dailySummaryEnabled) {
-            dailySummaryEnabled = newDailySummaryEnabled;
-            scheduleDailySummaryTimer();
-        }
+        dailySummaryEnabled = config->getEmailCreateDailySummary();
 
         msGraphConfigured = !msGraphApplicationId.isEmpty() && !msGraphTenantId.isEmpty() && !msGraphSecret.isEmpty();
     }

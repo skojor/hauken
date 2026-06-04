@@ -20,6 +20,7 @@ public:
     void recordSignalState(const QDateTime &dt, bool signalAboveThreshold, bool l1Interference);
     Snapshot createSnapshotAndReset(const QDateTime &periodEnd);
     QString toHtmlReport(const Snapshot &snapshot, const QString &location, const QString &instrument) const;
+    QString toLogLine(const Snapshot &snapshot, const QString &location, const QString &instrument) const;
 
 private:
     QString formatDuration(qint64 milliseconds) const;

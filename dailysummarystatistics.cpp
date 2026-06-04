@@ -80,6 +80,19 @@ QString DailySummaryStatistics::toHtmlReport(const Snapshot &snapshot, const QSt
     return html;
 }
 
+QString DailySummaryStatistics::toLogLine(const Snapshot &snapshot, const QString &location, const QString &instrument) const
+{
+    return QString("Daily summary of incidents and L1 interference. Period: %1 - %2. Location: %3, instrument: %4. Registered incidents: %5. Total time above signal threshold: %6. L1 interference (1575.42 MHz center frequency): %7 (%8 %).")
+        .arg(snapshot.periodStart.toString("dd.MM.yy hh:mm:ss"))
+        .arg(snapshot.periodEnd.toString("dd.MM.yy hh:mm:ss"))
+        .arg(location)
+        .arg(instrument.isEmpty() ? "unknown" : instrument)
+        .arg(snapshot.incidentCount)
+        .arg(formatDuration(snapshot.signalAboveThresholdMsecs))
+        .arg(formatDuration(snapshot.l1InterferenceMsecs))
+        .arg(QString::number(percentageOfPeriod(snapshot.l1InterferenceMsecs, snapshot), 'f', 2));
+}
+
 QString DailySummaryStatistics::formatDuration(qint64 milliseconds) const
 {
     const qint64 totalSeconds = milliseconds / 1000;
