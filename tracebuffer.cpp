@@ -34,7 +34,7 @@ void TraceBuffer::deleteOlderThan()
         return;
 
     const QDateTime now = QDateTime::currentDateTime();
-    int removeCount = 0;
+    qsizetype removeCount = 0;
 
     while (removeCount < datetimeBuffer.size() && datetimeBuffer.at(removeCount).secsTo(now) > bufferAge)
         ++removeCount;
@@ -155,10 +155,10 @@ void TraceBuffer::calcMaxhold()
         maxholdBufferAggregate = displayBuffer;
     }
 
-    const int secondsToUse = std::min(maxholdTime - 1, maxholdBuffer.size());
+    const qsizetype secondsToUse = std::min(static_cast<qsizetype>(maxholdTime - 1), maxholdBuffer.size());
     QVector<double> maxhold(plotResolution, -500);
 
-    for (int seconds = 0; seconds < secondsToUse; seconds++) {
+    for (qsizetype seconds = 0; seconds < secondsToUse; seconds++) {
         const QVector<double> &line = maxholdBuffer.at(seconds);
         if (line.size() != plotResolution)
             continue;
@@ -187,10 +187,10 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
         const int samplesPerBucket = std::max(1, (int)rate);
         for (int i=0; i<plotResolution; i++) {
             //int val = data.at(rate * i);
-            const int bucketStart = std::min((int)(rate * i), data.size() - 1);
-            const int bucketEnd = std::min(bucketStart + samplesPerBucket, data.size() - 1);
+            const qsizetype bucketStart = std::min(static_cast<qsizetype>(rate * i), data.size() - 1);
+            const qsizetype bucketEnd = std::min(bucketStart + static_cast<qsizetype>(samplesPerBucket), data.size() - 1);
             int top = data.at(bucketStart);
-            for (int j=bucketStart + 1; j<=bucketEnd; j++)
+            for (qsizetype j=bucketStart + 1; j<=bucketEnd; j++)
                 top = std::max(top, (int)data.at(j)); // pick the strongest sample to show in plot
 
             //val /= (int)rate + 1;
