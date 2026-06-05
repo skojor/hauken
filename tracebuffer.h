@@ -49,11 +49,11 @@ public slots:
             emit newDispTriglevel(averageDispLevelNormalized);
         }
         else {
-            QVector<double> copy = averageDispLevel;
-            for (auto &val : copy)
+            trigLevelDisplayBuffer = averageDispLevel;
+            for (auto &val : trigLevelDisplayBuffer)
                 val += trigLevel;
 
-            emit newDispTriglevel(copy);
+            emit newDispTriglevel(trigLevelDisplayBuffer);
         }
     }
     void updSettings();
@@ -117,6 +117,7 @@ private:
     int plotResolution;
     QElapsedTimer *maxholdBufferElapsedTimer = new QElapsedTimer;
     QVector<double> maxholdBufferAggregate;
+    QVector<double> trigLevelDisplayBuffer;
     const int throttleTime = 40; // min time in ms between screen updates
     const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;
