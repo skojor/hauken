@@ -6,6 +6,7 @@
 #include <QSaveFile>
 #include <QTextStream>
 #include <QTime>
+#include <QTimeZone>
 
 namespace {
 constexpr qint64 MsecsPerDay = 24LL * 60LL * 60LL * 1000LL;
