@@ -101,6 +101,7 @@ private:
     QTimer *timeBetweenEmailsTimer;
     QTimer *retryEmailsTimer;
     QTimer *dailySummaryTimer;
+    QTimer *dailySummaryPersistenceTimer;
     QList<SimpleMail::MimeInlineFile *> emailPictures;
     QList<SimpleMail::MimeInlineFile *> emailIqPlot;
     QList<SimpleMail::MimeMessage> emailBacklog;
@@ -145,6 +146,10 @@ private:
     bool dailySummaryEnabled = false;
 
     void scheduleDailySummaryTimer();
+    void startDailySummaryPersistence();
+    void saveDailySummaryStatistics();
+    void loadDailySummaryStatistics();
+    QString dailySummaryStatisticsFilename() const;
     void sendHtmlEmail(const QString &subject, const QString &html, bool usePriorityRecipients = false);
 
     bool shouldAppendPosition(NOTIFY::TYPE type) const;

@@ -22,6 +22,8 @@ public:
     Snapshot createSnapshotAndReset(const QDateTime &periodEnd);
     QString toHtmlReport(const Snapshot &snapshot, const QString &location, const QString &instrument) const;
     QString toLogLine(const Snapshot &snapshot, const QString &location, const QString &instrument) const;
+    bool saveToFile(const QString &filename, const QDateTime &persistedAt) const;
+    bool loadFromFile(const QString &filename, const QDateTime &now);
 
 private:
     QString formatDuration(qint64 milliseconds) const;
