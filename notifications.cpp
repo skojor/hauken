@@ -25,11 +25,13 @@ void Notifications::start()
     mailDelayTimer = new QTimer;
     retryEmailsTimer = new QTimer;
     dailySummaryTimer = new QTimer;
+    dailySummaryPersistenceTimer = new QTimer;
 
     connect(truncateTimer, &QTimer::timeout, this, &Notifications::checkTruncate);
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
     connect(retryEmailsTimer, &QTimer::timeout, this, &Notifications::retryEmails);
     connect(dailySummaryTimer, &QTimer::timeout, this, &Notifications::sendDailySummary);
+    connect(dailySummaryPersistenceTimer, &QTimer::timeout, this, &Notifications::saveDailySummaryStatistics);
 
     //truncateTimer->setSingleShot(true);
     mailDelayTimer->setSingleShot(true);
@@ -40,6 +42,8 @@ void Notifications::start()
     dailySummaryTimer->setSingleShot(true);
 
     updSettings();
+    loadDailySummaryStatistics();
+    startDailySummaryPersistence();
     setupIncidentTable();
     scheduleDailySummaryTimer();
 
@@ -399,6 +403,7 @@ void Notifications::sendDailySummary()
         sendHtmlEmail("Daily summary from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")", html);
     }
 
+    saveDailySummaryStatistics();
     scheduleDailySummaryTimer();
 }
 
@@ -435,6 +440,54 @@ void Notifications::scheduleDailySummaryTimer()
     }
 
     dailySummaryTimer->start(static_cast<int>(msecsToMidnight));
+}
+
+void Notifications::startDailySummaryPersistence()
+{
+    if (!dailySummaryPersistenceTimer) {
+        return;
+    }
+
+    dailySummaryPersistenceTimer->start(60 * 1000);
+    saveDailySummaryStatistics();
+}
+
+void Notifications::saveDailySummaryStatistics()
+{
+    const QString filename = dailySummaryStatisticsFilename();
+    if (filename.isEmpty()) {
+        return;
+    }
+
+    const QFileInfo fileInfo(filename);
+    QDir().mkpath(fileInfo.absolutePath());
+    if (!dailySummaryStatistics.saveToFile(filename, QDateTime::currentDateTime())) {
+        qWarning() << "Failed to save daily summary statistics to" << filename;
+    }
+}
+
+void Notifications::loadDailySummaryStatistics()
+{
+    const QString filename = dailySummaryStatisticsFilename();
+    if (filename.isEmpty() || !QFileInfo::exists(filename)) {
+        return;
+    }
+
+    if (dailySummaryStatistics.loadFromFile(filename, QDateTime::currentDateTime())) {
+        qDebug() << "Loaded daily summary statistics from" << filename;
+    }
+    else {
+        qWarning() << "Ignoring invalid daily summary statistics file" << filename;
+    }
+}
+
+QString Notifications::dailySummaryStatisticsFilename() const
+{
+    if (workFolder.isEmpty()) {
+        return QString();
+    }
+
+    return QDir(workFolder).filePath("daily-summary-statistics.json");
 }
 
 bool Notifications::simpleParametersCheck()

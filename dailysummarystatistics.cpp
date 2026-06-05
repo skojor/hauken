@@ -1,6 +1,11 @@
 #include "dailysummarystatistics.h"
 
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSaveFile>
 #include <QTextStream>
+#include <QTime>
 
 namespace {
 constexpr qint64 MsecsPerDay = 24LL * 60LL * 60LL * 1000LL;
@@ -73,6 +78,83 @@ DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshotAndReset(
     m_signalAboveThresholdMsecs = 0;
     m_l1InterferenceMsecs = 0;
     return snapshot;
+}
+
+bool DailySummaryStatistics::saveToFile(const QString &filename, const QDateTime &persistedAt) const
+{
+    QSaveFile file(filename);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+
+    const Snapshot snapshot = createSnapshot(persistedAt);
+    QJsonObject object;
+    object["version"] = 1;
+    object["persistedAt"] = persistedAt.toString(Qt::ISODateWithMs);
+    const QDateTime persistedPeriodStart(persistedAt.date(), QTime(0, 0), persistedAt.timeZone());
+    object["periodStart"] = (m_periodStart.isValid() ? snapshot.periodStart : persistedPeriodStart).toString(Qt::ISODateWithMs);
+    object["incidentCount"] = snapshot.incidentCount;
+    object["signalAboveThresholdMsecs"] = QString::number(snapshot.signalAboveThresholdMsecs);
+    object["l1InterferenceMsecs"] = QString::number(snapshot.l1InterferenceMsecs);
+    object["lastSignalAboveThreshold"] = m_lastSignalAboveThreshold;
+    object["lastL1Interference"] = m_lastL1Interference;
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return file.commit();
+}
+
+bool DailySummaryStatistics::loadFromFile(const QString &filename, const QDateTime &now)
+{
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    if (!document.isObject()) {
+        return false;
+    }
+
+    const QJsonObject object = document.object();
+    if (object.value("version").toInt() != 1) {
+        return false;
+    }
+
+    const QDateTime persistedAt = QDateTime::fromString(object.value("persistedAt").toString(), Qt::ISODateWithMs);
+    const QDateTime periodStart = QDateTime::fromString(object.value("periodStart").toString(), Qt::ISODateWithMs);
+    if (!persistedAt.isValid() || !periodStart.isValid() || !now.isValid()) {
+        return false;
+    }
+
+    const QDateTime currentPeriodStart(now.date(), QTime(0, 0), now.timeZone());
+    if (periodStart < currentPeriodStart || periodStart > now || persistedAt < periodStart || persistedAt > now) {
+        return false;
+    }
+
+    bool signalOk = false;
+    bool l1Ok = false;
+    const qint64 signalAboveThresholdMsecs = object.value("signalAboveThresholdMsecs").toString().toLongLong(&signalOk);
+    const qint64 l1InterferenceMsecs = object.value("l1InterferenceMsecs").toString().toLongLong(&l1Ok);
+    const qint64 persistedPeriodMsecs = periodStart.msecsTo(persistedAt);
+    if (!signalOk || !l1Ok || signalAboveThresholdMsecs < 0 || l1InterferenceMsecs < 0
+        || signalAboveThresholdMsecs > persistedPeriodMsecs || l1InterferenceMsecs > persistedPeriodMsecs) {
+        return false;
+    }
+
+    const int incidentCount = object.value("incidentCount").toInt(0);
+    if (incidentCount < 0) {
+        return false;
+    }
+
+    m_periodStart = periodStart;
+    m_lastSignalStateUpdate = now;
+    m_lastSignalAboveThreshold = object.value("lastSignalAboveThreshold").toBool(false);
+    m_lastL1Interference = object.value("lastL1Interference").toBool(false);
+    m_incidentCount = incidentCount;
+    m_signalAboveThresholdMsecs = signalAboveThresholdMsecs;
+    m_l1InterferenceMsecs = l1InterferenceMsecs;
+
+    return true;
 }
 
 QString DailySummaryStatistics::toHtmlReport(const Snapshot &snapshot, const QString &location, const QString &instrument) const
