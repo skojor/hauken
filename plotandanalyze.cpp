@@ -542,10 +542,9 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
         quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
 
         m_plotsToSend.prepend(m_metadata.filename + "_info.jpg");
-        m_plotsDescription.prepend(QString::number(m_metadata.centerfreq * 1e-6)
-                                   + " MHz. Single plot, "
-                                   + QString::number(secondsAnalyzed * 1e6)
-                                   + " us long. Max level "
+        m_plotsDescription.prepend(//QString::number(m_metadata.centerfreq * 1e-6)
+                                   QString::number(secondsAnalyzed * 1e6)
+                                   + " μs plot. Max level "
                                    + " at timestamp "
                                    + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz. ")
                                    + "IQ recording started at "
