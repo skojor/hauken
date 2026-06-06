@@ -759,6 +759,7 @@ void PlotAndAnalyze::recordingState()
 
     m_reqTracedataTimer->start(tracedataTimeout);
     m_reqTraceplotTimer->start(traceplotTimeout);
+    QTimer::singleShot(tracedataTimeout, this, [this] () { emit reqMaxholdData(); });
 
     if (traceplotTimeout > tracedataTimeout) m_sendPlotsTimer->start(traceplotTimeout + 10e3);
     else m_sendPlotsTimer->start(tracedataTimeout + 10e3);
@@ -1005,34 +1006,109 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
         return;
     }
 
-    QStringList trigAreas = m_config->getTrigFrequencies();
+    if (maxholdData.size() < 2 || stopfreq <= startfreq) {
+        qDebug() << "Trace data frequency span is invalid, cannot calculate signal bandwidth"
+                 << maxholdData.size() << startfreq << stopfreq;
+        return;
+    }
 
-    double triglevel = m_config->getInstrTrigLevel();
-    double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
-    QPair<double, double> startStop(-999, -999);
+    struct SignalSpan {
+        double startMHz = 0;
+        double stopMHz = 0;
+    };
 
-    qDebug() << m_metadata.trigFrequency << maxholdData.size() << triglevel << res << avgData[22] << maxholdData[22];
-    for (int i = 0; i < avgData.size(); i++) {
-        if (maxholdData[i] > avgData[i] + triglevel) {
-            if (startStop.first < -990) startStop.first = startfreq + res * i;
+    const double triglevel = m_config->getInstrTrigLevel();
+    const double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
+    const double l1StartMHz = (GPSL1 - 512e3) * 1e-6;
+    const double l1StopMHz = (GPSL1 + 512e3) * 1e-6;
+    const double trigFrequencyMHz = m_metadata.trigFrequency > 1e6
+            ? m_metadata.trigFrequency * 1e-6
+            : m_metadata.trigFrequency;
+
+    QVector<SignalSpan> signalSpans;
+    int startIndex = -1;
+
+    auto appendSignalSpan = [&](int endIndex) {
+        if (startIndex < 0 || endIndex < startIndex)
+            return;
+
+        SignalSpan span;
+        span.startMHz = qMax(startfreq, startfreq + res * startIndex - res / 2.0);
+        span.stopMHz = qMin(stopfreq, startfreq + res * endIndex + res / 2.0);
+
+        if (span.stopMHz > span.startMHz)
+            signalSpans.append(span);
+
+        startIndex = -1;
+    };
+
+    for (int i = 0; i < maxholdData.size(); i++) {
+        const bool aboveTrigLevel = maxholdData.at(i) > avgData.at(i) + triglevel;
+
+        if (aboveTrigLevel) {
+            if (startIndex < 0)
+                startIndex = i;
         }
-        else if (startStop.first > -999) { // End of freq range above trig?
-            if ((int)(startfreq + res * i) > startStop.first)
-                startStop.second = startfreq + res * i;
-        }
-        if (startStop.first > -990 and startStop.second > -990) {
-            if (startStop.first * 1e6 >= GPSL1 and startStop.second * 1e6 <= GPSL1) {
-                // TODO
-            }
-            else if (trigAreas.size()) {
-                for (int i = 0; i < trigAreas.size(); i++) {
-                    if (startStop.first >= trigAreas[i].toDouble() and startStop.second <= trigAreas[i+1].toDouble()) {
-                        //TODO
-                    }
-                }
-            }
-
-            startStop = { -999, -999 };
+        else {
+            appendSignalSpan(i - 1);
         }
     }
+    appendSignalSpan(maxholdData.size() - 1);
+
+    if (signalSpans.isEmpty()) {
+        qDebug() << "No maxhold signal levels found above average + trigger level";
+        return;
+    }
+
+    int selectedIndex = -1;
+    double widestSpanMHz = -1;
+
+    for (int i = 0; i < signalSpans.size(); i++) {
+        const SignalSpan &span = signalSpans.at(i);
+        const double widthMHz = span.stopMHz - span.startMHz;
+
+        if (trigFrequencyMHz >= span.startMHz && trigFrequencyMHz <= span.stopMHz) {
+            selectedIndex = i;
+            break;
+        }
+
+        if (widthMHz > widestSpanMHz) {
+            widestSpanMHz = widthMHz;
+            selectedIndex = i;
+        }
+    }
+
+    const SignalSpan &selectedSpan = signalSpans.at(selectedIndex);
+    const double signalWidthMHz = selectedSpan.stopMHz - selectedSpan.startMHz;
+    const double centerMHz = (selectedSpan.startMHz + selectedSpan.stopMHz) / 2.0;
+    bool signalOverlapsL1 = false;
+    for (const SignalSpan &span : signalSpans) {
+        if (span.startMHz <= l1StopMHz && span.stopMHz >= l1StartMHz) {
+            signalOverlapsL1 = true;
+            break;
+        }
+    }
+
+    QString text;
+    QTextStream ts(&text);
+    ts << "Maxhold signal bandwidth estimate: "
+       << QString::number(signalWidthMHz, 'f', 3) << " MHz"
+       << " at center frequency " << QString::number(centerMHz, 'f', 6) << " MHz"
+       << " (" << QString::number(selectedSpan.startMHz, 'f', 6)
+       << "-" << QString::number(selectedSpan.stopMHz, 'f', 6) << " MHz).";
+
+    if (signalSpans.size() > 1)
+        ts << " " << signalSpans.size() << " separate signals above threshold were found; reporting the "
+           << (trigFrequencyMHz >= selectedSpan.startMHz && trigFrequencyMHz <= selectedSpan.stopMHz
+               ? "one containing the trigger frequency"
+               : "widest one")
+           << ".";
+
+    if (signalOverlapsL1)
+        ts << " Signal overlaps L1 center frequency +/- 512 kHz.";
+
+    emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+
+    if (signalOverlapsL1)
+        emit reportIntentional("Signal within L1 band, could be harmful");
 }
