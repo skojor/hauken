@@ -72,13 +72,15 @@ void TraceAnalyzer::alarmTriggered()
     if (!alarmEmitted) {
         alarmEmitted = true;
         QString alarmText;
-        if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth)
-            if (!pmrMode) alarmText = "single cont. signal above limit at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
-            else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
-        else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth)
-            alarmText = "total signal above limit: " + QString::number((int)khzAboveLimitTotal) + " kHz";
+        if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth) {
+            if (!pmrMode) alarmText = "narrow band signal"; // at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+        }
+            //else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+        else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth) {
+            alarmText = "wide band signal"; //: " + QString::number((int)khzAboveLimitTotal) + " kHz";
+        }
         else
-            alarmText = "both single and total signal levels triggered (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz)";
+            alarmText = "both narrow band and wide band signal"; // (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz)";
 
         if (config->getSdefSaveToFile())
             emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver, " + alarmText);

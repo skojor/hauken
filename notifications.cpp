@@ -94,7 +94,7 @@ QString Notifications::appendPosition(const QString &text)
 {
     emit reqPosition();
 
-    QString positionedText = text + QString(". Position %1 %2")
+    QString positionedText = text + QString(", at position %1 %2")
                                       .arg(latitude, 0, 'f', 5)
                                       .arg(longitude, 0, 'f', 5);
 
