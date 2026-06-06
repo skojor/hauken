@@ -32,12 +32,10 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
     connect(backlogCleanupTimer, &QTimer::timeout, this, &GnssDevice::cleanupBacklog);
     backlogCleanupTimer->start(1000);
 
-    QDir dir(config->getLogFolder() + "/gnssLogs");
-    if (!dir.exists()) {
-        if (!dir.mkdir(config->getLogFolder() + "/gnssLogs")) {
-            qWarning() << "Couldn't create folder" << config->getLogFolder() + "/gnssLogs";
-            return;
-        }
+    const QString gnssLogFolder = QDir(config->getLogFolder()).filePath("gnssLogs");
+    if (!QDir().mkpath(gnssLogFolder)) {
+        qWarning() << "Couldn't create folder" << gnssLogFolder;
+        return;
     }
 
 }

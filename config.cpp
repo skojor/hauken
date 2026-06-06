@@ -7,10 +7,29 @@ Config::Config(QObject *parent)
     : QObject(parent)
 {
     basicSettings = new QSettings("Nkom", "Hauken"); //(findWorkFolderName() + "/hauken.conf");
-    curFile = basicSettings->value("lastFile", "c:/Hauken/default.ini").toString();
-    if (!basicSettings->value("lastFile").isValid()) basicSettings->setValue("lastFile", "c:/Hauken/default.ini");
+
+    const QString defaultWorkFolder = basicSettings->value("workFolder", findWorkFolderName()).toString();
+    const QString defaultConfigFile = QDir(defaultWorkFolder).filePath("default.ini");
+
+    curFile = basicSettings->value("lastFile", defaultConfigFile).toString();
+    if (!basicSettings->value("lastFile").isValid()) basicSettings->setValue("lastFile", defaultConfigFile);
 
     settings = new QSettings(curFile, QSettings::IniFormat);
+
+    const QString configuredWorkFolder = settings->value("workFolder").toString();
+    const QString oldDefaultConfigFile = QDir(findWorkFolderName()).filePath("default.ini");
+    if (!configuredWorkFolder.isEmpty()
+        && QFileInfo(curFile).absoluteFilePath().compare(QFileInfo(oldDefaultConfigFile).absoluteFilePath(),
+                                                         Qt::CaseInsensitive) == 0
+        && QDir::cleanPath(configuredWorkFolder).compare(QDir::cleanPath(findWorkFolderName()),
+                                                         Qt::CaseInsensitive) != 0) {
+        const QString configuredDefaultConfigFile = QDir(configuredWorkFolder).filePath("default.ini");
+        QDir().mkpath(configuredWorkFolder);
+        if (!QFileInfo::exists(configuredDefaultConfigFile)) {
+            QFile::copy(curFile, configuredDefaultConfigFile);
+        }
+        newFileName(configuredDefaultConfigFile);
+    }
 }
 
 void Config::newFileName(const QString file)
@@ -20,6 +39,42 @@ void Config::newFileName(const QString file)
     delete settings;
     settings = new QSettings(curFile, QSettings::IniFormat);
     settings->setValue("SW_VERSION", FULL_VERSION);
+}
+
+QString Config::getWorkFolder()
+{
+    const QString folder = settings->value("workFolder",
+                                           basicSettings->value("workFolder", findWorkFolderName())).toString();
+    if (!folder.isEmpty()) {
+        QDir().mkpath(folder);
+    }
+    return folder;
+}
+
+void Config::setWorkFolder(QString s)
+{
+    settings->setValue("workFolder", s);
+    basicSettings->setValue("workFolder", s);
+    if (!s.isEmpty()) {
+        QDir().mkpath(s);
+    }
+}
+
+QString Config::getLogFolder()
+{
+    const QString folder = settings->value("logFolder", QDir(getWorkFolder()).filePath("logs")).toString();
+    if (!folder.isEmpty()) {
+        QDir().mkpath(folder);
+    }
+    return folder;
+}
+
+void Config::setLogFolder(QString s)
+{
+    settings->setValue("logFolder", s);
+    if (!s.isEmpty()) {
+        QDir().mkpath(s);
+    }
 }
 
 QByteArray Config::simpleEncr(QByteArray toEncrypt)
