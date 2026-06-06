@@ -372,7 +372,7 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
 
         else if (mostLikelyChirpRadar) {
             ts << "Classified as a chirp radar signal. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
             if (withinL2(m_metadata.trigFrequency))
                 ts << "Within L2 band. ";
@@ -381,21 +381,21 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
         else if (mostLikelyWbJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Classified as a wide band jammer. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (mostLikelyPbJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Classified as a partial band jammer. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (mostLikelyJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Could be a jammer. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
@@ -406,20 +406,20 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
 
         else if (sweepAndPulse) {
             ts << "Sweep and pulse signal. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (nbSweep) {
             flagReport = true;
             ts << "Narrowband sweep signal. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (pulseAndWb) {
             ts << "Wideband pulse. ";
-            if (m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
             if (withinAirRadar(m_metadata.trigFrequency))
                 ts << "Could be air radar at 1274 MHz. ";
@@ -438,13 +438,47 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
         emit analyzerResult(text, 100);
     }
 
-    if (m_metadata.fromFile)
+    const bool classificationAddedToPlot = attachClassificationToPendingPlot(text);
+
+    if (m_metadata.fromFile || classificationAddedToPlot)
         emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
     else
         emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
     //if (!m_metadata.fromFile)
     writeMetaToDisk(allResults, classes);
+}
+
+
+bool PlotAndAnalyze::shouldIncludePeriodEstimate() const
+{
+    const double centerFrequency = static_cast<double>(m_metadata.centerfreq);
+    return qAbs(centerFrequency - GPSL1) < 1e3 || qAbs(centerFrequency - GPSL2) < 1e3;
+}
+
+bool PlotAndAnalyze::attachClassificationToPendingPlot(const QString &text)
+{
+    if (text.isEmpty() || m_metadata.fromFile)
+        return false;
+
+    const QString infoPlot = m_metadata.filename + "_info.jpg";
+    int fallbackIndex = -1;
+
+    for (int i = 0; i < m_plotsToSend.size() && i < m_plotsDescription.size(); i++) {
+        if (m_plotsToSend[i] == infoPlot) {
+            m_plotsDescription[i].prepend(text + "<br>");
+            return true;
+        }
+        if (fallbackIndex < 0 && m_plotsToSend[i].startsWith(m_metadata.filename))
+            fallbackIndex = i;
+    }
+
+    if (fallbackIndex >= 0 && fallbackIndex < m_plotsDescription.size()) {
+        m_plotsDescription[fallbackIndex].prepend(text + "<br>");
+        return true;
+    }
+
+    return false;
 }
 
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
