@@ -32,12 +32,10 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
     connect(backlogCleanupTimer, &QTimer::timeout, this, &GnssDevice::cleanupBacklog);
     backlogCleanupTimer->start(1000);
 
-    QDir dir(config->getLogFolder() + "/gnssLogs");
-    if (!dir.exists()) {
-        if (!dir.mkdir(config->getLogFolder() + "/gnssLogs")) {
-            qWarning() << "Couldn't create folder" << config->getLogFolder() + "/gnssLogs";
-            return;
-        }
+    const QString gnssLogFolder = QDir(config->getLogFolder()).filePath("gnssLogs");
+    if (!QDir().mkpath(gnssLogFolder)) {
+        qWarning() << "Couldn't create folder" << gnssLogFolder;
+        return;
     }
 
 }
@@ -604,6 +602,26 @@ void GnssDevice::setupUbloxDevice()
     uBloxState = UBLOX::READY;
 }
 
+void GnssDevice::setIncidenceStartedDateTime()
+{
+    const QDateTime now = QDateTime::currentDateTime();
+
+    // Trace/GNSS alarm signals can be emitted repeatedly while an incident is
+    // active, so keep the first timestamp for the current backlog window.  If
+    // no GNSS plot was created for a previous alarm (for instance because the
+    // receiver had no backlog data), incidenceStartedDateTime could otherwise
+    // stay valid indefinitely and be reused for a later incident, shifting the
+    // plot marker by hundreds or thousands of seconds.
+    const bool timestampOutsideBacklog =
+        incidenceStartedDateTime.isValid()
+        && !backlogTimestamp.isEmpty()
+        && (incidenceStartedDateTime < backlogTimestamp.first()
+            || incidenceStartedDateTime > backlogTimestamp.last());
+
+    if (!incidenceStartedDateTime.isValid() || timestampOutsideBacklog)
+        incidenceStartedDateTime = now;
+}
+
 void GnssDevice::delayedReportHandler()
 {
     delayedReportTimer->stop();
@@ -666,6 +684,9 @@ void GnssDevice::saveBacklog()
     backlogCleanupTimer->stop(); // Don't delete data while saving!
 
     if (backlogData.size()) { // Save only if there are any data in buffer (daah)
+        if (!incidenceStartedDateTime.isValid())
+            incidenceStartedDateTime = QDateTime::currentDateTime();
+
         createGnssPlot();
 
         QFile file(createFilename());
@@ -678,6 +699,11 @@ void GnssDevice::saveBacklog()
         }
         else
             qWarning() << "Could not open file" << file.fileName() << "for writing";
+    }
+    else {
+        // Do not carry an alarm timestamp into the next incident when this
+        // receiver had nothing to plot for the current one.
+        incidenceStartedDateTime = QDateTime();
     }
     backlogCleanupTimer->start(1000);
 }

@@ -4,6 +4,7 @@ GnssDisplay::GnssDisplay(QSharedPointer<Config> c)
 {
     config = c;
     wdg->setAttribute(Qt::WA_QuitOnClose);
+    wdg->installEventFilter(this);
 
     connect(updateGnssDataTimer, &QTimer::timeout, this, &GnssDisplay::reqGnssData);
 }
@@ -28,7 +29,8 @@ void GnssDisplay::close()
 void GnssDisplay::updGnssData(GnssData g, int id)
 {
     if (id == 1) gnss1 = g;
-    else gnss2 = g;
+    else if (id == 2) gnss2 = g;
+    else instrumentGnss = g;
 
     updText();
 }
@@ -92,7 +94,31 @@ void GnssDisplay::setupWidget()
     mainLayout->addWidget(gnss2LeftGroupBox, 1, 0);
     mainLayout->addWidget(gnss2RightGroupBox, 1, 1);
     wdg->setLayout(mainLayout);
+    updateReceiverVisibility();
     //wdg->adjustSize();
+}
+
+bool GnssDisplay::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == wdg && event->type() == QEvent::Close) {
+        config->setGnssDisplayWindowState(wdg->saveGeometry());
+        if (!isClosing && config->getGnssDisplayWidget())
+            config->setGnssDisplayWidget(false);
+    }
+
+    return QObject::eventFilter(obj, event);
+}
+
+void GnssDisplay::updateReceiverVisibility()
+{
+    const bool useInstrumentGnss = config->getGnssUseInstrumentGnss();
+    const bool showGnss1 = useInstrumentGnss || config->getGnssSerialPort1Activate();
+    const bool showGnss2 = !useInstrumentGnss && config->getGnssSerialPort2Activate();
+
+    gnss1LeftGroupBox->setVisible(showGnss1);
+    gnss1RightGroupBox->setVisible(showGnss1);
+    gnss2LeftGroupBox->setVisible(showGnss2);
+    gnss2RightGroupBox->setVisible(showGnss2);
 }
 
 void GnssDisplay::updSettings()
@@ -102,7 +128,8 @@ void GnssDisplay::updSettings()
         wdg->restoreGeometry(config->getGnssDisplayWindowState());
     }
     else if (!config->getGnssDisplayWidget() && wdg->isVisible()) wdg->close();
-    gnss1Name = config->getGnss1Name();
+    updateReceiverVisibility();
+    gnss1Name = config->getGnssUseInstrumentGnss() ? tr("Instrument GNSS") : config->getGnss1Name();
     gnss2Name = config->getGnss2Name();
     if (gnss1Name.isEmpty()) gnss1RightGroupBox->setTitle("GNSS receiver 1 - info/calculations");
     else gnss1RightGroupBox->setTitle(gnss1Name);
@@ -112,36 +139,40 @@ void GnssDisplay::updSettings()
 
 void GnssDisplay::updText()
 {
-    if (gnss1.posValid) {
+    const bool useInstrumentGnss = config->getGnssUseInstrumentGnss();
+    GnssData displayGnss1 = useInstrumentGnss ? instrumentGnss : gnss1;
+    updateReceiverVisibility();
+
+    if (displayGnss1.posValid) {
         if (gnss1Name.isEmpty()) gnss1LeftGroupBox->setTitle("GNSS receiver 1 - position valid");
         else  gnss1LeftGroupBox->setTitle(gnss1Name + " - position valid");
-        gnss1Latitude->setText("<span style='font-size:normal;'>" + QString::number(gnss1.latitude, 'f', 7) + "</span>");
-        gnss1Longitude->setText("<span style='font-size:normal;'>" + QString::number(gnss1.longitude, 'f', 7) + "</span>");
-        gnss1Altitude->setText("<span style='font-size:normal;'>" + QString::number(gnss1.altitude, 'f', 0) + "</span>");
-        gnss1Time->setText("<span style='font-size:normal;'>" + gnss1.timestamp.toString("dd.MM.yy HH:mm:ss") + "</span>");
-        gnss1Dop->setText("<span style='font-size:normal;'>" + QString::number(gnss1.hdop, 'f', 1) + "</span>");
-        gnss1CNo->setText("<span style='font-size:normal;'>" + QString::number(gnss1.cno) + "</span>");
-        gnss1Agc->setText("<span style='font-size:normal;'>" + QString::number(gnss1.agc) + " %</span>");
-        gnss1Sats->setText("<span style='font-size:normal;'>" + QString::number(gnss1.satsTracked) + "</span>");
+        gnss1Latitude->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.latitude, 'f', 7) + "</span>");
+        gnss1Longitude->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.longitude, 'f', 7) + "</span>");
+        gnss1Altitude->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.altitude, 'f', 0) + "</span>");
+        gnss1Time->setText("<span style='font-size:normal;'>" + displayGnss1.timestamp.toString("dd.MM.yy HH:mm:ss") + "</span>");
+        gnss1Dop->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.hdop, 'f', 1) + "</span>");
+        gnss1CNo->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.cno) + "</span>");
+        gnss1Agc->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.agc) + " %</span>");
+        gnss1Sats->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.satsTracked) + "</span>");
 
-        gnss1PosValid->setText("<span style='font-size:normal;color:green;'>yes, tracking " + QString::number(gnss1.satsTracked) + " sats</span>");
+        gnss1PosValid->setText("<span style='font-size:normal;color:green;'>yes, tracking " + QString::number(displayGnss1.satsTracked) + " sats</span>");
 
-        if (abs(gnss1.posOffset) < 10) gnss1PosOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
-        else if (abs(gnss1.posOffset) < 50) gnss1PosOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(gnss1.posOffset), 'f', 0) + " m</span>");
-        else if (abs(gnss1.posOffset) < 1000) gnss1PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss1.posOffset), 'f', 0) + " m</span>");
-        else gnss1PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss1.posOffset / 1000), 'f', 0) + " km</span>");
+        if (abs(displayGnss1.posOffset) < 10) gnss1PosOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
+        else if (abs(displayGnss1.posOffset) < 50) gnss1PosOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(displayGnss1.posOffset), 'f', 0) + " m</span>");
+        else if (abs(displayGnss1.posOffset) < 1000) gnss1PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.posOffset), 'f', 0) + " m</span>");
+        else gnss1PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.posOffset / 1000), 'f', 0) + " km</span>");
 
-        if (abs(gnss1.altOffset) < 10) gnss1AltOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
-        else if (abs(gnss1.altOffset) < 50) gnss1AltOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(gnss1.altOffset), 'f', 0) + " m</span>");
-        else if (abs(gnss1.altOffset) < 1000) gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss1.altOffset), 'f', 0) + " m</span>");
-        else gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss1.altOffset / 1000), 'f', 0) + " km</span>");
+        if (abs(displayGnss1.altOffset) < 10) gnss1AltOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
+        else if (abs(displayGnss1.altOffset) < 50) gnss1AltOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(displayGnss1.altOffset), 'f', 0) + " m</span>");
+        else if (abs(displayGnss1.altOffset) < 1000) gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.altOffset), 'f', 0) + " m</span>");
+        else gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.altOffset / 1000), 'f', 0) + " km</span>");
 
-        if (gnss1.timeOffset < 1000) gnss1TimeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
-        else if (gnss1.timeOffset < 5000) gnss1TimeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(gnss1.timeOffset / 1000) + " sec(s)</span>");
-        else if (gnss1.timeOffset < 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss1.timeOffset / 1000) + " sec(s)</span>");
-        else if (gnss1.timeOffset < 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss1.timeOffset / 60000) + " min(s)</span>");
-        else if (gnss1.timeOffset < 60 * 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss1.timeOffset / 3600000) + " hour(s)</span>");
-        else if (gnss1.timeOffset < 24UL * 60 * 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss1.timeOffset / 24UL * 3600000) + " hour(s)</span>");
+        if (displayGnss1.timeOffset < 1000) gnss1TimeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
+        else if (displayGnss1.timeOffset < 5000) gnss1TimeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(displayGnss1.timeOffset / 1000) + " sec(s)</span>");
+        else if (displayGnss1.timeOffset < 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 1000) + " sec(s)</span>");
+        else if (displayGnss1.timeOffset < 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 60000) + " min(s)</span>");
+        else if (displayGnss1.timeOffset < 60 * 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 3600000) + " hour(s)</span>");
+        else if (displayGnss1.timeOffset < 24UL * 60 * 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 24UL * 3600000) + " hour(s)</span>");
 
         /*gnss1CwJamming->setText("<span style='font-size:normal;'>" + QString::number(gnss1.jammingIndicator) + "</span>");
         QString jam;
@@ -164,7 +195,7 @@ void GnssDisplay::updText()
         gnss1Sats->setText("<span style='font-size:normal;'>n/a</span>");
 
         gnss1PosValid->setText("<span style='font-size:normal;color:red;'>no</span>");
-        gnss1Agc->setText("<span style='font-size:normal;'>" + QString::number(gnss1.agc) + " %</span>");
+        gnss1Agc->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.agc) + " %</span>");
 
         gnss1PosOffset->setText(QString("<span style='font-size:normal;color:red;'>n/a</span>"));
         gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
@@ -235,6 +266,11 @@ void GnssDisplay::updText()
 
 void GnssDisplay::reqGnssData()
 {
-    emit requestGnssData(1);
-    emit requestGnssData(2);
+    if (config->getGnssUseInstrumentGnss()) {
+        emit requestGnssData(3);
+        return;
+    }
+
+    if (config->getGnssSerialPort1Activate()) emit requestGnssData(1);
+    if (config->getGnssSerialPort2Activate()) emit requestGnssData(2);
 }

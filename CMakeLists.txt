@@ -66,6 +66,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     config.cpp config.h
     customplotcontroller.cpp customplotcontroller.h
     datastreambaseclass.cpp datastreambaseclass.h
+    dailysummarystatistics.cpp dailysummarystatistics.h
     emailoptions.cpp emailoptions.h
     generaloptions.cpp generaloptions.h
     geolimit.cpp geolimit.h

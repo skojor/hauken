@@ -98,12 +98,10 @@ public slots:
     void setStnAltitude(QString s) { settings->setValue("station/Altitude", s); }
 
     QString findWorkFolderName();
-    QString getWorkFolder() { return settings->value("workFolder",
-                                                     findWorkFolderName()).toString(); }
-    void setWorkFolder(QString s) { settings->setValue("workFolder", s); }
-    QString getLogFolder() { return settings->value("logFolder",
-                                                    findWorkFolderName() + "/logs").toString(); }
-    void setLogFolder(QString s) { settings->setValue("logFolder", s); }
+    QString getWorkFolder();
+    void setWorkFolder(QString s);
+    QString getLogFolder();
+    void setLogFolder(QString s);
     bool getNewLogFolder() { return true; } // Forced on since v2.55
     void setNewLogFolder(bool b) { settings->setValue("newLogFolder", b); }
     bool getPmrMode() { return settings->value("pmr/mode", false).toBool();}
@@ -314,6 +312,8 @@ public slots:
     void setEmailAddIqPlot(bool b) { settings->setValue("email/addIqPlot", b); }
     bool getEmailAddGif() { return settings->value("email/addGif", true).toBool();}
     void setEmailAddGif(bool b) { settings->setValue("email/addGif", b);}
+    bool getEmailCreateDailySummary() { return settings->value("email/createDailySummary", false).toBool();}
+    void setEmailCreateDailySummary(bool b) { settings->setValue("email/createDailySummary", b);}
 
     // Camera options
     QString getCameraName() { return settings->value("camera/Name").toString();}

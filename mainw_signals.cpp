@@ -650,6 +650,12 @@ void MainWindow::setSignals()
             &TraceAnalyzer::alarm,
             aiPtr,
             &AI::startAiTimer); // will start analyze of data after x seconds
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer1, &GnssAnalyzer::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer1, &GnssAnalyzer::traceIncidentEnded);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer2, &GnssAnalyzer::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer2, &GnssAnalyzer::traceIncidentEnded);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer3, &GnssAnalyzer::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer3, &GnssAnalyzer::traceIncidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
     //connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData); TBR
     connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
@@ -663,11 +669,29 @@ void MainWindow::setSignals()
 
 
                 for (int i = 0; i < ip.size(); i++)
-                    instrIpAddr->addItem(name[i] + " (" + type[i] + ")", QVariant(ip[i]));
+                    instrIpAddr->addItem(name[i] + " " + ip[i] + " " + type[i], QVariant(ip[i]));
                 if (!config->getInstrCustomEntry().isEmpty())
                     instrIpAddr->addItem(config->getInstrCustomEntry());
 
-                int index = instrIpAddr->findText(config->getInstrIpAddr());
+                const QString savedInstrAddress = config->getInstrIpAddr().trimmed();
+                int index = instrIpAddr->findData(savedInstrAddress);
+                if (index == -1)
+                    index = instrIpAddr->findText(savedInstrAddress);
+
+                if (index == -1) {
+                    for (int i = 0; i < instrIpAddr->count(); i++) {
+                        const QString itemAddress = instrIpAddr->itemData(i).toString().trimmed();
+                        const QString itemText = instrIpAddr->itemText(i).trimmed();
+
+                        if (itemAddress == savedInstrAddress ||
+                            itemText == savedInstrAddress ||
+                            (!savedInstrAddress.isEmpty() && itemText.contains(savedInstrAddress))) {
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+
                 if (index != -1)
                     instrIpAddr->setCurrentIndex(index);
                 connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
@@ -676,8 +700,10 @@ void MainWindow::setSignals()
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)
             gnssDisplay->updGnssData(gnssDevice1->sendGnssData(), 1);
-        else
+        else if (id == 2)
             gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
+        else
+            gnssDisplay->updGnssData(measurementDevice->sendGnssData(), 3);
     });
 
     connect(read1809Data, &Read1809Data::freqChanged, this, [this](double a, double b) {
@@ -717,6 +743,7 @@ void MainWindow::setSignals()
             cameraRecorder->updPosition(measurementDevice->sendGnssData());
     });
     connect(traceAnalyzer, &TraceAnalyzer::maxLevelMeasured, cameraRecorder, &CameraRecorder::receivedSignalLevel);
+    connect(traceAnalyzer, &TraceAnalyzer::signalStatisticsUpdated, notifications, &Notifications::recSignalStatistics);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, cameraRecorder, &CameraRecorder::startRecorder);
 
     connect(oauthFileUploader, &OAuthFileUploader::toIncidentLog, notifications, &Notifications::toIncidentLog);

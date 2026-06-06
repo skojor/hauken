@@ -13,16 +13,20 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
         khzAboveLimit = khzAboveLimitTotal = singleTrigCenterFrequency = 0;
         maxLevel = -999;
         int valuesAboveLimit = 0, valuesAboveLimitTotal = 0;
+        bool l1Interference = false;
         if (averageData.size() == data.size()) {
             for (int i=0; i<data.size(); i++) {
-                if (checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                        && data.at(i) > averageData.at(i) + trigLevel * 10) { // * 10 because we have values in 1/10 dBuV!
+                const double frequency = startFreq + (resolution/1e3 * i);
+                const bool signalAboveLimit = checkIfFrequencyIsInTrigArea(frequency)
+                        && data.at(i) > averageData.at(i) + trigLevel * 10; // * 10 because we have values in 1/10 dBuV!
+                if (signalAboveLimit) {
                     valuesAboveLimit++;
                     valuesAboveLimitTotal++;
+                    if (qAbs(frequency * 1e6 - GPSL1) <= (resolution * 500.0)) {
+                        l1Interference = true;
+                    }
                 }
-                else if ((valuesAboveLimit && !checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))) ||
-                         (valuesAboveLimit && checkIfFrequencyIsInTrigArea(startFreq + (resolution/1e3 * i))
-                         && data.at(i) < averageData.at(i) + trigLevel * 10)) { // previously trace point high, not this one. reset counter and calc BW of signal
+                else if (valuesAboveLimit) { // previously trace point high, not this one. reset counter and calc BW of signal
                     double khzOfIncident = valuesAboveLimit * resolution;
                     if (khzOfIncident > khzAboveLimit) {
                         khzAboveLimit = khzOfIncident;
@@ -37,6 +41,7 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
                 if (data[i] > maxLevel) maxLevel = data[i];
             }
             khzAboveLimitTotal = valuesAboveLimitTotal * resolution;
+            emit signalStatisticsUpdated(valuesAboveLimitTotal > 0, l1Interference);
         }
 
         emit maxLevelMeasured((double)maxLevel * 0.1);
@@ -67,13 +72,15 @@ void TraceAnalyzer::alarmTriggered()
     if (!alarmEmitted) {
         alarmEmitted = true;
         QString alarmText;
-        if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth)
-            if (!pmrMode) alarmText = "single cont. signal above limit at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
-            else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
-        else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth)
-            alarmText = "total signal above limit: " + QString::number((int)khzAboveLimitTotal) + " kHz";
+        if (khzAboveLimit > singleTrigBandwidth && khzAboveLimitTotal <= totalTrigBandwidth) {
+            if (!pmrMode) alarmText = "narrow band signal"; // at center frequency " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+        }
+            //else alarmText = "Activity at " + QString::number(singleTrigCenterFrequency, 'f', 6) + " MHz (" + QString::number((int)khzAboveLimit) + " kHz span)";
+        else if (khzAboveLimit <= singleTrigBandwidth && khzAboveLimitTotal > totalTrigBandwidth) {
+            alarmText = "wide band signal"; //: " + QString::number((int)khzAboveLimitTotal) + " kHz";
+        }
         else
-            alarmText = "both single and total signal levels triggered (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz)";
+            alarmText = "both narrow band and wide band signal"; // (" + QString::number((int)khzAboveLimit) + " / " + QString::number((int)khzAboveLimitTotal) + " kHz)";
 
         if (config->getSdefSaveToFile())
             emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Recording triggered by measurement receiver, " + alarmText);
