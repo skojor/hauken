@@ -52,6 +52,10 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
     }
     QVector<QImage> images;
     m_metadata = meta; // Work copy, stored in class
+    const double halfBandwidthMHz = m_metadata.bandwidth * 0.5e-6;
+    m_lastClassificationStartMHz = m_metadata.centerfreq * 1e-6 - halfBandwidthMHz;
+    m_lastClassificationStopMHz = m_metadata.centerfreq * 1e-6 + halfBandwidthMHz;
+    m_lastClassificationHasRfi = false;
     createFilename();
     findIqFftMinMaxAvg(fftVector, 0, 0, true);
 
@@ -277,6 +281,7 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
     int imgsWithJammerInRow = 0, imgsWithJammerTotal = 0;
     int imgsWithPrnTotal = 0;
     bool prevImgWasJammer = true;
+    bool classificationHasRfi = false;
 
     // Look for images with classification other than !rfi
     for (int row = 0; row < allResults.rows; row++) {
@@ -285,6 +290,8 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
         output.reshape(1, 1).copyTo(probs);
         for (int classRes = 0; classRes < probs.size(); classRes++) {
             if (classes[classRes].contains("rfi") and probs[classRes] >= 0.5) {
+                if (probs[classRes] > 0.5)
+                    classificationHasRfi = true;
                 imgsWithRfi.append(row);
                 break;
             }
@@ -294,6 +301,11 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
             }
         }
     }
+
+    const double halfBandwidthMHz = m_metadata.bandwidth * 0.5e-6;
+    m_lastClassificationStartMHz = m_metadata.centerfreq * 1e-6 - halfBandwidthMHz;
+    m_lastClassificationStopMHz = m_metadata.centerfreq * 1e-6 + halfBandwidthMHz;
+    m_lastClassificationHasRfi = classificationHasRfi;
 
     ts << "FFM center " << QString::number(m_metadata.centerfreq * 1e-6, 'f', 1) << " MHz. ";
 
@@ -454,6 +466,14 @@ bool PlotAndAnalyze::shouldIncludePeriodEstimate() const
 {
     const double centerFrequency = static_cast<double>(m_metadata.centerfreq);
     return qAbs(centerFrequency - GPSL1) < 1e3 || qAbs(centerFrequency - GPSL2) < 1e3;
+}
+
+bool PlotAndAnalyze::classificationHasRfiForRange(double startMHz, double stopMHz) const
+{
+    if (!m_lastClassificationHasRfi)
+        return false;
+
+    return m_lastClassificationStartMHz <= stopMHz && m_lastClassificationStopMHz >= startMHz;
 }
 
 bool PlotAndAnalyze::attachClassificationToPendingPlot(const QString &text)
@@ -1143,6 +1163,6 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
 
     emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
-    if (signalOverlapsL1)
+    if (signalOverlapsL1 && classificationHasRfiForRange(l1StartMHz, l1StopMHz))
         emit reportIntentional("Signal within L1 band, could be harmful");
 }

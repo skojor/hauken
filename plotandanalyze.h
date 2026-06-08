@@ -70,6 +70,7 @@ private:
     void writeMetaToDisk(cv::Mat results, QStringList classes);
     bool shouldIncludePeriodEstimate() const;
     bool attachClassificationToPendingPlot(const QString &text);
+    bool classificationHasRfiForRange(double startMHz, double stopMHz) const;
     bool withinL1(quint64 freq) { if (abs(freq - GPSL1) < 0.5e6) return true; else return false;}
     bool withinL2(quint64 freq) { if (abs(freq - GPSL2) < 5e6) return true; else return false;}
     bool withinAirRadar(quint64 freq) { if (abs(freq - AIRRADAR) < 2e6) return true; else return false;}
@@ -86,6 +87,9 @@ private:
     QMutex m_mutex;
     quint64 m_startfreq, m_stopfreq;
     int m_resolution;
+    bool m_lastClassificationHasRfi = false;
+    double m_lastClassificationStartMHz = 0;
+    double m_lastClassificationStopMHz = 0;
 };
 
 #endif // PLOTANDANALYZE_H
