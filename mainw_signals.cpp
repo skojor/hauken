@@ -1074,6 +1074,7 @@ void MainWindow::setSignals()
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
+    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
