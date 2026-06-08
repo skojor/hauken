@@ -690,7 +690,8 @@ void MainWindow::setSignals()
                     // Backwards compatibility: older config could contain the station name instead.
                     if (index == -1) {
                         for (int i = 0; i < readyCount; i++) {
-                            if (name[i].trimmed() == savedInstrAddress) {
+                            qDebug() << name[i];
+                            if (savedInstrAddress.contains(name[i].trimmed())) {
                                 index = i;
                                 matchedLegacyName = true;
                                 break;
