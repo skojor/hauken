@@ -1115,6 +1115,7 @@ void MainWindow::setSignals()
 
     // Rebuild I/Q pause/resume after data transfer
     // Connect/disconnect relevant signals while transferring
+    connect(iqPlot, &IqPlot::busyRecording, traceBuffer, &TraceBuffer::setIqTransferInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool busy) {
         if (busy) {
             flagBusyRecordingIQ = true;

@@ -54,6 +54,9 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     //if (!traceBuffer.isEmpty() )qDebug() << data.size() << traceBuffer.last().size();
 
     QMutexLocker locker(&mutex);  // blocking access to containers, in case the cleanup timers wants to do work at the same time
+    if (iqTransferInProgress)
+        return;
+
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size()) { // two different container sizes indicates freq/resolution changed, let's discard the buffer
             failedTracesCtr++;
@@ -98,6 +101,12 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
         if (tracesUsedInAvg < tracesNeededForAvg)
             calcAvgLevel(data);
     }
+}
+
+void TraceBuffer::setIqTransferInProgress(bool inProgress)
+{
+    QMutexLocker locker(&mutex);
+    iqTransferInProgress = inProgress;
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
