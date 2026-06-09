@@ -548,6 +548,16 @@ void MainWindow::setSignals()
                 else
                     data = measurementDevice->sendGnssData();
 
+                if (!data.posValid) {
+                    GnssData fallbackData = gnssDevice1->sendGnssData();
+                    if (!fallbackData.posValid)
+                        fallbackData = gnssDevice2->sendGnssData();
+                    if (!fallbackData.posValid)
+                        fallbackData = measurementDevice->sendGnssData();
+                    if (fallbackData.posValid)
+                        data = fallbackData;
+                }
+
                 notifications->getLatitudeLongitude(data.posValid, data.latitude, data.longitude);
             },
             Qt::BlockingQueuedConnection);
