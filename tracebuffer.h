@@ -32,6 +32,7 @@ public:
 public slots:
     void start();
     void addTrace(const QVector<qint16> &data);
+    void setIqTransferInProgress(bool inProgress);
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
     QVector<double> retMaxhold();
@@ -126,6 +127,7 @@ private:
     bool flagSavedAvgLevelsInvalidated = true;
     bool flagAvgLevelsRestored = false;
     bool flagAvgLevelRestarted = true;
+    bool iqTransferInProgress = false;
 
     // Config cache
     quint64 startfreq, stopfreq, ffmCenterFreq;
