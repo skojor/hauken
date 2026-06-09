@@ -7,6 +7,7 @@
 #include <QTextStream>
 #include <QTime>
 #include <QTimeZone>
+#include <QtGlobal>
 
 namespace {
 constexpr qint64 MsecsPerDay = 24LL * 60LL * 60LL * 1000LL;
@@ -21,27 +22,99 @@ void DailySummaryStatistics::recordIncident(const QDateTime &dt)
     m_incidentCount++;
 }
 
-void DailySummaryStatistics::recordSignalState(const QDateTime &dt, bool signalAboveThreshold, bool l1Interference)
+void DailySummaryStatistics::recordSignalState(const QDateTime &dt, bool signalAboveThreshold, bool l1Interference, qint64 minTriggerMsecs)
 {
     if (!m_periodStart.isValid()) {
         m_periodStart = dt;
     }
 
-    if (m_lastSignalStateUpdate.isValid()) {
+    m_minTriggerMsecs = qMax<qint64>(0, minTriggerMsecs);
+    recordThresholdState(m_signalAboveThreshold, dt, signalAboveThreshold);
+    recordThresholdState(m_l1Interference, dt, l1Interference);
+    m_lastSignalStateUpdate = dt;
+}
+
+void DailySummaryStatistics::recordThresholdState(ThresholdState &state, const QDateTime &dt, bool active)
+{
+    if (m_lastSignalStateUpdate.isValid() && state.lastActive) {
         const qint64 elapsed = m_lastSignalStateUpdate.msecsTo(dt);
         if (elapsed > 0) {
-            if (m_lastSignalAboveThreshold) {
-                m_signalAboveThresholdMsecs += elapsed;
+            if (m_minTriggerMsecs == 0) {
+                state.activeMsecs += elapsed;
+                state.confirmedActive = true;
             }
-            if (m_lastL1Interference) {
-                m_l1InterferenceMsecs += elapsed;
+            else if (state.confirmedActive) {
+                state.activeMsecs += elapsed;
+            }
+            else {
+                if (!state.candidateStart.isValid()) {
+                    state.candidateStart = m_lastSignalStateUpdate;
+                }
+
+                const qint64 activeDuration = state.candidateStart.msecsTo(dt);
+                if (activeDuration >= m_minTriggerMsecs) {
+                    state.activeMsecs += activeDuration;
+                    state.confirmedActive = true;
+                }
             }
         }
     }
 
-    m_lastSignalStateUpdate = dt;
-    m_lastSignalAboveThreshold = signalAboveThreshold;
-    m_lastL1Interference = l1Interference;
+    if (active) {
+        if (!state.lastActive) {
+            state.candidateStart = dt;
+            state.confirmedActive = (m_minTriggerMsecs == 0);
+        }
+    }
+    else {
+        state.candidateStart = QDateTime();
+        state.confirmedActive = false;
+    }
+
+    state.lastActive = active;
+}
+
+qint64 DailySummaryStatistics::thresholdMsecsAt(const ThresholdState &state, const QDateTime &periodEnd) const
+{
+    qint64 activeMsecs = state.activeMsecs;
+    if (!m_lastSignalStateUpdate.isValid() || !state.lastActive) {
+        return activeMsecs;
+    }
+
+    const qint64 elapsed = m_lastSignalStateUpdate.msecsTo(periodEnd);
+    if (elapsed <= 0) {
+        return activeMsecs;
+    }
+
+    if (m_minTriggerMsecs == 0 || state.confirmedActive) {
+        return activeMsecs + elapsed;
+    }
+
+    if (state.candidateStart.isValid()) {
+        const qint64 activeDuration = state.candidateStart.msecsTo(periodEnd);
+        if (activeDuration >= m_minTriggerMsecs) {
+            return activeMsecs + activeDuration;
+        }
+    }
+
+    return activeMsecs;
+}
+
+void DailySummaryStatistics::resetThresholdState(ThresholdState &state, const QDateTime &periodEnd)
+{
+    const bool confirmedAtPeriodEnd = state.confirmedActive
+        || m_minTriggerMsecs == 0
+        || (state.candidateStart.isValid() && state.candidateStart.msecsTo(periodEnd) >= m_minTriggerMsecs);
+
+    state.activeMsecs = 0;
+    if (state.lastActive) {
+        state.candidateStart = periodEnd;
+        state.confirmedActive = confirmedAtPeriodEnd;
+    }
+    else {
+        state.candidateStart = QDateTime();
+        state.confirmedActive = false;
+    }
 }
 
 DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshot(const QDateTime &periodEnd) const
@@ -50,34 +123,21 @@ DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshot(const QD
     snapshot.periodEnd = periodEnd;
     snapshot.periodStart = m_periodStart.isValid() ? m_periodStart : periodEnd.addMSecs(-MsecsPerDay);
     snapshot.incidentCount = m_incidentCount;
-    snapshot.signalAboveThresholdMsecs = m_signalAboveThresholdMsecs;
-    snapshot.l1InterferenceMsecs = m_l1InterferenceMsecs;
-
-    if (m_lastSignalStateUpdate.isValid()) {
-        const qint64 elapsed = m_lastSignalStateUpdate.msecsTo(periodEnd);
-        if (elapsed > 0) {
-            if (m_lastSignalAboveThreshold) {
-                snapshot.signalAboveThresholdMsecs += elapsed;
-            }
-            if (m_lastL1Interference) {
-                snapshot.l1InterferenceMsecs += elapsed;
-            }
-        }
-    }
+    snapshot.signalAboveThresholdMsecs = thresholdMsecsAt(m_signalAboveThreshold, periodEnd);
+    snapshot.l1InterferenceMsecs = thresholdMsecsAt(m_l1Interference, periodEnd);
 
     return snapshot;
 }
 
 DailySummaryStatistics::Snapshot DailySummaryStatistics::createSnapshotAndReset(const QDateTime &periodEnd)
 {
-    recordSignalState(periodEnd, m_lastSignalAboveThreshold, m_lastL1Interference);
     const Snapshot snapshot = createSnapshot(periodEnd);
 
     m_periodStart = periodEnd;
     m_lastSignalStateUpdate = periodEnd;
     m_incidentCount = 0;
-    m_signalAboveThresholdMsecs = 0;
-    m_l1InterferenceMsecs = 0;
+    resetThresholdState(m_signalAboveThreshold, periodEnd);
+    resetThresholdState(m_l1Interference, periodEnd);
     return snapshot;
 }
 
@@ -97,8 +157,15 @@ bool DailySummaryStatistics::saveToFile(const QString &filename, const QDateTime
     object["incidentCount"] = snapshot.incidentCount;
     object["signalAboveThresholdMsecs"] = QString::number(snapshot.signalAboveThresholdMsecs);
     object["l1InterferenceMsecs"] = QString::number(snapshot.l1InterferenceMsecs);
-    object["lastSignalAboveThreshold"] = m_lastSignalAboveThreshold;
-    object["lastL1Interference"] = m_lastL1Interference;
+    object["lastSignalAboveThreshold"] = m_signalAboveThreshold.lastActive;
+    object["lastL1Interference"] = m_l1Interference.lastActive;
+    object["signalAboveThresholdConfirmed"] = m_signalAboveThreshold.confirmedActive
+        || m_minTriggerMsecs == 0
+        || (m_signalAboveThreshold.candidateStart.isValid() && m_signalAboveThreshold.candidateStart.msecsTo(persistedAt) >= m_minTriggerMsecs);
+    object["l1InterferenceConfirmed"] = m_l1Interference.confirmedActive
+        || m_minTriggerMsecs == 0
+        || (m_l1Interference.candidateStart.isValid() && m_l1Interference.candidateStart.msecsTo(persistedAt) >= m_minTriggerMsecs);
+    object["minTriggerMsecs"] = QString::number(m_minTriggerMsecs);
 
     file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
     return file.commit();
@@ -117,7 +184,8 @@ bool DailySummaryStatistics::loadFromFile(const QString &filename, const QDateTi
     }
 
     const QJsonObject object = document.object();
-    if (object.value("version").toInt() != 1) {
+    const int version = object.value("version").toInt();
+    if (version != 1) {
         return false;
     }
 
@@ -149,11 +217,19 @@ bool DailySummaryStatistics::loadFromFile(const QString &filename, const QDateTi
 
     m_periodStart = periodStart;
     m_lastSignalStateUpdate = now;
-    m_lastSignalAboveThreshold = object.value("lastSignalAboveThreshold").toBool(false);
-    m_lastL1Interference = object.value("lastL1Interference").toBool(false);
+    m_signalAboveThreshold.lastActive = object.value("lastSignalAboveThreshold").toBool(false);
+    m_l1Interference.lastActive = object.value("lastL1Interference").toBool(false);
+    m_signalAboveThreshold.confirmedActive = object.value("signalAboveThresholdConfirmed").toBool(m_signalAboveThreshold.lastActive);
+    m_l1Interference.confirmedActive = object.value("l1InterferenceConfirmed").toBool(m_l1Interference.lastActive);
+    m_signalAboveThreshold.candidateStart = m_signalAboveThreshold.lastActive ? now : QDateTime();
+    m_l1Interference.candidateStart = m_l1Interference.lastActive ? now : QDateTime();
     m_incidentCount = incidentCount;
-    m_signalAboveThresholdMsecs = signalAboveThresholdMsecs;
-    m_l1InterferenceMsecs = l1InterferenceMsecs;
+    m_signalAboveThreshold.activeMsecs = signalAboveThresholdMsecs;
+    m_l1Interference.activeMsecs = l1InterferenceMsecs;
+
+    bool minTriggerOk = false;
+    const qint64 minTriggerMsecs = object.value("minTriggerMsecs").toString().toLongLong(&minTriggerOk);
+    m_minTriggerMsecs = (minTriggerOk && minTriggerMsecs > 0) ? minTriggerMsecs : 0;
 
     return true;
 }
