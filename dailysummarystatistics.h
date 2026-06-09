@@ -38,6 +38,7 @@ private:
     qint64 thresholdMsecsAt(const ThresholdState &state, const QDateTime &periodEnd) const;
     void resetThresholdState(ThresholdState &state, const QDateTime &periodEnd);
     QString formatDuration(qint64 milliseconds) const;
+    QString formatPercentage(qint64 milliseconds, const Snapshot &snapshot) const;
     double percentageOfPeriod(qint64 milliseconds, const Snapshot &snapshot) const;
 
     QDateTime m_periodStart;
