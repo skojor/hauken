@@ -1,5 +1,7 @@
 #include "notifications.h"
 
+#include <cmath>
+
 namespace {
 struct PositionSnapshot
 {
@@ -7,6 +9,22 @@ struct PositionSnapshot
     double latitude = 0;
     double longitude = 0;
 };
+
+bool hasUsableCoordinates(const PositionSnapshot &position)
+{
+    return std::isfinite(position.latitude)
+           && std::isfinite(position.longitude)
+           && position.latitude >= -90.0
+           && position.latitude <= 90.0
+           && position.longitude >= -180.0
+           && position.longitude <= 180.0
+           && !(position.latitude == 0.0 && position.longitude == 0.0);
+}
+
+bool hasUsablePosition(const PositionSnapshot &position)
+{
+    return position.valid || hasUsableCoordinates(position);
+}
 }
 
 Notifications::Notifications(QSharedPointer<Config> c)
@@ -124,7 +142,7 @@ QString Notifications::appendPosition(const QString &text)
                                       .arg(position.latitude, 0, 'f', 5)
                                       .arg(position.longitude, 0, 'f', 5);
 
-    if (!position.valid) {
+    if (!hasUsablePosition(position)) {
         positionedText.append(" (position invalid or set manually)");
     }
 
@@ -314,7 +332,7 @@ void Notifications::sendMail()
                            position.longitude = longitude;
                        }
 
-                       if (!config->getSdefAddPosition() || !position.valid) {
+                       if (!config->getSdefAddPosition() || !hasUsablePosition(position)) {
                            return QString();
                        }
 
