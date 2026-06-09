@@ -23,6 +23,7 @@
 #include <QDataStream>
 #include <QCoreApplication>
 #include <QStringList>
+#include <QMutex>
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QJsonObject>
@@ -64,7 +65,7 @@ public slots:
     void recTracePlot(const QPixmap *pic);
     void recIqPlot(const QString &filename, const QString &description) { iqPlotFilenames.append(filename); iqPlotDescriptions.append(description);}
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
-    void getLatitudeLongitude(bool valid, double lat, double lon) { positionValid = valid; latitude = lat; longitude = lon;}
+    void getLatitudeLongitude(bool valid, double lat, double lon);
     void recPrediction(const QString &text);
     void setGnssPlotFilename(QString name) { gnssPlotFilename = name;}
     void setGnssPlotFilename2(QString name) { gnssPlotFilename2 = name;}
@@ -113,6 +114,7 @@ private:
     QString htmlData;
     QString currentEmailSubject;
     QList<QString> graphEmailLog;
+    mutable QMutex positionMutex;
     bool positionValid = false;
     double latitude = 0, longitude = 0;
     QSharedPointer<Config> config;

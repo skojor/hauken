@@ -548,6 +548,16 @@ void MainWindow::setSignals()
                 else
                     data = measurementDevice->sendGnssData();
 
+                if (!data.posValid) {
+                    GnssData fallbackData = gnssDevice1->sendGnssData();
+                    if (!fallbackData.posValid)
+                        fallbackData = gnssDevice2->sendGnssData();
+                    if (!fallbackData.posValid)
+                        fallbackData = measurementDevice->sendGnssData();
+                    if (fallbackData.posValid)
+                        data = fallbackData;
+                }
+
                 notifications->getLatitudeLongitude(data.posValid, data.latitude, data.longitude);
             },
             Qt::BlockingQueuedConnection);
@@ -668,32 +678,46 @@ void MainWindow::setSignals()
                 instrIpAddr->clear();
 
 
-                for (int i = 0; i < ip.size(); i++)
+                const int readyCount = qMin(ip.size(), qMin(name.size(), type.size()));
+                for (int i = 0; i < readyCount; i++)
                     instrIpAddr->addItem(name[i] + " " + ip[i] + " " + type[i], QVariant(ip[i]));
                 if (!config->getInstrCustomEntry().isEmpty())
                     instrIpAddr->addItem(config->getInstrCustomEntry());
 
                 const QString savedInstrAddress = config->getInstrIpAddr().trimmed();
-                int index = instrIpAddr->findData(savedInstrAddress);
-                if (index == -1)
-                    index = instrIpAddr->findText(savedInstrAddress);
+                int index = -1;
+                bool matchedLegacyName = false;
 
-                if (index == -1) {
-                    for (int i = 0; i < instrIpAddr->count(); i++) {
-                        const QString itemAddress = instrIpAddr->itemData(i).toString().trimmed();
-                        const QString itemText = instrIpAddr->itemText(i).trimmed();
-
-                        if (itemAddress == savedInstrAddress ||
-                            itemText == savedInstrAddress ||
-                            (!savedInstrAddress.isEmpty() && itemText.contains(savedInstrAddress))) {
+                if (!savedInstrAddress.isEmpty()) {
+                    // Preferred format: the saved value is the instrument IP address.
+                    for (int i = 0; i < readyCount; i++) {
+                        if (ip[i].trimmed() == savedInstrAddress) {
                             index = i;
                             break;
                         }
                     }
+
+                    // Backwards compatibility: older config could contain the station name instead.
+                    if (index == -1) {
+                        for (int i = 0; i < readyCount; i++) {
+                            qDebug() << name[i];
+                            if (savedInstrAddress.contains(name[i].trimmed())) {
+                                index = i;
+                                matchedLegacyName = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (index == -1)
+                        index = instrIpAddr->findText(savedInstrAddress);
                 }
 
-                if (index != -1)
+                if (index != -1) {
                     instrIpAddr->setCurrentIndex(index);
+                    if (matchedLegacyName)
+                        config->setInstrIpAddr(instrIpAddr->itemData(index).toString());
+                }
                 connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
             });
 
@@ -1060,6 +1084,7 @@ void MainWindow::setSignals()
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
+    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
@@ -1100,6 +1125,7 @@ void MainWindow::setSignals()
 
     // Rebuild I/Q pause/resume after data transfer
     // Connect/disconnect relevant signals while transferring
+    connect(iqPlot, &IqPlot::busyRecording, traceBuffer, &TraceBuffer::setIqTransferInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool busy) {
         if (busy) {
             flagBusyRecordingIQ = true;

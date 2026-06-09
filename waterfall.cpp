@@ -16,11 +16,12 @@ void Waterfall::start()
 
 void Waterfall::receiveTrace(const QVector<double> &trace)
 {
+    QMutexLocker locker(&mutex);
+    if (paused) return;
+
     if (!initial) {
-        mutex.lock();
         traceCopy = trace;
-        mutex.unlock();
-        if (!updIntervalTimer->isActive()) {
+        if (updIntervalTimer && !updIntervalTimer->isActive()) {
             updIntervalTimer->start(100); // first call
         }
     }
@@ -31,8 +32,13 @@ void Waterfall::receiveTrace(const QVector<double> &trace)
 
 void Waterfall::updTimerCallback()
 {
+    QMutexLocker locker(&mutex); // this needs exclusive access to containers and pixmap
+    if (paused) {
+        if (updIntervalTimer) updIntervalTimer->stop();
+        return;
+    }
+
     if (!traceCopy.isEmpty()) {
-        mutex.lock(); // this needs exclusive access to containers and pixmap
         pixmap->scroll(0, 1, pixmap->rect());
 
         QImage image = pixmap->toImage();
@@ -65,7 +71,6 @@ void Waterfall::updTimerCallback()
         }
         *pixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
         emit imageReady(pixmap);
-        mutex.unlock(); // done with the exclusive work here
         double interval = 1000.0 / ((double) pixmap->height() / waterfallTime);
         updIntervalTimer->start((int) interval);
     }
@@ -73,16 +78,14 @@ void Waterfall::updTimerCallback()
 
 void Waterfall::restartPlot()
 {
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     if (pixmap) *pixmap = QPixmap(pixmap->size());
-    mutex.unlock();
 }
 
 void Waterfall::updSize(QRect s)
 {
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     *pixmap = QPixmap(s.width(), s.height());
-    mutex.unlock();
 }
 
 void Waterfall::updSettings()

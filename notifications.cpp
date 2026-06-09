@@ -1,8 +1,44 @@
 #include "notifications.h"
 
+#include <cmath>
+
+namespace {
+struct PositionSnapshot
+{
+    bool valid = false;
+    double latitude = 0;
+    double longitude = 0;
+};
+
+bool hasUsableCoordinates(const PositionSnapshot &position)
+{
+    return std::isfinite(position.latitude)
+           && std::isfinite(position.longitude)
+           && position.latitude >= -90.0
+           && position.latitude <= 90.0
+           && position.longitude >= -180.0
+           && position.longitude <= 180.0
+           && !(position.latitude == 0.0 && position.longitude == 0.0);
+}
+
+bool hasUsablePosition(const PositionSnapshot &position)
+{
+    return position.valid || hasUsableCoordinates(position);
+}
+}
+
 Notifications::Notifications(QSharedPointer<Config> c)
 {
     config = c;
+}
+
+
+void Notifications::getLatitudeLongitude(bool valid, double lat, double lon)
+{
+    QMutexLocker locker(&positionMutex);
+    positionValid = valid;
+    latitude = lat;
+    longitude = lon;
 }
 
 void Notifications::start()
@@ -94,11 +130,19 @@ QString Notifications::appendPosition(const QString &text)
 {
     emit reqPosition();
 
-    QString positionedText = text + QString(", at position %1 %2")
-                                      .arg(latitude, 0, 'f', 5)
-                                      .arg(longitude, 0, 'f', 5);
+    PositionSnapshot position;
+    {
+        QMutexLocker locker(&positionMutex);
+        position.valid = positionValid;
+        position.latitude = latitude;
+        position.longitude = longitude;
+    }
 
-    if (!positionValid) {
+    QString positionedText = text + QString(", at position %1 %2")
+                                      .arg(position.latitude, 0, 'f', 5)
+                                      .arg(position.longitude, 0, 'f', 5);
+
+    if (!hasUsablePosition(position)) {
         positionedText.append(" (position invalid or set manually)");
     }
 
@@ -279,19 +323,32 @@ void Notifications::sendMail()
             ts  << "<html><body><table>" << mailtext
                << "<p>Location: " << config->location() << ", "
                << "instrument: " << ( m_instrData.isEmpty() ? "unknown" : m_instrData ) << ".</p>"
-               << (config->getSdefAddPosition() && positionValid ?
-                       "<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/" +
-                           QString::number(latitude, 'f', 5) + "+" +
-                           QString::number(longitude, 'f', 5) + "/@" +
-                           QString::number(latitude, 'f', 5) + "," +
-                           QString::number(longitude, 'f', 5) + ",10z\">" +
-                           QString::number(latitude, 'f', 5) + " " +
-                           QString::number(longitude, 'f', 5) +
+               << [&]() {
+                       PositionSnapshot position;
+                       {
+                           QMutexLocker locker(&positionMutex);
+                           position.valid = positionValid;
+                           position.latitude = latitude;
+                           position.longitude = longitude;
+                       }
+
+                       if (!config->getSdefAddPosition() || !hasUsablePosition(position)) {
+                           return QString();
+                       }
+
+                       return "<tr><td>Current position</td><td><a href=\"https://www.google.com/maps/place/" +
+                           QString::number(position.latitude, 'f', 5) + "+" +
+                           QString::number(position.longitude, 'f', 5) + "/@" +
+                           QString::number(position.latitude, 'f', 5) + "," +
+                           QString::number(position.longitude, 'f', 5) + ",10z\">" +
+                           QString::number(position.latitude, 'f', 5) + " " +
+                           QString::number(position.longitude, 'f', 5) +
                            tr("</a></td><td>") +
                            "<a href=\"https://nais.kystverket.no/point/" +
-                           QString::number(longitude, 'f', 5) + "_" +
-                           QString::number(latitude, 'f', 5)  +
-                           tr("\">Link til Kystverket</td></tr>") : "")
+                           QString::number(position.longitude, 'f', 5) + "_" +
+                           QString::number(position.latitude, 'f', 5) +
+                           tr("\">Link til Kystverket</td></tr>");
+                   }()
                <<
                 /* + (predictionReceived ? "AI classification: " + prediction +
                                ", probability " + QString::number(probability) + " %" : "") +'/*/
@@ -386,7 +443,7 @@ void Notifications::sendMail()
 
 void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interference)
 {
-    dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference);
+    dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference, config->getInstrMinTrigTime());
 }
 
 void Notifications::sendDailySummary()
