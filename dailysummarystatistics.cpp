@@ -250,7 +250,7 @@ QString DailySummaryStatistics::toHtmlReport(const Snapshot &snapshot, const QSt
        //<< "<tr><td>Total time above signal threshold</td><td>" << formatDuration(snapshot.signalAboveThresholdMsecs) << "</td></tr>"
        << "<tr><td>L1 interference (1575.42 MHz center frequency)</td><td>"
        << formatDuration(snapshot.l1InterferenceMsecs) << " ("
-       << QString::number(percentageOfPeriod(snapshot.l1InterferenceMsecs, snapshot), 'f', 2) << " %)</td></tr>"
+       << formatPercentage(snapshot.l1InterferenceMsecs, snapshot) << ")</td></tr>"
        << "</table>"
        << "</body></html>";
 
@@ -261,15 +261,14 @@ QString DailySummaryStatistics::toLogLine(const Snapshot &snapshot, const QStrin
 {
     return QString("Daily summary of incidents and L1 interference. Period: %1 - %2. Location: %3, instrument: %4. Registered incidents: %5. " \
                    //"Total time above signal threshold: %6. "
-                   "L1 interference (1575.42 MHz center frequency): %7 (%8 %).")
+                   "L1 interference (1575.42 MHz center frequency): %6 (%7).")
         .arg(snapshot.periodStart.toString("dd.MM.yy hh:mm:ss"))
         .arg(snapshot.periodEnd.toString("dd.MM.yy hh:mm:ss"))
         .arg(location)
         .arg(instrument.isEmpty() ? "unknown" : instrument)
         .arg(snapshot.incidentCount)
-        .arg(formatDuration(snapshot.signalAboveThresholdMsecs))
         .arg(formatDuration(snapshot.l1InterferenceMsecs))
-        .arg(QString::number(percentageOfPeriod(snapshot.l1InterferenceMsecs, snapshot), 'f', 2));
+        .arg(formatPercentage(snapshot.l1InterferenceMsecs, snapshot));
 }
 
 QString DailySummaryStatistics::formatDuration(qint64 milliseconds) const
@@ -283,6 +282,11 @@ QString DailySummaryStatistics::formatDuration(qint64 milliseconds) const
         .arg(hours, 2, 10, QLatin1Char('0'))
         .arg(minutes, 2, 10, QLatin1Char('0'))
         .arg(seconds, 2, 10, QLatin1Char('0'));
+}
+
+QString DailySummaryStatistics::formatPercentage(qint64 milliseconds, const Snapshot &snapshot) const
+{
+    return QString("%1%").arg(QString::number(percentageOfPeriod(milliseconds, snapshot), 'f', 2));
 }
 
 double DailySummaryStatistics::percentageOfPeriod(qint64 milliseconds, const Snapshot &snapshot) const
