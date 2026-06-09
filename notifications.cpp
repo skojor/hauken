@@ -386,7 +386,7 @@ void Notifications::sendMail()
 
 void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interference)
 {
-    dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference);
+    dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference, config->getInstrMinTrigTime());
 }
 
 void Notifications::sendDailySummary()
