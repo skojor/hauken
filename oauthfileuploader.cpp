@@ -428,11 +428,11 @@ QUrl OAuthFileUploader::uploadedNotificationUrl() const
             path = path.left(path.indexOf("/api/files/", 0, Qt::CaseInsensitive)) + "/api/files/uploaded";
         }
         else if (path.contains("/stoystorage", Qt::CaseInsensitive)) {
-            path = "/api/files/uploaded";
+            path = "/stoydata/api/files/uploaded";
         }
         else {
             if (path.endsWith('/')) path.chop(1);
-            path += "/api/files/uploaded";
+            path += "/stoydata/api/files/uploaded";
         }
     }
 
