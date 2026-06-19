@@ -20,6 +20,11 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt4->setText("Compress files in zip format");
     cbOpt4->setToolTip("If checked the measurement file will be zipped after recording.");
 
+    fileLayout->addRow(cbOpt13);
+    cbOpt13->setText("Compress all incident files into one zip for upload");
+    cbOpt13->setToolTip("If checked all files in the incident folder will be zipped into one file. "
+                         "This replaces the ordinary measurement file zip when enabled.");
+
     fileLayout->addRow(cbOpt10);
     cbOpt10->setText("Upload file to server when finished using OAuth");
     cbOpt10->setToolTip("Enable this option to activate OAuth2 authentication and file upload. "\
@@ -106,6 +111,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt2->setChecked(config->getSdefUploadFile());
     cbOpt3->setChecked(config->getSdefAddPosition());
     cbOpt4->setChecked(config->getSdefZipFiles());
+    cbOpt13->setChecked(config->getSdefZipAllIncidentFiles());
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
     sbOpt2->setValue(config->getSdefMaxRecordTime());
@@ -147,6 +153,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefGpsSource(comboOpt1->currentText());
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
+    config->setSdefZipAllIncidentFiles(cbOpt13->isChecked());
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());

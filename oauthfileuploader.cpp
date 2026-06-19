@@ -51,8 +51,13 @@ void OAuthFileUploader::fileUploadRequest(const QString filename)
     QString tmpFilename = filename;
     QFile file(tmpFilename);
     if (!file.exists()) {
-        qDebug() << "OAuthUploader: File not found:" << tmpFilename << ", checking if it has been zipped";
-        tmpFilename = filename + ".zip";
+        if (filename.endsWith(".zip", Qt::CaseInsensitive)) {
+            qDebug() << "OAuthUploader: File not found:" << tmpFilename << ", giving up.";
+        }
+        else {
+            qDebug() << "OAuthUploader: File not found:" << tmpFilename << ", checking if it has been zipped";
+            tmpFilename = filename + ".zip";
+        }
     }
 
     file.setFileName(tmpFilename);

@@ -196,6 +196,8 @@ public slots:
     void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val); }
     bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
     void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b); }
+    bool getSdefZipAllIncidentFiles() { return settings->value("sdef/zipAllIncidentFiles", false).toBool();}
+    void setSdefZipAllIncidentFiles(bool b) { settings->setValue("sdef/zipAllIncidentFiles", b); }
     QString getSdefServer() { return settings->value("sdef/Server").toString().trimmed();}
     void setSdefServer(QString s) { settings->setValue("sdef/Server", s); }
     QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString().trimmed();}

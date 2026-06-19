@@ -4,6 +4,8 @@
 #include "JlCompress.h"
 
 #include <algorithm>
+#include <QFileInfo>
+#include <utility>
 
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
@@ -382,7 +384,9 @@ void SdefRecorder::endRecording()
                 this,
                 &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
         } else {
-            if (config->getSdefZipFiles() && recording)
+            if (config->getSdefZipAllIncidentFiles() && recording)
+                zipIncidentFolder();
+            else if (config->getSdefZipFiles() && recording)
                 zipit(); // Zip the file anyways, we don't shit storage space here
         }
         if (!finishedFilename.isEmpty())
@@ -423,7 +427,11 @@ bool SdefRecorder::curlLogin()
             return false;
         }
     }
-    if (config->getSdefZipFiles())
+    if (config->getSdefZipAllIncidentFiles()) {
+        if (!zipIncidentFolder())
+            return false;
+    }
+    else if (config->getSdefZipFiles())
         zipit();
     if (!askedForLogin && !finishedFilename.isEmpty())
         filesAwaitingUpload.append(finishedFilename); // add to transmit queue
@@ -525,6 +533,53 @@ void SdefRecorder::zipit()
         QFile::remove(file.fileName());
         finishedFilename += ".zip";
     }
+}
+
+bool SdefRecorder::zipIncidentFolder()
+{
+    if (finishedFilename.isEmpty())
+        return false;
+
+    const QFileInfo finishedFileInfo(finishedFilename);
+    const QDir incidentFolder = finishedFileInfo.absoluteDir();
+    const QString zipFilename = incidentFolder.absoluteFilePath(finishedFileInfo.completeBaseName() + "_incident.zip");
+    const QFileInfo zipFileInfo(zipFilename);
+
+    QStringList filesToZip;
+    const QFileInfoList incidentFiles = incidentFolder.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
+    for (const QFileInfo &fileInfo : incidentFiles) {
+        if (fileInfo.absoluteFilePath() == zipFileInfo.absoluteFilePath())
+            continue;
+
+        if (fileInfo.suffix().compare("zip", Qt::CaseInsensitive) == 0)
+            continue;
+
+        filesToZip.append(fileInfo.absoluteFilePath());
+    }
+
+    if (filesToZip.isEmpty()) {
+        qDebug() << "No incident files found to compress in" << incidentFolder.absolutePath();
+        return false;
+    }
+
+    if (zipFileInfo.exists() && !QFile::remove(zipFilename)) {
+        qDebug() << "Could not replace existing incident zip" << zipFilename;
+        return false;
+    }
+
+    if (!JlCompress::compressFiles(zipFilename, filesToZip)) {
+        qDebug() << "Compression of incident folder" << incidentFolder.absolutePath() << "failed";
+        QFile::remove(zipFilename);
+        return false;
+    }
+
+    for (const QString &filename : std::as_const(filesToZip)) {
+        if (!QFile::remove(filename))
+            qDebug() << "Could not remove compressed incident file" << filename;
+    }
+
+    finishedFilename = zipFilename;
+    return true;
 }
 
 void SdefRecorder::recPrediction(QString pred, int prob)

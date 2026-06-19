@@ -69,6 +69,7 @@ private slots:
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
     void zipit();
+    bool zipIncidentFolder();
     void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
     void startTempFile();
     QByteArray genSdefTraceLine(double lat = 0, double lng = 0, const QVector<qint16> = QVector<qint16>());
