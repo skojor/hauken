@@ -71,11 +71,11 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     oauthLayout->addRow(new QLabel("OAuth2 authority"), leOpt10);
     leOpt10->setToolTip("Set the URL to the login authority.");
 
-    oauthLayout->addRow(new QLabel("OAuth2 application ID"), leOpt11);
-    leOpt11->setToolTip("Application/client ID to use for authentication.");
+    oauthLayout->addRow(new QLabel("OAuth2 application ID"), leOpt12);
+    leOpt12->setToolTip("Application/client ID to use for authentication.");
 
-    oauthLayout->addRow(new QLabel("OAuth2 scope"), leOpt12);
-    leOpt12->setToolTip("Set the scope which this authentication should cover.");
+    oauthLayout->addRow(new QLabel("OAuth2 scope"), leOpt11);
+    leOpt11->setToolTip("Set the scope which this authentication should cover.");
 
     oauthLayout->addRow(new QLabel("File upload address"), leOpt13);
     leOpt13->setToolTip("The address to use for uploading measurement files.");
