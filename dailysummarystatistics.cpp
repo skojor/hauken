@@ -247,7 +247,7 @@ QString DailySummaryStatistics::toHtmlReport(const Snapshot &snapshot, const QSt
        << "<table border=\"1\" cellspacing=\"0\" cellpadding=\"4\">"
        << "<tr><th align=\"left\">Metric</th><th align=\"left\">Value</th></tr>"
        << "<tr><td>Registered incidents</td><td>" << snapshot.incidentCount << "</td></tr>"
-       //<< "<tr><td>Total time above signal threshold</td><td>" << formatDuration(snapshot.signalAboveThresholdMsecs) << "</td></tr>"
+       << "<tr><td>Total time above signal threshold</td><td>" << formatDuration(snapshot.signalAboveThresholdMsecs) << "</td></tr>"
        << "<tr><td>L1 interference (1575.42 MHz center frequency)</td><td>"
        << formatDuration(snapshot.l1InterferenceMsecs) << " ("
        << formatPercentage(snapshot.l1InterferenceMsecs, snapshot) << ")</td></tr>"
@@ -260,7 +260,7 @@ QString DailySummaryStatistics::toHtmlReport(const Snapshot &snapshot, const QSt
 QString DailySummaryStatistics::toLogLine(const Snapshot &snapshot, const QString &location, const QString &instrument) const
 {
     return QString("Daily summary of incidents and L1 interference. Period: %1 - %2. Location: %3, instrument: %4. Registered incidents: %5. " \
-                   //"Total time above signal threshold: %6. "
+                   "Total time above signal threshold: %6. " \
                    "L1 interference (1575.42 MHz center frequency): %6 (%7).")
         .arg(snapshot.periodStart.toString("dd.MM.yy hh:mm:ss"))
         .arg(snapshot.periodEnd.toString("dd.MM.yy hh:mm:ss"))

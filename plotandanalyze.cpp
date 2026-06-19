@@ -15,9 +15,11 @@ void PlotAndAnalyze::start()
     m_reqTracedataTimer = new QTimer;
     m_sendPlotsTimer = new QTimer;
     m_reqTraceplotTimer = new QTimer;
+    m_incidentEndTimer = new QTimer;
     m_reqTracedataTimer->setSingleShot(true);
     m_sendPlotsTimer->setSingleShot(true);
     m_reqTraceplotTimer->setSingleShot(true);
+    m_incidentEndTimer->setSingleShot(true);
 
     connect(m_reqTracedataTimer, &QTimer::timeout, this, [this] () {
         emit reqTracedata();
@@ -34,13 +36,33 @@ void PlotAndAnalyze::start()
     connect(m_reqTraceplotTimer, &QTimer::timeout, this, [this] () {
         emit reqTracePlot();
     });
+
+    connect(m_incidentEndTimer, &QTimer::timeout, this, [this] () {
+        m_freqNotificationSentForIncident = false;
+    });
 }
 
 void PlotAndAnalyze::end()
 {
+    delete m_incidentEndTimer;
+    m_incidentEndTimer = nullptr;
     delete m_reqTraceplotTimer;
     delete m_sendPlotsTimer;
     delete m_reqTracedataTimer;
+}
+
+void PlotAndAnalyze::traceIncidentStarted()
+{
+    if (m_incidentEndTimer && m_incidentEndTimer->isActive())
+        m_incidentEndTimer->stop();
+}
+
+void PlotAndAnalyze::traceIncidentEnded()
+{
+    if (!m_incidentEndTimer)
+        return;
+
+    m_incidentEndTimer->start(m_config->getSdefRecordTime() * 60 * 1000);
 }
 
 void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, const IqMetadata &meta)
@@ -1160,6 +1182,10 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
     if (signalOverlapsL1)
         ts << " Signal overlaps L1 center frequency +/- 512 kHz.";
 
+    if (m_freqNotificationSentForIncident)
+        return;
+
+    m_freqNotificationSentForIncident = true;
     emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
     if (signalOverlapsL1 && classificationHasRfiForRange(l1StartMHz, l1StopMHz))

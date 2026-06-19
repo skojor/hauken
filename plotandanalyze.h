@@ -5,6 +5,7 @@
 #include <QVector>
 #include <QImage>
 #include <QMutex>
+#include <QTimer>
 #include "config.h"
 #include <QSharedPointer>
 #include "typedefs.h"
@@ -36,6 +37,10 @@ public:
                                 const QVector<double> avgData,
                                 double startfreq,
                                 double stopfreq);
+
+public slots:
+    void traceIncidentStarted();
+    void traceIncidentEnded();
 
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);
@@ -82,6 +87,7 @@ private:
     QTimer *m_reqTracedataTimer;
     QTimer *m_reqTraceplotTimer;
     QTimer *m_sendPlotsTimer;
+    QTimer *m_incidentEndTimer = nullptr;
     QVector<QString> m_plotsToSend;
     QVector<QString> m_plotsDescription;
     QMutex m_mutex;
@@ -90,6 +96,7 @@ private:
     bool m_lastClassificationHasRfi = false;
     double m_lastClassificationStartMHz = 0;
     double m_lastClassificationStopMHz = 0;
+    bool m_freqNotificationSentForIncident = false;
 };
 
 #endif // PLOTANDANALYZE_H

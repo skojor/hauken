@@ -666,6 +666,8 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer2, &GnssAnalyzer::traceIncidentEnded);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer3, &GnssAnalyzer::traceIncidentStarted);
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer3, &GnssAnalyzer::traceIncidentEnded);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, plotAndAnalyze, &PlotAndAnalyze::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, plotAndAnalyze, &PlotAndAnalyze::traceIncidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
     //connect(aiPtr, &AI::reqTraceBuffer, traceBuffer, &TraceBuffer::getAiData); TBR
     connect(traceBuffer, &TraceBuffer::aiData, aiPtr, &AI::receiveTraceBuffer);
