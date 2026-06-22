@@ -32,7 +32,6 @@ public:
 public slots:
     void start();
     void addTrace(const QVector<qint16> &data);
-    void setIqTransferInProgress(bool inProgress);
     void emptyBuffer();
     void getSecondsOfBuffer(int secs = 0);
     QVector<double> retMaxhold();
@@ -50,11 +49,11 @@ public slots:
             emit newDispTriglevel(averageDispLevelNormalized);
         }
         else {
-            trigLevelDisplayBuffer = averageDispLevel;
-            for (auto &val : trigLevelDisplayBuffer)
+            QVector<double> copy = averageDispLevel;
+            for (auto &val : copy)
                 val += trigLevel;
 
-            emit newDispTriglevel(trigLevelDisplayBuffer);
+            emit newDispTriglevel(copy);
         }
     }
     void updSettings();
@@ -118,7 +117,6 @@ private:
     int plotResolution;
     QElapsedTimer *maxholdBufferElapsedTimer = new QElapsedTimer;
     QVector<double> maxholdBufferAggregate;
-    QVector<double> trigLevelDisplayBuffer;
     const int throttleTime = 40; // min time in ms between screen updates
     const int avgLevelMaintenanceTime = 120000; // msecs
     int tracesNeededForAvg = 250;
@@ -127,7 +125,6 @@ private:
     bool flagSavedAvgLevelsInvalidated = true;
     bool flagAvgLevelsRestored = false;
     bool flagAvgLevelRestarted = true;
-    bool iqTransferInProgress = false;
 
     // Config cache
     quint64 startfreq, stopfreq, ffmCenterFreq;

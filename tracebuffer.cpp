@@ -1,10 +1,5 @@
 #include "tracebuffer.h"
 
-#include <algorithm>
-#include <utility>
-
-#include <QMutexLocker>
-
 TraceBuffer::TraceBuffer(QSharedPointer<Config> c)
 {
     config = c;
@@ -28,35 +23,24 @@ void TraceBuffer::start()
 
 void TraceBuffer::deleteOlderThan()
 {
-    QMutexLocker locker(&mutex);
-
-    if (traceBuffer.size() <= 2 || datetimeBuffer.isEmpty())
-        return;
-
-    const QDateTime now = QDateTime::currentDateTime();
-    qsizetype removeCount = 0;
-
-    while (removeCount < datetimeBuffer.size() && datetimeBuffer.at(removeCount).secsTo(now) > bufferAge)
-        ++removeCount;
-
-    if (removeCount > 0) {
-        datetimeBuffer.erase(datetimeBuffer.begin(), datetimeBuffer.begin() + removeCount);
-        traceBuffer.erase(traceBuffer.begin(), traceBuffer.begin() + std::min(removeCount, traceBuffer.size()));
-        normTraceBuffer.erase(normTraceBuffer.begin(), normTraceBuffer.begin() + std::min(removeCount, normTraceBuffer.size()));
+    //mutex.lock();
+    if (traceBuffer.size() > 2) {
+        while (!traceBuffer.isEmpty() && !datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
+            datetimeBuffer.removeFirst();
+            traceBuffer.removeFirst();
+            normTraceBuffer.removeFirst();
+            //displayBuffer.removeFirst();
+        }
+        while (maxholdBuffer.size() > 120) maxholdBuffer.removeLast();
     }
-
-    if (maxholdBuffer.size() > 120)
-        maxholdBuffer.resize(120);
+    //mutex.unlock();
 }
 
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
     //if (!traceBuffer.isEmpty() )qDebug() << data.size() << traceBuffer.last().size();
 
-    QMutexLocker locker(&mutex);  // blocking access to containers, in case the cleanup timers wants to do work at the same time
-    if (iqTransferInProgress)
-        return;
-
+    mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size()) { // two different container sizes indicates freq/resolution changed, let's discard the buffer
             failedTracesCtr++;
@@ -101,12 +85,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
         if (tracesUsedInAvg < tracesNeededForAvg)
             calcAvgLevel(data);
     }
-}
-
-void TraceBuffer::setIqTransferInProgress(bool inProgress)
-{
-    QMutexLocker locker(&mutex);
-    iqTransferInProgress = inProgress;
+    mutex.unlock();
 }
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
@@ -143,92 +122,92 @@ void TraceBuffer::getAiData(int secs) // secs ignored ftm, just send all you hav
 
 void TraceBuffer::calcMaxhold()
 {
-    if (maxholdTime <= 0 || plotResolution <= 0 || displayBuffer.size() != plotResolution)
-        return;
+    QVector<double> maxhold;
+    maxhold.fill(-500, plotResolution);
 
-    if (!maxholdBufferElapsedTimer->isValid())
-        maxholdBufferElapsedTimer->start();
+    if (!maxholdBufferElapsedTimer->isValid()) maxholdBufferElapsedTimer->start();
 
-    if (maxholdBufferAggregate.size() != plotResolution) {
+    if (maxholdBuffer.isEmpty()) maxholdBuffer.append(displayBuffer);
+
+    if (maxholdBufferAggregate.isEmpty()) {
         maxholdBufferElapsedTimer->start();
         maxholdBufferAggregate = displayBuffer;
     }
-    else if (maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold
-        for (int i=0; i<plotResolution; i++)
-            maxholdBufferAggregate[i] = std::max(maxholdBufferAggregate.at(i), displayBuffer.at(i));
+
+    else if (!maxholdBufferAggregate.isEmpty() && maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold
+        for (int i=0; i<plotResolution; i++) {
+            if (maxholdBufferAggregate.at(i) < displayBuffer.at(i)) maxholdBufferAggregate[i] = displayBuffer.at(i);
+        }
     }
-    else {
+    else if (maxholdBufferElapsedTimer->elapsed() >= 1000) {
         maxholdBufferElapsedTimer->start();
         maxholdBuffer.prepend(maxholdBufferAggregate);
         emit newDispMaxholdToWaterfall(maxholdBufferAggregate); // for waterfall calc.
-        maxholdBufferAggregate = displayBuffer;
+        maxholdBufferAggregate.clear();
     }
 
-    const qsizetype secondsToUse = std::min(static_cast<qsizetype>(maxholdTime - 1), maxholdBuffer.size());
-    QVector<double> maxhold(plotResolution, -500);
-
-    for (qsizetype seconds = 0; seconds < secondsToUse; seconds++) {
-        const QVector<double> &line = maxholdBuffer.at(seconds);
-        if (line.size() != plotResolution)
-            continue;
-
-        for (int i=0; i<plotResolution; i++)
-            maxhold[i] = std::max(maxhold.at(i), line.at(i));
+    if (!maxholdBuffer.isEmpty()) {
+        for (int seconds = 0; seconds < maxholdTime - 1 && seconds < maxholdBuffer.size(); seconds++) {
+            for (int i=0; i<plotResolution; i++) {
+                if (maxholdBuffer[seconds].size() == plotResolution &&
+                    maxhold.at(i) < maxholdBuffer.at(seconds).at(i)) {
+                    maxhold[i] = maxholdBuffer.at(seconds).at(i);
+                }
+            }
+        }
+    }
+    if (maxholdBufferAggregate.size() == plotResolution) { // Comparing maxhold to changes which happened < 1 second ago
+        for (int i=0; i<plotResolution; i++) {
+            if (maxhold[i] < maxholdBufferAggregate[i])
+                maxhold[i] = maxholdBufferAggregate[i];
+        }
     }
 
-    for (int i=0; i<plotResolution; i++)
-        maxhold[i] = std::max(maxhold.at(i), maxholdBufferAggregate.at(i));
-
-    emit newDispMaxhold(maxhold);
+    if ( maxholdTime > 0)
+        emit newDispMaxhold(maxhold);
 }
 
 void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points
 {
-    if (plotResolution <= 0 || data.isEmpty())
-        return;
-
-    displayBuffer.resize(plotResolution);
+    displayBuffer.clear();
     QVector<qint16> tmpNormTraceBuffer(plotResolution);
-    const int correction = config->getCorrValue() * 10;
+    double corr = config->getCorrValue();
 
     if (data.size() > plotResolution) {
-        const double rate = (double)data.size() / plotResolution;
-        const int samplesPerBucket = std::max(1, (int)rate);
+        double rate = (double)data.size() / plotResolution;
         for (int i=0; i<plotResolution; i++) {
             //int val = data.at(rate * i);
-            const qsizetype bucketStart = std::min(static_cast<qsizetype>(rate * i), data.size() - 1);
-            const qsizetype bucketEnd = std::min(bucketStart + static_cast<qsizetype>(samplesPerBucket), data.size() - 1);
-            int top = data.at(bucketStart);
-            for (qsizetype j=bucketStart + 1; j<=bucketEnd; j++)
-                top = std::max(top, (int)data.at(j)); // pick the strongest sample to show in plot
+            int top = -800;
+            for (int j=1; j<=(int)rate; j++) {
+                if (data.size() > rate * i + j && top < data.at(rate * i + j))
+                    top = data.at(rate * i + j); // pick the strongest sample to show in plot
+                //val += data.at(rate * i + j);
+            }
 
             //val /= (int)rate + 1;
             //if (top > 150) val = top; // hack to boost display of small bw signals
             if (useDbm) top -= 1070;
-            top += correction;
+            top += corr * 10;
 
-            displayBuffer[i] = (double)top / 10.0; // / (int)rate + 1);
+            displayBuffer.append(((double)top / 10.0)); // / (int)rate + 1);
             tmpNormTraceBuffer[i] = top;
         }
     }
-    else {
-        const double rate = (double)plotResolution / data.size();
+    else if (data.size()) {
+        double rate = (double)plotResolution / data.size();
         for (int i=0; i<plotResolution; i++) {
-            const int sourceIndex = (int)((double)i / rate);
-            const qint16 value = data.at(sourceIndex);
-            displayBuffer[i] = (double)value / 10.0;
-            tmpNormTraceBuffer[i] = value;
+            displayBuffer.append((double)data.at((int)((double)i / rate)) / 10.0);
+            tmpNormTraceBuffer[i] = data.at((int)((double)i / rate));
         }
     }
-
-    if (averageDispLevel.size() == plotResolution) {
-        for (int i=0; i<plotResolution; i++) {
-            if (normalizeSpectrum)
-                displayBuffer[i] -= averageDispLevel.at(i);
-            tmpNormTraceBuffer[i] -= averageDispLevel.at(i) * 10;
-        }
+    if (normalizeSpectrum && !averageDispLevel.isEmpty()) {
+        for (int i=0; i<plotResolution; i++)
+            displayBuffer[i] -= averageDispLevel.at(i);
     }
-    normTraceBuffer.append(std::move(tmpNormTraceBuffer));
+    for (int i=0; i<plotResolution; i++) {
+        tmpNormTraceBuffer[i] -= averageDispLevel.at(i) * 10;
+    }
+    normTraceBuffer.append(tmpNormTraceBuffer);
     //emit aiData(normTraceBuffer); // debug, analyze live
 }
 
@@ -276,11 +255,11 @@ void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
         emit newDispTriglevel(averageDispLevelNormalized);
     }
     else {
-        trigLevelDisplayBuffer = averageDispLevel;
-        for (auto &val : trigLevelDisplayBuffer)
+        QVector<double> copy = averageDispLevel;
+        for (auto &val : copy)
             val += trigLevel;
 
-        emit newDispTriglevel(trigLevelDisplayBuffer); // Time consuming, why?
+        emit newDispTriglevel(copy); // Time consuming, why?
     }
 
     tracesUsedInAvg++;
@@ -292,14 +271,12 @@ void TraceBuffer::emptyBuffer()
     traceBuffer.clear();
     datetimeBuffer.clear();
     displayBuffer.clear();
-    normTraceBuffer.clear();
     maxholdBuffer.clear();
     maxholdBufferAggregate.clear();
     averageLevel.clear();
     averageDispLevel.clear();
     averageDispLevel.resize(plotResolution);
     averageDispLevelNormalized.clear();
-    trigLevelDisplayBuffer.clear();
 
     restartCalcAvgLevel();
 }
@@ -332,7 +309,6 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
         averageDispLevel.clear();
         averageDispLevel.resize(plotResolution);
         averageDispLevelNormalized.clear();
-        trigLevelDisplayBuffer.clear();
         emit averageLevelCalculating();
         avgFactor = 40;
     }
@@ -348,7 +324,6 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
             averageDispLevel.clear();
             averageDispLevel.resize(plotResolution);
             averageDispLevelNormalized.clear();
-            trigLevelDisplayBuffer.clear();
             emit averageLevelCalculating();
             avgFactor = 40;
         }
@@ -356,7 +331,6 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
             averageDispLevel.clear();
             averageDispLevel.resize(plotResolution);
             averageDispLevelNormalized.clear();
-            trigLevelDisplayBuffer.clear();
             tracesUsedInAvg = tracesNeededForAvg - 1;
             avgFactor = 1;
         }
@@ -404,7 +378,6 @@ void TraceBuffer::updSettings()
     }
     normalizeSpectrum = config->getInstrNormalizeSpectrum();
     averageDispLevelNormalized.clear();
-    trigLevelDisplayBuffer.clear();
     tracesNeededForAvg = config->getInstrTracesNeededForAverage();
     useDbm = config->getUseDbm();
     useSavedAvgLevels = config->getInstrRestoreAvgLevels();

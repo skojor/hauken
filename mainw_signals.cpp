@@ -1086,7 +1086,6 @@ void MainWindow::setSignals()
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
-    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
@@ -1127,7 +1126,6 @@ void MainWindow::setSignals()
 
     // Rebuild I/Q pause/resume after data transfer
     // Connect/disconnect relevant signals while transferring
-    connect(iqPlot, &IqPlot::busyRecording, traceBuffer, &TraceBuffer::setIqTransferInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool busy) {
         if (busy) {
             flagBusyRecordingIQ = true;

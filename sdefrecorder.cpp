@@ -2,11 +2,6 @@
 #include "version.h"
 #include "asciitranslator.h"
 #include "JlCompress.h"
-
-#include <algorithm>
-#include <QFileInfo>
-#include <utility>
-
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
     config = c;
@@ -139,9 +134,6 @@ void SdefRecorder::updSettings()
 
 void SdefRecorder::triggerRecording()
 {
-    if (iqRecordingInProgress)
-        return;
-
     if (deviceConnected) { // never start a recording unless some device is connected!
         recordingStartedTimer->start(
             recordTime); // minutes. restarts every time routine is called, which means it will run for x minutes after incident ended
@@ -698,74 +690,10 @@ void SdefRecorder::updTracesPerSecond(double d)
 
 void SdefRecorder::setIqRecordingInProgress(bool b)
 {
-    const int stateSerial = ++iqRecordingStateSerial;
-
-    if (b) {
-        if (!iqRecordingInProgress) {
-            iqRecordingInProgress = true;
-            pauseForIqTransfer();
-        }
-        return;
-    }
-
-    QTimer::singleShot(1000, this, [this, stateSerial] {
-        if (stateSerial != iqRecordingStateSerial)
-            return;
-
-        iqRecordingInProgress = false;
-        resumeAfterIqTransfer();
-    });
-}
-
-void SdefRecorder::pauseForIqTransfer()
-{
-    pauseTimer(recordingStartedTimer, recordingStartedTimerRemaining);
-    pauseTimer(recordingTimeoutTimer, recordingTimeoutTimerRemaining);
-
-    if (autorecorderTimer && autorecorderTimer->isActive()) {
-        autorecorderTimerPaused = true;
-        autorecorderTimer->stop();
-    }
-
-    if (tempFileTimer && tempFileTimer->isActive()) {
-        tempFileTimerPaused = true;
-        tempFileTimer->stop();
-    }
-}
-
-void SdefRecorder::resumeAfterIqTransfer()
-{
-    resumeTimer(recordingStartedTimer, recordingStartedTimerRemaining);
-    resumeTimer(recordingTimeoutTimer, recordingTimeoutTimerRemaining);
-
-    if (autorecorderTimerPaused) {
-        autorecorderTimerPaused = false;
-        if (config->getAutoRecorderActivate())
-            autorecorderTimer->start(10000);
-    }
-
-    if (tempFileTimerPaused) {
-        tempFileTimerPaused = false;
-        if (tempFileMaxhold > 0)
-            tempFileTimer->start(tempFileMaxhold * 1e3);
-    }
-}
-
-void SdefRecorder::pauseTimer(QTimer *timer, int &remainingTime)
-{
-    remainingTime = -1;
-    if (timer && timer->isActive()) {
-        remainingTime = std::max(1, timer->remainingTime());
-        timer->stop();
-    }
-}
-
-void SdefRecorder::resumeTimer(QTimer *timer, int &remainingTime)
-{
-    if (timer && remainingTime > 0) {
-        timer->start(remainingTime);
-        remainingTime = -1;
-    }
+    if (b) iqRecordingInProgress = b;
+    else QTimer::singleShot(1000, this, [this] {
+            iqRecordingInProgress = false;
+        });
 }
 
 void SdefRecorder::updFrequencies(quint64 sta, quint64 stop)
