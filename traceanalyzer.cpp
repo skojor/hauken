@@ -12,13 +12,20 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
 
         khzAboveLimit = khzAboveLimitTotal = singleTrigCenterFrequency = 0;
         maxLevel = -999;
+        qint16 maxLevelInTrigArea = -999;
         int valuesAboveLimit = 0, valuesAboveLimitTotal = 0;
         bool l1Interference = false;
-        if (averageData.size() == data.size()) {
+        bool traceLevelValid = false;
+        if (averageData.size() == data.size() && !data.isEmpty()) {
             for (int i=0; i<data.size(); i++) {
                 const double frequency = startFreq + (resolution/1e3 * i);
-                const bool signalAboveLimit = checkIfFrequencyIsInTrigArea(frequency)
+                const bool frequencyInTrigArea = checkIfFrequencyIsInTrigArea(frequency);
+                const bool signalAboveLimit = frequencyInTrigArea
                         && data.at(i) > averageData.at(i) + trigLevel * 10; // * 10 because we have values in 1/10 dBuV!
+                if (frequencyInTrigArea) {
+                    traceLevelValid = true;
+                    if (data[i] > maxLevelInTrigArea) maxLevelInTrigArea = data[i];
+                }
                 if (signalAboveLimit) {
                     valuesAboveLimit++;
                     valuesAboveLimitTotal++;
@@ -45,6 +52,8 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
         }
 
         emit maxLevelMeasured((double)maxLevel * 0.1);
+    if (traceLevelValid) checkSignificantLevelIncrease(maxLevelInTrigArea);
+        else resetSignificantLevelChangeState();
 
         if (khzAboveLimit > singleTrigBandwidth || khzAboveLimitTotal > totalTrigBandwidth) {
             if (trigTime == 0) { // trig time 0 means sound the alarm immediately
@@ -91,6 +100,49 @@ void TraceAnalyzer::alarmTriggered()
         emit trigRegistered(singleTrigCenterFrequency);
     }
     emit alarm();
+}
+
+void TraceAnalyzer::checkSignificantLevelIncrease(qint16 currentMaxLevel)
+{
+    if (!significantLevelReferenceValid) {
+        stableMaxLevel = currentMaxLevel;
+        significantLevelReferenceValid = true;
+        significantLevelChangePending = false;
+        significantLevelChangeTimer.invalidate();
+        return;
+    }
+
+    if (currentMaxLevel - stableMaxLevel >= SignificantLevelChangeRaw) {
+        if (!significantLevelChangePending) {
+            significantLevelChangePending = true;
+            significantLevelChangeTimer.start();
+        }
+        else if (significantLevelChangeTimer.elapsed() >= SignificantLevelChangeDurationMs) {
+            const QString msg = QString("Significant received level increase: %1 dB increase sustained for %2 seconds")
+                                    .arg(SignificantLevelChangeDb)
+                                    .arg(SignificantLevelChangeDurationMs / 1000);
+
+            stableMaxLevel = currentMaxLevel;
+            significantLevelChangePending = false;
+            significantLevelChangeTimer.invalidate();
+
+            emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", msg);
+            emit significantLevelChange();
+        }
+    }
+    else {
+        stableMaxLevel = currentMaxLevel;
+        significantLevelChangePending = false;
+        significantLevelChangeTimer.invalidate();
+    }
+}
+
+void TraceAnalyzer::resetSignificantLevelChangeState()
+{
+    significantLevelReferenceValid = false;
+    significantLevelChangePending = false;
+    significantLevelChangeTimer.invalidate();
+    stableMaxLevel = 0;
 }
 
 void TraceAnalyzer::setAverageTrace(const QVector<qint16> &data)

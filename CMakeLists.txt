@@ -96,6 +96,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     restapi.cpp restapi.h
     sdefoptions.cpp sdefoptions.h
     sdefrecorder.cpp sdefrecorder.h
+    simulator.cpp simulator.h
     tcpdatastream.cpp tcpdatastream.h
     traceanalyzer.cpp traceanalyzer.h
     tracebuffer.cpp tracebuffer.h

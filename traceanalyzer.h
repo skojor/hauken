@@ -19,7 +19,7 @@ public:
 public slots:
     void setTrace(const QVector<qint16> &data);
     void setAverageTrace(const QVector<qint16> &data);
-    void resetAverageLevel() {averageData.clear();}
+    void resetAverageLevel() { averageData.clear(); resetSignificantLevelChangeState(); }
     void clearAlarmState() { alarmEmitted = false;}
     void updTrigFrequencyTable();
     void updSettings();
@@ -28,13 +28,14 @@ public slots:
     double getKhzAboveLimit() { return khzAboveLimit; }
     double getKhzAboveLimitTotal() { return khzAboveLimitTotal; }
     void setAnalyzerReady() { ready = true;}
-    void setAnalyzerNotReady() { ready = false;}
+    void setAnalyzerNotReady() { ready = false; resetSignificantLevelChangeState();}
     void freqChanged(double a, double b) { startFreq = a * 1e-6; stopFreq = b * 1e-6;}
     void resChanged(double a) { resolution = a * 1e-3;}
 
 signals:
     void alarm();
     void alarmEnded();
+    void significantLevelChange();
     void toIncidentLog(const NOTIFY::TYPE, const QString,const QString);
     void trigRegistered(double centerfreq);
     void maxLevelMeasured(double);
@@ -43,13 +44,22 @@ signals:
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
     void alarmTriggered();
+    void checkSignificantLevelIncrease(qint16 currentMaxLevel);
+    void resetSignificantLevelChangeState();
     void pmrCheckUptime(const quint64 frequency, const bool active);
 
 private:
+    static constexpr int SignificantLevelChangeDb = 10;
+    static constexpr int SignificantLevelChangeDurationMs = 10000;
+    static constexpr int SignificantLevelChangeRaw = SignificantLevelChangeDb * 10;
+
     QSharedPointer<Config> config;
     QElapsedTimer *elapsedTimer = new QElapsedTimer;
+    QElapsedTimer significantLevelChangeTimer;
     QVector<qint16> averageData;
     bool alarmEmitted = false;
+    bool significantLevelReferenceValid = false;
+    bool significantLevelChangePending = false;
     QList<QPair<double, double>> trigFrequenciesList;
     bool recorderRunning = false;
     double khzAboveLimit = 0, khzAboveLimitTotal = 0;
@@ -62,6 +72,7 @@ private:
     double startFreq, stopFreq, resolution;
     bool pmrMode;
     qint16 maxLevel;
+    qint16 stableMaxLevel = 0;
     bool useDbm = false;
     //QList<PmrTable> pmrTable;
 };

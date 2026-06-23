@@ -90,6 +90,7 @@
 #include "datastreamammos.h"
 #include "settingsdialog.h"
 #include "plotandanalyze.h"
+#include "simulator.h"
 
 class MyComboBox : public QComboBox {
     Q_OBJECT
@@ -299,6 +300,8 @@ private:
     QAction *hideShowIncidentlog = new QAction("Hide/show incident log");
     QAction *triggerDailySummaryLog = new QAction("Trigger daily summary in incident log");
     QAction *triggerDailySummaryEmail = new QAction("Trigger daily summary email report");
+    QAction *startSimulatorAct = new QAction("Start trace analyzer simulator");
+    QAction *startSignificantLevelSimulatorAct = new QAction("Start significant level simulator");
     QAction *toggleDarkMode = new QAction("Toogle dark mode");
     QAction *aboutAct;
     QAction *aboutQtAct;
@@ -392,6 +395,7 @@ private:
     QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
     bool flagBusyRecordingIQ = false;
     PlotAndAnalyze *plotAndAnalyze = new PlotAndAnalyze(config);
+    Simulator *simulator = nullptr;
 
 signals:
     void stopPlot(bool);
