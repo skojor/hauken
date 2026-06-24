@@ -51,8 +51,13 @@ void OAuthFileUploader::fileUploadRequest(const QString filename)
     QString tmpFilename = filename;
     QFile file(tmpFilename);
     if (!file.exists()) {
-        qDebug() << "OAuthUploader: File not found:" << tmpFilename << ", checking if it has been zipped";
-        tmpFilename = filename + ".zip";
+        if (filename.endsWith(".zip", Qt::CaseInsensitive)) {
+            qDebug() << "OAuthUploader: File not found:" << tmpFilename << ", giving up.";
+        }
+        else {
+            qDebug() << "OAuthUploader: File not found:" << tmpFilename << ", checking if it has been zipped";
+            tmpFilename = filename + ".zip";
+        }
     }
 
     file.setFileName(tmpFilename);
@@ -428,11 +433,11 @@ QUrl OAuthFileUploader::uploadedNotificationUrl() const
             path = path.left(path.indexOf("/api/files/", 0, Qt::CaseInsensitive)) + "/api/files/uploaded";
         }
         else if (path.contains("/stoystorage", Qt::CaseInsensitive)) {
-            path = "/api/files/uploaded";
+            path = "/stoydata/api/files/uploaded";
         }
         else {
             if (path.endsWith('/')) path.chop(1);
-            path += "/api/files/uploaded";
+            path += "/stoydata/api/files/uploaded";
         }
     }
 

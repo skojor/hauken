@@ -64,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     arduinoPtr = new Arduino(config);
     read1809Data = new Read1809Data(config);
+    simulator = new Simulator(this);
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -159,6 +160,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
     read1809Data->close();
+    if (simulator) simulator->stopSimulation();
     measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
@@ -278,6 +280,44 @@ void MainWindow::createActions()
             QMetaObject::invokeMethod(notifications, "sendDailySummaryEmailReport", Qt::QueuedConnection);
             updateStatusLine(tr("Daily summary email report triggered"));
         }
+    });
+
+    startSimulatorAct->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S));
+    startSimulatorAct->setShortcutContext(Qt::ApplicationShortcut);
+    startSimulatorAct->setStatusTip(tr("Start trace analyzer simulator"));
+    addAction(startSimulatorAct);
+    connect(startSimulatorAct, &QAction::triggered, this, [this] {
+        if (measurementDevice->isConnected()) {
+            updateStatusLine(tr("Disconnect the measurement device before starting the simulator"));
+            return;
+        }
+        if (!simulator || simulator->isRunning()) {
+            updateStatusLine(tr("Trace analyzer simulator is already running"));
+            return;
+        }
+
+        traceBuffer->emptyBuffer();
+        traceBuffer->restartCalcAvgLevel(true);
+        simulator->startTraceAnalyzerScenario();
+    });
+
+    startSignificantLevelSimulatorAct->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_D));
+    startSignificantLevelSimulatorAct->setShortcutContext(Qt::ApplicationShortcut);
+    startSignificantLevelSimulatorAct->setStatusTip(tr("Start significant level simulator"));
+    addAction(startSignificantLevelSimulatorAct);
+    connect(startSignificantLevelSimulatorAct, &QAction::triggered, this, [this] {
+        if (measurementDevice->isConnected()) {
+            updateStatusLine(tr("Disconnect the measurement device before starting the simulator"));
+            return;
+        }
+        if (!simulator || simulator->isRunning()) {
+            updateStatusLine(tr("Trace analyzer simulator is already running"));
+            return;
+        }
+
+        traceBuffer->emptyBuffer();
+        traceBuffer->restartCalcAvgLevel(true);
+        simulator->startSignificantLevelScenario();
     });
 
     connect(hideShowControls, &QAction::triggered, this, [this] {

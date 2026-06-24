@@ -52,6 +52,18 @@ public:
     QString msg;
 };
 
+class EmailAttachmentBuffer
+{
+public:
+    bool isEmpty() const { return data.isEmpty(); }
+
+    QByteArray data;
+    QString fileName;
+    QString description;
+    QByteArray contentId;
+    QByteArray contentType;
+};
+
 class Notifications : public QObject
 {
     Q_OBJECT
@@ -63,12 +75,12 @@ public slots:
     void updSettings();
     void toIncidentLog(const NOTIFY::TYPE type, const QString name, const QString string);
     void recTracePlot(const QPixmap *pic);
-    void recIqPlot(const QString &filename, const QString &description) { iqPlotFilenames.append(filename); iqPlotDescriptions.append(description);}
+    void recIqPlot(const QString &filename, const QString &description);
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon);
     void recPrediction(const QString &text);
-    void setGnssPlotFilename(QString name) { gnssPlotFilename = name;}
-    void setGnssPlotFilename2(QString name) { gnssPlotFilename2 = name;}
+    void setGnssPlotFilename(QString name);
+    void setGnssPlotFilename2(QString name);
 
     void appendIncidentLog(QDateTime dt, const QString string);
     void appendLogFile(QDateTime dt, const QString string);
@@ -103,8 +115,6 @@ private:
     QTimer *retryEmailsTimer;
     QTimer *dailySummaryTimer;
     QTimer *dailySummaryPersistenceTimer;
-    QList<SimpleMail::MimeInlineFile *> emailPictures;
-    QList<SimpleMail::MimeInlineFile *> emailIqPlot;
     QList<SimpleMail::MimeMessage> emailBacklog;
     QString lastPicFilename;
     bool graphAuthenticated = false;
@@ -140,9 +150,9 @@ private:
     int probability = 0;
     bool predictionReceived = false;
     bool notifyPriorityRecipients = false;
-    QString iqPlotFilename, gnssPlotFilename, gnssPlotFilename2;
-    QStringList iqPlotFilenames;
-    QStringList iqPlotDescriptions;
+    EmailAttachmentBuffer gnssPlot;
+    EmailAttachmentBuffer gnssPlot2;
+    QList<EmailAttachmentBuffer> iqPlots;
     QString m_instrData;
     DailySummaryStatistics dailySummaryStatistics;
     bool dailySummaryEnabled = false;
@@ -156,6 +166,12 @@ private:
 
     bool shouldAppendPosition(NOTIFY::TYPE type) const;
     QString appendPosition(const QString &text);
+    EmailAttachmentBuffer readAttachment(const QString &filename,
+                                         const QByteArray &contentId,
+                                         const QString &description = QString()) const;
+    void appendGraphAttachment(QJsonArray &attachments, const EmailAttachmentBuffer &attachment) const;
+    SimpleMail::MimeInlineFile *createInlineFile(const EmailAttachmentBuffer &attachment) const;
+    void clearBufferedAttachments();
 
 };
 

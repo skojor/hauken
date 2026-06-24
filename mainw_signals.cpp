@@ -262,6 +262,34 @@ void MainWindow::setSignals()
             &TraceAnalyzer::setAverageTrace);
     connect(traceBuffer, &TraceBuffer::traceToAnalyzer, traceAnalyzer, &TraceAnalyzer::setTrace);
 
+    connect(simulator, &Simulator::traceReady, traceBuffer, &TraceBuffer::addTrace);
+    connect(simulator, &Simulator::frequencyChanged, this, [this](double a, double b) {
+        traceAnalyzer->freqChanged(a, b);
+        customPlotController->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+        sdefRecorder->updFrequencies(a, b);
+        plotAndAnalyze->updFrequencies(a, b);
+    });
+    connect(simulator, &Simulator::resolutionChanged, this, [this](double a) {
+        traceAnalyzer->resChanged(a);
+        customPlotController->resChanged(a);
+        aiPtr->resChanged(a);
+        sdefRecorder->updResolution(a);
+        plotAndAnalyze->updResolution(a);
+    });
+    connect(simulator, &Simulator::tracesPerSecondChanged, this, [this](double d) {
+        sdefRecorder->updTracesPerSecond(d);
+        tracesPerSecond = d;
+    });
+    connect(simulator, &Simulator::simulationStarted, this, [this]() {
+        customPlotController->updDeviceConnected(true);
+        updateStatusLine("Trace analyzer simulator started");
+    });
+    connect(simulator, &Simulator::simulationFinished, this, [this]() {
+        customPlotController->updDeviceConnected(false);
+        updateStatusLine("Trace analyzer simulator finished");
+    });
+
     connect(traceAnalyzer,
             &TraceAnalyzer::toIncidentLog,
             notifications,
@@ -303,6 +331,8 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
+    connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::resetTimer);
+    connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::requestIqData);
 
     connect(btnTrigRecording, &QPushButton::clicked, config.data(), &Config::incidentRestart); // Manual trig = new filename timestamp
 
@@ -1086,7 +1116,6 @@ void MainWindow::setSignals()
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, config.data(), &Config::incidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingStarted, config.data(), &Config::incidentStarted);
-    connect(iqPlot, &IqPlot::busyRecording, sdefRecorder, &SdefRecorder::setIqRecordingInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
@@ -1127,7 +1156,6 @@ void MainWindow::setSignals()
 
     // Rebuild I/Q pause/resume after data transfer
     // Connect/disconnect relevant signals while transferring
-    connect(iqPlot, &IqPlot::busyRecording, traceBuffer, &TraceBuffer::setIqTransferInProgress);
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool busy) {
         if (busy) {
             flagBusyRecordingIQ = true;
