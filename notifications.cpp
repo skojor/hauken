@@ -138,7 +138,9 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
 bool Notifications::shouldAppendPosition(NOTIFY::TYPE type) const
 {
     return config->getSdefAddPosition() &&
-           (type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER);
+           (type == NOTIFY::TYPE::TRACEANALYZER ||
+            type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE ||
+            type == NOTIFY::TYPE::GNSSANALYZER);
 }
 
 QString Notifications::appendPosition(const QString &text)
@@ -174,12 +176,19 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
-    if ((type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER || type == NOTIFY::TYPE::AI)
+    if ((type == NOTIFY::TYPE::TRACEANALYZER ||
+         type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE ||
+         type == NOTIFY::TYPE::GNSSANALYZER ||
+         type == NOTIFY::TYPE::AI)
         && !msg.contains("Normal signal levels", Qt::CaseInsensitive)) {
         dailySummaryStatistics.recordIncident(dt);
     }
     if (config->getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
         appendEmailText(dt,  msg);
+    else if (config->getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE) {
+        notifyPriorityRecipients = config->getEmailFilteredRecipients().size() > 5;
+        appendEmailText(dt, msg);
+    }
     else if (config->getEmailNotifyMeasurementDeviceHighLevel() && (type == NOTIFY::TYPE::TRACEANALYZER or type == NOTIFY::TYPE::AI))
         appendEmailText(dt, msg);
     else if (config->getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
@@ -322,7 +331,7 @@ void Notifications::sendMail()
             message.setSubject("Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")");
             message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
-            if (predictionReceived &&
+            if ((predictionReceived || notifyPriorityRecipients) &&
                 config->getEmailFilteredRecipients().size() > 5) {
                 notifyPriorityRecipients = true;
                 for (auto &val : config->getEmailFilteredRecipients().split(";"))
@@ -419,6 +428,7 @@ void Notifications::sendMail()
                 if (!graphEmailLog.isEmpty()) authGraph(); // try to auth and send immediately
             }
             else {
+                notifyPriorityRecipients = false;
                 clearBufferedAttachments();
                 SimpleMail::ServerReply *reply = server->sendMail(message);
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]

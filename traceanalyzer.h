@@ -44,7 +44,7 @@ signals:
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
     void alarmTriggered();
-    void checkSignificantLevelIncrease(qint16 currentMaxLevel);
+    void checkSignificantLevelChange(qint16 currentMaxLevel, qint16 currentTriggerLevel);
     void resetSignificantLevelChangeState();
     void pmrCheckUptime(const quint64 frequency, const bool active);
 
@@ -60,6 +60,7 @@ private:
     bool alarmEmitted = false;
     bool significantLevelReferenceValid = false;
     bool significantLevelChangePending = false;
+    int significantLevelChangeDirection = 0;
     QList<QPair<double, double>> trigFrequenciesList;
     bool recorderRunning = false;
     double khzAboveLimit = 0, khzAboveLimitTotal = 0;
