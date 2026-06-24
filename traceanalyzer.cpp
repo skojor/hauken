@@ -56,8 +56,6 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
         }
 
         emit maxLevelMeasured((double)maxLevel * 0.1);
-        if (traceLevelValid) checkSignificantLevelChange(maxLevelInTrigArea, triggerLevelAtMaxInTrigArea);
-        else resetSignificantLevelChangeState();
 
         if (khzAboveLimit > singleTrigBandwidth || khzAboveLimitTotal > totalTrigBandwidth) {
             if (trigTime == 0) { // trig time 0 means sound the alarm immediately
@@ -77,6 +75,9 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
                 emit alarmEnded();
             }
         }
+
+        if (traceLevelValid && traceAnalyzerIncidentHasHappened()) checkSignificantLevelChange(maxLevelInTrigArea, triggerLevelAtMaxInTrigArea);
+        else resetSignificantLevelChangeState();
     }
 }
 
@@ -104,6 +105,11 @@ void TraceAnalyzer::alarmTriggered()
         emit trigRegistered(singleTrigCenterFrequency);
     }
     emit alarm();
+}
+
+bool TraceAnalyzer::traceAnalyzerIncidentHasHappened() const
+{
+    return alarmEmitted;
 }
 
 void TraceAnalyzer::checkSignificantLevelChange(qint16 currentMaxLevel, qint16 currentTriggerLevel)

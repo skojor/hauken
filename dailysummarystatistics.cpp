@@ -252,7 +252,7 @@ QString DailySummaryStatistics::toHtmlReport(const Snapshot &snapshot, const QSt
        << formatDuration(snapshot.l1InterferenceMsecs) << " ("
        << formatPercentage(snapshot.l1InterferenceMsecs, snapshot) << ")</td></tr>"
        << "</table>"
-       << "</body></html>";
+       << "</body></html>   /  ";
 
     return html;
 }

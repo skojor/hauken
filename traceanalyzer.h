@@ -44,6 +44,7 @@ signals:
 private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
     void alarmTriggered();
+    bool traceAnalyzerIncidentHasHappened() const;
     void checkSignificantLevelChange(qint16 currentMaxLevel, qint16 currentTriggerLevel);
     void resetSignificantLevelChangeState();
     void pmrCheckUptime(const quint64 frequency, const bool active);
