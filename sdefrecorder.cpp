@@ -179,11 +179,11 @@ QString SdefRecorder::createFilename()
     if (!QDir().exists(dir))
         QDir().mkpath(dir);
 
-        ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
-        << "_" << AsciiTranslator::toAscii(config->getStationName())
-        << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
-        << QString::number(1e-3 * stopfreq, 'f', 0)
-        << ".cef";
+    ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
+       << "_" << AsciiTranslator::toAscii(config->getStationName())
+       << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
+       << QString::number(1e-3 * stopfreq, 'f', 0)
+       << ".cef";
 
     return filename;
 }
@@ -698,29 +698,29 @@ void SdefRecorder::setIqRecordingInProgress(bool b)
 
 void SdefRecorder::updFrequencies(quint64 sta, quint64 stop)
 {
-    if (!iqRecordingInProgress) {
-        closeTempFile();
-        endRecording();
-        startfreq = sta;
-        stopfreq = stop;
-    }
+    //if (!iqRecordingInProgress) {
+    closeTempFile();
+    endRecording();
+    startfreq = sta;
+    stopfreq = stop;
+    //}
 }
 
 void SdefRecorder::updResolution(quint32 res)
 {
-    if (!iqRecordingInProgress) {
-        closeTempFile();
-        endRecording();
-        resolution = res;
-    }
+    //if (!iqRecordingInProgress) {
+    closeTempFile();
+    endRecording();
+    resolution = res;
+    //}
 }
 
 void SdefRecorder::updScanTime(int i)
 {
-    if (!iqRecordingInProgress) {
-        closeTempFile();
-        scanTime = (double)i / 1e3;
-    }
+    //if (!iqRecordingInProgress) {
+    closeTempFile();
+    scanTime = (double)i / 1e3;
+    //}
 }
 
 QByteArray SdefRecorder::genSdefTraceLine(double lat, double lng, const QVector<qint16> line)
