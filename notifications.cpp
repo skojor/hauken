@@ -64,6 +64,48 @@ QStringList validEmailRecipients(const QString &recipientString)
 
     return validRecipients;
 }
+
+int graphHttpStatusCode(const QByteArray &curlOutput)
+{
+    if (curlOutput.size() < 3) {
+        return 0;
+    }
+
+    bool ok = false;
+    const int statusCode = QString::fromLatin1(curlOutput.right(3)).toInt(&ok);
+    if (!ok || statusCode < 100 || statusCode > 599) {
+        return 0;
+    }
+
+    return statusCode;
+}
+
+QString graphServerReason(QByteArray curlOutput, const QByteArray &curlError)
+{
+    const int statusCode = graphHttpStatusCode(curlOutput);
+    if (statusCode) {
+        curlOutput.chop(3);
+    }
+
+    const QJsonDocument reply = QJsonDocument::fromJson(curlOutput.trimmed());
+    const QJsonObject error = reply.object().value("error").toObject();
+    const QString errorMessage = error.value("message").toString().simplified();
+    if (!errorMessage.isEmpty()) {
+        return errorMessage;
+    }
+
+    const QString body = QString::fromUtf8(curlOutput).simplified();
+    if (!body.isEmpty()) {
+        return body;
+    }
+
+    const QString stderrText = QString::fromUtf8(curlError).simplified();
+    if (!stderrText.isEmpty()) {
+        return stderrText;
+    }
+
+    return "No server reason returned";
+}
 }
 
 Notifications::Notifications(QSharedPointer<Config> c)
@@ -825,7 +867,8 @@ void Notifications::sendMailWithGraph()
 void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
 {
     QByteArray output = process->readAllStandardOutput();
-    //qDebug() << output << process->readAllStandardError();
+    QByteArray errorOutput = process->readAllStandardError();
+    //qDebug() << output << errorOutput;
 
     if (exitCode != 0) {
         qDebug() << "Graph exit code" << exitCode;
@@ -859,18 +902,28 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
             sendMailWithGraph();
         }
         else {
-            qDebug() << output << process->readAllStandardError();
+            qDebug() << output << errorOutput;
             emit warning("No valid response from MS Graph authentication server");
         }
     }
-    else if (output.contains("200") || output.contains("201") || output.contains("202")) {
-        qDebug() << "Mail sent successfully"; // << output << process->readAllStandardError();
-        if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
-        graphMailInProgress = false;
-    }
     else {
-        qDebug() << "Server responded with code" << output;
-        graphMailInProgress = false;
+        const int statusCode = graphHttpStatusCode(output);
+        if (statusCode >= 200 && statusCode < 300) {
+            qDebug() << "Mail sent successfully"; // << output << errorOutput;
+            if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
+            graphMailInProgress = false;
+        }
+        else {
+            const QString reason = graphServerReason(output, errorOutput);
+            qDebug() << "Graph email failed with server response" << statusCode << reason;
+            toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Graph email notification failed and was removed from the queue. Server response: " +
+                                                     (statusCode ? QString::number(statusCode) + " " : QString()) + reason);
+            if (!graphEmailLog.isEmpty()) {
+                QFile::remove(graphEmailLog.first());
+                graphEmailLog.removeFirst();
+            }
+            graphMailInProgress = false;
+        }
     }
 }
 
