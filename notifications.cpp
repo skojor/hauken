@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <QFileInfo>
+#include <QRegularExpression>
 
 namespace {
 struct PositionSnapshot
@@ -39,6 +40,29 @@ QByteArray contentTypeForFile(const QString &filename)
         return "image/png";
 
     return "application/octet-stream";
+}
+
+bool isValidEmailAddress(const QString &email)
+{
+    static const QRegularExpression emailPattern(R"(^[^\s@;<>]+@[^\s@;<>]+\.[^\s@;<>]+$)");
+    return emailPattern.match(email).hasMatch();
+}
+
+QStringList validEmailRecipients(const QString &recipientString)
+{
+    QStringList validRecipients;
+
+    for (auto &&value : recipientString.split(';', Qt::SkipEmptyParts)) {
+        const QString recipient = value.simplified();
+        if (isValidEmailAddress(recipient)) {
+            validRecipients.append(recipient);
+        }
+        else {
+            qWarning() << "Ignoring invalid email recipient" << recipient;
+        }
+    }
+
+    return validRecipients;
 }
 }
 
@@ -260,6 +284,12 @@ void Notifications::sendHtmlEmail(const QString &subject, const QString &html, b
         return;
     }
 
+    const QStringList mailRecipients = validEmailRecipients(usePriorityRecipients ? config->getEmailFilteredRecipients() : recipients);
+    if (mailRecipients.isEmpty()) {
+        emit warning("Email notifications is enabled, but no valid recipients are configured. Check your configuration!");
+        return;
+    }
+
     auto server = new SimpleMail::Server;
     server->setHost(mailserverAddress);
     server->setPort(mailserverPort.toUInt());
@@ -269,16 +299,13 @@ void Notifications::sendHtmlEmail(const QString &subject, const QString &html, b
         server->setPassword(smtpPass);
     }
 
-    const QStringList mailRecipients = (usePriorityRecipients ? config->getEmailFilteredRecipients() : recipients).split(';', Qt::SkipEmptyParts);
-
     auto mimeHtml = new SimpleMail::MimeHtml;
     mimeHtml->setHtml(html);
 
     SimpleMail::MimeMessage message;
     message.setSubject(subject);
     message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
-    for (auto &val : mailRecipients) {
-        const QString recipient = val.simplified();
+    for (auto &recipient : mailRecipients) {
         message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
     }
     message.addPart(mimeHtml);
@@ -313,6 +340,13 @@ void Notifications::sendMail()
 {
     if (!timeBetweenEmailsTimer->isActive()) {
         if (simpleParametersCheck() and !mailtext.isEmpty()) {
+            const QStringList mailRecipients = validEmailRecipients(recipients);
+            const QStringList priorityMailRecipients = validEmailRecipients(config->getEmailFilteredRecipients());
+            if (mailRecipients.isEmpty() && priorityMailRecipients.isEmpty()) {
+                emit warning("Email notifications is enabled, but no valid recipients are configured. Check your configuration!");
+                return;
+            }
+
             auto server = new SimpleMail::Server;
             server->setHost(mailserverAddress);
             server->setPort(mailserverPort.toUInt());
@@ -322,24 +356,20 @@ void Notifications::sendMail()
                 server->setPassword(smtpPass);
             }
 
-            QStringList mailRecipients;
-            if (recipients.contains(';')) mailRecipients = recipients.split(';');
-            else mailRecipients.append(recipients);
-
             auto mimeHtml = new SimpleMail::MimeHtml;
             SimpleMail::MimeMessage message;
             message.setSubject("Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")");
             message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
             if ((predictionReceived || notifyPriorityRecipients) &&
-                config->getEmailFilteredRecipients().size() > 5) {
+                !priorityMailRecipients.isEmpty()) {
                 notifyPriorityRecipients = true;
-                for (auto &val : config->getEmailFilteredRecipients().split(";"))
-                    message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+                for (auto &recipient : priorityMailRecipients)
+                    message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
             }
             else {
-                for (auto &val : mailRecipients)
-                    message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+                for (auto &recipient : mailRecipients)
+                    message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
             }
             QString data;
             QTextStream ts(&data);
@@ -659,10 +689,6 @@ void Notifications::retryEmails()
                 server->setPassword(smtpPass);
             }
 
-            QStringList mailRecipients;
-            if (recipients.contains(';')) mailRecipients = recipients.split(';');
-            else mailRecipients.append(recipients);
-
             for (int i=0; i<emailBacklog.size(); i++) {
                 SimpleMail::ServerReply *reply = server->sendMail(emailBacklog.at(i));
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply, i]
@@ -707,8 +733,8 @@ void Notifications::generateGraphEmail()
     QJsonObject att, att2;
     QStringList recipients;
 
-    if (!notifyPriorityRecipients) recipients = config->getEmailRecipients().split(';');
-    else recipients = config->getEmailFilteredRecipients().split(";");
+    if (!notifyPriorityRecipients) recipients = validEmailRecipients(config->getEmailRecipients());
+    else recipients = validEmailRecipients(config->getEmailFilteredRecipients());
     notifyPriorityRecipients = false; // reset until next notification
 
     for (auto &recipient : recipients) {
