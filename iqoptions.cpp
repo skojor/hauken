@@ -36,6 +36,9 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt9->setText("Generate a movie from all I/Q samples gathered");
     cbOpt9->setToolTip("Will generate an mp4 movie using all samples gathered from a recording.");
 
+    mainLayout->addRow(cbOpt10);
+    cbOpt10->setText(tr("Use AMMOS protocol for data transfer"));
+
     mainLayout->addRow(cbOpt7);
     cbOpt7->setText(tr("Use average signal as low level of plot"));
     cbOpt7->setToolTip(tr("If checked the average level of the current received spectrum will be used "
@@ -82,6 +85,7 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt7->setChecked(config->getIqUseAvgForPlot());
     cbOpt8->setChecked(config->getIqSaveAs16bit());
     cbOpt9->setChecked(config->getIqGenerateMovie());
+    cbOpt10->setChecked(config->getIqUseAmmosProtocol());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
@@ -117,6 +121,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqUseAvgForPlot(cbOpt7->isChecked());
     config->setIqSaveAs16bit(cbOpt8->isChecked());
     config->setIqGenerateMovie(cbOpt9->isChecked());
+    config->setIqUseAmmosProtocol(cbOpt10->isChecked());
 
     //emit updSettings();
     //dialog->close();

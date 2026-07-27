@@ -202,6 +202,7 @@ private:
     QElapsedTimer *scpiThrottleTimer = new QElapsedTimer;
     bool deviceInUseWarningIssued = false;
     bool useUdpStream = true;
+    bool useAmmosProtocol = false;
     bool autoReconnect;
     bool autoReconnectInProgress = false;
     bool muteNotification = false;

@@ -41,6 +41,7 @@ void MeasurementDevice::initializeDevicePtr()
     devicePtr->pscanStartFrequency = config->getInstrStartFreq();
     devicePtr->pscanStopFrequency = config->getInstrStopFreq();
     devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq();
+    useAmmosProtocol = config->getIqUseAmmosProtocol();
 }
 
 void MeasurementDevice::instrConnect()
@@ -94,7 +95,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        //qDebug() << ">>" << data;
+        qDebug() << ">>" << data;
     }
 }
 
@@ -681,7 +682,9 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
     //vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
 
-    QByteArray modeStr = "cw, ifp, aud, psc";
+    QByteArray modeStr = config->getIqUseAmmosProtocol() ?
+                         "cw, ifp, aud, psc" :
+                         "cw, ifp, aud, if, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -707,7 +710,9 @@ void MeasurementDevice::setupUdpStream()
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
 
-    QByteArray modeStr = "cw, ifp, aud, if, psc";
+    QByteArray modeStr = config->getIqUseAmmosProtocol() ?
+                         "cw, ifp, aud, psc" :
+                         "cw, ifp, aud, if, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -839,6 +844,11 @@ void MeasurementDevice::updSettings()
 
     if (useUdpStream != !config->getInstrUseTcpDatastream())
         useUdpStream = !config->getInstrUseTcpDatastream();
+
+    if (useAmmosProtocol != config->getIqUseAmmosProtocol()) {
+        useAmmosProtocol = config->getIqUseAmmosProtocol();
+        restartStream();
+    }
 
     if ((config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument")) || config->getGnssUseInstrumentGnss())  {// only ask device for position if it is needed
         if (!askForPosition) {
@@ -1085,11 +1095,14 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
         scpiWrite("freq:mode ffm");
     }
     else modeChanged = false;
-    //ifStreamOff();
-    scpiWrite("meas:time 500 ms"); // Slow down other data transfer
+    if (!config->getIqUseAmmosProtocol())
+        ifStreamOff();
+    else
+        scpiWrite("meas:time 500 ms"); // Slow down other data transfer
     scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3))); // Needed to reset iq start timestamp!
     scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
-    scpiWrite("init:imm");
+    if (config->getIqUseAmmosProtocol())
+        scpiWrite("init:imm");
     ifStreamOn();
 }
 
@@ -1216,6 +1229,12 @@ void MeasurementDevice::setDetector(int i)
 
 void MeasurementDevice::ifStreamOn()
 {
+    if (!config->getIqUseAmmosProtocol()) {
+        scpiWrite("syst:if:rem:mode short");
+        emit ifStreamRequested();
+        return;
+    }
+
     if (!vifStreamTcp->isOpen())
         vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
     scpiWrite("trac:tcp:tag:on \"" +
@@ -1229,6 +1248,9 @@ void MeasurementDevice::ifStreamOn()
 void MeasurementDevice::ifStreamOff()
 {
     scpiWrite("syst:if:rem:mode off");
+    if (!config->getIqUseAmmosProtocol())
+        return;
+
     scpiWrite("trac:tcp:tag:off \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) +
