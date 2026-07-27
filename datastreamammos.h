@@ -9,11 +9,11 @@ class DatastreamAmmos : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamAmmos(QObject *parent = nullptr);
-    void invalidateHeader() { m_frequency = m_bandwidth = m_samplerate = m_sampleCtr = 0; }
+    void invalidateHeader();
     void parseAmmosData(const QByteArray &data);
 
 signals:
-    void ifDataReady(const QVector<complexInt16>);
+    void ifDataReady(const QVector<complexInt16> &);
     void headerChanged(quint64, quint32, quint32, quint64);
 
 private:

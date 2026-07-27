@@ -29,7 +29,7 @@ public:
 
 public slots:
     void requestIqData(); // Function call to set up I/Q transfer
-    void getIqData(const QVector<complexInt16> iq16); // New, gather parts of data before doing sth with them
+    void getIqData(const QVector<complexInt16> &iq16); // New, gather parts of data before doing sth with them
     void parseIqData(const QVector<complexInt16> &iq16, IqMetadata meta); // Data from vifstream class
     void validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 timestamp);
     void setFfmFrequency(double d) { m_iqMetadata.centerfreq = d;}

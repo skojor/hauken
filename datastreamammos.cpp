@@ -9,6 +9,20 @@ DatastreamAmmos::DatastreamAmmos(QObject *parent)
     : StreamParserBase{parent}
 {}
 
+void DatastreamAmmos::invalidateHeader()
+{
+    qDebug() << "AMMOS parser invalidated"
+             << "bufferBytes" << m_buffer.size()
+             << "lastFreq" << m_frequency
+             << "lastBw" << m_bandwidth
+             << "lastRate" << m_samplerate
+             << "lastSeq" << m_seqNr
+             << "lastSampleCtr" << m_sampleCtr;
+    m_frequency = m_bandwidth = m_samplerate = m_sampleCtr = 0;
+    m_seqNr = 0;
+    m_buffer.clear();
+}
+
 void DatastreamAmmos::parseAmmosData(const QByteArray &data)
 {
     m_buffer.append(data);
@@ -24,6 +38,10 @@ void DatastreamAmmos::parseAmmosData(const QByteArray &data)
         if (frameStart < 0) {
             constexpr qsizetype magicBytes = 4;
             const qsizetype keepBytes = std::min<qsizetype>(m_buffer.size(), magicBytes - 1);
+            if (m_buffer.size() > keepBytes)
+                qDebug() << "AMMOS parser dropped bytes without header"
+                         << "dropped" << (m_buffer.size() - keepBytes)
+                         << "kept" << keepBytes;
             m_buffer = m_buffer.right(keepBytes);
             break;
         }
@@ -44,7 +62,11 @@ void DatastreamAmmos::parseAmmosData(const QByteArray &data)
         const quint64 payloadBytes = quint64(frameHeader.datablockLength) * sizeof(complexInt16);
         if (frameHeader.datablockLength > quint32(std::numeric_limits<int>::max()) or
             payloadBytes > quint64(std::numeric_limits<qsizetype>::max()) - headerBytes) {
-            qDebug() << "AMMOS payload too large" << payloadBytes;
+            qDebug() << "AMMOS payload too large"
+                     << "payloadBytes" << payloadBytes
+                     << "datablockLength" << frameHeader.datablockLength
+                     << "bufferBytes" << m_buffer.size()
+                     << "inverted" << inverted;
             m_buffer.clear();
             break;
         }
@@ -77,6 +99,12 @@ bool DatastreamAmmos::checkHeaders()
             m_samplerate = m_header.samplerate;
             emit headerChanged(m_frequency, m_bandwidth, m_samplerate, timestamp);
         }
+
+        if (m_seqNr and m_header.frameCount != m_seqNr + 1)
+            qDebug() << "AMMOS frame sequence jump"
+                     << "previous" << m_seqNr
+                     << "current" << m_header.frameCount
+                     << "sampleCounter" << sampleCount;
 
         m_seqNr = m_header.frameCount;
         m_sampleCtr = sampleCount;

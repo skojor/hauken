@@ -95,7 +95,7 @@ void MeasurementDevice::scpiWrite(QByteArray data)
         }
         scpiThrottleTimer->start();
         scpiSocket->write(data + '\n');
-        qDebug() << ">>" << data;
+        //qDebug() << ">>" << data;
     }
 }
 
@@ -1145,6 +1145,10 @@ void MeasurementDevice::setupVifConnection()
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");*/
     //scpiWrite("meas:time 100 ms"); // Slow down trace data transfer while I/Q transfer is running
+    qDebug() << "Setting up I/Q connection"
+             << "ammos" << config->getIqUseAmmosProtocol()
+             << "mode" << static_cast<int>(devicePtr->mode)
+             << "bwHz" << config->getIqFftPlotBw() * 1e3;
     scpiWrite("abor");
     scpiWrite("dem:mode IQ");
     scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3)));
@@ -1230,6 +1234,7 @@ void MeasurementDevice::setDetector(int i)
 void MeasurementDevice::ifStreamOn()
 {
     if (!config->getIqUseAmmosProtocol()) {
+        qDebug() << "Starting legacy I/Q stream";
         scpiWrite("syst:if:rem:mode short");
         emit ifStreamRequested();
         return;
@@ -1237,6 +1242,10 @@ void MeasurementDevice::ifStreamOn()
 
     if (!vifStreamTcp->isOpen())
         vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+    qDebug() << "Starting AMMOS I/Q stream"
+             << "localAddress" << scpiSocket->localAddress().toString()
+             << "vifPort" << vifStreamTcp->getTcpPort()
+             << "socketOpen" << vifStreamTcp->isOpen();
     scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) +
@@ -1247,6 +1256,7 @@ void MeasurementDevice::ifStreamOn()
 
 void MeasurementDevice::ifStreamOff()
 {
+    qDebug() << "Stopping I/Q stream" << "ammos" << config->getIqUseAmmosProtocol();
     scpiWrite("syst:if:rem:mode off");
     if (!config->getIqUseAmmosProtocol())
         return;

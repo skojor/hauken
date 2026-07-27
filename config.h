@@ -172,7 +172,7 @@ public slots:
     void setIqSaveAs16bit(bool b) { settings->setValue("iq/saveAs16bit", b);}
     bool getIqGenerateMovie() { return settings->value("iq/generateMovie", false).toBool(); }
     void setIqGenerateMovie(bool b) { settings->setValue("iq/generateMovie", b);}
-    bool getIqUseAmmosProtocol() { return settings->value("iq/useAmmosProtocol", false).toBool(); }
+    bool getIqUseAmmosProtocol() { return settings->value("iq/useAmmosProtocol", true).toBool(); }
     void setIqUseAmmosProtocol(bool b) { settings->setValue("iq/useAmmosProtocol", b);}
 
     // 1809 options
