@@ -1092,7 +1092,8 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
         double stopMHz = 0;
     };
 
-    const double triglevel = m_config->getInstrTrigLevel();
+    const double configuredTrigLevel = m_config->getInstrTrigLevel();
+    const double triglevel = configuredTrigLevel < 5.0 ? configuredTrigLevel + 3.0 : configuredTrigLevel;
     const double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
     const double l1StartMHz = (GPSL1 - 512e3) * 1e-6;
     const double l1StopMHz = (GPSL1 + 512e3) * 1e-6;
