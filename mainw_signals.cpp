@@ -972,7 +972,9 @@ void MainWindow::setSignals()
     connect(udpStream.data(), &DataStreamBaseClass::newVifData, datastreamVif, &DatastreamVif::parseVifData);
     connect(tcpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseAmmosData);
     connect(udpStream.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseAmmosData);
+    connect(vifStreamTcp.data(), &DataStreamBaseClass::newIfData, datastreamIf, &DatastreamIf::parseIfData);
     connect(vifStreamTcp.data(), &DataStreamBaseClass::newAmmosData, datastreamAmmos, &DatastreamAmmos::parseAmmosData);
+    connect(vifStreamTcp.data(), &VifStreamTcp::headerInvalidated, datastreamIf, &DatastreamIf::invalidateHeader);
     connect(vifStreamTcp.data(), &VifStreamTcp::headerInvalidated, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
     connect(tcpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);
     connect(udpStream.data(), &DataStreamBaseClass::newPscanData, datastreamPScan, &DatastreamPScan::parseData);

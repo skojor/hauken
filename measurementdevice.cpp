@@ -682,9 +682,7 @@ void MeasurementDevice::setupTcpStream()
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
     //vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
 
-    QByteArray modeStr = config->getIqUseAmmosProtocol() ?
-                         "cw, ifp, aud, psc" :
-                         "cw, ifp, aud, if, psc";
+    QByteArray modeStr = "cw, ifp, aud, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -710,9 +708,7 @@ void MeasurementDevice::setupUdpStream()
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
 
-    QByteArray modeStr = config->getIqUseAmmosProtocol() ?
-                         "cw, ifp, aud, psc" :
-                         "cw, ifp, aud, if, psc";
+    QByteArray modeStr = "cw, ifp, aud, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -1234,12 +1230,29 @@ void MeasurementDevice::setDetector(int i)
 void MeasurementDevice::ifStreamOn()
 {
     if (!config->getIqUseAmmosProtocol()) {
+        QByteArray em200Specific;
+        if (devicePtr->advProtocol) em200Specific = ", 'ifpan'";
+        else em200Specific = ", 'swap'";
+
+        vifStreamTcp->setPayloadType(HeaderType::EB200);
+        if (!vifStreamTcp->isOpen())
+            vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+
         qDebug() << "Starting legacy I/Q stream";
+        scpiWrite("trac:tcp:tag:on \"" +
+                  scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                  QByteArray::number(vifStreamTcp->getTcpPort()) +
+                  ", if");
+        scpiWrite("trac:tcp:flag:on \"" +
+                  scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                  QByteArray::number(vifStreamTcp->getTcpPort()) +
+                  ", 'volt:ac', 'opt'" + em200Specific);
         scpiWrite("syst:if:rem:mode short");
         emit ifStreamRequested();
         return;
     }
 
+    vifStreamTcp->setPayloadType(HeaderType::AMMOS);
     if (!vifStreamTcp->isOpen())
         vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
     qDebug() << "Starting AMMOS I/Q stream"
@@ -1258,8 +1271,14 @@ void MeasurementDevice::ifStreamOff()
 {
     qDebug() << "Stopping I/Q stream" << "ammos" << config->getIqUseAmmosProtocol();
     scpiWrite("syst:if:rem:mode off");
-    if (!config->getIqUseAmmosProtocol())
+    if (!config->getIqUseAmmosProtocol()) {
+        scpiWrite("trac:tcp:tag:off \"" +
+                  scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                  QByteArray::number(vifStreamTcp->getTcpPort()) +
+                  ", if");
+        vifStreamTcp->invalidateHeader();
         return;
+    }
 
     scpiWrite("trac:tcp:tag:off \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +

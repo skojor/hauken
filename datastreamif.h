@@ -11,7 +11,8 @@ class DatastreamIf : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamIf(QObject *parent = nullptr);
-    void invalidateHeader() { m_frequency = m_bandwidth = m_samplerate = m_sampleCtr = 0; }
+    void invalidateHeader();
+    void parseIfData(const QByteArray &data);
 
 signals:
     void ifDataReady(const QVector<complexInt16> &);
@@ -22,8 +23,13 @@ private:
     bool readOptHeader(QDataStream &ds) { return m_optHeader.readData(ds, m_attrHeader.optHeaderLength);}
     bool checkHeaders();
     void checkOptHeader();
+    int locateHeader(const QByteArray &buf) const;
+    bool readHeaders(const char *data, qsizetype size);
+    bool readOptHeader(const char *data, qsizetype size);
+    void readFrame(const char *data, qsizetype size);
 
     IfOptHeader m_optHeader;
+    QByteArray m_buffer;
     quint64 m_frequency = 0;
     quint32 m_bandwidth = 0;
     quint32 m_samplerate = 0;
