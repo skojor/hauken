@@ -208,7 +208,9 @@ public slots:
     void setSdefNewMsFormat(bool b) { settings->setValue("sdef/newMsFormat", b); }
     bool getSdefUploadIntentionalOnly() { return settings->value("sdef/UploadIntentionalOnly", true).toBool();}
     void setSdefUploadIntentionalOnly(bool b) { settings->setValue("sdef/UploadIntentionalOnly", b);}
-    bool getSdefDeleteOldMeasurementFiles() { return settings->value("sdef/DeleteOldMeasurementFiles", true).toBool();}
+    bool getSdefDeleteLocalFilesAfterUpload() { return settings->value("sdef/DeleteLocalFilesAfterUpload", false).toBool();}
+    void setSdefDeleteLocalFilesAfterUpload(bool b) { settings->setValue("sdef/DeleteLocalFilesAfterUpload", b);}
+    bool getSdefDeleteOldMeasurementFiles() { return settings->value("sdef/DeleteOldMeasurementFiles", false).toBool();}
     void setSdefDeleteOldMeasurementFiles(bool b) { settings->setValue("sdef/DeleteOldMeasurementFiles", b);}
 
     // OAuth2 options

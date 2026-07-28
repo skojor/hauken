@@ -60,6 +60,7 @@ private:
 
     void abortCurrentUpload(const QString &reason);
     void finalizeSuccessfulUpload(const QString &uploadedFilename, const QString &status);
+    void deleteUploadedLocalFile(const QString &filename);
     QNetworkRequest makeAuthorizedRequest(const QUrl &url) const;
     QUrl blockUploadUrl(const QString &filename, const QString &blockId) const;
     QUrl blockListUrl(const QString &filename) const;

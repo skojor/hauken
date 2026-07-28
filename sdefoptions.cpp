@@ -25,6 +25,11 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt13->setToolTip("If checked all files in the incident folder will be zipped into one file. "
                          "This replaces the ordinary measurement file zip when enabled.");
 
+    fileLayout->addRow(cbOpt15);
+    cbOpt15->setText("Delete local files after uploading");
+    cbOpt15->setToolTip("If checked successfully uploaded measurement files are deleted locally. "
+                         "Files are only deleted after OAuth upload has completed successfully.");
+
     fileLayout->addRow(cbOpt14);
     cbOpt14->setText("Delete measurement files older than 3 months");
     cbOpt14->setToolTip("If checked old measurement files in the log folder will be deleted. "
@@ -117,6 +122,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt3->setChecked(config->getSdefAddPosition());
     cbOpt4->setChecked(config->getSdefZipFiles());
     cbOpt13->setChecked(config->getSdefZipAllIncidentFiles());
+    cbOpt15->setChecked(config->getSdefDeleteLocalFilesAfterUpload());
     cbOpt14->setChecked(config->getSdefDeleteOldMeasurementFiles());
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
@@ -160,6 +166,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefZipAllIncidentFiles(cbOpt13->isChecked());
+    config->setSdefDeleteLocalFilesAfterUpload(cbOpt15->isChecked());
     config->setSdefDeleteOldMeasurementFiles(cbOpt14->isChecked());
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());

@@ -318,6 +318,23 @@ void OAuthFileUploader::cleanUploadBacklog()
     }
 }
 
+void OAuthFileUploader::deleteUploadedLocalFile(const QString &filename)
+{
+    if (!config->getSdefDeleteLocalFilesAfterUpload() || filename.isEmpty())
+        return;
+
+    QFile file(filename);
+    if (!file.exists())
+        return;
+
+    if (file.remove()) {
+        qDebug() << "OAuthUploader: Deleted local uploaded file" << filename;
+    }
+    else {
+        qDebug() << "OAuthUploader: Could not delete local uploaded file" << filename << file.errorString();
+    }
+}
+
 void OAuthFileUploader::abortCurrentUpload(const QString &reason)
 {
     emit toIncidentLog(NOTIFY::TYPE::OAUTHFILEUPLOAD, "", "OAuth: File upload failed, retrying later. Reason: " + reason);
@@ -355,12 +372,15 @@ void OAuthFileUploader::finalizeSuccessfulUpload(const QString &uploadedFilename
                        "OAuth: File " + status + " (" + uploadedFilename + ", size " +
                            formatBytes(m_currentFileSize) + ", average upload speed " + formatSpeed(averageSpeed) + ")");
 
+    const QString uploadedFilePath = m_currentFilePath;
+
     if (m_currentFile != nullptr) {
         m_currentFile->deleteLater();
         m_currentFile = nullptr;
     }
 
     cleanUploadBacklog();
+    deleteUploadedLocalFile(uploadedFilePath);
 
     m_currentFilePath.clear();
     m_currentUploadName.clear();
