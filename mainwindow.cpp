@@ -170,6 +170,14 @@ void MainWindow::closeEvent(QCloseEvent *event)
     config->setWindowState(this->saveState());
     incidentLog->close();
     customPlot->close();
+
+    const auto windows = iqPlotWindows.values();
+    for (const auto &window : windows) {
+        if (!window.isNull())
+            window->close();
+    }
+    iqPlotWindows.clear();
+
     QMainWindow::closeEvent(event);
 }
 
