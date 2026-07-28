@@ -28,6 +28,11 @@ void VifStreamTcp::newDataHandler()
     const QByteArray buf = tcpSocket->readAll();
     byteCtr += buf.size();
 
-    if (!buf.isEmpty())
+    if (buf.isEmpty())
+        return;
+
+    if (m_payloadType == HeaderType::EB200)
+        emit newIfData(buf);
+    else
         emit newAmmosData(buf);
 }

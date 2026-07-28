@@ -64,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     arduinoPtr = new Arduino(config);
     read1809Data = new Read1809Data(config);
+    simulator = new Simulator(this);
 
     incidentLog->setAcceptRichText(true);
     incidentLog->setReadOnly(true);
@@ -107,6 +108,10 @@ MainWindow::MainWindow(QWidget *parent)
                 ->rect()); // weird func, needed to set the size of the waterfall image delayed
     });
     notificationTimer->setSingleShot(true);
+
+    connect(measurementFileCleanupTimer, &QTimer::timeout, this, &MainWindow::cleanupOldMeasurementFiles);
+    measurementFileCleanupTimer->start(24 * 60 * 60 * 1000);
+    QTimer::singleShot(60 * 1000, this, &MainWindow::cleanupOldMeasurementFiles);
 
     gnssDisplay->setParent(this);
     gnssDisplay->start();
@@ -159,6 +164,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         arduinoPtr->watchdogOff(); // Always turn off the watchdog if app is closing gracefully
     arduinoPtr->close();
     read1809Data->close();
+    if (simulator) simulator->stopSimulation();
     measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
@@ -173,6 +179,45 @@ MainWindow::~MainWindow()
     extras.setValue("incGeometry", incidentLog->saveGeometry());
     extras.setValue("plotGeometry", customPlot->saveGeometry());
     QApplication::exit();
+}
+
+void MainWindow::cleanupOldMeasurementFiles()
+{
+    if (!config->getSdefDeleteOldMeasurementFiles())
+        return;
+
+    const QFileInfo logFolderInfo(config->getLogFolder());
+    const QFileInfo workFolderInfo(config->getWorkFolder());
+    QString logFolder = logFolderInfo.canonicalFilePath();
+    QString workFolder = workFolderInfo.canonicalFilePath();
+
+    if (logFolder.isEmpty())
+        logFolder = QDir::cleanPath(logFolderInfo.absoluteFilePath());
+    if (workFolder.isEmpty())
+        workFolder = QDir::cleanPath(workFolderInfo.absoluteFilePath());
+
+    const Qt::CaseSensitivity pathCaseSensitivity = QSysInfo::kernelType().contains("win")
+                                                        ? Qt::CaseInsensitive
+                                                        : Qt::CaseSensitive;
+    if (logFolder.compare(workFolder, pathCaseSensitivity) == 0) {
+        qDebug() << "Old measurement file cleanup skipped because log folder equals work folder" << logFolder;
+        return;
+    }
+
+    const QDateTime oldestAllowed = QDateTime::currentDateTime().addMonths(-3);
+    QDirIterator files(logFolder,
+                       QStringList() << "*.cef" << "*.CEF" << "*.zip" << "*.ZIP"
+                                     << "*.iq" << "*.IQ" << "*.jpg" << "*.JPG"
+                                     << "*.gif" << "*.GIF",
+                       QDir::Files | QDir::NoSymLinks,
+                       QDirIterator::Subdirectories);
+
+    while (files.hasNext()) {
+        files.next();
+        const QFileInfo fileInfo = files.fileInfo();
+        if (fileInfo.lastModified() < oldestAllowed && !QFile::remove(fileInfo.absoluteFilePath()))
+            qDebug() << "Could not delete old measurement file" << fileInfo.absoluteFilePath();
+    }
 }
 
 void MainWindow::createActions()
@@ -278,6 +323,44 @@ void MainWindow::createActions()
             QMetaObject::invokeMethod(notifications, "sendDailySummaryEmailReport", Qt::QueuedConnection);
             updateStatusLine(tr("Daily summary email report triggered"));
         }
+    });
+
+    startSimulatorAct->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S));
+    startSimulatorAct->setShortcutContext(Qt::ApplicationShortcut);
+    startSimulatorAct->setStatusTip(tr("Start trace analyzer simulator"));
+    addAction(startSimulatorAct);
+    connect(startSimulatorAct, &QAction::triggered, this, [this] {
+        if (measurementDevice->isConnected()) {
+            updateStatusLine(tr("Disconnect the measurement device before starting the simulator"));
+            return;
+        }
+        if (!simulator || simulator->isRunning()) {
+            updateStatusLine(tr("Trace analyzer simulator is already running"));
+            return;
+        }
+
+        traceBuffer->emptyBuffer();
+        traceBuffer->restartCalcAvgLevel(true);
+        simulator->startTraceAnalyzerScenario();
+    });
+
+    startSignificantLevelSimulatorAct->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_D));
+    startSignificantLevelSimulatorAct->setShortcutContext(Qt::ApplicationShortcut);
+    startSignificantLevelSimulatorAct->setStatusTip(tr("Start significant level simulator"));
+    addAction(startSignificantLevelSimulatorAct);
+    connect(startSignificantLevelSimulatorAct, &QAction::triggered, this, [this] {
+        if (measurementDevice->isConnected()) {
+            updateStatusLine(tr("Disconnect the measurement device before starting the simulator"));
+            return;
+        }
+        if (!simulator || simulator->isRunning()) {
+            updateStatusLine(tr("Trace analyzer simulator is already running"));
+            return;
+        }
+
+        traceBuffer->emptyBuffer();
+        traceBuffer->restartCalcAvgLevel(true);
+        simulator->startSignificantLevelScenario();
     });
 
     connect(hideShowControls, &QAction::triggered, this, [this] {

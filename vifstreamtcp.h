@@ -21,9 +21,13 @@ public:
     void restartTimeoutTimer() {}
     void invalidateHeader() { emit headerInvalidated(); }
     bool isOpen() { return tcpSocket->isOpen(); }
+    void setPayloadType(HeaderType type) { m_payloadType = type; }
 
 signals:
     void headerInvalidated();
+
+private:
+    HeaderType m_payloadType = HeaderType::AMMOS;
 };
 
 #endif // VIFSTREAMTCP_H

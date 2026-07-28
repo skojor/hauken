@@ -41,6 +41,7 @@ void MeasurementDevice::initializeDevicePtr()
     devicePtr->pscanStartFrequency = config->getInstrStartFreq();
     devicePtr->pscanStopFrequency = config->getInstrStopFreq();
     devicePtr->ffmCenterFrequency = config->getInstrFfmCenterFreq();
+    useAmmosProtocol = config->getIqUseAmmosProtocol();
 }
 
 void MeasurementDevice::instrConnect()
@@ -707,7 +708,7 @@ void MeasurementDevice::setupUdpStream()
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
 
-    QByteArray modeStr = "cw, ifp, aud, if, psc";
+    QByteArray modeStr = "cw, ifp, aud, psc";
 
     QByteArray gpsc;
     if (askForPosition) gpsc = ", gpsc";
@@ -839,6 +840,11 @@ void MeasurementDevice::updSettings()
 
     if (useUdpStream != !config->getInstrUseTcpDatastream())
         useUdpStream = !config->getInstrUseTcpDatastream();
+
+    if (useAmmosProtocol != config->getIqUseAmmosProtocol()) {
+        useAmmosProtocol = config->getIqUseAmmosProtocol();
+        restartStream();
+    }
 
     if ((config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument")) || config->getGnssUseInstrumentGnss())  {// only ask device for position if it is needed
         if (!askForPosition) {
@@ -1085,11 +1091,14 @@ void MeasurementDevice::setVifFreqAndMode(const double frequency)
         scpiWrite("freq:mode ffm");
     }
     else modeChanged = false;
-    //ifStreamOff();
-    scpiWrite("meas:time 500 ms"); // Slow down other data transfer
+    if (!config->getIqUseAmmosProtocol())
+        ifStreamOff();
+    else
+        scpiWrite("meas:time 500 ms"); // Slow down other data transfer
     scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3))); // Needed to reset iq start timestamp!
     scpiWrite("freq " + QByteArray::number((quint64)(frequency * 1e6)));
-    scpiWrite("init:imm");
+    if (config->getIqUseAmmosProtocol())
+        scpiWrite("init:imm");
     ifStreamOn();
 }
 
@@ -1132,6 +1141,10 @@ void MeasurementDevice::setupVifConnection()
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) + ", vif");*/
     //scpiWrite("meas:time 100 ms"); // Slow down trace data transfer while I/Q transfer is running
+    qDebug() << "Setting up I/Q connection"
+             << "ammos" << config->getIqUseAmmosProtocol()
+             << "mode" << static_cast<int>(devicePtr->mode)
+             << "bwHz" << config->getIqFftPlotBw() * 1e3;
     scpiWrite("abor");
     scpiWrite("dem:mode IQ");
     scpiWrite("band " + QByteArray::number((int)(config->getIqFftPlotBw() * 1e3)));
@@ -1216,8 +1229,36 @@ void MeasurementDevice::setDetector(int i)
 
 void MeasurementDevice::ifStreamOn()
 {
+    if (!config->getIqUseAmmosProtocol()) {
+        QByteArray em200Specific;
+        if (devicePtr->advProtocol) em200Specific = ", 'ifpan'";
+        else em200Specific = ", 'swap'";
+
+        vifStreamTcp->setPayloadType(HeaderType::EB200);
+        if (!vifStreamTcp->isOpen())
+            vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+
+        qDebug() << "Starting legacy I/Q stream";
+        scpiWrite("trac:tcp:tag:on \"" +
+                  scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                  QByteArray::number(vifStreamTcp->getTcpPort()) +
+                  ", if");
+        scpiWrite("trac:tcp:flag:on \"" +
+                  scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                  QByteArray::number(vifStreamTcp->getTcpPort()) +
+                  ", 'volt:ac', 'opt'" + em200Specific);
+        scpiWrite("syst:if:rem:mode short");
+        emit ifStreamRequested();
+        return;
+    }
+
+    vifStreamTcp->setPayloadType(HeaderType::AMMOS);
     if (!vifStreamTcp->isOpen())
         vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
+    qDebug() << "Starting AMMOS I/Q stream"
+             << "localAddress" << scpiSocket->localAddress().toString()
+             << "vifPort" << vifStreamTcp->getTcpPort()
+             << "socketOpen" << vifStreamTcp->isOpen();
     scpiWrite("trac:tcp:tag:on \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) +
@@ -1228,7 +1269,17 @@ void MeasurementDevice::ifStreamOn()
 
 void MeasurementDevice::ifStreamOff()
 {
+    qDebug() << "Stopping I/Q stream" << "ammos" << config->getIqUseAmmosProtocol();
     scpiWrite("syst:if:rem:mode off");
+    if (!config->getIqUseAmmosProtocol()) {
+        scpiWrite("trac:tcp:tag:off \"" +
+                  scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
+                  QByteArray::number(vifStreamTcp->getTcpPort()) +
+                  ", if");
+        vifStreamTcp->invalidateHeader();
+        return;
+    }
+
     scpiWrite("trac:tcp:tag:off \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
               QByteArray::number(vifStreamTcp->getTcpPort()) +

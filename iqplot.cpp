@@ -4,6 +4,7 @@
 #include <QRegularExpression>
 #include <QtConcurrent>
 #include <QFileInfo>
+#include <algorithm>
 //#include "opencv2/opencv.hpp"
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
@@ -21,7 +22,15 @@ void IqPlot::start()
     stopIqStreamTimer->setSingleShot(true);
 
     connect(timeoutTimer, &QTimer::timeout, this, [this]() {
-        qWarning() << "I/Q transfer timed out." << iqSamples.size() << flagRequestedEndVifConnection << flagHeaderValidated;
+        qWarning() << "I/Q transfer timed out."
+                   << "samples" << iqSamples.size()
+                   << "needed" << samplesNeeded
+                   << "remainingFreqsMHz" << listFreqs
+                   << "requestedEnd" << flagRequestedEndVifConnection
+                   << "headerValidated" << flagHeaderValidated
+                   << "metadataFreq" << m_iqMetadata.centerfreq
+                   << "metadataBw" << m_iqMetadata.bandwidth
+                   << "metadataRate" << m_iqMetadata.samplerate;
         emit endVifConnection();
         emit busyRecording(false);
         iqSamples.clear();
@@ -46,7 +55,7 @@ void IqPlot::end()
     delete timeoutTimer;
 }
 
-void IqPlot::getIqData(const QVector<complexInt16> iq16)
+void IqPlot::getIqData(const QVector<complexInt16> &iq16)
 {
     m_iqMetadata.fromFile = false;
     if (!samplesNeeded)
@@ -54,7 +63,9 @@ void IqPlot::getIqData(const QVector<complexInt16> iq16)
 
     if (!listFreqs.isEmpty() && flagHeaderValidated) timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // Restart timer as long as data is flowing and we have work to do
     if (flagHeaderValidated and !throwFirstSamples) {
-        iqSamples += iq16;
+        const qsizetype oldSize = iqSamples.size();
+        iqSamples.resize(oldSize + iq16.size());
+        std::copy(iq16.cbegin(), iq16.cend(), iqSamples.begin() + oldSize);
         //qDebug() << "Gathering I/Q cnt" << iqSamples.size();
     }
     else if (flagHeaderValidated and throwFirstSamples) {
@@ -273,8 +284,8 @@ void IqPlot::requestIqData()
             }
         }
         emit busyRecording(true);
-        emit setFfmCenterFrequency(listFreqs.first());
         emit reqVifConnection();
+        emit setFfmCenterFrequency(listFreqs.first());
         flagRequestedEndVifConnection = false;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS);
     }
@@ -407,12 +418,25 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         m_iqMetadata.centerfreq = freq;
         m_iqMetadata.timestamp = QDateTime::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
         m_iqMetadata.trigFrequency = trigFrequency;
+        if (!samplesNeeded)
+            samplesNeeded = (int)(config->getIqLogTime() * rate);
+        const qsizetype requiredSamples = qsizetype(samplesNeeded);
+        if (iqSamples.capacity() < requiredSamples)
+            iqSamples.reserve(requiredSamples);
         qDebug() << "Timestamp set at" << QDateTime::fromMSecsSinceEpoch(1e-6 * m_iqMetadata.timestamp);
         //qDebug() << "validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << ", samplerate:" << rate << freq << bw << timestamp;
     }
     else {
         flagHeaderValidated = false;
-        //qDebug() << "not validated at" << QDateTime::currentDateTime().toString("mm:ss:zzz") << freq << bw << rate;
+        if (!listFreqs.isEmpty()) {
+            qDebug() << "I/Q header rejected"
+                     << "expectedFreq" << quint64(listFreqs.first() * 1e6)
+                     << "expectedBw" << quint32(config->getIqFftPlotBw() * 1e3)
+                     << "gotFreq" << freq
+                     << "gotBw" << bw
+                     << "gotRate" << rate
+                     << "pendingFreqsMHz" << listFreqs;
+        }
 
     }
 }

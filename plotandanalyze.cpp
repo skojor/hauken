@@ -4,6 +4,8 @@
 #include "opencv2/opencv.hpp"
 #include "version.h"
 #include <complex>
+#include <QFileInfo>
+#include <QPainter>
 
 PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
 {
@@ -15,9 +17,11 @@ void PlotAndAnalyze::start()
     m_reqTracedataTimer = new QTimer;
     m_sendPlotsTimer = new QTimer;
     m_reqTraceplotTimer = new QTimer;
+    m_incidentEndTimer = new QTimer;
     m_reqTracedataTimer->setSingleShot(true);
     m_sendPlotsTimer->setSingleShot(true);
     m_reqTraceplotTimer->setSingleShot(true);
+    m_incidentEndTimer->setSingleShot(true);
 
     connect(m_reqTracedataTimer, &QTimer::timeout, this, [this] () {
         emit reqTracedata();
@@ -34,13 +38,33 @@ void PlotAndAnalyze::start()
     connect(m_reqTraceplotTimer, &QTimer::timeout, this, [this] () {
         emit reqTracePlot();
     });
+
+    connect(m_incidentEndTimer, &QTimer::timeout, this, [this] () {
+        m_freqNotificationSentForIncident = false;
+    });
 }
 
 void PlotAndAnalyze::end()
 {
+    delete m_incidentEndTimer;
+    m_incidentEndTimer = nullptr;
     delete m_reqTraceplotTimer;
     delete m_sendPlotsTimer;
     delete m_reqTracedataTimer;
+}
+
+void PlotAndAnalyze::traceIncidentStarted()
+{
+    if (m_incidentEndTimer && m_incidentEndTimer->isActive())
+        m_incidentEndTimer->stop();
+}
+
+void PlotAndAnalyze::traceIncidentEnded()
+{
+    if (!m_incidentEndTimer)
+        return;
+
+    m_incidentEndTimer->start(m_config->getSdefRecordTime() * 60 * 1000);
 }
 
 void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, const IqMetadata &meta)
@@ -97,15 +121,6 @@ void PlotAndAnalyze::receiveFftData(const QVector<QVector<double> > &fftVector, 
         images = createImages(fftVector, 5e-4, m_metadata.maxLoc, 50, false);
         if (!images.isEmpty()) {
             createGif(images);
-            double delta = (double)m_metadata.imageStartAt * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
-            quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
-
-            m_plotsDescription.append(QString::number(m_metadata.centerfreq * 1e-6)
-                                      + " MHz. FFT animation from "
-                                      + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
-                                      + ", 500 us per image, total time covered "
-                                      + QString::number(500 * images.size()) + " us");
-
         }
         else {
             qWarning() << "Not enough I/Q data to generate plot(s)";
@@ -504,24 +519,69 @@ bool PlotAndAnalyze::attachClassificationToPendingPlot(const QString &text)
 void PlotAndAnalyze::createGif(QVector<QImage> &images)
 {
     if (images.size() > 0) {
-        const int width = 256, height = 256;
+        const int width = 192, height = 192;
+        const int sourceDelay = 40; // ms
+        const int maxFrames = 20;
+        const int bitDepth = 5;
+        const qint64 maxInlineGifBytes = 300 * 1024;
+        const int frameStep = qMax(1, (images.size() + maxFrames - 1) / maxFrames);
 
         GifWriter gifWriter;
-        int delay = 40; // ms
+        int delay = sourceDelay * frameStep;
+        const QString gifFilename = m_metadata.filename + ".gif";
 
-        if (!GifBegin(&gifWriter, qPrintable(m_metadata.filename + ".gif"), width, height, delay)) {
-            qWarning() << "Cannot write to gif file:" << m_metadata.filename + ".gif";
+        if (!GifBegin(&gifWriter, qPrintable(gifFilename), width, height, delay, bitDepth)) {
+            qWarning() << "Cannot write to gif file:" << gifFilename;
             return;
         }
-        for (auto &&img : images) {
-            QImage converted = img.convertToFormat(QImage::Format_RGBA8888);
+        for (int i = 0; i < images.size(); i += frameStep) {
+            QImage converted = images[i].convertToFormat(QImage::Format_RGBA8888);
             converted = converted.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             if (!converted.isNull())
-                GifWriteFrame(&gifWriter, converted.bits(), converted.width(), converted.height(), delay);
+                GifWriteFrame(&gifWriter, converted.bits(), converted.width(), converted.height(), delay, bitDepth);
         }
         GifEnd(&gifWriter);
-        if (m_config->getEmailAddGif() and !m_metadata.fromFile)
-            m_plotsToSend.append(m_metadata.filename + ".gif");
+        if (m_config->getEmailAddGif() and !m_metadata.fromFile) {
+            double delta = (double)m_metadata.imageStartAt * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
+            quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;
+            QString fileToSend = gifFilename;
+            QString description = QString::number(m_metadata.centerfreq * 1e-6)
+                                  + " MHz. Compressed FFT animation from "
+                                  + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
+                                  + ", 500 us per source image, total time covered "
+                                  + QString::number(500 * images.size()) + " us";
+
+            if (QFileInfo(gifFilename).size() > maxInlineGifBytes) {
+                const int thumbWidth = 128, thumbHeight = 128, columns = 5;
+                const int frameCount = (images.size() + frameStep - 1) / frameStep;
+                const int rows = (frameCount + columns - 1) / columns;
+                QImage sheet(columns * thumbWidth, rows * thumbHeight, QImage::Format_RGB888);
+                sheet.fill(Qt::black);
+
+                QPainter painter(&sheet);
+                for (int sourceIndex = 0, frameIndex = 0; sourceIndex < images.size(); sourceIndex += frameStep, frameIndex++) {
+                    const QRect target((frameIndex % columns) * thumbWidth,
+                                       (frameIndex / columns) * thumbHeight,
+                                       thumbWidth,
+                                       thumbHeight);
+                    painter.drawImage(target, images[sourceIndex].scaled(thumbWidth, thumbHeight, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                }
+                painter.end();
+
+                const QString sheetFilename = m_metadata.filename + "_frames.jpg";
+                if (sheet.save(sheetFilename, "jpg", 70)) {
+                    fileToSend = sheetFilename;
+                    description = QString::number(m_metadata.centerfreq * 1e-6)
+                                  + " MHz. Compressed FFT frame overview from "
+                                  + QDateTime::fromMSecsSinceEpoch(startingAt).toString("hh:mm:ss.zzz")
+                                  + ", 500 us per source image, total time covered "
+                                  + QString::number(500 * images.size()) + " us";
+                }
+            }
+
+            m_plotsToSend.append(fileToSend);
+            m_plotsDescription.append(description);
+        }
     }
 }
 
@@ -1070,7 +1130,8 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
         double stopMHz = 0;
     };
 
-    const double triglevel = m_config->getInstrTrigLevel();
+    const double configuredTrigLevel = m_config->getInstrTrigLevel();
+    const double triglevel = configuredTrigLevel < 5.0 ? configuredTrigLevel + 3.0 : configuredTrigLevel;
     const double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
     const double l1StartMHz = (GPSL1 - 512e3) * 1e-6;
     const double l1StopMHz = (GPSL1 + 512e3) * 1e-6;
@@ -1160,6 +1221,10 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
     if (signalOverlapsL1)
         ts << " Signal overlaps L1 center frequency +/- 512 kHz.";
 
+    if (m_freqNotificationSentForIncident)
+        return;
+
+    m_freqNotificationSentForIncident = true;
     emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
     if (signalOverlapsL1 && classificationHasRfiForRange(l1StartMHz, l1StopMHz))

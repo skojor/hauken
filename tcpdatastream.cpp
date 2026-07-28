@@ -50,7 +50,7 @@ void TcpDataStream::newDataHandler()
             processData(tcpBuffer.mid(pos, header.dataSize));
         }
         else {
-            qDebug() << "ooo" << header.seqNumber << sequenceNr << attrHeader.length;
+            //qDebug() << "ooo" << header.seqNumber << sequenceNr << attrHeader.length;
             emit waitForPscanEndMarker(true);
         }
         tcpBuffer = tcpBuffer.remove(pos, header.dataSize);

@@ -8,7 +8,6 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QMutex>
-#include <QMutexLocker>
 #include <QObject>
 #include <QPainter>
 #include <QPixmap>
@@ -44,26 +43,24 @@ public slots:
     void updSettings();
     void restartPlot();
     void stopPlot(bool b) {
-        QMutexLocker locker(&mutex);
         if (!b) {
-            paused = true;
             initial = 2;
-            traceCopy.clear();
-            if (updIntervalTimer) updIntervalTimer->stop();
+            updIntervalTimer->stop();
         }
         else {
-            paused = false;
-            traceCopy.clear();
+            updIntervalTimer->start(100);
             initial = 2;
-            if (updIntervalTimer) updIntervalTimer->start(100);
         }
     }
     void pausePlot(bool b) {
-        QMutexLocker locker(&mutex);
-        paused = b;
-        traceCopy.clear();
-        initial = 2;
-        if (b && updIntervalTimer) updIntervalTimer->stop();
+        if (b) {
+            updIntervalTimer->stop();
+            initial = 2;
+        }
+        else {
+            traceCopy.clear();
+            initial = 2;
+        }
     }
     void updTimerCallback();
 
@@ -89,7 +86,6 @@ private:
     COLORS colorset;
     bool greyscale = false;
     QMutex mutex;
-    bool paused = false;
     int initial = 2;
 };
 

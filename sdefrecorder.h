@@ -69,13 +69,10 @@ private slots:
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
     void zipit();
+    bool zipIncidentFolder();
     void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
     void startTempFile();
     QByteArray genSdefTraceLine(double lat = 0, double lng = 0, const QVector<qint16> = QVector<qint16>());
-    void pauseForIqTransfer();
-    void resumeAfterIqTransfer();
-    void pauseTimer(QTimer *timer, int &remainingTime);
-    void resumeTimer(QTimer *timer, int &remainingTime);
 
 signals:
     void recordingStarted();
@@ -135,11 +132,6 @@ private:
 
     QVector<qint16> tempFileTracedata;
     bool iqRecordingInProgress = false;
-    int iqRecordingStateSerial = 0;
-    int recordingStartedTimerRemaining = -1;
-    int recordingTimeoutTimerRemaining = -1;
-    bool autorecorderTimerPaused = false;
-    bool tempFileTimerPaused = false;
     int skipTraces = 0;
     QString antName = "NA";
 

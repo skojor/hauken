@@ -77,8 +77,8 @@ EmailOptions::EmailOptions(QSharedPointer<Config> c)
     cbOpt7->setToolTip("Includes images of the I/Q plots. Only generated if there is enough I/Q samples");
 
     layout2->addRow(cbOpt8);
-    cbOpt8->setText("Add GIF animation of I/Q signal to email (if available)");
-    cbOpt8->setToolTip("Generates a short GIF of the signal. Only generated if there is enough I/Q samples");
+    cbOpt8->setText("Add compressed I/Q animation or frame overview to email (if available)");
+    cbOpt8->setToolTip("Generates a compact animation, or a JPEG frame overview if the animation is too large. Only generated if there is enough I/Q samples");
 
     layout2->addRow(new QLabel("Delay before taking image snapshots"), sbOpt3);
     sbOpt3->setToolTip("Wait this many seconds before making a snapshot of the trace and the waterfall. Useful to see more waterfall before mail is sent.\nThis value cannot be higher than the double of incident truncation time (because then the email is sent, and it's a little late to include attachments...");

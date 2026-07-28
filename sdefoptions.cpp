@@ -20,6 +20,21 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt4->setText("Compress files in zip format");
     cbOpt4->setToolTip("If checked the measurement file will be zipped after recording.");
 
+    fileLayout->addRow(cbOpt13);
+    cbOpt13->setText("Compress all incident files into one zip for upload");
+    cbOpt13->setToolTip("If checked all files in the incident folder will be zipped into one file. "
+                         "This replaces the ordinary measurement file zip when enabled.");
+
+    fileLayout->addRow(cbOpt15);
+    cbOpt15->setText("Delete local files after uploading");
+    cbOpt15->setToolTip("If checked successfully uploaded measurement files are deleted locally. "
+                         "Files are only deleted after OAuth upload has completed successfully.");
+
+    fileLayout->addRow(cbOpt14);
+    cbOpt14->setText("Delete measurement files older than 3 months");
+    cbOpt14->setToolTip("If checked old measurement files in the log folder will be deleted. "
+                         "Files are only deleted when the log folder is separate from the work folder.");
+
     fileLayout->addRow(cbOpt10);
     cbOpt10->setText("Upload file to server when finished using OAuth");
     cbOpt10->setToolTip("Enable this option to activate OAuth2 authentication and file upload. "\
@@ -71,11 +86,11 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     oauthLayout->addRow(new QLabel("OAuth2 authority"), leOpt10);
     leOpt10->setToolTip("Set the URL to the login authority.");
 
-    oauthLayout->addRow(new QLabel("OAuth2 application ID"), leOpt11);
-    leOpt11->setToolTip("Application/client ID to use for authentication.");
+    oauthLayout->addRow(new QLabel("OAuth2 application ID"), leOpt12);
+    leOpt12->setToolTip("Application/client ID to use for authentication.");
 
-    oauthLayout->addRow(new QLabel("OAuth2 scope"), leOpt12);
-    leOpt12->setToolTip("Set the scope which this authentication should cover.");
+    oauthLayout->addRow(new QLabel("OAuth2 scope"), leOpt11);
+    leOpt11->setToolTip("Set the scope which this authentication should cover.");
 
     oauthLayout->addRow(new QLabel("File upload address"), leOpt13);
     leOpt13->setToolTip("The address to use for uploading measurement files.");
@@ -106,6 +121,9 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt2->setChecked(config->getSdefUploadFile());
     cbOpt3->setChecked(config->getSdefAddPosition());
     cbOpt4->setChecked(config->getSdefZipFiles());
+    cbOpt13->setChecked(config->getSdefZipAllIncidentFiles());
+    cbOpt15->setChecked(config->getSdefDeleteLocalFilesAfterUpload());
+    cbOpt14->setChecked(config->getSdefDeleteOldMeasurementFiles());
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
     sbOpt2->setValue(config->getSdefMaxRecordTime());
@@ -147,6 +165,9 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefGpsSource(comboOpt1->currentText());
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
+    config->setSdefZipAllIncidentFiles(cbOpt13->isChecked());
+    config->setSdefDeleteLocalFilesAfterUpload(cbOpt15->isChecked());
+    config->setSdefDeleteOldMeasurementFiles(cbOpt14->isChecked());
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());

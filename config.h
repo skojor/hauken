@@ -172,6 +172,8 @@ public slots:
     void setIqSaveAs16bit(bool b) { settings->setValue("iq/saveAs16bit", b);}
     bool getIqGenerateMovie() { return settings->value("iq/generateMovie", false).toBool(); }
     void setIqGenerateMovie(bool b) { settings->setValue("iq/generateMovie", b);}
+    bool getIqUseAmmosProtocol() { return settings->value("iq/useAmmosProtocol", true).toBool(); }
+    void setIqUseAmmosProtocol(bool b) { settings->setValue("iq/useAmmosProtocol", b);}
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}
@@ -196,6 +198,8 @@ public slots:
     void setSdefPreRecordTime(int val) { settings->setValue("sdef/PreRecordTime", val); }
     bool getSdefZipFiles() { return settings->value("sdef/zipFiles", true).toBool();}
     void setSdefZipFiles(bool b) { settings->setValue("sdef/zipFiles", b); }
+    bool getSdefZipAllIncidentFiles() { return settings->value("sdef/zipAllIncidentFiles", false).toBool();}
+    void setSdefZipAllIncidentFiles(bool b) { settings->setValue("sdef/zipAllIncidentFiles", b); }
     QString getSdefServer() { return settings->value("sdef/Server").toString().trimmed();}
     void setSdefServer(QString s) { settings->setValue("sdef/Server", s); }
     QString getSdefAuthAddress() { return settings->value("sdef/AuthAddress").toString().trimmed();}
@@ -204,6 +208,10 @@ public slots:
     void setSdefNewMsFormat(bool b) { settings->setValue("sdef/newMsFormat", b); }
     bool getSdefUploadIntentionalOnly() { return settings->value("sdef/UploadIntentionalOnly", true).toBool();}
     void setSdefUploadIntentionalOnly(bool b) { settings->setValue("sdef/UploadIntentionalOnly", b);}
+    bool getSdefDeleteLocalFilesAfterUpload() { return settings->value("sdef/DeleteLocalFilesAfterUpload", false).toBool();}
+    void setSdefDeleteLocalFilesAfterUpload(bool b) { settings->setValue("sdef/DeleteLocalFilesAfterUpload", b);}
+    bool getSdefDeleteOldMeasurementFiles() { return settings->value("sdef/DeleteOldMeasurementFiles", false).toBool();}
+    void setSdefDeleteOldMeasurementFiles(bool b) { settings->setValue("sdef/DeleteOldMeasurementFiles", b);}
 
     // OAuth2 options
     bool getOauth2Enable() { return settings->value("OAuth2/enable").toBool();}

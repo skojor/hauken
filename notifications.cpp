@@ -1,6 +1,8 @@
 #include "notifications.h"
 
 #include <cmath>
+#include <QFileInfo>
+#include <QRegularExpression>
 
 namespace {
 struct PositionSnapshot
@@ -24,6 +26,85 @@ bool hasUsableCoordinates(const PositionSnapshot &position)
 bool hasUsablePosition(const PositionSnapshot &position)
 {
     return position.valid || hasUsableCoordinates(position);
+}
+
+QByteArray contentTypeForFile(const QString &filename)
+{
+    const QString suffix = QFileInfo(filename).suffix().toLower();
+
+    if (suffix == "jpg" || suffix == "jpeg")
+        return "image/jpg";
+    if (suffix == "gif")
+        return "image/gif";
+    if (suffix == "png")
+        return "image/png";
+
+    return "application/octet-stream";
+}
+
+bool isValidEmailAddress(const QString &email)
+{
+    static const QRegularExpression emailPattern(R"(^[^\s@;<>]+@[^\s@;<>]+\.[^\s@;<>]+$)");
+    return emailPattern.match(email).hasMatch();
+}
+
+QStringList validEmailRecipients(const QString &recipientString)
+{
+    QStringList validRecipients;
+
+    for (auto &&value : recipientString.split(';', Qt::SkipEmptyParts)) {
+        const QString recipient = value.simplified();
+        if (isValidEmailAddress(recipient)) {
+            validRecipients.append(recipient);
+        }
+        else {
+            qWarning() << "Ignoring invalid email recipient" << recipient;
+        }
+    }
+
+    return validRecipients;
+}
+
+int graphHttpStatusCode(const QByteArray &curlOutput)
+{
+    if (curlOutput.size() < 3) {
+        return 0;
+    }
+
+    bool ok = false;
+    const int statusCode = QString::fromLatin1(curlOutput.right(3)).toInt(&ok);
+    if (!ok || statusCode < 100 || statusCode > 599) {
+        return 0;
+    }
+
+    return statusCode;
+}
+
+QString graphServerReason(QByteArray curlOutput, const QByteArray &curlError)
+{
+    const int statusCode = graphHttpStatusCode(curlOutput);
+    if (statusCode) {
+        curlOutput.chop(3);
+    }
+
+    const QJsonDocument reply = QJsonDocument::fromJson(curlOutput.trimmed());
+    const QJsonObject error = reply.object().value("error").toObject();
+    const QString errorMessage = error.value("message").toString().simplified();
+    if (!errorMessage.isEmpty()) {
+        return errorMessage;
+    }
+
+    const QString body = QString::fromUtf8(curlOutput).simplified();
+    if (!body.isEmpty()) {
+        return body;
+    }
+
+    const QString stderrText = QString::fromUtf8(curlError).simplified();
+    if (!stderrText.isEmpty()) {
+        return stderrText;
+    }
+
+    return "No server reason returned";
 }
 }
 
@@ -123,7 +204,9 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
 bool Notifications::shouldAppendPosition(NOTIFY::TYPE type) const
 {
     return config->getSdefAddPosition() &&
-           (type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER);
+           (type == NOTIFY::TYPE::TRACEANALYZER ||
+            type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE ||
+            type == NOTIFY::TYPE::GNSSANALYZER);
 }
 
 QString Notifications::appendPosition(const QString &text)
@@ -159,12 +242,19 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
-    if ((type == NOTIFY::TYPE::TRACEANALYZER || type == NOTIFY::TYPE::GNSSANALYZER || type == NOTIFY::TYPE::AI)
+    if ((type == NOTIFY::TYPE::TRACEANALYZER ||
+         type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE ||
+         type == NOTIFY::TYPE::GNSSANALYZER ||
+         type == NOTIFY::TYPE::AI)
         && !msg.contains("Normal signal levels", Qt::CaseInsensitive)) {
         dailySummaryStatistics.recordIncident(dt);
     }
     if (config->getEmailNotifyGnssIncidents() && type == NOTIFY::TYPE::GNSSANALYZER)
         appendEmailText(dt,  msg);
+    else if (config->getEmailNotifyMeasurementDeviceHighLevel() && type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE) {
+        notifyPriorityRecipients = config->getEmailFilteredRecipients().size() > 5;
+        appendEmailText(dt, msg);
+    }
     else if (config->getEmailNotifyMeasurementDeviceHighLevel() && (type == NOTIFY::TYPE::TRACEANALYZER or type == NOTIFY::TYPE::AI))
         appendEmailText(dt, msg);
     else if (config->getEmailNotifyMeasurementDeviceDisconnected() && msg.contains("disconnected", Qt::CaseInsensitive))
@@ -236,6 +326,12 @@ void Notifications::sendHtmlEmail(const QString &subject, const QString &html, b
         return;
     }
 
+    const QStringList mailRecipients = validEmailRecipients(usePriorityRecipients ? config->getEmailFilteredRecipients() : recipients);
+    if (mailRecipients.isEmpty()) {
+        emit warning("Email notifications is enabled, but no valid recipients are configured. Check your configuration!");
+        return;
+    }
+
     auto server = new SimpleMail::Server;
     server->setHost(mailserverAddress);
     server->setPort(mailserverPort.toUInt());
@@ -245,16 +341,13 @@ void Notifications::sendHtmlEmail(const QString &subject, const QString &html, b
         server->setPassword(smtpPass);
     }
 
-    const QStringList mailRecipients = (usePriorityRecipients ? config->getEmailFilteredRecipients() : recipients).split(';', Qt::SkipEmptyParts);
-
     auto mimeHtml = new SimpleMail::MimeHtml;
     mimeHtml->setHtml(html);
 
     SimpleMail::MimeMessage message;
     message.setSubject(subject);
     message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
-    for (auto &val : mailRecipients) {
-        const QString recipient = val.simplified();
+    for (auto &recipient : mailRecipients) {
         message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
     }
     message.addPart(mimeHtml);
@@ -289,6 +382,13 @@ void Notifications::sendMail()
 {
     if (!timeBetweenEmailsTimer->isActive()) {
         if (simpleParametersCheck() and !mailtext.isEmpty()) {
+            const QStringList mailRecipients = validEmailRecipients(recipients);
+            const QStringList priorityMailRecipients = validEmailRecipients(config->getEmailFilteredRecipients());
+            if (mailRecipients.isEmpty() && priorityMailRecipients.isEmpty()) {
+                emit warning("Email notifications is enabled, but no valid recipients are configured. Check your configuration!");
+                return;
+            }
+
             auto server = new SimpleMail::Server;
             server->setHost(mailserverAddress);
             server->setPort(mailserverPort.toUInt());
@@ -298,24 +398,20 @@ void Notifications::sendMail()
                 server->setPassword(smtpPass);
             }
 
-            QStringList mailRecipients;
-            if (recipients.contains(';')) mailRecipients = recipients.split(';');
-            else mailRecipients.append(recipients);
-
             auto mimeHtml = new SimpleMail::MimeHtml;
             SimpleMail::MimeMessage message;
             message.setSubject("Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")");
             message.setSender(SimpleMail::EmailAddress(config->getEmailFromAddress(), ""));
 
-            if (predictionReceived &&
-                config->getEmailFilteredRecipients().size() > 5) {
+            if ((predictionReceived || notifyPriorityRecipients) &&
+                !priorityMailRecipients.isEmpty()) {
                 notifyPriorityRecipients = true;
-                for (auto &val : config->getEmailFilteredRecipients().split(";"))
-                    message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+                for (auto &recipient : priorityMailRecipients)
+                    message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
             }
             else {
-                for (auto &val : mailRecipients)
-                    message.addTo(SimpleMail::EmailAddress(val, val.split('@').at(0)));
+                for (auto &recipient : mailRecipients)
+                    message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
             }
             QString data;
             QTextStream ts(&data);
@@ -357,16 +453,16 @@ void Notifications::sendMail()
                 //"<img src='cid:image1'>";
 
             int iter = 0;
-            for (auto && iqPlotFilename : iqPlotFilenames) {
-                if (!iqPlotFilename.isEmpty()) {
-                    ts << "<br><p>" << iqPlotDescriptions[iter] << "</p><img src='cid:iqplot" << iter << "'>";
+            for (auto && iqPlot : iqPlots) {
+                if (!iqPlot.isEmpty()) {
+                    ts << "<br><p>" << iqPlot.description << "</p><img src='cid:iqplot" << iter << "'>";
                 }
                 iter++;
             }
 
             ts <<
-                (gnssPlotFilename.isEmpty() ? "" : "<br><p>GNSS 1 data</p><img src='cid:image2'>") <<
-                (gnssPlotFilename2.isEmpty() ? "" : "<br><p>GNSS 2 data</p><img src='cid:image3'>") <<
+                (gnssPlot.isEmpty() ? "" : "<br><p>GNSS 1 data</p><img src='cid:image2'>") <<
+                (gnssPlot2.isEmpty() ? "" : "<br><p>GNSS 2 data</p><img src='cid:image3'>") <<
                 "<hr></body></table>   /";
 
             //qDebug() << "mail debug:" << mimeHtml->data();
@@ -380,27 +476,17 @@ void Notifications::sendMail()
                 predictionReceived = false;
             }
 
-            /*auto image1 = new SimpleMail::MimeInlineFile(new QFile(lastPicFilename));
-
-            image1->setContentId("image1");
-            image1->setContentType("image/jpg");
-            //message.addPart(&image1);
-            emailPictures.append(image1);*/
-            if (!gnssPlotFilename.isEmpty()) {
-                auto image2 = new SimpleMail::MimeInlineFile(new QFile(gnssPlotFilename));
-                image2->setContentId("image2");
-                image2->setContentType("image/jpg");
-                emailPictures.append(image2);
-            }
-            if (!gnssPlotFilename2.isEmpty()) {
-                auto image3 = new SimpleMail::MimeInlineFile(new QFile(gnssPlotFilename2));
-                image3->setContentId("image3");
-                image3->setContentType("image/jpg");
-                emailPictures.append(image3);
+            QList<SimpleMail::MimeInlineFile *> inlineAttachments;
+            if (!gnssPlot.isEmpty())
+                inlineAttachments.append(createInlineFile(gnssPlot));
+            if (!gnssPlot2.isEmpty())
+                inlineAttachments.append(createInlineFile(gnssPlot2));
+            for (auto &&iqPlot : iqPlots) {
+                if (!iqPlot.isEmpty())
+                    inlineAttachments.append(createInlineFile(iqPlot));
             }
 
-            //message.addPart(emailPictures.last());
-            for (auto && part : emailPictures)
+            for (auto && part : inlineAttachments)
                 message.addPart(part);
 
             //qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
@@ -414,6 +500,8 @@ void Notifications::sendMail()
                 if (!graphEmailLog.isEmpty()) authGraph(); // try to auth and send immediately
             }
             else {
+                notifyPriorityRecipients = false;
+                clearBufferedAttachments();
                 SimpleMail::ServerReply *reply = server->sendMail(message);
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
                         {
@@ -424,7 +512,6 @@ void Notifications::sendMail()
                             }
                             else {
                                 this->emailBacklog.removeLast();
-                                this->emailPictures.removeLast();
                             }
                             reply->deleteLater();
                         });
@@ -589,6 +676,22 @@ void Notifications::recTracePlot(const QPixmap *pic)
         qDebug() << "Traceplot saved as" << lastPicFilename;
 }
 
+void Notifications::recIqPlot(const QString &filename, const QString &description)
+{
+    const QByteArray contentId = QByteArray("iqplot") + QByteArray::number(iqPlots.size());
+    iqPlots.append(readAttachment(filename, contentId, description));
+}
+
+void Notifications::setGnssPlotFilename(QString name)
+{
+    gnssPlot = readAttachment(name, "image2", "GNSS 1 data");
+}
+
+void Notifications::setGnssPlotFilename2(QString name)
+{
+    gnssPlot2 = readAttachment(name, "image3", "GNSS 2 data");
+}
+
 void Notifications::updSettings()
 {
     if (incidentLogfile) { // Don't do this until thread has started!
@@ -628,10 +731,6 @@ void Notifications::retryEmails()
                 server->setPassword(smtpPass);
             }
 
-            QStringList mailRecipients;
-            if (recipients.contains(';')) mailRecipients = recipients.split(';');
-            else mailRecipients.append(recipients);
-
             for (int i=0; i<emailBacklog.size(); i++) {
                 SimpleMail::ServerReply *reply = server->sendMail(emailBacklog.at(i));
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply, i]
@@ -642,7 +741,6 @@ void Notifications::retryEmails()
                             }
                             else {
                                 this->emailBacklog.removeAt(i);
-                                this->emailPictures.removeAt(i);
                             }
                             reply->deleteLater();
                         });
@@ -677,8 +775,8 @@ void Notifications::generateGraphEmail()
     QJsonObject att, att2;
     QStringList recipients;
 
-    if (!notifyPriorityRecipients) recipients = config->getEmailRecipients().split(';');
-    else recipients = config->getEmailFilteredRecipients().split(";");
+    if (!notifyPriorityRecipients) recipients = validEmailRecipients(config->getEmailRecipients());
+    else recipients = validEmailRecipients(config->getEmailFilteredRecipients());
     notifyPriorityRecipients = false; // reset until next notification
 
     for (auto &recipient : recipients) {
@@ -690,8 +788,6 @@ void Notifications::generateGraphEmail()
 
     body.insert("contentType", "html");
     body.insert("content", htmlData);
-    QFile picture(lastPicFilename);
-
     bool fileOk = false;
     /*if (!picture.open(QIODevice::ReadOnly)) {
         qDebug() << "Cannot open traceplot file" << lastPicFilename << picture.errorString();
@@ -707,68 +803,21 @@ void Notifications::generateGraphEmail()
         att.insert("isInline", "true");
         attachments.append(att);
     }*/
-    if (!gnssPlotFilename.isEmpty()) {
+    if (!gnssPlot.isEmpty()) {
         fileOk = true;
-        QJsonObject att;
-        QFile picture(gnssPlotFilename);
-        if (picture.open(QIODevice::ReadOnly)) {
-            att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att.insert("name", "image2.jpg");
-            att.insert("contentType", "image/jpg");
-            att.insert("contentId", "image2");
-            att.insert("contentBytes", QString(picture.readAll().toBase64()));
-            att.insert("isInline", "true");
-            attachments.append(att);
-        }
-        gnssPlotFilename.clear();
+        appendGraphAttachment(attachments, gnssPlot);
     }
-    if (!gnssPlotFilename2.isEmpty()) {
+    if (!gnssPlot2.isEmpty()) {
         fileOk = true;
-        QJsonObject att;
-        QFile picture(gnssPlotFilename2);
-        if (picture.open(QIODevice::ReadOnly)) {
-            att.insert("@odata.type", "#microsoft.graph.fileAttachment");
-            att.insert("name", "image3.jpg");
-            att.insert("contentType", "image/jpg");
-            att.insert("contentId", "image3");
-            att.insert("contentBytes", QString(picture.readAll().toBase64()));
-            att.insert("isInline", "true");
-            attachments.append(att);
-        }
-        gnssPlotFilename2.clear();
+        appendGraphAttachment(attachments, gnssPlot2);
     }
-
-    int iter = 0;
-    for (auto && iqPlotFilename : iqPlotFilenames) {
-        if (!iqPlotFilename.isEmpty()) {
-            QFile picture2(iqPlotFilename);
-            if (!picture2.open(QIODevice::ReadOnly)) {
-                qDebug() << "Cannot open iqplot file" << iqPlotFilename << picture2.errorString();
-            }
-            else {
-                fileOk = true;
-                QJsonObject att2;
-                //QString filename = iqPlotFilename.split('/').last();
-                att2.insert("@odata.type", "#microsoft.graph.fileAttachment");
-                att2.insert("name", "iqplot" + QString::number(iter));
-                if (iqPlotFilename.contains("jpg")) {
-                    att2.insert("contentType", "image/jpg");
-                    att2.insert("contentId", "iqplot" + QString::number(iter));
-                }
-                else if (iqPlotFilename.contains("gif")) {
-                    att2.insert("contentType", "image/gif");
-                    att2.insert("contentId", "iqplot" + QString::number(iter));
-                }
-                att2.insert("contentBytes", QString(picture2.readAll().toBase64()));
-                att2.insert("isInline", "true");
-                attachments.append(att2);
-                iqPlotFilename.clear();
-            }
+    for (auto &&iqPlot : iqPlots) {
+        if (!iqPlot.isEmpty()) {
+            fileOk = true;
+            appendGraphAttachment(attachments, iqPlot);
         }
-        iter++;
     }
-    iqPlotFilenames.clear();
-    iqPlotDescriptions.clear();
+    clearBufferedAttachments();
 
     message.insert("subject", currentEmailSubject.isEmpty() ? "Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")" : currentEmailSubject);
     message.insert("body", body);
@@ -818,7 +867,8 @@ void Notifications::sendMailWithGraph()
 void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
 {
     QByteArray output = process->readAllStandardOutput();
-    //qDebug() << output << process->readAllStandardError();
+    QByteArray errorOutput = process->readAllStandardError();
+    //qDebug() << output << errorOutput;
 
     if (exitCode != 0) {
         qDebug() << "Graph exit code" << exitCode;
@@ -852,18 +902,28 @@ void Notifications::curlCallback(int exitCode, QProcess::ExitStatus)
             sendMailWithGraph();
         }
         else {
-            qDebug() << output << process->readAllStandardError();
+            qDebug() << output << errorOutput;
             emit warning("No valid response from MS Graph authentication server");
         }
     }
-    else if (output.contains("200") || output.contains("201") || output.contains("202")) {
-        qDebug() << "Mail sent successfully"; // << output << process->readAllStandardError();
-        if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
-        graphMailInProgress = false;
-    }
     else {
-        qDebug() << "Server responded with code" << output;
-        graphMailInProgress = false;
+        const int statusCode = graphHttpStatusCode(output);
+        if (statusCode >= 200 && statusCode < 300) {
+            qDebug() << "Mail sent successfully"; // << output << errorOutput;
+            if (QFile::remove(graphEmailLog.first())) graphEmailLog.removeFirst();  // delete file and name from the sendlist if successful
+            graphMailInProgress = false;
+        }
+        else {
+            const QString reason = graphServerReason(output, errorOutput);
+            qDebug() << "Graph email failed with server response" << statusCode << reason;
+            toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Graph email notification failed and was removed from the queue. Server response: " +
+                                                     (statusCode ? QString::number(statusCode) + " " : QString()) + reason);
+            if (!graphEmailLog.isEmpty()) {
+                QFile::remove(graphEmailLog.first());
+                graphEmailLog.removeFirst();
+            }
+            graphMailInProgress = false;
+        }
     }
 }
 
@@ -872,4 +932,51 @@ void Notifications::recPrediction(const QString &text)
     // New, triggered only on intentional signal!
     prediction = text;
     predictionReceived = true;
+}
+
+EmailAttachmentBuffer Notifications::readAttachment(const QString &filename,
+                                                    const QByteArray &contentId,
+                                                    const QString &description) const
+{
+    EmailAttachmentBuffer attachment;
+    attachment.fileName = QFileInfo(filename).fileName();
+    attachment.description = description;
+    attachment.contentId = contentId;
+    attachment.contentType = contentTypeForFile(filename);
+
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "Cannot open email attachment file" << filename << file.errorString();
+        return attachment;
+    }
+
+    attachment.data = file.readAll();
+    return attachment;
+}
+
+void Notifications::appendGraphAttachment(QJsonArray &attachments, const EmailAttachmentBuffer &attachment) const
+{
+    QJsonObject graphAttachment;
+    graphAttachment.insert("@odata.type", "#microsoft.graph.fileAttachment");
+    graphAttachment.insert("name", attachment.fileName);
+    graphAttachment.insert("contentType", QString::fromLatin1(attachment.contentType));
+    graphAttachment.insert("contentId", QString::fromLatin1(attachment.contentId));
+    graphAttachment.insert("contentBytes", QString(attachment.data.toBase64()));
+    graphAttachment.insert("isInline", "true");
+    attachments.append(graphAttachment);
+}
+
+SimpleMail::MimeInlineFile *Notifications::createInlineFile(const EmailAttachmentBuffer &attachment) const
+{
+    auto inlineFile = new SimpleMail::MimeInlineFile(attachment.data, attachment.fileName);
+    inlineFile->setContentId(attachment.contentId);
+    inlineFile->setContentType(attachment.contentType);
+    return inlineFile;
+}
+
+void Notifications::clearBufferedAttachments()
+{
+    gnssPlot = EmailAttachmentBuffer();
+    gnssPlot2 = EmailAttachmentBuffer();
+    iqPlots.clear();
 }
