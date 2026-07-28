@@ -25,6 +25,11 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt13->setToolTip("If checked all files in the incident folder will be zipped into one file. "
                          "This replaces the ordinary measurement file zip when enabled.");
 
+    fileLayout->addRow(cbOpt14);
+    cbOpt14->setText("Delete measurement files older than 3 months");
+    cbOpt14->setToolTip("If checked old measurement files in the log folder will be deleted. "
+                         "Files are only deleted when the log folder is separate from the work folder.");
+
     fileLayout->addRow(cbOpt10);
     cbOpt10->setText("Upload file to server when finished using OAuth");
     cbOpt10->setToolTip("Enable this option to activate OAuth2 authentication and file upload. "\
@@ -112,6 +117,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     cbOpt3->setChecked(config->getSdefAddPosition());
     cbOpt4->setChecked(config->getSdefZipFiles());
     cbOpt13->setChecked(config->getSdefZipAllIncidentFiles());
+    cbOpt14->setChecked(config->getSdefDeleteOldMeasurementFiles());
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
     sbOpt2->setValue(config->getSdefMaxRecordTime());
@@ -154,6 +160,7 @@ void SdefOptions::saveCurrentSettings()
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefZipAllIncidentFiles(cbOpt13->isChecked());
+    config->setSdefDeleteOldMeasurementFiles(cbOpt14->isChecked());
     config->setSdefRecordTime(sbOpt1->value());
     config->setSdefMaxRecordTime(sbOpt2->value());
     config->setSdefPreRecordTime(sbOpt3->value());

@@ -12,8 +12,11 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDoubleSpinBox>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QDirIterator>
+#include <QFileInfo>
 #include <QFontMetrics>
 #include <QFuture>
 #include <QFutureWatcher>
@@ -30,6 +33,7 @@
 #include <QStyle>
 #include <QStandardPaths>
 #include <QString>
+#include <QSysInfo>
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -204,6 +208,7 @@ private slots:
     void btnConnectPressed(bool state = true);
     void btnDisconnectPressed();
     void hideLayoutWidgets(QLayout *, bool);
+    void cleanupOldMeasurementFiles();
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -364,6 +369,7 @@ private:
     QMediaPlayer *player = new QMediaPlayer;
     QAudioOutput *audioOutput = new QAudioOutput;
     QTimer *notificationTimer = new QTimer;
+    QTimer *measurementFileCleanupTimer = new QTimer(this);
 
     QSharedPointer<UdpDataStream> udpStream = QSharedPointer<UdpDataStream>(new UdpDataStream, &QObject::deleteLater);
     QSharedPointer<TcpDataStream> tcpStream = QSharedPointer<TcpDataStream>(new TcpDataStream, &QObject::deleteLater);
