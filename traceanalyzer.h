@@ -45,23 +45,24 @@ private slots:
     bool checkIfFrequencyIsInTrigArea(double freq);
     void alarmTriggered();
     bool traceAnalyzerIncidentHasHappened() const;
-    void checkSignificantLevelChange(qint16 currentMaxLevel, qint16 currentTriggerLevel);
+    void checkSignificantLevelChange(qint16 currentMaxLevel);
     void resetSignificantLevelChangeState();
     void pmrCheckUptime(const quint64 frequency, const bool active);
 
 private:
     static constexpr int SignificantLevelChangeDb = 10;
     static constexpr int SignificantLevelChangeDurationMs = 10000;
+    static constexpr int SignificantLevelStableAverageDurationMs = 300000;
     static constexpr int SignificantLevelChangeRaw = SignificantLevelChangeDb * 10;
 
     QSharedPointer<Config> config;
     QElapsedTimer *elapsedTimer = new QElapsedTimer;
     QElapsedTimer significantLevelChangeTimer;
+    QElapsedTimer stableMaxLevelTimer;
     QVector<qint16> averageData;
     bool alarmEmitted = false;
     bool significantLevelReferenceValid = false;
     bool significantLevelChangePending = false;
-    int significantLevelChangeDirection = 0;
     QList<QPair<double, double>> trigFrequenciesList;
     bool recorderRunning = false;
     double khzAboveLimit = 0, khzAboveLimitTotal = 0;
@@ -74,7 +75,8 @@ private:
     double startFreq, stopFreq, resolution;
     bool pmrMode;
     qint16 maxLevel;
-    qint16 stableMaxLevel = 0;
+    qint64 stableMaxLevelSum = 0;
+    qint64 stableMaxLevelCount = 0;
     bool useDbm = false;
     //QList<PmrTable> pmrTable;
 };
