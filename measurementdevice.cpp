@@ -1272,18 +1272,16 @@ void MeasurementDevice::ifStreamOff()
     qDebug() << "Stopping I/Q stream" << "ammos" << config->getIqUseAmmosProtocol();
     scpiWrite("syst:if:rem:mode off");
     if (!config->getIqUseAmmosProtocol()) {
-        scpiWrite("trac:tcp:tag:off \"" +
+        scpiWrite("trac:tcp:del \"" +
                   scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-                  QByteArray::number(vifStreamTcp->getTcpPort()) +
-                  ", if");
+                  QByteArray::number(vifStreamTcp->getTcpPort()));
         vifStreamTcp->invalidateHeader();
         return;
     }
 
-    scpiWrite("trac:tcp:tag:off \"" +
+    scpiWrite("trac:tcp:del \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamTcp->getTcpPort()) +
-              ", AIF");
+              QByteArray::number(vifStreamTcp->getTcpPort()));
     vifStreamTcp->invalidateHeader(); // To ensure updated header is sent next time data is requested
     setMeasurementTime();
     //vifStreamTcp->closeListener();

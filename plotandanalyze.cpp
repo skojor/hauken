@@ -617,6 +617,7 @@ void PlotAndAnalyze::createJpgWithInfo(QImage &image, const double secondsAnalyz
     addLines(image, secondsAnalyzed);
     addText(image, secondsAnalyzed);
     image.save(m_metadata.filename + "_info.jpg");
+    emit iqPlotImageReady(m_metadata.filename + "_info.jpg", m_metadata.centerfreq);
     if (m_config->getEmailAddIqPlot() and !m_metadata.fromFile) {
         double delta = (double)m_metadata.maxLoc * (1.0 / m_metadata.samplerate) * (double)m_metadata.samplesInc;
         quint64 startingAt = m_metadata.timestamp * 1e-6 + delta * 1e3;

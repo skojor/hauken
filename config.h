@@ -174,6 +174,8 @@ public slots:
     void setIqGenerateMovie(bool b) { settings->setValue("iq/generateMovie", b);}
     bool getIqUseAmmosProtocol() { return settings->value("iq/useAmmosProtocol", true).toBool(); }
     void setIqUseAmmosProtocol(bool b) { settings->setValue("iq/useAmmosProtocol", b);}
+    bool getIqShowPlotsInWindow() { return settings->value("iq/showPlotsInWindow", false).toBool(); }
+    void setIqShowPlotsInWindow(bool b) { settings->setValue("iq/showPlotsInWindow", b); }
 
     // 1809 options
     bool getSdefSaveToFile() { return settings->value("sdef/SaveToFile", true).toBool();}

@@ -39,6 +39,10 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     mainLayout->addRow(cbOpt10);
     cbOpt10->setText(tr("Use AMMOS protocol for data transfer"));
 
+    mainLayout->addRow(cbOpt11);
+    cbOpt11->setText(tr("Show I/Q plot(s) in a new window"));
+    cbOpt11->setToolTip(tr("Open generated I/Q plot images in separate windows. Existing windows are reused for matching center frequencies."));
+
     mainLayout->addRow(cbOpt7);
     cbOpt7->setText(tr("Use average signal as low level of plot"));
     cbOpt7->setToolTip(tr("If checked the average level of the current received spectrum will be used "
@@ -86,6 +90,7 @@ IqOptions::IqOptions(QSharedPointer<Config> c)
     cbOpt8->setChecked(config->getIqSaveAs16bit());
     cbOpt9->setChecked(config->getIqGenerateMovie());
     cbOpt10->setChecked(config->getIqUseAmmosProtocol());
+    cbOpt11->setChecked(config->getIqShowPlotsInWindow());
 
     /*connect(btnBox, &QDialogButtonBox::accepted, this, &IqOptions::saveCurrentSettings);
     connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
@@ -122,6 +127,7 @@ void IqOptions::saveCurrentSettings()
     config->setIqSaveAs16bit(cbOpt8->isChecked());
     config->setIqGenerateMovie(cbOpt9->isChecked());
     config->setIqUseAmmosProtocol(cbOpt10->isChecked());
+    config->setIqShowPlotsInWindow(cbOpt11->isChecked());
 
     //emit updSettings();
     //dialog->close();

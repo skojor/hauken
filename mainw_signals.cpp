@@ -1222,6 +1222,34 @@ void MainWindow::setSignals()
     });*/
 
     connect(plotAndAnalyze, &PlotAndAnalyze::imageReady, notifications, &Notifications::recIqPlot);
+    connect(plotAndAnalyze, &PlotAndAnalyze::iqPlotImageReady, this, [this](const QString &filename, quint64 centerFrequency) {
+        if (!config->getIqShowPlotsInWindow())
+            return;
+
+        QPixmap pixmap(filename);
+        if (pixmap.isNull()) {
+            qWarning() << "Could not open IQ plot image" << filename;
+            return;
+        }
+
+        QPointer<QLabel> &window = iqPlotWindows[centerFrequency];
+        if (window.isNull()) {
+            window = new QLabel;
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            window->setAlignment(Qt::AlignCenter);
+            window->setScaledContents(false);
+            window->setWindowTitle("I/Q plot " + QString::number(centerFrequency * 1e-6, 'f', 3) + " MHz");
+            connect(window, &QObject::destroyed, this, [this, centerFrequency]() {
+                iqPlotWindows.remove(centerFrequency);
+            });
+        }
+
+        window->setPixmap(pixmap);
+        window->adjustSize();
+        window->show();
+        window->raise();
+        window->activateWindow();
+    });
     connect(iqPlot, &IqPlot::busyRecording, waterfall, &Waterfall::pausePlot);
     connect(iqPlot, &IqPlot::iqdataReady, plotAndAnalyze, &PlotAndAnalyze::receiveIqData);
     connect(iqPlot, &IqPlot::fftdataReady, plotAndAnalyze, &PlotAndAnalyze::receiveFftData);
