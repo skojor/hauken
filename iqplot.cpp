@@ -448,7 +448,7 @@ void IqPlot::receiverControl()
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
-        throwFirstSamples = 5 * m_iqMetadata.samplerate / 1e7;
+        throwFirstSamples = 12 * m_iqMetadata.samplerate / 1e7;
         if (!throwFirstSamples) throwFirstSamples = 1;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();
