@@ -124,9 +124,12 @@ void MeasurementDevice::instrDisconnect()
     }
     updFrequencyData->stop();
     scpiSocket->close();
-    tcpStream->closeListener();
-    udpStream->closeListener();
-    vifStreamTcp->closeListener();
+    if (tcpStream)
+        tcpStream->closeListener();
+    if (udpStream)
+        udpStream->closeListener();
+    if (vifStreamTcp)
+        vifStreamTcp->closeListener();
 }
 
 void MeasurementDevice::scpiDisconnected()
@@ -399,6 +402,12 @@ void MeasurementDevice::askUdp()
 
 void MeasurementDevice::checkUdp(const QByteArray buffer)
 {
+    if (!udpStream) {
+        qWarning() << "MeasurementDevice: UDP stream pointer not set";
+        waitingForReply = false;
+        return;
+    }
+
     QList<QByteArray> datastreamList = buffer.split('\n');
     bool inUse = false;
     waitingForReply = false;
@@ -616,6 +625,9 @@ void MeasurementDevice::delTcpStreams()
 
 void MeasurementDevice::delOwnStream()
 {
+    if (!tcpStream || !udpStream)
+        return;
+
     if (scpiSocket->state() == QAbstractSocket::ConnectedState && (tcpStream->getTcpPort() > 0 || udpStream->getUdpPort() > 0)) {
         if (config->getInstrUseTcpDatastream())
             scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
@@ -662,6 +674,11 @@ void MeasurementDevice::startDevice()
 void MeasurementDevice::restartStream(bool withDisconnect)
 {
     if (connected) {
+        if (!udpStream || !tcpStream) {
+            qWarning() << "MeasurementDevice: Stream pointer(s) not set, cannot restart stream";
+            return;
+        }
+
         delUdpStreams();
         delTcpStreams();
         delOwnStream();
@@ -678,6 +695,11 @@ void MeasurementDevice::restartStream(bool withDisconnect)
 
 void MeasurementDevice::setupTcpStream()
 {
+    if (!tcpStream) {
+        qWarning() << "MeasurementDevice: TCP stream pointer not set";
+        return;
+    }
+
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
     //vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
@@ -704,6 +726,11 @@ void MeasurementDevice::setupTcpStream()
 
 void MeasurementDevice::setupUdpStream()
 {
+    if (!udpStream) {
+        qWarning() << "MeasurementDevice: UDP stream pointer not set";
+        return;
+    }
+
 
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
@@ -760,8 +787,10 @@ void MeasurementDevice::handleStreamTimeout()
         }
     }
     else {
-        udpStream->closeListener();
-        tcpStream->closeListener();
+        if (udpStream)
+            udpStream->closeListener();
+        if (tcpStream)
+            tcpStream->closeListener();
     }
 }
 
@@ -1229,6 +1258,11 @@ void MeasurementDevice::setDetector(int i)
 
 void MeasurementDevice::ifStreamOn()
 {
+    if (!vifStreamTcp) {
+        qWarning() << "MeasurementDevice: VIF TCP stream pointer not set";
+        return;
+    }
+
     if (!config->getIqUseAmmosProtocol()) {
         QByteArray em200Specific;
         if (devicePtr->advProtocol) em200Specific = ", 'ifpan'";
@@ -1269,6 +1303,11 @@ void MeasurementDevice::ifStreamOn()
 
 void MeasurementDevice::ifStreamOff()
 {
+    if (!vifStreamTcp) {
+        qWarning() << "MeasurementDevice: VIF TCP stream pointer not set";
+        return;
+    }
+
     qDebug() << "Stopping I/Q stream" << "ammos" << config->getIqUseAmmosProtocol();
     scpiWrite("syst:if:rem:mode off");
     if (!config->getIqUseAmmosProtocol()) {

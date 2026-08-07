@@ -96,6 +96,12 @@ MainWindow::MainWindow(QWidget *parent)
     setSignals();
     instrumentList->start(); // check if instrument server is available
 
+    // Set stream pointers before config/startup actions that may trigger auto-connect.
+    measurementDevice->setUdpStreamPtr(udpStream);
+    measurementDevice->setTcpStreamPtr(tcpStream);
+    measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
+    measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
+
     qInfo() << "MainWindow: applying config and startup state";
     getConfigValues();
     btnConnectPressed(false); // Read and select instr. from list before any connections are made
@@ -115,11 +121,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     gnssDisplay->setParent(this);
     gnssDisplay->start();
-
-    measurementDevice->setUdpStreamPtr(udpStream);
-    measurementDevice->setTcpStreamPtr(tcpStream);
-    measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
-    measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
 
     QSettings extras;
     if (extras.value("incGeometry").isValid())
