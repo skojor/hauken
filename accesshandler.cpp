@@ -17,7 +17,30 @@ AccessHandler::AccessHandler(QObject *parent, QSharedPointer<Config> c)
     connect(m_timeoutTimer, &QTimer::timeout, this, [this] () {
         m_timeoutTimer->stop();
         m_stateTimer->stop();
-        cleanupMsalResources(true);
+        
+        // Critical fix: Don't call MSALRUNTIME_Shutdown() while async operations may be active.
+        // This can cause crashes or hangs if the MSAL background thread is still processing.
+        // Instead, only release the async handle and cleanup non-runtime resources.
+        // Keep MSAL runtime alive until app exit to avoid re-initialization issues.
+        
+        if (m_asyncHandle) {
+            MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
+            m_asyncHandle = nullptr;
+        }
+        
+        if (m_authParameters) {
+            MSALRUNTIME_ReleaseAuthParameters(m_authParameters);
+            m_authParameters = nullptr;
+        }
+        
+        if (m_ctx.account) {
+            MSALRUNTIME_ReleaseAccount(m_ctx.account);
+            m_ctx.account = nullptr;
+        }
+        
+        // Don't call MSALRUNTIME_Shutdown() here - it can hang if async op is still in progress
+        // Shutdown will be called in destructor when app is exiting.
+        
         m_state = StateHandler::Idle;
         qWarning() << "AccessHandler: Timeout while running authorization routine, retrying later";
         emit accessTokenInvalid("Authorization timed out");
@@ -101,9 +124,11 @@ void AccessHandler::stateHandler()
         m_state = StateHandler::DiscoverAccount;
         m_asyncHandle = nullptr;
         m_ctx = {};
+        qDebug() << "AccessHandler: Starting account discovery...";
         MSALRUNTIME_DiscoverAccountsAsync(m_appId.c_str(), m_correlationId.c_str(), discoverCallback, &m_ctx, &m_asyncHandle);
     }
     else if (m_state == StateHandler::DiscoverAccount && m_ctx.called) { // Done, we have first acc. set in ctx
+        qDebug() << "AccessHandler: Account discovered, acquiring token...";
         MSALRUNTIME_ReleaseAsyncHandle(m_asyncHandle);
         m_asyncHandle = nullptr;
         m_state = StateHandler::AcquireToken;
@@ -115,10 +140,13 @@ void AccessHandler::stateHandler()
         m_stateTimer->stop();
         m_timeoutTimer->stop();
         cleanupMsalResources(true);
+        qDebug() << "AccessHandler: Token acquisition completed";
         if (m_ctx.token.isEmpty()) {
+            qWarning() << "AccessHandler: Couldn't retrieve a valid token";
             emit accessTokenInvalid("Couldn't retrieve a valid token");
         }
         else {
+            qInfo() << "AccessHandler: Successfully acquired token for user:" << m_ctx.acc;
             emit accessTokenValid(m_ctx.acc);
             if (!m_initialLogin)
                 emit accessTokenReady(m_ctx.token); // Don't signal new token when starting up
