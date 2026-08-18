@@ -35,18 +35,17 @@ public:
     explicit DataStreamBaseClass(QObject *parent = nullptr);
     QHostAddress ownAddress;
     quint16 port = 0, udpPort = 5559;
-    QTcpSocket *tcpSocket = new QTcpSocket;
-    QUdpSocket *udpSocket = new QUdpSocket;
+    QTcpSocket *tcpSocket = nullptr;
+    QUdpSocket *udpSocket = nullptr;
     int byteCtr = 0;
-    QTimer *bytesPerSecTimer = new QTimer;
+    QTimer *bytesPerSecTimer = nullptr;
     QByteArray tcpBuffer, udpBuffer, vitaBuffer;
     QSharedPointer<Device> devicePtr;
     Eb200Header header;
     Vita49DataHeader vitaHeader;
     AttrHeaderCombined attrHeader;
     EsmbOptHeaderDScan esmbOptHeader; // FIX
-    QTimer *timeoutTimer = new QTimer;
-    QElapsedTimer *traceTimer = new QElapsedTimer;
+    QTimer *timeoutTimer = nullptr;
     const int timeoutInMs = 10000;
     QVector<QNetworkDatagram> ifBufferUdp;
     QByteArray ifBufferTcp;

@@ -8,7 +8,7 @@ Waterfall::Waterfall(QSharedPointer<Config> c)
 
 void Waterfall::start()
 {
-    updIntervalTimer = new QTimer;
+    updIntervalTimer = new QTimer(this);
     //updIntervalTimer->setSingleShot(true);
     connect(updIntervalTimer, &QTimer::timeout, this, &Waterfall::updTimerCallback);
     updSettings();

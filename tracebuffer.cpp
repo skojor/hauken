@@ -8,7 +8,7 @@ TraceBuffer::TraceBuffer(QSharedPointer<Config> c)
 
 void TraceBuffer::start()
 {
-    deleteOlderThanTimer = new QTimer;
+    deleteOlderThanTimer = new QTimer(this);
     throttleTimer = new QElapsedTimer;
     connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
     deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!

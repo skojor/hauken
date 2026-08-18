@@ -138,11 +138,11 @@ void Notifications::start()
     }
 
     incidentLogfile = new QFile;
-    truncateTimer = new QTimer;
-    mailDelayTimer = new QTimer;
-    retryEmailsTimer = new QTimer;
-    dailySummaryTimer = new QTimer;
-    dailySummaryPersistenceTimer = new QTimer;
+    truncateTimer = new QTimer(this);
+    mailDelayTimer = new QTimer(this);
+    retryEmailsTimer = new QTimer(this);
+    dailySummaryTimer = new QTimer(this);
+    dailySummaryPersistenceTimer = new QTimer(this);
 
     connect(truncateTimer, &QTimer::timeout, this, &Notifications::checkTruncate);
     connect(mailDelayTimer, &QTimer::timeout, this, &Notifications::sendMail);
@@ -153,7 +153,7 @@ void Notifications::start()
     //truncateTimer->setSingleShot(true);
     mailDelayTimer->setSingleShot(true);
 
-    timeBetweenEmailsTimer = new QTimer;
+    timeBetweenEmailsTimer = new QTimer(this);
     timeBetweenEmailsTimer->setSingleShot(true);
     retryEmailsTimer->setSingleShot(true);
     dailySummaryTimer->setSingleShot(true);
@@ -535,20 +535,44 @@ void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interf
 
 void Notifications::sendDailySummary()
 {
-    const QDateTime summaryTime = QDateTime::currentDateTime();
-    const auto snapshot = dailySummaryStatistics.createSnapshotAndReset(summaryTime);
-    const QString logLine = dailySummaryStatistics.toLogLine(snapshot, config->location(), m_instrData);
+    try {
+        // Safety check: ensure config is still valid
+        if (!config) {
+            qWarning() << "sendDailySummary: config is null, aborting";
+            return;
+        }
+        
+        const QDateTime summaryTime = QDateTime::currentDateTime();
+        qDebug() << "Sending daily summary at" << summaryTime;
+        
+        const auto snapshot = dailySummaryStatistics.createSnapshotAndReset(summaryTime);
+        const QString logLine = dailySummaryStatistics.toLogLine(snapshot, config->location(), m_instrData);
 
-    appendIncidentLog(summaryTime, logLine);
-    appendLogFile(summaryTime, logLine);
+        appendIncidentLog(summaryTime, logLine);
+        appendLogFile(summaryTime, logLine);
 
-    if (dailySummaryEnabled) {
-        const QString html = dailySummaryStatistics.toHtmlReport(snapshot, config->location(), m_instrData);
-        sendHtmlEmail("Daily summary from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")", html);
+        if (dailySummaryEnabled) {
+            try {
+                const QString html = dailySummaryStatistics.toHtmlReport(snapshot, config->location(), m_instrData);
+                const QString subject = "Daily summary from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")";
+                sendHtmlEmail(subject, html);
+            } catch (const std::exception &e) {
+                qWarning() << "sendDailySummary: exception during email generation:" << e.what();
+            } catch (...) {
+                qWarning() << "sendDailySummary: unknown exception during email generation";
+            }
+        }
+
+        saveDailySummaryStatistics();
+        scheduleDailySummaryTimer();
+    } catch (const std::exception &e) {
+        qWarning() << "sendDailySummary: exception:" << e.what();
+        // Still reschedule timer to avoid getting stuck
+        scheduleDailySummaryTimer();
+    } catch (...) {
+        qWarning() << "sendDailySummary: unknown exception";
+        scheduleDailySummaryTimer();
     }
-
-    saveDailySummaryStatistics();
-    scheduleDailySummaryTimer();
 }
 
 void Notifications::sendDailySummaryToIncidentLog()
@@ -579,10 +603,20 @@ void Notifications::scheduleDailySummaryTimer()
     const QDateTime now = QDateTime::currentDateTime();
     QDateTime nextMidnight(now.date().addDays(1), QTime(0, 0));
     qint64 msecsToMidnight = now.msecsTo(nextMidnight);
+    
+    // Safety: ensure value is positive and within valid range
     if (msecsToMidnight <= 0) {
-        msecsToMidnight = 24LL * 60LL * 60LL * 1000LL;
+        msecsToMidnight = 24LL * 60LL * 60LL * 1000LL;  // 24 hours in milliseconds
+    }
+    
+    // Validate timer value doesn't exceed int range (max ~24.8 days)
+    const qint64 MAX_TIMER_INTERVAL = 2147483647LL;  // INT_MAX
+    if (msecsToMidnight > MAX_TIMER_INTERVAL) {
+        qWarning() << "Daily summary timer interval exceeds maximum:" << msecsToMidnight << "ms, clamping to max";
+        msecsToMidnight = MAX_TIMER_INTERVAL;
     }
 
+    qDebug() << "Scheduling daily summary timer for" << msecsToMidnight << "ms (" << (msecsToMidnight / 3600000.0) << "hours)";
     dailySummaryTimer->start(static_cast<int>(msecsToMidnight));
 }
 
@@ -598,15 +632,25 @@ void Notifications::startDailySummaryPersistence()
 
 void Notifications::saveDailySummaryStatistics()
 {
-    const QString filename = dailySummaryStatisticsFilename();
-    if (filename.isEmpty()) {
-        return;
-    }
+    try {
+        const QString filename = dailySummaryStatisticsFilename();
+        if (filename.isEmpty()) {
+            return;
+        }
 
-    const QFileInfo fileInfo(filename);
-    QDir().mkpath(fileInfo.absolutePath());
-    if (!dailySummaryStatistics.saveToFile(filename, QDateTime::currentDateTime())) {
-        qWarning() << "Failed to save daily summary statistics to" << filename;
+        const QFileInfo fileInfo(filename);
+        if (!QDir().mkpath(fileInfo.absolutePath())) {
+            qWarning() << "Failed to create directory for daily summary statistics:" << fileInfo.absolutePath();
+            return;
+        }
+        
+        if (!dailySummaryStatistics.saveToFile(filename, QDateTime::currentDateTime())) {
+            qWarning() << "Failed to save daily summary statistics to" << filename;
+        }
+    } catch (const std::exception &e) {
+        qWarning() << "saveDailySummaryStatistics: exception:" << e.what();
+    } catch (...) {
+        qWarning() << "saveDailySummaryStatistics: unknown exception";
     }
 }
 

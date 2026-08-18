@@ -14,10 +14,10 @@ PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
 
 void PlotAndAnalyze::start()
 {
-    m_reqTracedataTimer = new QTimer;
-    m_sendPlotsTimer = new QTimer;
-    m_reqTraceplotTimer = new QTimer;
-    m_incidentEndTimer = new QTimer;
+    m_reqTracedataTimer = new QTimer(this);
+    m_sendPlotsTimer = new QTimer(this);
+    m_reqTraceplotTimer = new QTimer(this);
+    m_incidentEndTimer = new QTimer(this);
     m_reqTracedataTimer->setSingleShot(true);
     m_sendPlotsTimer->setSingleShot(true);
     m_reqTraceplotTimer->setSingleShot(true);
@@ -46,8 +46,7 @@ void PlotAndAnalyze::start()
 
 void PlotAndAnalyze::end()
 {
-    delete m_incidentEndTimer;
-    m_incidentEndTimer = nullptr;
+    // Timers are now owned by parent (this), will be deleted automatically
     delete m_reqTraceplotTimer;
     delete m_sendPlotsTimer;
     delete m_reqTracedataTimer;

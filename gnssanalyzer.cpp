@@ -415,7 +415,7 @@ void GnssAnalyzer::tests()
     testData.altitude = config->getStnAltitude().toDouble();
     testData.agc = 40;
 
-    QTimer *t = new QTimer;
+    QTimer *t = new QTimer(this);
     qDebug() << "Starting gnss simulation";
     connect(t, &QTimer::timeout, this, [this] () {
         getData(testData);

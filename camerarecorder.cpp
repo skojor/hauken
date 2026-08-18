@@ -7,12 +7,12 @@ CameraRecorder::CameraRecorder(QSharedPointer<Config> c)
 
 void CameraRecorder::start()
 {
-    recordTimer = new QTimer();
-    snapTimer = new QTimer();
-    alarmTimer = new QTimer();
-    alarmPulse = new QTimer();
-    bufferTimer = new QTimer();
-    reqPositionTimer = new QTimer();
+    recordTimer = new QTimer(this);
+    snapTimer = new QTimer(this);
+    alarmTimer = new QTimer(this);
+    alarmPulse = new QTimer(this);
+    bufferTimer = new QTimer(this);
+    reqPositionTimer = new QTimer(this);
 
     camOpened = false;
 
