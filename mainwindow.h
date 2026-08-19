@@ -394,6 +394,7 @@ private:
     Network *ptrNetwork = nullptr;
     bool useDbm;
     bool measDeviceFinished = false;
+    bool startupStateApplied = false;
     AudioPlayer audioPlayer;
     AudioRecorder audioRecorder;
     QLCDNumber *lcdLevel = new QLCDNumber;

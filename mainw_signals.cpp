@@ -751,7 +751,15 @@ void MainWindow::setSignals()
                         config->setInstrIpAddr(instrIpAddr->itemData(index).toString());
                 }
                 connect(instrIpAddr, &QComboBox::currentIndexChanged, this, &MainWindow::instrIpChanged);
-            });
+
+                if (!startupStateApplied) {
+                    startupStateApplied = true;
+                    btnConnectPressed(false);
+                    instrConnected(false);
+                    instrAutoConnect();
+                }
+            },
+            Qt::QueuedConnection);
 
     connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
         if (id == 1)

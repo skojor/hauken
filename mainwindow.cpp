@@ -112,9 +112,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     qInfo() << "MainWindow: applying config and startup state";
     getConfigValues();
-    btnConnectPressed(false); // Read and select instr. from list before any connections are made
-    instrConnected(false); // to set initial inputs state
-    instrAutoConnect();
     QTimer::singleShot(50, customPlotController, [this] {
         //customPlotController->updSettings();
         waterfall->updSize(
