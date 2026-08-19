@@ -54,15 +54,15 @@ public slots:
     void setResUsed(int a) { resUsed = a; }
 
 private:
-    QTimer *reportTimer = new QTimer;
-    QTimer *gnssReqTimer = new QTimer;
-    QTimer *sensorDataTimer = new QTimer;
-    QTimer *processTimeoutTimer = new QTimer;
+    QTimer *reportTimer = nullptr;
+    QTimer *gnssReqTimer = nullptr;
+    QTimer *sensorDataTimer = nullptr;
+    QTimer *processTimeoutTimer = nullptr;
 
-    QProcess *curlProcess = new QProcess;
+    QProcess *curlProcess = nullptr;
     bool measurementDeviceConnected = false, inUse = false;
     QString inUseBy, inUseByIp, modeUsed;
-    quint64 startFreqUsed, stopFreqUsed, resUsed;
+    quint64 startFreqUsed = 0, stopFreqUsed = 0, resUsed = 0;
 
     QSharedPointer<Device> devicePtr = nullptr;   // get from measurementDevice class, ask for the ptr in startup
     QSharedPointer<Config> config;
@@ -70,7 +70,8 @@ private:
     double sensorTemp = -99, sensorHumidity = 0;
 
     // config cache
-    bool posReportActive, addPosition, addCogSog, addGnssStats, addConnStats, addSensorData, addMqttData;
+    bool posReportActive = false, addPosition = false, addCogSog = false, addGnssStats = false,
+        addConnStats = false, addSensorData = false, addMqttData = false;
     QString posSource, url, id;
     int reportInterval = 0;
     GnssData gnssData;

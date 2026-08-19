@@ -3,6 +3,10 @@
 Network::Network(QSharedPointer<Config> c)
 {
     config = c;
+    tcpServer = new QTcpServer(this);
+    tcpTestSocket = new QTcpSocket(this);
+    testTimer = new QTimer(this);
+
     if (!tcpServer->listen(QHostAddress::LocalHost, TCPPORT)) {
         qWarning() << "Could not start TCP listener at port" << TCPPORT << ":" << tcpServer->errorString();
     }
@@ -36,7 +40,8 @@ Network::Network(QSharedPointer<Config> c)
 
 Network::~Network()
 {
-    tcpServer->deleteLater();
+    tcpServer->close();
+    tcpTestSocket->close();
 }
 
 void Network::updSettings()
@@ -48,7 +53,7 @@ void Network::newTraceline(const QVector<qint16> data)
 {
     bool isConnected = false;
     for (auto && socket : tcpSockets) {
-        if (socket->isOpen())
+        if (socket && socket->isOpen())
             isConnected = true;
     }
 
@@ -68,7 +73,7 @@ void Network::newTraceline(const QVector<qint16> data)
         }
 
         for (auto && socket : tcpSockets) {
-            if (socket->isOpen())
+            if (socket && socket->isOpen())
                 socket->write(ba);
         }
     }
@@ -76,7 +81,11 @@ void Network::newTraceline(const QVector<qint16> data)
 
 void Network::handleNewConnection()
 {
-    tcpSockets.append(tcpServer->nextPendingConnection());
+    QTcpSocket *socket = tcpServer->nextPendingConnection();
+    if (!socket)
+        return;
+
+    tcpSockets.append(socket);
     qDebug() << "New connection on TCP:" << tcpSockets.last()->peerAddress() << tcpSockets.last()->peerPort();
     //connect(tcpSockets.last(), &QTcpSocket::disconnected, tcpSockets.last(), &QTcpSocket::deleteLater);
 }

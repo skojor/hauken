@@ -17,14 +17,22 @@ MainWindow::MainWindow(QWidget *parent)
     qInfo() << "MainWindow: constructing core services";
     settingsDialog = new SettingsDialog(this, config);
     instrumentList = new InstrumentList(config);
+    instrumentList->setParent(this);
     gnssDisplay = new GnssDisplay(config);
+    gnssDisplay->setParent(this);
     positionReport = new PositionReport(config);
+    positionReport->setParent(this);
     geoLimit = new GeoLimit(config);
+    geoLimit->setParent(this);
     mqtt = new Mqtt(config);
+    mqtt->setParent(this);
     accessHandler = new AccessHandler(this, config);
     oauthFileUploader = new OAuthFileUploader(config);
+    oauthFileUploader->setParent(this);
     restApi = new RestApi(config);
+    restApi->setParent(this);
     ptrNetwork = new Network(config);
+    ptrNetwork->setParent(this);
 
     setStatusBar(statusBar);
     //statusBar->addWidget(progressBar);

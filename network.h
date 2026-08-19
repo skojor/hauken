@@ -36,12 +36,12 @@ private slots:
 
 private:
     QSharedPointer<Config> config;
-    QTcpServer *tcpServer = new QTcpServer;
+    QTcpServer *tcpServer = nullptr;
     QList<QTcpSocket *> tcpSockets;
-    QTcpSocket *tcpTestSocket = new QTcpSocket;
+    QTcpSocket *tcpTestSocket = nullptr;
     bool useUdp = false;
-    QTimer *testTimer = new QTimer;
-    quint64 startFreq, stopFreq;
+    QTimer *testTimer = nullptr;
+    quint64 startFreq = 0, stopFreq = 0;
 
 signals:
 

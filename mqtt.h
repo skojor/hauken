@@ -54,10 +54,10 @@ private slots:
 
 private:
     QMqttClient m_mqttClient;
-    QTimer *m_keepaliveTimer = new QTimer;
-    QTimer *m_webswitchTimer = new QTimer;
-    QTimer *m_connectionTimer = new QTimer;
-    QTimer *m_receivedDataTimer = new QTimer;
+    QTimer *m_keepaliveTimer = nullptr;
+    QTimer *m_webswitchTimer = nullptr;
+    QTimer *m_connectionTimer = nullptr;
+    QTimer *m_receivedDataTimer = nullptr;
     QList<double> m_subValues;
     SITESTATUS m_siteStatus = UNKNOWN;
     QSharedPointer<Config> config;

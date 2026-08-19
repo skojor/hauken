@@ -4,6 +4,7 @@
 MeasurementDevice::MeasurementDevice(QSharedPointer<Config> c)
 {
     config = c;
+    devicePtr = QSharedPointer<Device>(new Device);
     start();
 }
 
@@ -14,6 +15,14 @@ MeasurementDevice::~MeasurementDevice()
 
 void MeasurementDevice::start()
 {
+    scpiSocket->setParent(this);
+    tcpTimeoutTimer->setParent(this);
+    autoReconnectTimer->setParent(this);
+    timedReconnectTimer->setParent(this);
+    updGnssDisplayTimer->setParent(this);
+    updFrequencyData->setParent(this);
+    updStreamsTimer->setParent(this);
+
     connect(scpiSocket, &QTcpSocket::disconnected, this, &MeasurementDevice::scpiDisconnected);
     //connect(scpiSocket, &QTcpSocket::errorOccurred, this, &MeasurementDevice::scpiError);
     connect(scpiSocket, &QTcpSocket::stateChanged, this, &MeasurementDevice::scpiStateChanged);
@@ -25,8 +34,6 @@ void MeasurementDevice::start()
     autoReconnectTimer->setSingleShot(true);
     connect(autoReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::autoReconnectCheckStatus);
     emit connectedStateChanged(connected);
-
-    devicePtr = QSharedPointer<Device>(new Device);
 
     connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
     updGnssDisplayTimer->start(1000);
@@ -415,7 +422,8 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
     bool ownIpCandidate = false;
     waitingForReply = false;
     const QByteArray ownIp = scpiSocket->localAddress().toString().toLocal8Bit();
-    const bool udpListenerActive = udpStream->udpSocket->state() == QAbstractSocket::BoundState;
+        const bool udpListenerActive = udpStream->udpSocket
+            && udpStream->udpSocket->state() == QAbstractSocket::BoundState;
     const QByteArray currentUdpPort = QByteArray::number(udpStream->getUdpPort());
 
     for (auto&& list : datastreamList) {
@@ -490,14 +498,15 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
     bool ownIpCandidate = false;
     waitingForReply = false;
     const QByteArray ownIp = scpiSocket->localAddress().toString().toLocal8Bit();
-    const bool tcpListenerActive = tcpStream && tcpStream->tcpSocket->state() == QAbstractSocket::ConnectedState;
+        const bool tcpListenerActive = tcpStream && tcpStream->tcpSocket
+            && tcpStream->tcpSocket->state() == QAbstractSocket::ConnectedState;
     const QByteArray currentTcpPort = tcpListenerActive ? QByteArray::number(tcpStream->getTcpPort()) : QByteArray();
 
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
         if (brokenList.size() > 2) {
             QList<QByteArray> brkList = brokenList[0].split(' ');
-            if (brkList.size() > 1) inUseByIp = brokenList[0].split(' ')[1].simplified();
+            if (brkList.size() > 1) inUseByIp = brkList[1].simplified();
             else inUseByIp = brokenList[0].simplified();
             inUseByIp.remove('\"');
             QString text = "remote";
@@ -1033,6 +1042,13 @@ void MeasurementDevice::askForAntennaNames()
 void MeasurementDevice::antennaNamesReply(QByteArray buffer)
 {
     waitingForReply = false;
+    if (devicePtr->antPorts.size() < 2) {
+        qWarning() << "MeasurementDevice: Antenna name reply received without two configured antenna entries";
+        instrumentState = InstrumentState::CONNECTED;
+        emit newAntennaNames();
+        return;
+    }
+
     if (instrumentState == InstrumentState::CHECK_ANT_NAME1) {
         devicePtr->antPorts[0] = buffer.simplified();
         devicePtr->antPorts[0].remove('\"');

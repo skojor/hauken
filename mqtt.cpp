@@ -3,6 +3,10 @@
 Mqtt::Mqtt(QSharedPointer<Config> c)
 {
     config = c;
+    m_keepaliveTimer = new QTimer(this);
+    m_webswitchTimer = new QTimer(this);
+    m_connectionTimer = new QTimer(this);
+    m_receivedDataTimer = new QTimer(this);
 
     connect(&m_mqttClient, &QMqttClient::stateChanged, this, &Mqtt::stateChanged);
     connect(&m_mqttClient, &QMqttClient::errorChanged, this, &Mqtt::error);
@@ -180,7 +184,8 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
     for (int i=0; i<subs.size(); i++) {
         if (subs[i] == topic) {
             m_subValues[i] = value.toDouble();
-            emit newData(subNames[i], m_subValues[i]);
+            const QString name = subNames.size() > i ? subNames.at(i) : subs.at(i);
+            emit newData(name, m_subValues[i]);
             if (subToIncidentlog.size() > i) {
                 if (subToIncidentlog[i] == "1") parseMqtt(topic.name(), msg); //emit toIncidentLog(NOTIFY::TYPE::MQTT, "", msg);
             }
