@@ -4,6 +4,7 @@ TraceAnalyzer::TraceAnalyzer(QSharedPointer<Config> c)
 {
     config = c;
     updTrigFrequencyTable();
+    updSettings();
 }
 
 void TraceAnalyzer::setTrace(const QVector<qint16> &data)
@@ -59,14 +60,14 @@ void TraceAnalyzer::setTrace(const QVector<qint16> &data)
             if (trigTime == 0) { // trig time 0 means sound the alarm immediately
                 alarmTriggered();
             }
-            else if (trigTime > 0 && !elapsedTimer->isValid()) // first time above limit, start the clock
-                elapsedTimer->start();
-            else if (trigTime > 0 && elapsedTimer->isValid() && elapsedTimer->elapsed() >= trigTime) {
+            else if (trigTime > 0 && !elapsedTimer.isValid()) // first time above limit, start the clock
+                elapsedTimer.start();
+            else if (trigTime > 0 && elapsedTimer.isValid() && elapsedTimer.elapsed() >= trigTime) {
                 alarmTriggered();
             }
         }
         else {
-            if (elapsedTimer) elapsedTimer->invalidate();
+            elapsedTimer.invalidate();
             if (alarmEmitted) {
                 if (!pmrMode) emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", "Normal signal levels");
                 alarmEmitted = false;
@@ -189,7 +190,7 @@ void TraceAnalyzer::updTrigFrequencyTable()
         trigFrequenciesList.append(QPair<double, double>(0, 0.001)); // nothing will be detected, ever!
     }
     else {
-        for (int i=0; i<freqList.size();) {
+        for (int i=0; i + 1 < freqList.size();) {
             double sel1 = freqList.at(i++).toDouble();
             double sel2 = freqList.at(i++).toDouble();
             trigFrequenciesList.append(QPair<double, double>(sel1, sel2));

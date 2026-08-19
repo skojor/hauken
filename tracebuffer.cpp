@@ -4,19 +4,22 @@ TraceBuffer::TraceBuffer(QSharedPointer<Config> c)
 {
     config = c;
     start();
+    updSettings();
 }
 
 void TraceBuffer::start()
 {
-    deleteOlderThanTimer = new QTimer(this);
-    throttleTimer = new QElapsedTimer;
-    connect(deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
-    deleteOlderThanTimer->start(1000); // clean our house once per second, if not we will eat memory like hell!
-    connect(averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+    if (started)
+        return;
 
-    connect(maintenanceRestartTimer, &QTimer::timeout, this, [this]() {
-        maintenanceRestartTimer->stop();
-        averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime);
+    started = true;
+    connect(&deleteOlderThanTimer, &QTimer::timeout, this, &TraceBuffer::deleteOlderThan);
+    deleteOlderThanTimer.start(1000); // clean our house once per second, if not we will eat memory like hell!
+    connect(&averageLevelMaintenanceTimer, &QTimer::timeout, this, &TraceBuffer::maintainAvgLevel);
+
+    connect(&maintenanceRestartTimer, &QTimer::timeout, this, [this]() {
+        maintenanceRestartTimer.stop();
+        averageLevelMaintenanceTimer.start(avgLevelMaintenanceTime);
         //qDebug() << "Restarting avg calc. after incident";
     });
 }
@@ -28,7 +31,8 @@ void TraceBuffer::deleteOlderThan()
         while (!traceBuffer.isEmpty() && !datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
-            normTraceBuffer.removeFirst();
+            if (!normTraceBuffer.isEmpty())
+                normTraceBuffer.removeFirst();
             //displayBuffer.removeFirst();
         }
         while (maxholdBuffer.size() > 120) maxholdBuffer.removeLast();
@@ -39,6 +43,9 @@ void TraceBuffer::deleteOlderThan()
 void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
     //if (!traceBuffer.isEmpty() )qDebug() << data.size() << traceBuffer.last().size();
+
+    if (data.isEmpty() || plotResolution <= 0)
+        return;
 
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
@@ -76,8 +83,8 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
         addDisplayBufferTrace(data);
         calcMaxhold();
 
-        if (!throttleTimer->isValid() || throttleTimer->elapsed() > throttleTime) {
-            throttleTimer->start();
+        if (!throttleTimer.isValid() || throttleTimer.elapsed() > throttleTime) {
+            throttleTimer.start();
             emit newDispTrace(displayBuffer);
             //emit reqReplot(); // Why this one? Not needed really?
         }
@@ -93,7 +100,7 @@ void TraceBuffer::getSecondsOfBuffer(int secs)
     QDateTime currentDateTime = QDateTime::currentDateTime();
     QVector<QDateTime> dateBuffer;
     QVector<QVector<qint16> > databuffer;
-    int iterator = traceBuffer.size() - 1;
+    int iterator = qMin(traceBuffer.size(), datetimeBuffer.size()) - 1;
     while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(currentDateTime) < secs) {
         dateBuffer.append(datetimeBuffer.at(iterator));
         databuffer.append(traceBuffer.at(iterator--));
@@ -106,7 +113,7 @@ TraceDataStruct TraceBuffer::retSecondsOfBuffer(int secs)
     TraceDataStruct traceDataStruct;
 
     QDateTime currentDateTime = QDateTime::currentDateTime();
-    int iterator = traceBuffer.size() - 1;
+    int iterator = qMin(traceBuffer.size(), datetimeBuffer.size()) - 1;
     while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(currentDateTime) < secs) {
         traceDataStruct.timestamp.append(datetimeBuffer[iterator]);
         traceDataStruct.data.append(traceBuffer[iterator--]);
@@ -122,25 +129,31 @@ void TraceBuffer::getAiData(int secs) // secs ignored ftm, just send all you hav
 
 void TraceBuffer::calcMaxhold()
 {
+    if (plotResolution <= 0 || displayBuffer.size() != plotResolution)
+        return;
+
     QVector<double> maxhold;
     maxhold.fill(-500, plotResolution);
 
-    if (!maxholdBufferElapsedTimer->isValid()) maxholdBufferElapsedTimer->start();
+    if (!maxholdBufferElapsedTimer.isValid()) maxholdBufferElapsedTimer.start();
 
     if (maxholdBuffer.isEmpty()) maxholdBuffer.append(displayBuffer);
 
     if (maxholdBufferAggregate.isEmpty()) {
-        maxholdBufferElapsedTimer->start();
+        maxholdBufferElapsedTimer.start();
         maxholdBufferAggregate = displayBuffer;
     }
 
-    else if (!maxholdBufferAggregate.isEmpty() && maxholdBufferElapsedTimer->elapsed() < 1000) {  // aggregates maxhold
+    if (maxholdBufferAggregate.size() != displayBuffer.size())
+        maxholdBufferAggregate = displayBuffer;
+
+    else if (maxholdBufferElapsedTimer.elapsed() < 1000) {  // aggregates maxhold
         for (int i=0; i<plotResolution; i++) {
             if (maxholdBufferAggregate.at(i) < displayBuffer.at(i)) maxholdBufferAggregate[i] = displayBuffer.at(i);
         }
     }
-    else if (maxholdBufferElapsedTimer->elapsed() >= 1000) {
-        maxholdBufferElapsedTimer->start();
+    else if (maxholdBufferElapsedTimer.elapsed() >= 1000) {
+        maxholdBufferElapsedTimer.start();
         maxholdBuffer.prepend(maxholdBufferAggregate);
         emit newDispMaxholdToWaterfall(maxholdBufferAggregate); // for waterfall calc.
         maxholdBufferAggregate.clear();
@@ -169,6 +182,12 @@ void TraceBuffer::calcMaxhold()
 
 void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample to plotResolution values, find max between points
 {
+    if (plotResolution <= 0 || data.isEmpty())
+        return;
+
+    if (averageDispLevel.size() != plotResolution)
+        averageDispLevel.fill(0.0, plotResolution);
+
     displayBuffer.clear();
     QVector<qint16> tmpNormTraceBuffer(plotResolution);
     double corr = config->getCorrValue();
@@ -213,6 +232,12 @@ void TraceBuffer::addDisplayBufferTrace(const QVector<qint16> &data) // resample
 
 void TraceBuffer::calcAvgLevel(const QVector<qint16> &data)
 {
+    if (plotResolution <= 0)
+        return;
+
+    if (averageDispLevel.size() != plotResolution)
+        averageDispLevel.fill(0.0, plotResolution);
+
     if (!data.isEmpty()) {        
         if (!traceBuffer.isEmpty()) { // never work on an empty buffer!
             if (averageLevel.isEmpty())
@@ -271,6 +296,7 @@ void TraceBuffer::emptyBuffer()
 {
     traceBuffer.clear();
     datetimeBuffer.clear();
+    normTraceBuffer.clear();
     displayBuffer.clear();
     maxholdBuffer.clear();
     maxholdBufferAggregate.clear();
@@ -278,13 +304,15 @@ void TraceBuffer::emptyBuffer()
     averageDispLevel.clear();
     averageDispLevel.resize(plotResolution);
     averageDispLevelNormalized.clear();
+    traceCopy.clear();
+    failedTracesCtr = 0;
 
     restartCalcAvgLevel();
 }
 
 void TraceBuffer::finishAvgLevelCalc()
 {
-    averageLevelMaintenanceTimer->start(avgLevelMaintenanceTime); // routine to keep updating the average level at a very slow interval
+    averageLevelMaintenanceTimer.start(avgLevelMaintenanceTime); // routine to keep updating the average level at a very slow interval
     if (flagAvgLevelRestarted) {
         emit averageLevelCalculating(); // To tell every class we have worked at least for a moment for this avg data
         flagAvgLevelRestarted = false;
@@ -305,7 +333,7 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
         tracesUsedInAvg = 0;
         maxholdBuffer.clear();
         maxholdBufferAggregate.clear();
-        averageLevelMaintenanceTimer->stop();
+        averageLevelMaintenanceTimer.stop();
         averageLevel.clear();
         averageDispLevel.clear();
         averageDispLevel.resize(plotResolution);
@@ -320,7 +348,7 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
             maxholdBuffer.clear();
             maxholdBufferAggregate.clear();
 
-            averageLevelMaintenanceTimer->stop();
+            averageLevelMaintenanceTimer.stop();
             averageLevel.clear();
             averageDispLevel.clear();
             averageDispLevel.resize(plotResolution);
@@ -340,7 +368,16 @@ void TraceBuffer::restartCalcAvgLevel(bool startFresh)
 
 void TraceBuffer::updSettings()
 {
+    if (config.isNull())
+        return;
+
     plotResolution = config->getPlotResolution();
+    if (plotResolution <= 0)
+        return;
+
+    if (averageDispLevel.size() != plotResolution)
+        averageDispLevel.fill(0.0, plotResolution);
+
     if (trigLevel != (int)config->getInstrTrigLevel()) {
         trigLevel = config->getInstrTrigLevel();
     }
@@ -379,7 +416,7 @@ void TraceBuffer::updSettings()
     }
     normalizeSpectrum = config->getInstrNormalizeSpectrum();
     averageDispLevelNormalized.clear();
-    tracesNeededForAvg = config->getInstrTracesNeededForAverage();
+    tracesNeededForAvg = qMax(1, config->getInstrTracesNeededForAverage());
     useDbm = config->getUseDbm();
     useSavedAvgLevels = config->getInstrRestoreAvgLevels();
     //maintainAvgLevel();
@@ -387,13 +424,13 @@ void TraceBuffer::updSettings()
 
 void TraceBuffer::deviceDisconnected()
 {
-    averageLevelMaintenanceTimer->stop();
+    averageLevelMaintenanceTimer.stop();
 }
 
 QVector<qint16> TraceBuffer::calcNormalizedTrace(const QVector<qint16> &data)
 {
     QVector<qint16> copy = data;
-    if (!averageLevel.isEmpty()) {
+    if (averageLevel.size() == copy.size()) {
         for (int i=0; i<copy.size(); i++)
             copy[i] -= averageLevel.at(i);
     }
@@ -433,9 +470,9 @@ void TraceBuffer::incidenceTriggered() // called whenever sth is above trig line
 {
     //qDebug() << "TraceBuffer: Incidence triggered, status" << averageLevelMaintenanceTimer->isActive() << maintenanceRestartTimer->isActive();
 
-    if (!maintenanceRestartTimer->isActive() && averageLevelMaintenanceTimer->isActive() && avgFactor <= 1) { // we have a situation, halt averaging until incidence has gone away
-        averageLevelMaintenanceTimer->stop();
-        maintenanceRestartTimer->start(120000);
+    if (!maintenanceRestartTimer.isActive() && averageLevelMaintenanceTimer.isActive() && avgFactor <= 1) { // we have a situation, halt averaging until incidence has gone away
+        averageLevelMaintenanceTimer.stop();
+        maintenanceRestartTimer.start(120000);
     }
 }
 
@@ -474,17 +511,20 @@ bool TraceBuffer::restoreAvgLevels()
 {
     QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
     if (file.open(QIODevice::ReadOnly)) {
-        quint64 a_startfreq, a_stopfreq, a_ffmCenterFreq;
-        int a_res, a_sp;
-        Instrument::FftMode a_fftm;
+        quint64 a_startfreq = 0, a_stopfreq = 0, a_ffmCenterFreq = 0;
+        int a_res = 0, a_sp = 0;
+        Instrument::FftMode a_fftm = Instrument::FftMode::OFF;
         QString a_fftMode;
-        int a_antPort;
-        int a_autoAtt;
-        int a_att;
-        int a_gainControl;
+        int a_antPort = 0;
+        int a_autoAtt = 0;
+        int a_att = 0;
+        int a_gainControl = 0;
 
         QDataStream ds(&file);
         ds >> a_startfreq >> a_stopfreq >> a_res >> a_ffmCenterFreq >> a_sp >> a_fftm >> a_antPort >> a_autoAtt >> a_att >> a_gainControl;
+
+        if (ds.status() != QDataStream::Ok)
+            return false;
 
         if (a_fftm == Instrument::FftMode::MAX)
             a_fftMode = "Max";
@@ -515,6 +555,10 @@ bool TraceBuffer::restoreAvgLevels()
                 ds >> val;
                 averageLevel.append(val);
             }
+            if (ds.status() != QDataStream::Ok) {
+                averageLevel.clear();
+                return false;
+            }
             file.close();
 
             return true;
@@ -535,7 +579,7 @@ QVector<double> TraceBuffer::retMaxhold()
     if (!maxholdBuffer.isEmpty()) {
         QVector<double> maxhold(maxholdBuffer.first().size(), -999);
         for (auto && line : maxholdBuffer) {
-            for (int i = 0; i < maxhold.size(); i++) {
+            for (int i = 0; i < maxhold.size() && i < line.size(); i++) {
                 if (line[i] > maxhold[i])
                     maxhold[i] = line[i];
             }
