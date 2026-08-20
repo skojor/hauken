@@ -15,6 +15,7 @@
 #include <utils.hpp>
 #include <MSALRuntimeLogging.h>
 #include <QSharedPointer>
+#include <atomic>
 #include "config.h"
 
 constexpr int kTimeoutMs = 15000;
@@ -42,7 +43,7 @@ enum class StateHandler {
 };
 
 struct DiscoverContext {
-    bool called = false;
+    std::atomic_bool called = false;
     MSALRUNTIME_ACCOUNT_HANDLE account = nullptr;
     QDateTime expiryTime;
     QString token;
@@ -94,9 +95,9 @@ private:
     StateHandler m_state = StateHandler::Idle;
     std::wstring m_correlationId;
     DiscoverContext m_ctx;
-    QTimer *m_stateTimer = new QTimer;
-    QTimer *m_timeoutTimer = new QTimer;
-    QTimer *m_debugTimer = new QTimer;
+    QTimer *m_stateTimer = nullptr;
+    QTimer *m_timeoutTimer = nullptr;
+    QTimer *m_debugTimer = nullptr;
 
     // Cached setting values/state to control when login should run.
     bool m_loginEnabled = false;

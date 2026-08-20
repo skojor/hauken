@@ -232,6 +232,8 @@ private:
 
     bool modeChangeInProgress = false;
     bool modeChanged = false;
+    bool pendingReconnectOwnIpCheck = false;
+    bool pendingReconnectNeedsTcpCheck = false;
     QList<double> centerFrequencies;
 
 };

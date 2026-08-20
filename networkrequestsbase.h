@@ -23,8 +23,8 @@ public slots:
 
 public:
     NetworkRequestsBase();
-    QNetworkAccessManager *networkAccessManager = new QNetworkAccessManager;
-    QTimer *tmNetworkTimeout = new QTimer;
+    QNetworkAccessManager *networkAccessManager = nullptr;
+    QTimer *tmNetworkTimeout = nullptr;
 };
 
 #endif // NETWORKREQUESTSBASE_H

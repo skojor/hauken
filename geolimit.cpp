@@ -4,6 +4,7 @@
 GeoLimit::GeoLimit(QSharedPointer<Config> c)
 {
     config = c;
+    timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &GeoLimit::checkCurrentPosition);
 }
 

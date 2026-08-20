@@ -105,17 +105,17 @@ private:
     QVector<QVector<double>> maxholdBuffer;
     int maxholdTime = 10;
     const int bufferAge = 120; // always hold 120 seconds of buffer. maxhold/other output adjusted to their own settings
-    QTimer *deleteOlderThanTimer;
-    QTimer *averageLevelMaintenanceTimer = new QTimer;
-    QTimer *maintenanceRestartTimer = new QTimer;
-    QElapsedTimer *throttleTimer;
+    QTimer deleteOlderThanTimer;
+    QTimer averageLevelMaintenanceTimer;
+    QTimer maintenanceRestartTimer;
+    QElapsedTimer throttleTimer;
     QMutex mutex;
     int trigLevel = 0;
     double avgFactor = 40;
     bool recording = false;
     int tracesUsedInAvg = 0;
-    int plotResolution;
-    QElapsedTimer *maxholdBufferElapsedTimer = new QElapsedTimer;
+    int plotResolution = 0;
+    QElapsedTimer maxholdBufferElapsedTimer;
     QVector<double> maxholdBufferAggregate;
     const int throttleTime = 40; // min time in ms between screen updates
     const int avgLevelMaintenanceTime = 120000; // msecs
@@ -127,17 +127,18 @@ private:
     bool flagAvgLevelRestarted = true;
 
     // Config cache
-    quint64 startfreq, stopfreq, ffmCenterFreq;
+    quint64 startfreq = 0, stopfreq = 0, ffmCenterFreq = 0;
     QString resolution, span;
     QString fftMode, antPort;
-    bool autoAtt;
-    int att;
-    bool normalizeSpectrum;
+    bool autoAtt = false;
+    int att = 0;
+    bool normalizeSpectrum = false;
     bool useSavedAvgLevels = false;
     bool init = true;
     int gainControl = 0;
     int failedTracesCtr = 0;
     QString avgFilename = ".avgdata";
+    bool started = false;
 };
 
 #endif // TRACEBUFFER_H

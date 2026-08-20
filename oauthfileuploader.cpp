@@ -26,11 +26,11 @@ OAuthFileUploader::OAuthFileUploader(QSharedPointer<Config> c)
 {
     config = c;
 
-    m_networkAccessManager = new QNetworkAccessManager;
-    m_authTimeoutTimer = new QTimer;
+    m_networkAccessManager = new QNetworkAccessManager(this);
+    m_authTimeoutTimer = new QTimer(this);
     m_authTimeoutTimer->setSingleShot(true);
 
-    m_uploadTimeoutTimer = new QTimer;
+    m_uploadTimeoutTimer = new QTimer(this);
     m_uploadTimeoutTimer->setSingleShot(true);
 
     connect(m_authTimeoutTimer, &QTimer::timeout, this, &OAuthFileUploader::authTimeoutHandler);

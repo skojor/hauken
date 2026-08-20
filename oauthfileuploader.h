@@ -47,8 +47,8 @@ private slots:
 
 private:
     QSharedPointer<Config> config;
-    QNetworkAccessManager *m_networkAccessManager;
-    QTimer *m_authTimeoutTimer, *m_uploadTimeoutTimer;
+    QNetworkAccessManager *m_networkAccessManager = nullptr;
+    QTimer *m_authTimeoutTimer = nullptr, *m_uploadTimeoutTimer = nullptr;
     QString m_accessToken;
     QStringList m_uploadBacklog;
     enum class UploadRequestType {

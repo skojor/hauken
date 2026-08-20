@@ -89,7 +89,6 @@ bool DatastreamAmmos::checkHeaders()
         quint64 freq = (quint64)m_header.freqHigh << 32 | m_header.freqLow;
         quint64 timestamp = (quint64)m_header.startTimestampHigh << 32 | m_header.startTimestampLow;
         quint64 sampleCount = (quint64)m_header.sampleCounterHigh << 32 | m_header.sampleCounterLow;
-
         if (freq != m_frequency or
             m_bandwidth != m_header.bandwidth or
             m_samplerate != m_header.samplerate)
@@ -101,10 +100,10 @@ bool DatastreamAmmos::checkHeaders()
         }
 
         if (m_seqNr and m_header.frameCount != m_seqNr + 1)
-            qDebug() << "AMMOS frame sequence jump"
+            /*qDebug() << "AMMOS frame sequence jump"
                      << "previous" << m_seqNr
                      << "current" << m_header.frameCount
-                     << "sampleCounter" << sampleCount;
+                     << "sampleCounter" << sampleCount;*/
 
         m_seqNr = m_header.frameCount;
         m_sampleCtr = sampleCount;

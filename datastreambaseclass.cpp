@@ -4,6 +4,12 @@
 DataStreamBaseClass::DataStreamBaseClass(QObject *parent)
     : QObject{parent}
 {
+    // Initialize objects with proper parent ownership
+    tcpSocket = new QTcpSocket(this);
+    udpSocket = new QUdpSocket(this);
+    bytesPerSecTimer = new QTimer(this);
+    timeoutTimer = new QTimer(this);
+    
     connect(udpSocket,
             &QUdpSocket::stateChanged,
             this,

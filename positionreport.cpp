@@ -3,6 +3,12 @@
 PositionReport::PositionReport(QSharedPointer<Config> c)
 {
     config = c;
+    reportTimer = new QTimer(this);
+    gnssReqTimer = new QTimer(this);
+    sensorDataTimer = new QTimer(this);
+    processTimeoutTimer = new QTimer(this);
+    curlProcess = new QProcess(this);
+
     connect(curlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &PositionReport::checkReturnValue);
     curlProcess->setWorkingDirectory(QDir(QCoreApplication::applicationDirPath()).absolutePath());
 

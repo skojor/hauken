@@ -17,14 +17,22 @@ MainWindow::MainWindow(QWidget *parent)
     qInfo() << "MainWindow: constructing core services";
     settingsDialog = new SettingsDialog(this, config);
     instrumentList = new InstrumentList(config);
+    instrumentList->setParent(this);
     gnssDisplay = new GnssDisplay(config);
+    gnssDisplay->setParent(this);
     positionReport = new PositionReport(config);
+    positionReport->setParent(this);
     geoLimit = new GeoLimit(config);
+    geoLimit->setParent(this);
     mqtt = new Mqtt(config);
+    mqtt->setParent(this);
     accessHandler = new AccessHandler(this, config);
     oauthFileUploader = new OAuthFileUploader(config);
+    oauthFileUploader->setParent(this);
     restApi = new RestApi(config);
+    restApi->setParent(this);
     ptrNetwork = new Network(config);
+    ptrNetwork->setParent(this);
 
     setStatusBar(statusBar);
     //statusBar->addWidget(progressBar);
@@ -96,11 +104,14 @@ MainWindow::MainWindow(QWidget *parent)
     setSignals();
     instrumentList->start(); // check if instrument server is available
 
+    // Set stream pointers before config/startup actions that may trigger auto-connect.
+    measurementDevice->setUdpStreamPtr(udpStream);
+    measurementDevice->setTcpStreamPtr(tcpStream);
+    measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
+    measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
+
     qInfo() << "MainWindow: applying config and startup state";
     getConfigValues();
-    btnConnectPressed(false); // Read and select instr. from list before any connections are made
-    instrConnected(false); // to set initial inputs state
-    instrAutoConnect();
     QTimer::singleShot(50, customPlotController, [this] {
         //customPlotController->updSettings();
         waterfall->updSize(
@@ -115,11 +126,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     gnssDisplay->setParent(this);
     gnssDisplay->start();
-
-    measurementDevice->setUdpStreamPtr(udpStream);
-    measurementDevice->setTcpStreamPtr(tcpStream);
-    measurementDevice->setVifStreamTcpPtr(vifStreamTcp);
-    measurementDevice->setVifStreamUdpPtr(vifStreamUdp);
 
     QSettings extras;
     if (extras.value("incGeometry").isValid())
@@ -170,6 +176,14 @@ void MainWindow::closeEvent(QCloseEvent *event)
     config->setWindowState(this->saveState());
     incidentLog->close();
     customPlot->close();
+
+    const auto windows = iqPlotWindows.values();
+    for (const auto &window : windows) {
+        if (!window.isNull())
+            window->close();
+    }
+    iqPlotWindows.clear();
+
     QMainWindow::closeEvent(event);
 }
 

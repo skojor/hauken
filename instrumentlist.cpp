@@ -5,6 +5,10 @@
 InstrumentList::InstrumentList(QSharedPointer<Config> c)
 {
     config = c;
+    networkAccessManager = new QNetworkAccessManager(this);
+    tmNetworkTimeout = new QTimer(this);
+    cookieJar = new QNetworkCookieJar(this);
+
     connect(tmNetworkTimeout, &QTimer::timeout, this, &InstrumentList::tmNetworkTimeoutHandler);
     connect(networkAccessManager,
             &QNetworkAccessManager::finished,
@@ -66,8 +70,15 @@ void InstrumentList::tmNetworkTimeoutHandler()
 
 void InstrumentList::networkAccessManagerFinished(QNetworkReply *reply)
 {
+    if (!reply)
+        return;
+
     tmNetworkTimeout->stop();
-    fetchDataHandler(reply->readAll());
+    if (reply == networkReply)
+        networkReply = nullptr;
+    const QByteArray response = reply->readAll();
+    reply->deleteLater();
+    fetchDataHandler(response);
 }
 
 void InstrumentList::parseLoginReply(const QByteArray &reply)
@@ -120,26 +131,32 @@ void InstrumentList::parseStationList(const QByteArray &reply)
     if (nrOfElements > 0) {
         //nrOfStations = nrOfElements;
         QJsonArray data = jsonObject.value("data").toArray();
-        if (data.size() == nrOfElements) { // Super simple fault check, improve! TODO
-            for (auto &&array : data) {
-                StationInfo stn;
-                stn.StationIndex = array.toObject().value("SInd").toString().toInt();
-                stn.name = array.toObject().value("Navn").toString();
-                stn.officialName = array.toObject().value("Off_navn").toString();
-                stn.address = array.toObject().value("Adresse").toString();
-                stn.latitude = array.toObject().value("Latitude").toString().toDouble();
-                stn.longitude = array.toObject().value("Longitude").toString().toDouble();
-                stn.status = array.toObject().value("Status").toString();
-                stn.type = (StationType) array.toObject().value("Type").toString().toInt();
-                stn.mmsi = array.toObject().value("MMSI").toString().toULong();
-                int active = array.toObject().value("Aktiv").toString().toInt();
-                if (active == 0)
-                    stn.active = false;
-                else
-                    stn.active = true;
+        if (data.size() != nrOfElements) {
+            tmNetworkTimeout->stop();
+            state = FAILED;
+            fetchDataHandler();
+            return;
+        }
 
-                stationInfo.append(stn);
-            }
+        stationInfo.clear();
+        for (auto &&array : data) {
+            StationInfo stn;
+            stn.StationIndex = array.toObject().value("SInd").toString().toInt();
+            stn.name = array.toObject().value("Navn").toString();
+            stn.officialName = array.toObject().value("Off_navn").toString();
+            stn.address = array.toObject().value("Adresse").toString();
+            stn.latitude = array.toObject().value("Latitude").toString().toDouble();
+            stn.longitude = array.toObject().value("Longitude").toString().toDouble();
+            stn.status = array.toObject().value("Status").toString();
+            stn.type = (StationType) array.toObject().value("Type").toString().toInt();
+            stn.mmsi = array.toObject().value("MMSI").toString().toULong();
+            int active = array.toObject().value("Aktiv").toString().toInt();
+            if (active == 0)
+                stn.active = false;
+            else
+                stn.active = true;
+
+            stationInfo.append(stn);
         }
         // We should have a list of stations here, time to ask for what they can do
         stationIndex = 0;
@@ -155,6 +172,12 @@ void InstrumentList::parseStationList(const QByteArray &reply)
 
 void InstrumentList::instrumentListRequest()
 {
+    if (stationIndex < 0 || stationIndex >= stationInfo.size()) {
+        state = FAILED;
+        fetchDataHandler();
+        return;
+    }
+
     QNetworkRequest networkRequest;
     networkRequest.setUrl(QUrl(config->getIpAddressServer() + "?action=ListInstruments&stnId="
                                + QString::number(stationInfo[stationIndex].StationIndex)));
@@ -164,6 +187,12 @@ void InstrumentList::instrumentListRequest()
 
 void InstrumentList::parseInstrumentList(const QByteArray &reply)
 {
+    if (stationIndex < 0 || stationIndex >= stationInfo.size()) {
+        state = FAILED;
+        fetchDataHandler();
+        return;
+    }
+
     QJsonDocument jsonDoc = QJsonDocument::fromJson(reply);
     QJsonObject jsonObject = jsonDoc.object();
     QJsonObject metaObject = jsonObject.value("metadata").toObject();

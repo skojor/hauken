@@ -3,6 +3,9 @@
 RestApi::RestApi(QSharedPointer<Config> c)
 {
     config = c;
+    httpServer = new QHttpServer(this);
+    tcpServer = new QTcpServer(this);
+
     tcpServer->listen(QHostAddress::Any, LISTEN_PORT);
     httpServer->bind(tcpServer);
 
@@ -21,9 +24,7 @@ RestApi::RestApi(QSharedPointer<Config> c)
 
 RestApi::~RestApi()
 {
-    httpServer->deleteLater();
     tcpServer->close();
-    tcpServer->deleteLater();
 }
 
 bool RestApi::authorize(const QHttpServerRequest &request)

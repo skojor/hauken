@@ -56,7 +56,7 @@ private:
     static constexpr int SignificantLevelChangeRaw = SignificantLevelChangeDb * 10;
 
     QSharedPointer<Config> config;
-    QElapsedTimer *elapsedTimer = new QElapsedTimer;
+    QElapsedTimer elapsedTimer;
     QElapsedTimer significantLevelChangeTimer;
     QElapsedTimer stableMaxLevelTimer;
     QVector<qint16> averageData;
@@ -69,12 +69,12 @@ private:
     bool ready = false;
 
     // config cache
-    double trigLevel;
-    double singleTrigBandwidth, totalTrigBandwidth, singleTrigCenterFrequency;
-    int trigTime;
-    double startFreq, stopFreq, resolution;
-    bool pmrMode;
-    qint16 maxLevel;
+    double trigLevel = 0;
+    double singleTrigBandwidth = 0, totalTrigBandwidth = 0, singleTrigCenterFrequency = 0;
+    int trigTime = 0;
+    double startFreq = 0, stopFreq = 0, resolution = 0;
+    bool pmrMode = false;
+    qint16 maxLevel = -999;
     qint64 stableMaxLevelSum = 0;
     qint64 stableMaxLevelCount = 0;
     bool useDbm = false;

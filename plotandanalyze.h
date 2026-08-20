@@ -45,6 +45,7 @@ public slots:
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);
     void imageReady(QString, QString);
+    void iqPlotImageReady(QString, quint64);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void analyzerResult(QString, int);
     void reportIntentional(QString);

@@ -84,11 +84,11 @@ private slots:
     void sortList();
 
 private:
-    QNetworkAccessManager *networkAccessManager = new QNetworkAccessManager;
-    QNetworkReply *networkReply;
-    QTimer *tmNetworkTimeout = new QTimer;
+    QNetworkAccessManager *networkAccessManager = nullptr;
+    QNetworkReply *networkReply = nullptr;
+    QTimer *tmNetworkTimeout = nullptr;
     QNetworkCookie networkCookie;
-    QNetworkCookieJar *cookieJar = new QNetworkCookieJar;
+    QNetworkCookieJar *cookieJar = nullptr;
     QList<StationInfo> stationInfo;
     QList<EquipmentInfo> equipmentInfo;
     //int nrOfStations = 0;

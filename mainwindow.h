@@ -21,11 +21,14 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QHostAddress>
+#include <QHash>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QPromise>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QSharedPointer>
@@ -391,6 +394,7 @@ private:
     Network *ptrNetwork = nullptr;
     bool useDbm;
     bool measDeviceFinished = false;
+    bool startupStateApplied = false;
     AudioPlayer audioPlayer;
     AudioRecorder audioRecorder;
     QLCDNumber *lcdLevel = new QLCDNumber;
@@ -402,6 +406,7 @@ private:
     bool flagBusyRecordingIQ = false;
     PlotAndAnalyze *plotAndAnalyze = new PlotAndAnalyze(config);
     Simulator *simulator = nullptr;
+    QHash<quint64, QPointer<QLabel>> iqPlotWindows;
 
 signals:
     void stopPlot(bool);

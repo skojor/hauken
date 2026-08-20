@@ -4,6 +4,7 @@
 MeasurementDevice::MeasurementDevice(QSharedPointer<Config> c)
 {
     config = c;
+    devicePtr = QSharedPointer<Device>(new Device);
     start();
 }
 
@@ -14,6 +15,14 @@ MeasurementDevice::~MeasurementDevice()
 
 void MeasurementDevice::start()
 {
+    scpiSocket->setParent(this);
+    tcpTimeoutTimer->setParent(this);
+    autoReconnectTimer->setParent(this);
+    timedReconnectTimer->setParent(this);
+    updGnssDisplayTimer->setParent(this);
+    updFrequencyData->setParent(this);
+    updStreamsTimer->setParent(this);
+
     connect(scpiSocket, &QTcpSocket::disconnected, this, &MeasurementDevice::scpiDisconnected);
     //connect(scpiSocket, &QTcpSocket::errorOccurred, this, &MeasurementDevice::scpiError);
     connect(scpiSocket, &QTcpSocket::stateChanged, this, &MeasurementDevice::scpiStateChanged);
@@ -25,8 +34,6 @@ void MeasurementDevice::start()
     autoReconnectTimer->setSingleShot(true);
     connect(autoReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::autoReconnectCheckStatus);
     emit connectedStateChanged(connected);
-
-    devicePtr = QSharedPointer<Device>(new Device);
 
     connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
     updGnssDisplayTimer->start(1000);
@@ -104,6 +111,8 @@ void MeasurementDevice::instrDisconnect()
     muteNotification = false;
     discPressed = true;
     deviceInUseWarningIssued = false;
+    pendingReconnectOwnIpCheck = false;
+    pendingReconnectNeedsTcpCheck = false;
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect && !discPressed ? ". Trying to reconnect" : " "));
@@ -124,9 +133,12 @@ void MeasurementDevice::instrDisconnect()
     }
     updFrequencyData->stop();
     scpiSocket->close();
-    tcpStream->closeListener();
-    udpStream->closeListener();
-    vifStreamTcp->closeListener();
+    if (tcpStream)
+        tcpStream->closeListener();
+    if (udpStream)
+        udpStream->closeListener();
+    if (vifStreamTcp)
+        vifStreamTcp->closeListener();
 }
 
 void MeasurementDevice::scpiDisconnected()
@@ -399,19 +411,40 @@ void MeasurementDevice::askUdp()
 
 void MeasurementDevice::checkUdp(const QByteArray buffer)
 {
+    if (!udpStream) {
+        qWarning() << "MeasurementDevice: UDP stream pointer not set";
+        waitingForReply = false;
+        return;
+    }
+
     QList<QByteArray> datastreamList = buffer.split('\n');
     bool inUse = false;
+    bool ownIpCandidate = false;
     waitingForReply = false;
+    const QByteArray ownIp = scpiSocket->localAddress().toString().toLocal8Bit();
+        const bool udpListenerActive = udpStream->udpSocket
+            && udpStream->udpSocket->state() == QAbstractSocket::BoundState;
+    const QByteArray currentUdpPort = QByteArray::number(udpStream->getUdpPort());
+
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
-        //for (auto&& ownIp : myOwnAddresses) {
-        //if (list.contains(ownIp.toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
-        if (list.contains(scpiSocket->localAddress().toString().toLocal8Bit()) && list.contains(QByteArray::number(udpStream->getUdpPort())))
-            break; // we are the users, continue
+        if (list.contains(ownIp)) {
+            if (udpListenerActive) {
+                if (list.contains(currentUdpPort))
+                    break; // we are the users, continue
+            }
+            else {
+                // Listener was disconnected, so local UDP port may have changed.
+                // Keep this as a candidate and verify ownership by username.
+                if (brokenList.size() > 2 && !list.contains("DEF"))
+                    inUse = true;
+                ownIpCandidate = true;
+                break;
+            }
+        }
         if (brokenList.size() > 2 && !list.contains("DEF")) {
             inUse = true;
         }
-        //}
     }
     if (!autoReconnectInProgress) {
         QString msg = (inUse? "Instrument is in use (UDP)":"Instrument is not in use (UDP)");
@@ -435,10 +468,14 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
             stateConnected();
     }
     else if (autoReconnectInProgress && inUse) {
-        /*if (devicePtr->tcpStream) // Why? We already know it is in use?!
-            askTcp();
-        else*/
-        handleStreamTimeout();
+        if (ownIpCandidate) {
+            pendingReconnectOwnIpCheck = true;
+            pendingReconnectNeedsTcpCheck = devicePtr->tcpStream;
+            askUser(true);
+        }
+        else {
+            handleStreamTimeout();
+        }
     }
 }
 
@@ -458,12 +495,18 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
 {
     QList<QByteArray> datastreamList = buffer.split('\n');
     bool inUse = false;
+    bool ownIpCandidate = false;
     waitingForReply = false;
+    const QByteArray ownIp = scpiSocket->localAddress().toString().toLocal8Bit();
+        const bool tcpListenerActive = tcpStream && tcpStream->tcpSocket
+            && tcpStream->tcpSocket->state() == QAbstractSocket::ConnectedState;
+    const QByteArray currentTcpPort = tcpListenerActive ? QByteArray::number(tcpStream->getTcpPort()) : QByteArray();
+
     for (auto&& list : datastreamList) {
         QList<QByteArray> brokenList = list.split(',');
         if (brokenList.size() > 2) {
             QList<QByteArray> brkList = brokenList[0].split(' ');
-            if (brkList.size() > 1) inUseByIp = brokenList[0].split(' ')[1].simplified();
+            if (brkList.size() > 1) inUseByIp = brkList[1].simplified();
             else inUseByIp = brokenList[0].simplified();
             inUseByIp.remove('\"');
             QString text = "remote";
@@ -478,8 +521,20 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
                 else if (list.toLower().contains("ifp")) emit modeUsed("ifpan");
             }
         }
-        if (list.contains(tcpOwnAdress) && list.contains(tcpOwnPort))
-            break; // we are the users, continue
+        if (list.contains(ownIp)) {
+            if (tcpListenerActive) {
+                if (list.contains(currentTcpPort))
+                    break; // we are the users, continue
+            }
+            else {
+                // Listener was disconnected, so local TCP port may have changed.
+                // Keep this as a candidate and verify ownership by username.
+                if (brokenList.size() > 2 && !list.contains("DEF"))
+                    inUse = true;
+                ownIpCandidate = true;
+                break;
+            }
+        }
         if (brokenList.size() > 2 && !list.contains("DEF")) {
             inUse = true;
         }
@@ -503,7 +558,14 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
         stateConnected();
     }
     else if (autoReconnectInProgress && inUse) {
-        handleStreamTimeout();
+        if (ownIpCandidate) {
+            pendingReconnectOwnIpCheck = true;
+            pendingReconnectNeedsTcpCheck = false;
+            askUser(true);
+        }
+        else {
+            handleStreamTimeout();
+        }
     }
 }
 
@@ -530,6 +592,9 @@ void MeasurementDevice::askUser(bool flagCheckUserOnly)
 void MeasurementDevice::checkUser(const QByteArray buffer)
 {
     waitingForReply = false;
+    const QByteArray stationName = AsciiTranslator::toAscii(config->getStationName()).toLatin1();
+    const QString bufferText = QString::fromLatin1(buffer);
+    const bool ownedByHauken = buffer.contains(stationName) && bufferText.contains("hauken", Qt::CaseInsensitive);
     QString msg = devicePtr->id + tr(" may be in use");
     if (!buffer.isEmpty()) {
         msg += tr(" by ") + QString(buffer).simplified();
@@ -539,8 +604,8 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
         inUseBy.clear();
     }
     msg += tr(". Press connect once more to override");
-    if (!firstConnection || buffer.contains(AsciiTranslator::toAscii(config->getStationName()).toLatin1())) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
-        //qDebug() << "In use by myself, how silly! Continuing..." << buffer << config->getStationName();
+    if (!firstConnection || ownedByHauken) {           // 130522: Rebuilt to reconnect upon startup if computer reboots
+        qDebug() << "In use by myself, how silly! Continuing..." << buffer << config->getStationName();
         deviceInUseWarningIssued = true;
         askUdp();
     }
@@ -557,6 +622,9 @@ void MeasurementDevice::checkUser(const QByteArray buffer)
 void MeasurementDevice::checkUserOnly(const QByteArray buffer)
 {
     waitingForReply = false;
+    const QByteArray stationName = AsciiTranslator::toAscii(config->getStationName()).toLatin1();
+    const QString bufferText = QString::fromLatin1(buffer);
+    const bool ownedByHauken = buffer.contains(stationName) && bufferText.contains("hauken", Qt::CaseInsensitive);
     if (!buffer.isEmpty()) {
         inUseBy = AsciiTranslator::toAscii(QString(buffer).simplified());
     }
@@ -564,6 +632,24 @@ void MeasurementDevice::checkUserOnly(const QByteArray buffer)
         inUseBy.clear();
     }
     emit deviceBusy(inUseBy);
+
+    if (pendingReconnectOwnIpCheck) {
+        pendingReconnectOwnIpCheck = false;
+        const bool continueWithTcp = pendingReconnectNeedsTcpCheck;
+        pendingReconnectNeedsTcpCheck = false;
+
+        if (ownedByHauken) {
+            if (continueWithTcp)
+                askTcp();
+            else
+                stateConnected();
+        }
+        else {
+            handleStreamTimeout();
+        }
+        return;
+    }
+
     instrumentState = InstrumentState::CONNECTED;
 }
 
@@ -616,6 +702,9 @@ void MeasurementDevice::delTcpStreams()
 
 void MeasurementDevice::delOwnStream()
 {
+    if (!tcpStream || !udpStream)
+        return;
+
     if (scpiSocket->state() == QAbstractSocket::ConnectedState && (tcpStream->getTcpPort() > 0 || udpStream->getUdpPort() > 0)) {
         if (config->getInstrUseTcpDatastream())
             scpiWrite("trac:tcp:del \"" + scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
@@ -662,6 +751,11 @@ void MeasurementDevice::startDevice()
 void MeasurementDevice::restartStream(bool withDisconnect)
 {
     if (connected) {
+        if (!udpStream || !tcpStream) {
+            qWarning() << "MeasurementDevice: Stream pointer(s) not set, cannot restart stream";
+            return;
+        }
+
         delUdpStreams();
         delTcpStreams();
         delOwnStream();
@@ -678,6 +772,11 @@ void MeasurementDevice::restartStream(bool withDisconnect)
 
 void MeasurementDevice::setupTcpStream()
 {
+    if (!tcpStream) {
+        qWarning() << "MeasurementDevice: TCP stream pointer not set";
+        return;
+    }
+
     tcpStream->setDeviceType(devicePtr);
     tcpStream->openListener(*scpiAddress, scpiPort + 10);
     //vifStreamTcp->openListener(*scpiAddress, scpiPort + 10);
@@ -704,6 +803,11 @@ void MeasurementDevice::setupTcpStream()
 
 void MeasurementDevice::setupUdpStream()
 {
+    if (!udpStream) {
+        qWarning() << "MeasurementDevice: UDP stream pointer not set";
+        return;
+    }
+
 
     udpStream->setDeviceType(devicePtr);
     udpStream->openListener();
@@ -742,7 +846,7 @@ void MeasurementDevice::fftDataHandler(QVector<qint16> &data)
 
 void MeasurementDevice::handleStreamTimeout()
 {
-    qDebug() << "Stream timeout triggered" << connected;
+    //qDebug() << "Stream timeout triggered" << connected;
 
     if (connected) {
         tcpTimeoutTimer->stop();
@@ -760,8 +864,10 @@ void MeasurementDevice::handleStreamTimeout()
         }
     }
     else {
-        udpStream->closeListener();
-        tcpStream->closeListener();
+        if (udpStream)
+            udpStream->closeListener();
+        if (tcpStream)
+            tcpStream->closeListener();
     }
 }
 
@@ -936,6 +1042,13 @@ void MeasurementDevice::askForAntennaNames()
 void MeasurementDevice::antennaNamesReply(QByteArray buffer)
 {
     waitingForReply = false;
+    if (devicePtr->antPorts.size() < 2) {
+        qWarning() << "MeasurementDevice: Antenna name reply received without two configured antenna entries";
+        instrumentState = InstrumentState::CONNECTED;
+        emit newAntennaNames();
+        return;
+    }
+
     if (instrumentState == InstrumentState::CHECK_ANT_NAME1) {
         devicePtr->antPorts[0] = buffer.simplified();
         devicePtr->antPorts[0].remove('\"');
@@ -1229,6 +1342,11 @@ void MeasurementDevice::setDetector(int i)
 
 void MeasurementDevice::ifStreamOn()
 {
+    if (!vifStreamTcp) {
+        qWarning() << "MeasurementDevice: VIF TCP stream pointer not set";
+        return;
+    }
+
     if (!config->getIqUseAmmosProtocol()) {
         QByteArray em200Specific;
         if (devicePtr->advProtocol) em200Specific = ", 'ifpan'";
@@ -1269,21 +1387,24 @@ void MeasurementDevice::ifStreamOn()
 
 void MeasurementDevice::ifStreamOff()
 {
+    if (!vifStreamTcp) {
+        qWarning() << "MeasurementDevice: VIF TCP stream pointer not set";
+        return;
+    }
+
     qDebug() << "Stopping I/Q stream" << "ammos" << config->getIqUseAmmosProtocol();
     scpiWrite("syst:if:rem:mode off");
     if (!config->getIqUseAmmosProtocol()) {
-        scpiWrite("trac:tcp:tag:off \"" +
+        scpiWrite("trac:tcp:del \"" +
                   scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-                  QByteArray::number(vifStreamTcp->getTcpPort()) +
-                  ", if");
+                  QByteArray::number(vifStreamTcp->getTcpPort()));
         vifStreamTcp->invalidateHeader();
         return;
     }
 
-    scpiWrite("trac:tcp:tag:off \"" +
+    scpiWrite("trac:tcp:del \"" +
               scpiSocket->localAddress().toString().toLocal8Bit() + "\", " +
-              QByteArray::number(vifStreamTcp->getTcpPort()) +
-              ", AIF");
+              QByteArray::number(vifStreamTcp->getTcpPort()));
     vifStreamTcp->invalidateHeader(); // To ensure updated header is sent next time data is requested
     setMeasurementTime();
     //vifStreamTcp->closeListener();

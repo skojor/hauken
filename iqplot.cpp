@@ -14,9 +14,9 @@ IqPlot::IqPlot(QSharedPointer<Config> c)
 
 void IqPlot::start()
 {
-    lastIqRequestTimer = new QTimer;
-    timeoutTimer = new QTimer;
-    stopIqStreamTimer = new QTimer;
+    lastIqRequestTimer = new QTimer(this);
+    timeoutTimer = new QTimer(this);
+    stopIqStreamTimer = new QTimer(this);
 
     timeoutTimer->setSingleShot(true);
     stopIqStreamTimer->setSingleShot(true);
@@ -51,8 +51,7 @@ void IqPlot::start()
 
 void IqPlot::end()
 {
-    delete lastIqRequestTimer;
-    delete timeoutTimer;
+    // Timers are now owned by parent (this), will be deleted automatically
 }
 
 void IqPlot::getIqData(const QVector<complexInt16> &iq16)
@@ -448,7 +447,7 @@ void IqPlot::receiverControl()
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
-        throwFirstSamples = 5 * m_iqMetadata.samplerate / 1e7;
+        throwFirstSamples = 12 * m_iqMetadata.samplerate / 1e7;
         if (!throwFirstSamples) throwFirstSamples = 1;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();

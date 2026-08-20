@@ -27,8 +27,8 @@ private slots:
     void parseJson(QJsonObject object);
 
 private:
-    QHttpServer *httpServer = new QHttpServer;
-    QTcpServer *tcpServer = new QTcpServer;
+    QHttpServer *httpServer = nullptr;
+    QTcpServer *tcpServer = nullptr;
     QJsonObject myData;
     QSharedPointer<Config> config;
 

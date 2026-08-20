@@ -33,7 +33,7 @@ public:
 
 private:
     QGeoPolygon polygon;
-    QTimer *timer = new QTimer;
+    QTimer *timer = nullptr;
     bool weAreInsidePolygon = false, triedReadingFileNoSuccess = false, awaitingPosition = true, notifyWeAreWaiting = false;
     bool testMode = false;
     QGeoCoordinate testCoordinates;

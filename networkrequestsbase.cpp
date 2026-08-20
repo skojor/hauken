@@ -2,6 +2,9 @@
 
 NetworkRequestsBase::NetworkRequestsBase()
 {
+    networkAccessManager = new QNetworkAccessManager(this);
+    tmNetworkTimeout = new QTimer(this);
+
     connect(networkAccessManager,
             &QNetworkAccessManager::finished,
             this,
