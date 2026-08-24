@@ -119,6 +119,9 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt15->setText(tr("Show PPS timing in the GNSS window"));
     cbOpt15->setToolTip(tr("Display reference, GPS, and Galileo PPS status and offsets in the separate GNSS window"));
     ppsLayout->addRow(cbOpt15);
+    cbOpt16->setText(tr("Plot PPS difference in a separate window"));
+    cbOpt16->setToolTip(tr("Plot reference minus GPS and reference minus Galileo PPS offsets"));
+    ppsLayout->addRow(cbOpt16);
 
     ppsLayout->addRow(tr("MQTT broker"), comboOpt5);
     ppsLayout->addRow(tr("Status topic"), leOpt3);
@@ -161,6 +164,7 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     cbOpt14->setChecked(config->getGnssShowNotifications());
     sbOpt1->setValue(config->getGnssTimeFilter());
     cbOpt15->setChecked(config->getGnssPpsDisplayEnabled());
+    cbOpt16->setChecked(config->getGnssPpsPlotEnabled());
     refreshPpsProfiles();
     leOpt3->setText(config->getGnssPpsStatusTopic());
     leOpt4->setText(config->getGnssPpsAvailabilityTopic());
@@ -217,6 +221,7 @@ void GnssOptions::saveCurrentSettings()
     config->setGnssShowNotifications(cbOpt14->isChecked());
     config->setGnssTimeFilter(sbOpt1->value());
     config->setGnssPpsDisplayEnabled(cbOpt15->isChecked());
+    config->setGnssPpsPlotEnabled(cbOpt16->isChecked());
     config->setGnssPpsBrokerProfileId(comboOpt5->currentData().toString());
     config->setGnssPpsStatusTopic(leOpt3->text());
     config->setGnssPpsAvailabilityTopic(leOpt4->text());

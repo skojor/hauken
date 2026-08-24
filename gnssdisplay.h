@@ -19,8 +19,10 @@
 #include <QGroupBox>
 #include <QEvent>
 #include <QGridLayout>
+#include <QVBoxLayout>
 #include "config.h"
 #include "typedefs.h"
+#include "qcustomplot.h"
 
 
 /*
@@ -96,9 +98,16 @@ private:
     QLabel *ppsBackend = new QLabel;
     QLabel *ppsQualified = new QLabel;
     QLabel *ppsError = new QLabel;
+    QWidget *ppsPlotWindow = nullptr;
+    QCustomPlot *ppsPlot = nullptr;
+    QTimer *ppsPlotTimer = new QTimer;
+    qint64 ppsPlotElapsedSeconds = 0;
 
     void updateReceiverVisibility();
     void updatePpsText();
+    void updatePpsPlot();
+    void resetPpsPlot();
+    void setupPpsPlot();
 
     QSharedPointer<Config> config;
 

@@ -12,6 +12,15 @@ QString formatOffset(const PpsOffsetData &offset)
     return coloredText(QString::number(offset.currentNs / 1000.0, 'f', 3) + " us", "green");
 }
 
+QString formatFixType(int fixMode)
+{
+    switch (fixMode) {
+    case 2: return "2D";
+    case 3: return "3D";
+    default: return "no fix";
+    }
+}
+
 QString formatSource(const PpsSourceData &source, bool showMetadata)
 {
     if (!source.valid) return coloredText(source.reason.isEmpty() ? "invalid" : source.reason, "red");
@@ -19,7 +28,7 @@ QString formatSource(const PpsSourceData &source, bool showMetadata)
     QString text = QString("valid, age %1 s").arg(source.ageNs / 1e9, 0, 'f', 3);
     if (showMetadata) {
         if (source.metadataValid)
-            text += QString(", fix %1, %2 sats").arg(source.fixMode).arg(source.satellites);
+            text += QString(", fix %1").arg(formatFixType(source.fixMode));
         else
             text += ", metadata invalid";
     }
@@ -35,11 +44,18 @@ GnssDisplay::GnssDisplay(QSharedPointer<Config> c)
 
     connect(updateGnssDataTimer, &QTimer::timeout, this, &GnssDisplay::reqGnssData);
     connect(updateGnssDataTimer, &QTimer::timeout, this, &GnssDisplay::updatePpsText);
+    ppsPlotTimer->setInterval(1000);
+    connect(ppsPlotTimer, &QTimer::timeout, this, &GnssDisplay::updatePpsPlot);
 }
 
 void GnssDisplay::start()
 {
     setupWidget();
+    if (config->getGnssPpsPlotEnabled()) {
+        setupPpsPlot();
+        ppsPlotWindow->show();
+        ppsPlotTimer->start();
+    }
     updText();
     updateGnssDataTimer->start(250);
 }
@@ -51,6 +67,7 @@ void GnssDisplay::close()
     qDebug() << "Closing Gnss Display widget...";
     config->setGnssDisplayWindowState(wdg->saveGeometry());
     wdg->close();
+    if (ppsPlotWindow) ppsPlotWindow->close();
 
 }
 
@@ -192,6 +209,59 @@ void GnssDisplay::updateReceiverVisibility()
     ppsGroupBox->setVisible(config->getGnssPpsDisplayEnabled());
 }
 
+void GnssDisplay::setupPpsPlot()
+{
+    if (ppsPlotWindow) return;
+
+    ppsPlotWindow = new QWidget;
+    ppsPlotWindow->setWindowTitle(tr("PPS difference"));
+    ppsPlot = new QCustomPlot(ppsPlotWindow);
+    ppsPlot->addGraph();
+    ppsPlot->addGraph();
+    ppsPlot->graph(0)->setPen(QPen(Qt::blue));
+    ppsPlot->graph(0)->setName(tr("Reference - GPS"));
+    ppsPlot->graph(1)->setPen(QPen(Qt::red));
+    ppsPlot->graph(1)->setName(tr("Reference - Galileo"));
+    ppsPlot->legend->setVisible(true);
+    ppsPlot->xAxis->setLabel(tr("Seconds"));
+    ppsPlot->yAxis->setLabel(tr("Difference (us)"));
+    ppsPlot->xAxis->setRange(0, 10);
+
+    auto resetButton = new QPushButton(tr("Reset plot"), ppsPlotWindow);
+    connect(resetButton, &QPushButton::clicked, this, &GnssDisplay::resetPpsPlot);
+    auto layout = new QVBoxLayout(ppsPlotWindow);
+    layout->addWidget(ppsPlot);
+    layout->addWidget(resetButton);
+    ppsPlotWindow->resize(800, 500);
+}
+
+void GnssDisplay::resetPpsPlot()
+{
+    if (!ppsPlot) return;
+
+    ppsPlotElapsedSeconds = 0;
+    ppsPlot->graph(0)->data()->clear();
+    ppsPlot->graph(1)->data()->clear();
+    ppsPlot->xAxis->setRange(0, 10);
+    ppsPlot->yAxis->setRange(-1, 1);
+    ppsPlot->replot();
+}
+
+void GnssDisplay::updatePpsPlot()
+{
+    if (!config->getGnssPpsPlotEnabled() || !ppsPlot) return;
+
+    ++ppsPlotElapsedSeconds;
+    if (!ppsDataReceived || !ppsData.gpsReference.valid || !ppsData.galileoReference.valid) return;
+
+    const double x = ppsPlotElapsedSeconds;
+    ppsPlot->graph(0)->addData(x, -ppsData.gpsReference.currentNs / 1000.0);
+    ppsPlot->graph(1)->addData(x, -ppsData.galileoReference.currentNs / 1000.0);
+    ppsPlot->rescaleAxes(false);
+    ppsPlot->xAxis->setRange(qMax(0.0, x - 60.0), qMax(10.0, x), Qt::AlignRight);
+    ppsPlot->replot(QCustomPlot::rpQueuedReplot);
+}
+
 void GnssDisplay::updSettings()
 {
     if (!isClosing && config->getGnssDisplayWidget() && !wdg->isVisible()) {
@@ -206,6 +276,15 @@ void GnssDisplay::updSettings()
     else gnss1RightGroupBox->setTitle(gnss1Name);
     if (gnss2Name.isEmpty()) gnss2RightGroupBox->setTitle("GNSS receiver 2 - info/calculations");
     else gnss2RightGroupBox->setTitle(gnss2Name);
+    if (config->getGnssPpsPlotEnabled()) {
+        setupPpsPlot();
+        ppsPlotWindow->show();
+        ppsPlotTimer->start();
+    }
+    else {
+        ppsPlotTimer->stop();
+        if (ppsPlotWindow) ppsPlotWindow->hide();
+    }
     updatePpsText();
 }
 

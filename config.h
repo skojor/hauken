@@ -270,6 +270,8 @@ public slots:
     void setGnssDisplayWidget(bool b) { settings->setValue("gnss/displayWidget", b); }
     bool getGnssPpsDisplayEnabled() { return settings->value("gnss/pps/displayEnabled", false).toBool();}
     void setGnssPpsDisplayEnabled(bool b) { settings->setValue("gnss/pps/displayEnabled", b); }
+    bool getGnssPpsPlotEnabled() { return settings->value("gnss/pps/plotEnabled", false).toBool();}
+    void setGnssPpsPlotEnabled(bool b) { settings->setValue("gnss/pps/plotEnabled", b); }
     QString getGnssPpsBrokerProfileId() { return settings->value("gnss/pps/brokerProfileId", "primary").toString();}
     void setGnssPpsBrokerProfileId(QString s) { settings->setValue("gnss/pps/brokerProfileId", s); }
     QString getGnssPpsStatusTopic() { return settings->value("gnss/pps/statusTopic", "hauken/pps/status").toString().trimmed();}
