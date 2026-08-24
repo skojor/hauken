@@ -257,7 +257,7 @@ void GnssDisplay::updatePpsPlot()
     const double x = ppsPlotElapsedSeconds;
     ppsPlot->graph(0)->addData(x, -ppsData.gpsReference.currentNs / 1000.0);
     ppsPlot->graph(1)->addData(x, -ppsData.galileoReference.currentNs / 1000.0);
-    ppsPlot->rescaleAxes(false);
+    ppsPlot->yAxis->rescale(true);
     ppsPlot->xAxis->setRange(qMax(0.0, x - 60.0), qMax(10.0, x), Qt::AlignRight);
     ppsPlot->replot(QCustomPlot::rpQueuedReplot);
 }
