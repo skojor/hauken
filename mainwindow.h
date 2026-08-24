@@ -67,7 +67,7 @@
 #include "gnssdisplay.h"
 #include "instrumentlist.h"
 #include "led/ledindicator.h"
-#include "mqtt.h"
+#include "mqttmanager.h"
 #include "notifications.h"
 #include "oauthfileuploader.h"
 #include "pmrtablewdg.h"
@@ -365,7 +365,7 @@ private:
 
     PositionReport *positionReport = nullptr;
     GeoLimit *geoLimit = nullptr;
-    Mqtt *mqtt = nullptr;
+    MqttManager *mqttManager = nullptr;
     QLineEdit *antPortLineEdit = new QLineEdit;
 
     bool traceAlarmRaised = false, recordAlarmRaised = true, gnssAlarmRaised = true, recordDisabledRaised = false;

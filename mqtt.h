@@ -27,13 +27,16 @@ class Mqtt : public NetworkRequestsBase
 {
     Q_OBJECT
 public:
-    explicit Mqtt(QSharedPointer<Config>);
+    explicit Mqtt(QSharedPointer<Config>, const QString &profileId);
+    QString profileId() const { return m_profileId; }
 
 public slots:
     void updSettings();
+    void setAdditionalSubscriptions(const QStringList &topics);
 
 signals:
     void newData(const QString, double);
+    void rawMessage(const QString &profileId, const QString &topic, const QByteArray &payload);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void triggerRecording();
     void endRecording();
@@ -61,10 +64,14 @@ private:
     QList<double> m_subValues;
     SITESTATUS m_siteStatus = UNKNOWN;
     QSharedPointer<Config> config;
+    QString m_profileId;
 
     // config cache
     bool enabled = false;
     QString keepaliveTopic;
+    QStringList subscriptionTopics;
+    QStringList additionalSubscriptions;
     QString webswitchAddress;
+    bool reconnectPending = false;
 };
 #endif // MQTT_H

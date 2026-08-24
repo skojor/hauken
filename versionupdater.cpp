@@ -4,6 +4,8 @@ VersionUpdater::VersionUpdater(QSharedPointer<Config> c)
 {
     config = c;
 
+    migrateMqttBrokerProfiles();
+
     QFile file(config->getWorkFolder() + "/" + ConfigFile);
     if (file.exists())
         handleConfigUpdates();
@@ -24,6 +26,26 @@ VersionUpdater::VersionUpdater(QSharedPointer<Config> c)
         config->setOAuth2Scope(config->getOAuth2Scope().split("/access_as_user").first() + "/.default");
     }
     config->setNewLogFolder(true); // Default on from v2.55
+}
+
+void VersionUpdater::migrateMqttBrokerProfiles()
+{
+    if (config->hasMqttBrokerProfiles()) return;
+
+    MqttBrokerProfile primary;
+    primary.id = "primary";
+    primary.name = tr("Primary");
+    primary.enabled = config->getMqttActivate();
+    primary.server = config->getMqttServer();
+    primary.username = config->getMqttUsername();
+    primary.password = config->getMqttPassword();
+    primary.port = config->getMqttPort();
+    primary.keepaliveTopic = config->getMqttKeepaliveTopic();
+    primary.subNames = config->getMqttSubNames();
+    primary.subTopics = config->getMqttSubTopics();
+    primary.subToIncidentlog = config->getMqttSubToIncidentlog();
+    primary.primary = true;
+    config->setMqttBrokerProfile(primary);
 }
 
 void VersionUpdater::handleConfigUpdates()

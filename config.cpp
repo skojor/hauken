@@ -41,6 +41,90 @@ void Config::newFileName(const QString file)
     settings->setValue("SW_VERSION", FULL_VERSION);
 }
 
+QStringList Config::getMqttBrokerProfileIds() const
+{
+    return settings->value("mqtt/brokerProfileIds").toStringList();
+}
+
+QList<MqttBrokerProfile> Config::getMqttBrokerProfiles() const
+{
+    QList<MqttBrokerProfile> profiles;
+    const QStringList ids = getMqttBrokerProfileIds();
+    profiles.reserve(ids.size());
+    for (const QString &id : ids) {
+        const MqttBrokerProfile profile = getMqttBrokerProfile(id);
+        if (!profile.id.isEmpty()) profiles.append(profile);
+    }
+    return profiles;
+}
+
+MqttBrokerProfile Config::getMqttBrokerProfile(const QString &id) const
+{
+    MqttBrokerProfile profile;
+    if (id.isEmpty() || !getMqttBrokerProfileIds().contains(id)) return profile;
+
+    const QString prefix = "mqtt/brokers/" + id + "/";
+    profile.id = id;
+    profile.name = settings->value(prefix + "name", id).toString().trimmed();
+    profile.enabled = settings->value(prefix + "enabled", false).toBool();
+    profile.server = settings->value(prefix + "server").toString().trimmed();
+    profile.username = settings->value(prefix + "username").toString().trimmed();
+    profile.password = simpleEncr(settings->value(prefix + "password").toByteArray());
+    profile.port = settings->value(prefix + "port", 1883).toInt();
+    profile.keepaliveTopic = settings->value(prefix + "keepaliveTopic").toString().trimmed();
+    profile.subNames = settings->value(prefix + "subNames").toStringList();
+    profile.subTopics = settings->value(prefix + "subTopics").toStringList();
+    profile.subToIncidentlog = settings->value(prefix + "subToIncidentlog").toStringList();
+    profile.primary = settings->value(prefix + "primary", false).toBool();
+    return profile;
+}
+
+void Config::setMqttBrokerProfile(const MqttBrokerProfile &profile)
+{
+    const QString id = profile.id.trimmed();
+    if (id.isEmpty()) return;
+
+    QStringList ids = getMqttBrokerProfileIds();
+    if (profile.primary) {
+        for (const QString &existingId : ids) {
+            if (existingId != id)
+                settings->setValue("mqtt/brokers/" + existingId + "/primary", false);
+        }
+    }
+
+    const QString prefix = "mqtt/brokers/" + id + "/";
+    settings->setValue(prefix + "name", profile.name.trimmed());
+    settings->setValue(prefix + "enabled", profile.enabled);
+    settings->setValue(prefix + "server", profile.server.trimmed());
+    settings->setValue(prefix + "username", profile.username.trimmed());
+    settings->setValue(prefix + "password", simpleEncr(profile.password.simplified().toLocal8Bit()));
+    settings->setValue(prefix + "port", profile.port);
+    settings->setValue(prefix + "keepaliveTopic", profile.keepaliveTopic.trimmed());
+    settings->setValue(prefix + "subNames", profile.subNames);
+    settings->setValue(prefix + "subTopics", profile.subTopics);
+    settings->setValue(prefix + "subToIncidentlog", profile.subToIncidentlog);
+    settings->setValue(prefix + "primary", profile.primary);
+
+    if (!ids.contains(id)) {
+        ids.append(id);
+        settings->setValue("mqtt/brokerProfileIds", ids);
+    }
+}
+
+void Config::removeMqttBrokerProfile(const QString &id)
+{
+    QStringList ids = getMqttBrokerProfileIds();
+    if (!ids.removeOne(id)) return;
+
+    settings->remove("mqtt/brokers/" + id);
+    settings->setValue("mqtt/brokerProfileIds", ids);
+}
+
+bool Config::hasMqttBrokerProfiles() const
+{
+    return !getMqttBrokerProfileIds().isEmpty();
+}
+
 QString Config::getWorkFolder()
 {
     const QString folder = settings->value("workFolder",
@@ -77,7 +161,7 @@ void Config::setLogFolder(QString s)
     }
 }
 
-QByteArray Config::simpleEncr(QByteArray toEncrypt)
+QByteArray Config::simpleEncr(QByteArray toEncrypt) const
 {
     QByteArray key = "6NrqMXHFqBv3QBm0cZjo/0PAzsIbam+hhsWI7PLkT4Wt5biPOXMis2qh7eEw6dksSnu1XwNaIza4vLw+vm7lhnp+aNyZPrVqQcMDKRTyq1rXg1ZRzXEtjCxESRx7KcRbi24t+GXgcnNQB706JEqxMvCukyia+cK7VCGSdIYskDb6U/jqeb+QxnD5s1g6CeYHswbWpEuwCMVSZDk1vkSBZHE4oHTnjiwdb3bMvVzPW9KKQ75WGwU7trqNyLMtZS7JrVrxFX2LHov2qh7eEw6dksSnu1XwNaIza4vLw+vm7lhnp+aNyZPrVqQcMDKRTyq1rXg1ZRzXEtjCxESRx7KcRbi24t+GXgcnNQB706JEqxMvCukyia+cK7VCGSdIYskDb6U/jqeb+QxnD5s1g6CeYHswbWpEuwCMVSZDk1vkSBZHE4oHTnjiwdb3bMvVzPW9KKQ75WGwU7trqNyLMtZS7JrVr";
     QByteArray output = toEncrypt;

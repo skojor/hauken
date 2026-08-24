@@ -1,6 +1,7 @@
 #include "mqtt.h"
 
-Mqtt::Mqtt(QSharedPointer<Config> c)
+Mqtt::Mqtt(QSharedPointer<Config> c, const QString &profileId)
+    : m_profileId(profileId)
 {
     config = c;
     m_keepaliveTimer = new QTimer(this);
@@ -13,10 +14,12 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
     connect(&m_mqttClient, &QMqttClient::messageSent, this, &Mqtt::msgSent);
     connect(&m_mqttClient, &QMqttClient::messageReceived, this, &Mqtt::msgReceived);
     connect(m_keepaliveTimer, &QTimer::timeout, this, [this] {
-       m_mqttClient.publish(config->getMqttKeepaliveTopic(), QByteArray());
-        for (auto &val : config->getMqttSubTopics()) {
+        const MqttBrokerProfile profile = config->getMqttBrokerProfile(m_profileId);
+        m_mqttClient.publish(profile.keepaliveTopic, QByteArray());
+        for (const QString &topic : profile.subTopics) {
+            QString val = topic;
             QString request = val.replace("N/", "R/");
-           m_mqttClient.publish(request, QByteArray());
+            m_mqttClient.publish(request, QByteArray());
         }
         //qDebug() << "Sending MQTT keepalive";
     });
@@ -129,6 +132,11 @@ Mqtt::Mqtt(QSharedPointer<Config> c)
 void Mqtt::stateChanged(QMqttClient::ClientState state)
 {
     if (state == QMqttClient::ClientState::Disconnected) {
+        if (reconnectPending) {
+            reconnectPending = false;
+            updSettings();
+            return;
+        }
         qDebug() << "MQTT disconnected, trying reconnect in 1 minute";
         QTimer::singleShot(60e3, this, [this]() {
             reconnect();
@@ -140,9 +148,10 @@ void Mqtt::stateChanged(QMqttClient::ClientState state)
     }
     else if (state == QMqttClient::ClientState::Connected) {
         m_connectionTimer->stop();
-        qDebug() << "MQTT connected to broker, requesting subscriptions";
+        qDebug() << "MQTT profile" << m_profileId << "connected, requesting subscriptions";
         subscribe();
-        if (!config->getMqttKeepaliveTopic().isEmpty())m_mqttClient.publish(config->getMqttKeepaliveTopic(), QByteArray());
+        const QString topic = config->getMqttBrokerProfile(m_profileId).keepaliveTopic;
+        if (!topic.isEmpty()) m_mqttClient.publish(topic, QByteArray());
 
     }
 }
@@ -160,8 +169,25 @@ void Mqtt::msgSent(qint32 id)
 
 void Mqtt::subscribe()
 {
-    for (auto &val : config->getMqttSubTopics()) {
-       m_mqttClient.subscribe(val);
+    const MqttBrokerProfile profile = config->getMqttBrokerProfile(m_profileId);
+    QStringList topics = profile.subTopics + additionalSubscriptions;
+    topics.removeDuplicates();
+    for (const QString &topic : topics) {
+        m_mqttClient.subscribe(topic);
+    }
+}
+
+void Mqtt::setAdditionalSubscriptions(const QStringList &topics)
+{
+    QStringList uniqueTopics = topics;
+    uniqueTopics.removeAll(QString());
+    uniqueTopics.removeDuplicates();
+    if (uniqueTopics == additionalSubscriptions) return;
+
+    additionalSubscriptions = uniqueTopics;
+    if (m_mqttClient.state() != QMqttClient::ClientState::Disconnected) {
+        reconnectPending = true;
+        m_mqttClient.disconnectFromHost();
     }
 }
 
@@ -169,9 +195,12 @@ void Mqtt::msgReceived(const QByteArray &msg, const QMqttTopicName &topic)
 {
     m_receivedDataTimer->start(MQTT_DATATRANSFER_TIMEOUT_MS);
 
-    QStringList subs = config->getMqttSubTopics();
-    QStringList subNames = config->getMqttSubNames();
-    QStringList subToIncidentlog = config->getMqttSubToIncidentlog();
+    emit rawMessage(m_profileId, topic.name(), msg);
+
+    const MqttBrokerProfile profile = config->getMqttBrokerProfile(m_profileId);
+    const QStringList subs = profile.subTopics;
+    const QStringList subNames = profile.subNames;
+    const QStringList subToIncidentlog = profile.subToIncidentlog;
 
     QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
     QJsonObject jsonObject = jsonDoc.object();
@@ -202,44 +231,45 @@ void Mqtt::reconnect()
 
 void Mqtt::updSettings()
 {
-    if (config->getMqttActivate() != enabled) {
-        enabled = config->getMqttActivate();
-        if (enabled) {
-            reconnect();
-        }
+    const MqttBrokerProfile profile = config->getMqttBrokerProfile(m_profileId);
+    enabled = profile.enabled && !profile.id.isEmpty();
+    if (!enabled) {
+        stopKeepaliveTimer();
+        m_webswitchTimer->stop();
+        if (m_mqttClient.state() != QMqttClient::ClientState::Disconnected)
+            m_mqttClient.disconnectFromHost();
+        return;
     }
-    bool reconnectFlag = false;
-    if (config->getMqttServer() !=m_mqttClient.hostname()) {
-       m_mqttClient.setHostname(config->getMqttServer());
-        if (m_mqttClient.state() == QMqttClient::ClientState::Connected)m_mqttClient.disconnect();
-        reconnectFlag = true;
-    }
-    if (config->getMqttUsername() !=m_mqttClient.username()) {
-       m_mqttClient.setUsername(config->getMqttUsername());
-        if (m_mqttClient.state() == QMqttClient::ClientState::Connected)m_mqttClient.disconnect();
-        reconnectFlag = true;
-    }
-    if (config->getMqttPassword() !=m_mqttClient.password()) {
-       m_mqttClient.setPassword(config->getMqttPassword());
-        if (m_mqttClient.state() == QMqttClient::ClientState::Connected)m_mqttClient.disconnect();
-        reconnectFlag = true;
-    }
-    if (config->getMqttPort() !=m_mqttClient.port()) {
-       m_mqttClient.setPort(config->getMqttPort());
-        if (m_mqttClient.state() == QMqttClient::ClientState::Connected)m_mqttClient.disconnect();
-        reconnectFlag = true;
-    }
-    if (reconnectFlag)
-        reconnect();
 
-    if (config->getMqttKeepaliveTopic() != keepaliveTopic) {
-        keepaliveTopic = config->getMqttKeepaliveTopic();
+    QStringList configuredSubscriptions = profile.subTopics + additionalSubscriptions;
+    configuredSubscriptions.removeDuplicates();
+    const bool reconnectRequired = profile.server != m_mqttClient.hostname()
+                                || profile.username != m_mqttClient.username()
+                                || profile.password != m_mqttClient.password()
+                                || profile.port != m_mqttClient.port()
+                                || configuredSubscriptions != subscriptionTopics;
+    if (reconnectRequired && m_mqttClient.state() != QMqttClient::ClientState::Disconnected) {
+        reconnectPending = true;
+        m_mqttClient.disconnectFromHost();
+        return;
+    }
+
+    m_mqttClient.setHostname(profile.server);
+    m_mqttClient.setUsername(profile.username);
+    m_mqttClient.setPassword(profile.password);
+    m_mqttClient.setPort(profile.port);
+    subscriptionTopics = configuredSubscriptions;
+    reconnect();
+
+    if (profile.keepaliveTopic != keepaliveTopic) {
+        keepaliveTopic = profile.keepaliveTopic;
         if (!keepaliveTopic.isEmpty()) startKeepaliveTimer();
         else stopKeepaliveTimer();
     }
 
-    if (config->getMqttWebswitchAddress() != webswitchAddress) {
-        webswitchAddress = config->getMqttWebswitchAddress();
+    const QString configuredWebswitch = profile.primary ? config->getMqttWebswitchAddress() : QString();
+    if (configuredWebswitch != webswitchAddress) {
+        webswitchAddress = configuredWebswitch;
         if (webswitchAddress.isEmpty())m_webswitchTimer->stop();
         else {
             reqWebswitchData();
@@ -265,6 +295,8 @@ void Mqtt::checkConnection()
 
 void Mqtt::parseMqtt(const QString &topic, const QByteArray &msg)
 {
+    if (!config->getMqttBrokerProfile(m_profileId).primary) return;
+
     if (topic.contains("basic_status", Qt::CaseInsensitive)) { // special case
         QJsonDocument jsonDoc = QJsonDocument::fromJson(msg);
         QJsonObject jsonObject = jsonDoc.object();
@@ -325,7 +357,8 @@ void Mqtt::parseMqtt(const QString &topic, const QByteArray &msg)
 
 void Mqtt::reqWebswitchData()
 {
-    networkAccessManager->get(QNetworkRequest(QUrl(config->getMqttWebswitchAddress())));
+    if (!webswitchAddress.isEmpty())
+        networkAccessManager->get(QNetworkRequest(QUrl(webswitchAddress)));
 }
 
 void Mqtt::networkAccessManagerReplyHandler(QNetworkReply *reply)

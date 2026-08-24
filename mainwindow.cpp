@@ -15,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     qInfo() << "MainWindow: constructing core services";
+    VersionUpdater versionUpdater(config); // Handles any config changes needed
     settingsDialog = new SettingsDialog(this, config);
     instrumentList = new InstrumentList(config);
     instrumentList->setParent(this);
@@ -24,8 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
     positionReport->setParent(this);
     geoLimit = new GeoLimit(config);
     geoLimit->setParent(this);
-    mqtt = new Mqtt(config);
-    mqtt->setParent(this);
+    mqttManager = new MqttManager(config, this);
     accessHandler = new AccessHandler(this, config);
     oauthFileUploader = new OAuthFileUploader(config);
     oauthFileUploader->setParent(this);
@@ -45,7 +45,6 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(config->getWindowGeometry());
     restoreState(config->getWindowState());
 
-    VersionUpdater versionUpdater(config); // Handles any config changes needed
     useDbm = config->getUseDbm();
 
     QFont font = QApplication::font("QMessageBox");
@@ -126,6 +125,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     gnssDisplay->setParent(this);
     gnssDisplay->start();
+    mqttManager->updSettings();
 
     QSettings extras;
     if (extras.value("incGeometry").isValid())

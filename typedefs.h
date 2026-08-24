@@ -887,6 +887,46 @@ public:
     JAMMINGSTATE jammingState = JAMMINGSTATE::UNKNOWN;
 };
 
+struct PpsSourceData
+{
+    bool valid = false;
+    qint64 edgeTimestampNs = 0;
+    qint64 ageNs = 0;
+    qint64 intervalNs = 0;
+    QString reason;
+    bool metadataValid = false;
+    int fixMode = 0;
+    int satellites = 0;
+};
+
+struct PpsOffsetData
+{
+    bool valid = false;
+    qint64 currentNs = 0;
+    double meanNs = 0;
+    double stddevNs = 0;
+    qint64 minimumNs = 0;
+    qint64 maximumNs = 0;
+    quint64 samples = 0;
+};
+
+struct PpsData
+{
+    int schemaVersion = 0;
+    quint64 sequence = 0;
+    QDateTime generatedAtUtc;
+    QDateTime receivedAtUtc;
+    QString backend;
+    bool qualified = false;
+    QString error;
+    PpsSourceData reference;
+    PpsSourceData gps;
+    PpsSourceData galileo;
+    PpsOffsetData gpsReference;
+    PpsOffsetData galileoReference;
+    PpsOffsetData galileoGps;
+};
+
 class ConnectionStatus
 {
 public:
