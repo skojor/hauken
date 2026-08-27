@@ -223,9 +223,15 @@ void GnssDisplay::setupPpsPlot()
     ppsPlot->graph(1)->setPen(QPen(Qt::red));
     ppsPlot->graph(1)->setName(tr("Reference - Galileo"));
     ppsPlot->legend->setVisible(true);
-    ppsPlot->xAxis->setLabel(tr("Seconds"));
+    auto dateTimeTicker = QSharedPointer<QCPAxisTickerDateTime>::create();
+    dateTimeTicker->setDateTimeFormat("hh:mm:ss");
+    dateTimeTicker->setDateTimeSpec(Qt::UTC);
+    dateTimeTicker->setTickCount(7);
+    ppsPlot->xAxis->setTicker(dateTimeTicker);
+    ppsPlot->xAxis->setLabel(tr("UTC time"));
     ppsPlot->yAxis->setLabel(tr("Difference (us)"));
-    ppsPlot->xAxis->setRange(0, 10);
+    const double now = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTimeUtc());
+    ppsPlot->xAxis->setRange(now - 60.0, now);
 
     auto resetButton = new QPushButton(tr("Reset plot"), ppsPlotWindow);
     connect(resetButton, &QPushButton::clicked, this, &GnssDisplay::resetPpsPlot);
@@ -239,10 +245,11 @@ void GnssDisplay::resetPpsPlot()
 {
     if (!ppsPlot) return;
 
-    ppsPlotElapsedSeconds = 0;
     ppsPlot->graph(0)->data()->clear();
     ppsPlot->graph(1)->data()->clear();
-    ppsPlot->xAxis->setRange(0, 10);
+    const double now = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTimeUtc());
+    ppsPlotStartTime = 0;
+    ppsPlot->xAxis->setRange(now, now + 10.0);
     ppsPlot->yAxis->setRange(-1, 1);
     ppsPlot->replot();
 }
@@ -251,14 +258,14 @@ void GnssDisplay::updatePpsPlot()
 {
     if (!config->getGnssPpsPlotEnabled() || !ppsPlot) return;
 
-    ++ppsPlotElapsedSeconds;
     if (!ppsDataReceived || !ppsData.gpsReference.valid || !ppsData.galileoReference.valid) return;
 
-    const double x = ppsPlotElapsedSeconds;
+    const double x = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTimeUtc());
+    if (ppsPlotStartTime == 0) ppsPlotStartTime = x;
     ppsPlot->graph(0)->addData(x, -ppsData.gpsReference.currentNs / 1000.0);
     ppsPlot->graph(1)->addData(x, -ppsData.galileoReference.currentNs / 1000.0);
     ppsPlot->yAxis->rescale(true);
-    ppsPlot->xAxis->setRange(qMax(0.0, x - 60.0), qMax(10.0, x), Qt::AlignRight);
+    ppsPlot->xAxis->setRange(ppsPlotStartTime, qMax(ppsPlotStartTime + 10.0, x));
     ppsPlot->replot(QCustomPlot::rpQueuedReplot);
 }
 

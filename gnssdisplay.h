@@ -101,7 +101,7 @@ private:
     QWidget *ppsPlotWindow = nullptr;
     QCustomPlot *ppsPlot = nullptr;
     QTimer *ppsPlotTimer = new QTimer;
-    qint64 ppsPlotElapsedSeconds = 0;
+    double ppsPlotStartTime = 0;
 
     void updateReceiverVisibility();
     void updatePpsText();
