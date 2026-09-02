@@ -232,6 +232,7 @@ void GnssDisplay::setupPpsPlot()
     ppsPlot->yAxis->setLabel(tr("Difference (us)"));
     const double now = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTimeUtc());
     ppsPlot->xAxis->setRange(now - 60.0, now);
+    ppsPlot->yAxis->setRange(-50.0, 50.0);
 
     auto resetButton = new QPushButton(tr("Reset plot"), ppsPlotWindow);
     connect(resetButton, &QPushButton::clicked, this, &GnssDisplay::resetPpsPlot);
@@ -250,7 +251,7 @@ void GnssDisplay::resetPpsPlot()
     const double now = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTimeUtc());
     ppsPlotStartTime = 0;
     ppsPlot->xAxis->setRange(now, now + 10.0);
-    ppsPlot->yAxis->setRange(-1, 1);
+    ppsPlot->yAxis->setRange(-50.0, 50.0);
     ppsPlot->replot();
 }
 
@@ -265,6 +266,8 @@ void GnssDisplay::updatePpsPlot()
     ppsPlot->graph(0)->addData(x, -ppsData.gpsReference.currentNs / 1000.0);
     ppsPlot->graph(1)->addData(x, -ppsData.galileoReference.currentNs / 1000.0);
     ppsPlot->yAxis->rescale(true);
+    const QCPRange yRange = ppsPlot->yAxis->range();
+    ppsPlot->yAxis->setRange(qMin(yRange.lower, -50.0), qMax(yRange.upper, 50.0));
     ppsPlot->xAxis->setRange(ppsPlotStartTime, qMax(ppsPlotStartTime + 10.0, x));
     ppsPlot->replot(QCustomPlot::rpQueuedReplot);
 }
