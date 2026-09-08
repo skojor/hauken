@@ -474,7 +474,7 @@ void GnssDevice::appendToBinaryfile(const QByteArray &data)
         qDebug() << "GNSS logfile opened" << binaryFile.fileName();
     }
     QString ts = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
-    binaryFile.write(ts.toLocal8Bit() + "," + data);
+    binaryFile.write(ts.toLocal8Bit() + "," + data + '\n');
     binaryFile.flush();
 
     if (logfileStartedDate.daysTo(QDate::currentDate())) {
