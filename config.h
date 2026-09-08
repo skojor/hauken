@@ -10,13 +10,14 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include "mqttbrokerprofile.h"
 
 class Config : public QObject
 {
     Q_OBJECT
 public:
     explicit Config(QObject *parent = nullptr);
-    QByteArray simpleEncr(QByteArray);
+    QByteArray simpleEncr(QByteArray) const;
     QSettings *settings;
 
 signals:
@@ -267,6 +268,18 @@ public slots:
 
     bool getGnssDisplayWidget() { return settings->value("gnss/displayWidget", false).toBool();}
     void setGnssDisplayWidget(bool b) { settings->setValue("gnss/displayWidget", b); }
+    bool getGnssPpsDisplayEnabled() { return settings->value("gnss/pps/displayEnabled", false).toBool();}
+    void setGnssPpsDisplayEnabled(bool b) { settings->setValue("gnss/pps/displayEnabled", b); }
+    bool getGnssPpsPlotEnabled() { return settings->value("gnss/pps/plotEnabled", false).toBool();}
+    void setGnssPpsPlotEnabled(bool b) { settings->setValue("gnss/pps/plotEnabled", b); }
+    QString getGnssPpsBrokerProfileId() { return settings->value("gnss/pps/brokerProfileId", "primary").toString();}
+    void setGnssPpsBrokerProfileId(QString s) { settings->setValue("gnss/pps/brokerProfileId", s); }
+    QString getGnssPpsStatusTopic() { return settings->value("gnss/pps/statusTopic", "hauken/pps/status").toString().trimmed();}
+    void setGnssPpsStatusTopic(QString s) { settings->setValue("gnss/pps/statusTopic", s.trimmed()); }
+    QString getGnssPpsAvailabilityTopic() { return settings->value("gnss/pps/availabilityTopic", "hauken/pps/availability").toString().trimmed();}
+    void setGnssPpsAvailabilityTopic(QString s) { settings->setValue("gnss/pps/availabilityTopic", s.trimmed()); }
+    int getGnssPpsStaleTimeoutSec() { return settings->value("gnss/pps/staleTimeoutSec", 5).toInt();}
+    void setGnssPpsStaleTimeoutSec(int i) { settings->setValue("gnss/pps/staleTimeoutSec", i); }
     QString getGnss1Name() { return settings->value("gnss/gnss1Name", "").toString();}
     void setGnss1Name(QString s) { settings->setValue("gnss/gnss1Name", s); }
     QString getGnss2Name() { return settings->value("gnss/gnss2Name", "").toString();}
@@ -452,6 +465,13 @@ public slots:
     void setGeoLimitFilename(QString s) { settings->setValue("geoLimit/filename", s); }
 
     // MQTT options
+    QStringList getMqttBrokerProfileIds() const;
+    QList<MqttBrokerProfile> getMqttBrokerProfiles() const;
+    MqttBrokerProfile getMqttBrokerProfile(const QString &id) const;
+    void setMqttBrokerProfile(const MqttBrokerProfile &profile);
+    void removeMqttBrokerProfile(const QString &id);
+    bool hasMqttBrokerProfiles() const;
+
     bool getMqttActivate() { return settings->value("mqtt/activated", false).toBool();}
     void setMqttActivate(bool b) { settings->setValue("mqtt/activated", b); }
     QString getMqttServer() { return settings->value("mqtt/server", "").toString().trimmed();}

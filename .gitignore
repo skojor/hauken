@@ -19,3 +19,4 @@ include/msal
 libs/msalruntime.lib
 include/lame
 libs/libmp3lame.lib
+rpi/

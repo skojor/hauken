@@ -20,6 +20,7 @@ public:
 
 private:
     void handleConfigUpdates();
+    void migrateMqttBrokerProfiles();
     QSharedPointer<Config> config;
 };
 

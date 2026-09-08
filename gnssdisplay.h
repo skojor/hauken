@@ -19,8 +19,10 @@
 #include <QGroupBox>
 #include <QEvent>
 #include <QGridLayout>
+#include <QVBoxLayout>
 #include "config.h"
 #include "typedefs.h"
+#include "qcustomplot.h"
 
 
 /*
@@ -40,6 +42,9 @@ public:
     void updSettings();
     void updText();
     void updGnssData(GnssData data, int id);
+    void updPpsData(const PpsData &data);
+    void updPpsAvailability(bool online);
+    void updPpsError(const QString &error);
     void reqGnssData();
     bool eventFilter(QObject *obj, QEvent *event) override;
 
@@ -55,6 +60,7 @@ private:
     QGroupBox *gnss1RightGroupBox = new QGroupBox;
     QGroupBox *gnss2LeftGroupBox = new QGroupBox;
     QGroupBox *gnss2RightGroupBox = new QGroupBox;
+    QGroupBox *ppsGroupBox = new QGroupBox;
 
     QLabel *gnss1Latitude = new QLabel, *gnss2Latitude = new QLabel;
     QLabel *gnss1Longitude = new QLabel, *gnss2Longitude = new QLabel;
@@ -74,8 +80,34 @@ private:
 
     QTimer *updateGnssDataTimer = new QTimer;
     QString gnss1Name, gnss2Name;
+    PpsData ppsData;
+    bool ppsDataReceived = false;
+    bool ppsAvailabilityKnown = false;
+    bool ppsOnline = false;
+    QString ppsLastError;
+
+    QLabel *ppsAvailability = new QLabel;
+    QLabel *ppsReference = new QLabel;
+    QLabel *ppsGps = new QLabel;
+    QLabel *ppsGalileo = new QLabel;
+    QLabel *ppsGpsReference = new QLabel;
+    QLabel *ppsGalileoReference = new QLabel;
+    QLabel *ppsGalileoGps = new QLabel;
+    QLabel *ppsJitter = new QLabel;
+    QLabel *ppsSamples = new QLabel;
+    QLabel *ppsBackend = new QLabel;
+    QLabel *ppsQualified = new QLabel;
+    QLabel *ppsError = new QLabel;
+    QWidget *ppsPlotWindow = nullptr;
+    QCustomPlot *ppsPlot = nullptr;
+    QTimer *ppsPlotTimer = new QTimer;
+    double ppsPlotStartTime = 0;
 
     void updateReceiverVisibility();
+    void updatePpsText();
+    void updatePpsPlot();
+    void resetPpsPlot();
+    void setupPpsPlot();
 
     QSharedPointer<Config> config;
 

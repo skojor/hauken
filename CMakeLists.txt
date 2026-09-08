@@ -5,7 +5,7 @@ project(Hauken LANGUAGES C CXX)
 set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64")
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Widgets Mqtt)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Concurrent Gui Network NetworkAuth SerialPort HttpServer Multimedia Positioning PrintSupport Test Widgets Mqtt)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
@@ -81,8 +81,9 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     main.cpp
     mainwindow.cpp mainwindow.h mainw_signals.cpp mainw_changelog.cpp mainw_device.cpp
     measurementdevice.cpp measurementdevice.h
-    mqtt.cpp mqtt.h
+    mqtt.cpp mqtt.h mqttbrokerprofile.h mqttmanager.cpp mqttmanager.h
     mqttoptions.cpp mqttoptions.h
+    ppsstatusparser.cpp ppsstatusparser.h
     notifications.cpp notifications.h
     oauthfileuploader.cpp oauthfileuploader.h
 
@@ -237,6 +238,18 @@ qt_generate_deploy_app_script(
 )
 
 install(SCRIPT ${deploy_script})
+
+include(CTest)
+if (BUILD_TESTING)
+    qt_add_executable(ppsstatusparser_test
+        tests/ppsstatusparser_test.cpp
+        ppsstatusparser.cpp ppsstatusparser.h
+        typedefs.h
+    )
+    target_include_directories(ppsstatusparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ppsstatusparser_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME ppsstatusparser_test COMMAND ppsstatusparser_test)
+endif()
 
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /await)

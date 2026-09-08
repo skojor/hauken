@@ -16,6 +16,7 @@ public slots:
 
 private slots:
     QStringList getAvailablePorts();
+    void refreshPpsProfiles();
 };
 
 #endif // GNSSOPTIONS_H

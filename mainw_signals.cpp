@@ -322,9 +322,12 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, arduinoPtr, &Arduino::updSettings);
     connect(config.data(), &Config::settingsUpdated, positionReport, &PositionReport::updSettings);
     connect(config.data(), &Config::settingsUpdated, geoLimit, &GeoLimit::updSettings);
-    connect(config.data(), &Config::settingsUpdated, mqtt, &Mqtt::updSettings);
+    connect(config.data(), &Config::settingsUpdated, mqttManager, &MqttManager::updSettings);
     connect(config.data(), &Config::settingsUpdated, instrumentList, &InstrumentList::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssDisplay, &GnssDisplay::updSettings);
+    connect(mqttManager, &MqttManager::ppsDataUpdated, gnssDisplay, &GnssDisplay::updPpsData);
+    connect(mqttManager, &MqttManager::ppsAvailabilityChanged, gnssDisplay, &GnssDisplay::updPpsAvailability);
+    connect(mqttManager, &MqttManager::ppsError, gnssDisplay, &GnssDisplay::updPpsError);
     connect(config.data(), &Config::settingsUpdated, accessHandler, &AccessHandler::updSettings);
     connect(config.data(), &Config::settingsUpdated, ptrNetwork, &Network::updSettings);
 
@@ -470,9 +473,9 @@ void MainWindow::setSignals()
     });
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(mqtt, &Mqtt::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(mqtt, &Mqtt::triggerRecording, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(mqtt, &Mqtt::endRecording, sdefRecorder, &SdefRecorder::endRecording);
+    connect(mqttManager, &MqttManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(mqttManager, &MqttManager::triggerRecording, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(mqttManager, &MqttManager::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
     connect(measurementDevice,
@@ -655,7 +658,7 @@ void MainWindow::setSignals()
         }
     });
 
-    connect(mqtt, &Mqtt::newData, positionReport, &PositionReport::updMqttData);
+    connect(mqttManager, &MqttManager::newData, positionReport, &PositionReport::updMqttData);
     connect(read1809Data, &Read1809Data::newTrace, traceBuffer, &TraceBuffer::addTrace);
     connect(read1809Data, &Read1809Data::playbackRunning, this, [this](bool b) {
         if (b) {

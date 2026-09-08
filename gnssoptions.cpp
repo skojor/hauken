@@ -114,12 +114,29 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     gnss4Layout->addRow(tr("GNSS 2 name"), leOpt2);
     leOpt2->setToolTip(tr("Name will be displayed on separate window, in title"));
 
+    auto ppsGroupBox = new QGroupBox(tr("PPS timing display"));
+    auto ppsLayout = new QFormLayout(ppsGroupBox);
+    cbOpt15->setText(tr("Show PPS timing in the GNSS window"));
+    cbOpt15->setToolTip(tr("Display reference, GPS, and Galileo PPS status and offsets in the separate GNSS window"));
+    ppsLayout->addRow(cbOpt15);
+    cbOpt16->setText(tr("Plot PPS difference in a separate window"));
+    cbOpt16->setToolTip(tr("Plot reference minus GPS and reference minus Galileo PPS offsets"));
+    ppsLayout->addRow(cbOpt16);
+
+    ppsLayout->addRow(tr("MQTT broker"), comboOpt5);
+    ppsLayout->addRow(tr("Status topic"), leOpt3);
+    ppsLayout->addRow(tr("Availability topic"), leOpt4);
+    sbOpt2->setRange(1, 300);
+    sbOpt2->setSuffix(tr(" sec"));
+    ppsLayout->addRow(tr("Stale timeout"), sbOpt2);
+
     auto mainLayout = new QFormLayout(this);
 
     mainLayout->addWidget(gnss1GroupBox);
     mainLayout->addWidget(gnss2GroupBox);
     mainLayout->addWidget(gnss3GroupBox);
     mainLayout->addWidget(gnss4GroupBox);
+    mainLayout->addWidget(ppsGroupBox);
 
     mainLayout->addWidget(new QLabel("<span style='font-size:normal;color:red;'>Restart the program after changing serial ports!</span>"));
 
@@ -146,6 +163,27 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     leOpt2->setText(config->getGnss2Name());
     cbOpt14->setChecked(config->getGnssShowNotifications());
     sbOpt1->setValue(config->getGnssTimeFilter());
+    cbOpt15->setChecked(config->getGnssPpsDisplayEnabled());
+    cbOpt16->setChecked(config->getGnssPpsPlotEnabled());
+    refreshPpsProfiles();
+    leOpt3->setText(config->getGnssPpsStatusTopic());
+    leOpt4->setText(config->getGnssPpsAvailabilityTopic());
+    sbOpt2->setValue(config->getGnssPpsStaleTimeoutSec());
+    connect(config.data(), &Config::settingsUpdated, this, &GnssOptions::refreshPpsProfiles);
+}
+
+void GnssOptions::refreshPpsProfiles()
+{
+    const QString selectedId = comboOpt5->currentData().toString().isEmpty()
+                                   ? config->getGnssPpsBrokerProfileId()
+                                   : comboOpt5->currentData().toString();
+    comboOpt5->clear();
+    for (const MqttBrokerProfile &profile : config->getMqttBrokerProfiles()) {
+        QString label = profile.name;
+        if (!profile.enabled) label += tr(" (disabled)");
+        comboOpt5->addItem(label, profile.id);
+    }
+    comboOpt5->setCurrentIndex(comboOpt5->findData(selectedId));
 }
 
 QStringList GnssOptions::getAvailablePorts()
@@ -182,6 +220,12 @@ void GnssOptions::saveCurrentSettings()
     config->setGnss2Name(leOpt2->text());
     config->setGnssShowNotifications(cbOpt14->isChecked());
     config->setGnssTimeFilter(sbOpt1->value());
+    config->setGnssPpsDisplayEnabled(cbOpt15->isChecked());
+    config->setGnssPpsPlotEnabled(cbOpt16->isChecked());
+    config->setGnssPpsBrokerProfileId(comboOpt5->currentData().toString());
+    config->setGnssPpsStatusTopic(leOpt3->text());
+    config->setGnssPpsAvailabilityTopic(leOpt4->text());
+    config->setGnssPpsStaleTimeoutSec(sbOpt2->value());
 
     //dialog->close();
 }

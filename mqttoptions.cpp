@@ -1,168 +1,275 @@
 #include "mqttoptions.h"
 
+#include <algorithm>
+#include <QHeaderView>
+#include <QHBoxLayout>
+#include <QMessageBox>
+#include <QUuid>
+#include <QVBoxLayout>
+
 MqttOptions::MqttOptions(QSharedPointer<Config> c)
+    : OptionsBaseClass{}
 {
     config = c;
-    mainLayout = new QFormLayout(this);
-    setWindowTitle("MQTT/webswitch configuration");
-    /*connect(btnBox, &QDialogButtonBox::accepted, this, &MqttOptions::saveCurrentSettings);
-    connect(btnBox, &QDialogButtonBox::rejected, dialog, &QDialog::close);*/
-    QGroupBox *subServerGroupBox = new QGroupBox("MQTT server options");
-    QFormLayout *subServerLayout = new QFormLayout;
-    subServerGroupBox->setLayout(subServerLayout);
+    setWindowTitle(tr("MQTT and webswitch configuration"));
 
-    subServerLayout->addRow(cbOpt1);
-    cbOpt1->setText("Enable MQTT sensor data");
-    cbOpt1->setToolTip("Enabling this option will subscribe for sensor data from an MQTT server. " \
-                       "If set the sensor name will be included in the HTTP report together with" \
-                       "the value reported from the MQTT server.");
+    auto pageLayout = new QHBoxLayout(this);
+    auto profilePane = new QVBoxLayout;
+    profilePane->addWidget(new QLabel(tr("MQTT brokers")));
+    profilePane->addWidget(profileList, 1);
 
-    subServerLayout->addRow(cbOpt2);
-    cbOpt2->setText("MQTT test start triggers recording");
-    cbOpt2->setToolTip("Special MQTT test start message will trigger SDEF recording");
+    auto profileButtons = new QHBoxLayout;
+    profileButtons->addWidget(addProfileButton);
+    profileButtons->addWidget(removeProfileButton);
+    profilePane->addLayout(profileButtons);
+    pageLayout->addLayout(profilePane, 1);
 
-    subServerLayout->addRow(new QLabel(tr("MQTT server IP/address")), leOpt1);
-    leOpt1->setToolTip(tr("MQTT server to query for data"));
-    subServerLayout->addRow(new QLabel(tr("Server username")), leOpt13);
-    leOpt13->setToolTip(tr("Username for login to server (can be blank)"));
-    subServerLayout->addRow(new QLabel(tr("Server password")), leOpt14);
-    leOpt14->setToolTip(tr("Password for login to server (can be blank)"));
-    leOpt14->setEchoMode(QLineEdit::Password);
-    subServerLayout->addRow(new QLabel(tr("Server port")), sbOpt1);
-    sbOpt1->setToolTip(tr("Port number used to connect to server (default 1883)"));
-    sbOpt1->setRange(1,65536);
+    auto editorLayout = new QVBoxLayout;
+    auto connectionGroup = new QGroupBox(tr("Broker connection"));
+    auto connectionLayout = new QFormLayout(connectionGroup);
+    connectionLayout->addRow(profileEnabled);
+    connectionLayout->addRow(tr("Profile name"), profileName);
+    connectionLayout->addRow(tr("Server IP/address"), server);
+    connectionLayout->addRow(tr("Username"), username);
+    connectionLayout->addRow(tr("Password"), password);
+    connectionLayout->addRow(tr("Port"), port);
+    connectionLayout->addRow(tr("Keepalive topic"), keepaliveTopic);
+    editorLayout->addWidget(connectionGroup);
 
-    QGroupBox *keepAliveGroupBox = new QGroupBox("Keepalive topic");
-    QFormLayout *keepAliveLayout = new QFormLayout;
-    keepAliveGroupBox->setLayout(keepAliveLayout);
-    keepAliveLayout->addRow(new QLabel(tr("Topic")), leOpt12);
-    leOpt12->setToolTip(tr("If set this topic will be sent to the MQTT server periodically "\
-                           "to keep the connection alive (needed for some MQTT servers). " \
-                           "Only topic will be sent, no data"));
+    password->setEchoMode(QLineEdit::Password);
+    port->setRange(1, 65535);
+    port->setValue(1883);
 
-    QGroupBox *filterGroupBox = new QGroupBox("Site filter");
-    QFormLayout *filterLayout = new QFormLayout;
-    filterGroupBox->setLayout(filterLayout);
-    filterLayout->addRow(new QLabel(tr("Site filter")), sbOpt2);
-    sbOpt2->setToolTip(tr("Jammertest specific - enter site id here (1/2/3). 0 to disable"));
-    sbOpt2->setRange(0,3);
+    auto subscriptionGroup = new QGroupBox(tr("Sensor subscriptions"));
+    auto subscriptionLayout = new QVBoxLayout(subscriptionGroup);
+    subscriptions->setColumnCount(3);
+    subscriptions->setHorizontalHeaderLabels({tr("Name"), tr("Topic"), tr("Incident log")});
+    subscriptions->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    subscriptions->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    subscriptions->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    subscriptions->setSelectionBehavior(QAbstractItemView::SelectRows);
+    subscriptions->setSelectionMode(QAbstractItemView::SingleSelection);
+    subscriptionLayout->addWidget(subscriptions);
 
-    QGroupBox *webswitchGroupBox = new QGroupBox("HTTP webswitch options");
-    QFormLayout *webswitchLayout = new QFormLayout;
-    webswitchGroupBox->setLayout(webswitchLayout);
-    webswitchLayout->addRow(new QLabel(tr("Temperature HTTP(s) address")), leOpt15);
-    leOpt15->setToolTip(tr("If a valid address is provided, and a value is returned, " \
-                           "the temperature will be read in 60 second intervals and reported via position report."));
+    auto subscriptionButtons = new QHBoxLayout;
+    subscriptionButtons->addWidget(addSubscriptionButton);
+    subscriptionButtons->addWidget(removeSubscriptionButton);
+    subscriptionButtons->addStretch();
+    subscriptionLayout->addLayout(subscriptionButtons);
+    editorLayout->addWidget(subscriptionGroup, 1);
 
-    updSubs();
+    auto primaryLayout = new QFormLayout(primaryOptions);
+    primaryLayout->addRow(testTriggersRecording);
+    primaryLayout->addRow(tr("Site filter"), siteFilter);
+    primaryLayout->addRow(tr("Temperature HTTP(s) address"), webswitchAddress);
+    siteFilter->setRange(0, 3);
+    editorLayout->addWidget(primaryOptions);
+    pageLayout->addLayout(editorLayout, 3);
 
-    //dialog->setGeometry(100, 100, 450, 800);
-    QScrollArea *scrollArea = new QScrollArea(this);
-    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setGeometry(0, 0, 450, 800);
-    QWidget *widget = new QWidget();
-    widget->setLayout(mainLayout);
+    connect(addProfileButton, &QPushButton::clicked, this, &MqttOptions::addProfile);
+    connect(removeProfileButton, &QPushButton::clicked, this, &MqttOptions::removeProfile);
+    connect(profileList, &QListWidget::currentRowChanged, this, &MqttOptions::profileSelectionChanged);
+    connect(addSubscriptionButton, &QPushButton::clicked, this, &MqttOptions::addSubscription);
+    connect(removeSubscriptionButton, &QPushButton::clicked, this, &MqttOptions::removeSubscription);
+    connect(profileName, &QLineEdit::textChanged, this, [this] {
+        if (currentProfileIndex >= 0) updateProfileListItem(currentProfileIndex);
+    });
 
-    scrollArea->setWidget(widget);
-    mainLayout->addWidget(webswitchGroupBox);
-    mainLayout->addWidget(subServerGroupBox);
-    mainLayout->addWidget(keepAliveGroupBox);
-    mainLayout->addWidget(filterGroupBox);
-    for (auto &val : subGroupBoxes) mainLayout->addWidget(val);
+    profiles = config->getMqttBrokerProfiles();
+    for (const MqttBrokerProfile &profile : profiles)
+        profileList->addItem(profile.name);
+    for (int index = 0; index < profiles.size(); ++index)
+        updateProfileListItem(index);
 
-    cbOpt1->setChecked(config->getMqttActivate());
-    leOpt1->setText(config->getMqttServer());
-    leOpt13->setText(config->getMqttUsername());
-    leOpt14->setText(config->getMqttPassword());
-    sbOpt1->setValue(config->getMqttPort());
-    leOpt12->setText(config->getMqttKeepaliveTopic());
-    leOpt15->setText(config->getMqttWebswitchAddress());
-    cbOpt2->setChecked(config->getMqttTestTriggersRecording());
-    sbOpt2->setValue(config->getMqttSiteFilter());
+    if (!profiles.isEmpty()) profileList->setCurrentRow(0);
 }
 
 void MqttOptions::start()
 {
-
-    dialog->exec();
 }
 
 void MqttOptions::saveCurrentSettings()
 {
-    config->setMqttActivate(cbOpt1->isChecked());
-    config->setMqttServer(leOpt1->text());
-    config->setMqttTestTriggersRecording(cbOpt2->isChecked());
+    storeCurrentProfile();
 
-    QStringList names, topics, toIncidentlog;
-    for (auto &val : subNames) if (!val->text().isEmpty()) names.append(val->text());
-    for (auto &val : subTopics) if (!val->text().isEmpty()) topics.append(val->text());
-    for (auto &val : subIncidentlog) if (val->isChecked()) toIncidentlog.append("1"); else toIncidentlog.append("0");
-
-    config->setMqttSubNames(names);
-    config->setMqttSubTopics(topics);
-    config->setMqttSubToIncidentlog(toIncidentlog);
-
-    config->setMqttKeepaliveTopic(leOpt12->text());
-    config->setMqttUsername(leOpt13->text());
-    config->setMqttPassword(leOpt14->text());
-    config->setMqttPort(sbOpt1->value());
-    config->setMqttWebswitchAddress(leOpt15->text());
-    config->setMqttSiteFilter(sbOpt2->value());
-
-    //dialog->close();
-}
-
-void MqttOptions::updSubs()
-{
-    QStringList names = config->getMqttSubNames();
-    QStringList topics = config->getMqttSubTopics();
-    QStringList toIncidentlog = config->getMqttSubToIncidentlog();
-
-    if (subGroupBoxes.isEmpty()) {
-        //qDebug() << names;
-        for (int i=0; i < names.size() + 1; i++) {
-            addSub();
-        }
+    const QStringList existingIds = config->getMqttBrokerProfileIds();
+    QStringList retainedIds;
+    for (const MqttBrokerProfile &profile : profiles) retainedIds.append(profile.id);
+    for (const QString &id : existingIds) {
+        if (!retainedIds.contains(id)) config->removeMqttBrokerProfile(id);
     }
-    for (int i=0; i<subNames.size(); i++) {
-        if (names.size() >= i+1) subNames[i]->setText(config->getMqttSubNames()[i]);
-        if (topics.size() >= i+1) subTopics[i]->setText(config->getMqttSubTopics()[i]);
-        if (toIncidentlog.size() >= i+1) {
-            if (toIncidentlog[i] == "1") subIncidentlog[i]->setChecked(true);
-            else subIncidentlog[i]->setChecked(false);
-        }
-        else {
-            subIncidentlog.append(new QCheckBox);
-            subIncidentlog[i]->setChecked(false);
-        }
+
+    for (const MqttBrokerProfile &profile : profiles)
+        config->setMqttBrokerProfile(profile);
+
+    const auto primaryIt = std::find_if(profiles.cbegin(), profiles.cend(), [](const MqttBrokerProfile &profile) {
+        return profile.primary;
+    });
+    if (primaryIt == profiles.cend()) return;
+
+    config->setMqttActivate(primaryIt->enabled);
+    config->setMqttServer(primaryIt->server);
+    config->setMqttUsername(primaryIt->username);
+    config->setMqttPassword(primaryIt->password);
+    config->setMqttPort(primaryIt->port);
+    config->setMqttKeepaliveTopic(primaryIt->keepaliveTopic);
+    config->setMqttSubNames(primaryIt->subNames);
+    config->setMqttSubTopics(primaryIt->subTopics);
+    config->setMqttSubToIncidentlog(primaryIt->subToIncidentlog);
+    config->setMqttTestTriggersRecording(testTriggersRecording->isChecked());
+    config->setMqttSiteFilter(siteFilter->value());
+    config->setMqttWebswitchAddress(webswitchAddress->text());
+}
+
+void MqttOptions::addProfile()
+{
+    storeCurrentProfile();
+
+    MqttBrokerProfile profile;
+    profile.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    profile.name = tr("New broker");
+    profiles.append(profile);
+    profileList->addItem(profile.name);
+    profileList->setCurrentRow(profiles.size() - 1);
+    profileName->setFocus();
+    profileName->selectAll();
+}
+
+void MqttOptions::removeProfile()
+{
+    if (currentProfileIndex < 0 || currentProfileIndex >= profiles.size()) return;
+    if (profiles.at(currentProfileIndex).primary) return;
+
+    const QString name = profiles.at(currentProfileIndex).name;
+    if (QMessageBox::question(this,
+                              tr("Remove MQTT broker"),
+                              tr("Remove broker profile '%1'?").arg(name)) != QMessageBox::Yes)
+        return;
+
+    const int removedIndex = currentProfileIndex;
+    currentProfileIndex = -1;
+    profiles.removeAt(removedIndex);
+    delete profileList->takeItem(removedIndex);
+    if (!profiles.isEmpty()) profileList->setCurrentRow(qMin(removedIndex, profiles.size() - 1));
+    else loadProfile(-1);
+}
+
+void MqttOptions::profileSelectionChanged(int row)
+{
+    if (row == currentProfileIndex) return;
+    storeCurrentProfile();
+    currentProfileIndex = row;
+    loadProfile(row);
+}
+
+void MqttOptions::addSubscription()
+{
+    const int row = subscriptions->rowCount();
+    subscriptions->insertRow(row);
+    subscriptions->setItem(row, 0, new QTableWidgetItem);
+    subscriptions->setItem(row, 1, new QTableWidgetItem);
+    auto incidentItem = new QTableWidgetItem;
+    incidentItem->setFlags(incidentItem->flags() | Qt::ItemIsUserCheckable);
+    incidentItem->setCheckState(Qt::Unchecked);
+    subscriptions->setItem(row, 2, incidentItem);
+    subscriptions->setCurrentCell(row, 0);
+}
+
+void MqttOptions::removeSubscription()
+{
+    if (subscriptions->currentRow() >= 0)
+        subscriptions->removeRow(subscriptions->currentRow());
+}
+
+void MqttOptions::loadProfile(int index)
+{
+    const bool valid = index >= 0 && index < profiles.size();
+    profileName->setEnabled(valid);
+    profileEnabled->setEnabled(valid);
+    server->setEnabled(valid);
+    username->setEnabled(valid);
+    password->setEnabled(valid);
+    port->setEnabled(valid);
+    keepaliveTopic->setEnabled(valid);
+    subscriptions->setEnabled(valid);
+    addSubscriptionButton->setEnabled(valid);
+    removeSubscriptionButton->setEnabled(valid);
+    removeProfileButton->setEnabled(valid && !profiles.at(index).primary);
+    primaryOptions->setEnabled(valid && profiles.at(index).primary);
+
+    subscriptions->setRowCount(0);
+    if (!valid) {
+        profileName->clear();
+        profileEnabled->setChecked(false);
+        server->clear();
+        username->clear();
+        password->clear();
+        port->setValue(1883);
+        keepaliveTopic->clear();
+        return;
+    }
+
+    const MqttBrokerProfile &profile = profiles.at(index);
+    profileName->setText(profile.name);
+    profileEnabled->setChecked(profile.enabled);
+    server->setText(profile.server);
+    username->setText(profile.username);
+    password->setText(profile.password);
+    port->setValue(profile.port);
+    keepaliveTopic->setText(profile.keepaliveTopic);
+
+    const int count = qMax(profile.subNames.size(), profile.subTopics.size());
+    for (int row = 0; row < count; ++row) {
+        addSubscription();
+        if (row < profile.subNames.size()) subscriptions->item(row, 0)->setText(profile.subNames.at(row));
+        if (row < profile.subTopics.size()) subscriptions->item(row, 1)->setText(profile.subTopics.at(row));
+        if (row < profile.subToIncidentlog.size() && profile.subToIncidentlog.at(row) == "1")
+            subscriptions->item(row, 2)->setCheckState(Qt::Checked);
+    }
+
+    if (profile.primary) {
+        testTriggersRecording->setChecked(config->getMqttTestTriggersRecording());
+        siteFilter->setValue(config->getMqttSiteFilter());
+        webswitchAddress->setText(config->getMqttWebswitchAddress());
     }
 }
 
-void MqttOptions::addSub()
+void MqttOptions::storeCurrentProfile()
 {
-    if (!subNames.isEmpty()) disconnect(subNames.last(), &QLineEdit::textChanged, this, &MqttOptions::addSub);
+    if (currentProfileIndex < 0 || currentProfileIndex >= profiles.size()) return;
 
-    subGroupBoxes.append(new QGroupBox("Sensor " + QString::number(subGroupBoxes.size()+1)));
-    subLayouts.append(new QFormLayout);
-    subGroupBoxes.last()->setLayout(subLayouts.last());
-    subNames.append(new QLineEdit);
-    subTopics.append(new QLineEdit);
-    subIncidentlog.append(new QCheckBox);
-    subIncidentlog.last()->setText(tr("Show messages in incident log"));
-    subIncidentlog.last()->setToolTip(tr("Enable this option to add a line in the incident log when message topic is received"));
-    subLayouts.last()->addRow(new QLabel(tr("Name")), subNames.last());
-    subNames.last()->setToolTip(tr("Sensor name to be published in the HTTP report"));
-    subLayouts.last()->addRow(new QLabel(tr("Subscription topic")), subTopics.last());
-    subTopics.last()->setToolTip(tr("Subscription topic to subscribe to (blank to disable)"));
-    subLayouts.last()->addRow(subIncidentlog.last());
-    mainLayout->insertRow(mainLayout->rowCount()-1, subGroupBoxes.last());
-    connect(subNames.last(), &QLineEdit::textChanged, this, &MqttOptions::addSub);
+    MqttBrokerProfile &profile = profiles[currentProfileIndex];
+    profile.name = profileName->text().trimmed();
+    if (profile.name.isEmpty()) profile.name = profile.id;
+    profile.enabled = profileEnabled->isChecked();
+    profile.server = server->text().trimmed();
+    profile.username = username->text().trimmed();
+    profile.password = password->text();
+    profile.port = port->value();
+    profile.keepaliveTopic = keepaliveTopic->text().trimmed();
+    profile.subNames.clear();
+    profile.subTopics.clear();
+    profile.subToIncidentlog.clear();
+
+    for (int row = 0; row < subscriptions->rowCount(); ++row) {
+        const QString name = subscriptions->item(row, 0) ? subscriptions->item(row, 0)->text().trimmed() : QString();
+        const QString topic = subscriptions->item(row, 1) ? subscriptions->item(row, 1)->text().trimmed() : QString();
+        if (topic.isEmpty()) continue;
+        profile.subNames.append(name.isEmpty() ? topic : name);
+        profile.subTopics.append(topic);
+        const bool incidentLog = subscriptions->item(row, 2)
+                                 && subscriptions->item(row, 2)->checkState() == Qt::Checked;
+        profile.subToIncidentlog.append(incidentLog ? "1" : "0");
+    }
+
+    updateProfileListItem(currentProfileIndex);
 }
 
-void MqttOptions::setupWindow()
+void MqttOptions::updateProfileListItem(int index)
 {
-
-
-    //mainLayout->addWidget(btnBox);
+    if (index < 0 || index >= profileList->count()) return;
+    QString name = index == currentProfileIndex ? profileName->text().trimmed() : profiles.at(index).name;
+    if (name.isEmpty()) name = profiles.at(index).id;
+    if (profiles.at(index).primary) name += tr(" (primary)");
+    profileList->item(index)->setText(name);
 }
