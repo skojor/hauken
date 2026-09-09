@@ -41,6 +41,7 @@ public:
 public slots:
     void traceIncidentStarted();
     void traceIncidentEnded();
+    void recordingStartedWithoutAnalysisArtifacts();
 
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);
@@ -98,6 +99,7 @@ private:
     double m_lastClassificationStartMHz = 0;
     double m_lastClassificationStopMHz = 0;
     bool m_freqNotificationSentForIncident = false;
+    bool m_collectNotificationArtifacts = false;
 };
 
 #endif // PLOTANDANALYZE_H

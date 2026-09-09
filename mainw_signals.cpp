@@ -474,7 +474,10 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqttManager, &MqttManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(mqttManager, &MqttManager::triggerRecording, sdefRecorder, &SdefRecorder::triggerRecording);
+        connect(mqttManager,
+            &MqttManager::triggerRecording,
+            sdefRecorder,
+            &SdefRecorder::triggerRecordingWithoutAnalysisArtifacts);
     connect(mqttManager, &MqttManager::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
     connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
@@ -1295,5 +1298,12 @@ void MainWindow::setSignals()
                                                customPlot->xAxis->range().lower,
                                                customPlot->xAxis->range().upper);
     });
-    connect(sdefRecorder, &SdefRecorder::recordingStarted, plotAndAnalyze, &PlotAndAnalyze::recordingState);
+        connect(sdefRecorder,
+            &SdefRecorder::recordingStartedWithAnalysisArtifacts,
+            plotAndAnalyze,
+            &PlotAndAnalyze::recordingState);
+        connect(sdefRecorder,
+            &SdefRecorder::recordingStartedWithoutAnalysisArtifacts,
+            plotAndAnalyze,
+            &PlotAndAnalyze::recordingStartedWithoutAnalysisArtifacts);
 }
