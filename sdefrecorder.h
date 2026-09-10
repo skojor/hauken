@@ -39,6 +39,7 @@ public slots:
     void end();
     void updSettings();
     void triggerRecording(); // to be called as long as incident is happening!
+    void triggerRecordingWithoutAnalysisArtifacts();
     void manualTriggeredRecording();
     void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
     void receiveTrace(const QVector<qint16> data); // new data arrives here
@@ -76,6 +77,8 @@ private slots:
 
 signals:
     void recordingStarted();
+    void recordingStartedWithAnalysisArtifacts();
+    void recordingStartedWithoutAnalysisArtifacts();
     void recordingEnded();
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void reqTraceHistory(int);
@@ -90,6 +93,7 @@ signals:
     void folderDateTimeSet();
 
 private:
+    void startRecording(bool includeAnalysisArtifacts);
     //QSharedPointer<Config> config;
     QFile file;
     double tracePerSecond = -1, tracePerSecondForTempFile = -1;

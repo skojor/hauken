@@ -295,7 +295,7 @@ void Notifications::appendIncidentLog(QDateTime dt, const QString string)
 
 void Notifications::appendLogFile(QDateTime dt, const QString string)
 {
-    if (!incidentLogfile->isOpen()) {
+    if (incidentLogfile and !incidentLogfile->isOpen()) {
         incidentLogfile->setFileName(config->getWorkFolder() + "/incident.log");
         incidentLogfile->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
     }
@@ -303,8 +303,10 @@ void Notifications::appendLogFile(QDateTime dt, const QString string)
     QString text;
     QTextStream ts(&text);
     ts << dt.toString("dd.MM.yy hh:mm:ss") << "\t" << string << "\n";
-    incidentLogfile->write(text.toLocal8Bit());
-    incidentLogfile->flush();
+    if (incidentLogfile) {
+        incidentLogfile->write(text.toLocal8Bit());
+        incidentLogfile->flush();
+    }
 }
 
 void Notifications::appendEmailText(QDateTime dt, const QString string)

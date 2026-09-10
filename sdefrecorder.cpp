@@ -35,7 +35,7 @@ void SdefRecorder::start()
     connect(autorecorderTimer,
             &QTimer::timeout,
             this,
-            &SdefRecorder::triggerRecording); // auto recording triggers recording here
+            &SdefRecorder::triggerRecordingWithoutAnalysisArtifacts); // auto recording triggers recording here
 
     connect(tempFileTimer, &QTimer::timeout, this, &SdefRecorder::saveDataToTempFile);
 
@@ -134,6 +134,16 @@ void SdefRecorder::updSettings()
 
 void SdefRecorder::triggerRecording()
 {
+    startRecording(true);
+}
+
+void SdefRecorder::triggerRecordingWithoutAnalysisArtifacts()
+{
+    startRecording(false);
+}
+
+void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
+{
     if (deviceConnected) { // never start a recording unless some device is connected!
         recordingStartedTimer->start(
             recordTime); // minutes. restarts every time routine is called, which means it will run for x minutes after incident ended
@@ -143,6 +153,10 @@ void SdefRecorder::triggerRecording()
             dateTimeRecordingStarted = QDateTime::currentDateTime(); // for incident log
 
             emit recordingStarted();
+            if (includeAnalysisArtifacts)
+                emit recordingStartedWithAnalysisArtifacts();
+            else
+                emit recordingStartedWithoutAnalysisArtifacts();
 
             if (!recordingTimeoutTimer->isActive())
                 recordingTimeoutTimer->start(maxRecordTime); // only call once
@@ -167,7 +181,7 @@ void SdefRecorder::manualTriggeredRecording()
 {
     endRecording();
     emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
-    triggerRecording();
+    triggerRecordingWithoutAnalysisArtifacts();
 }
 
 QString SdefRecorder::createFilename()

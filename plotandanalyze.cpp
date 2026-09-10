@@ -28,8 +28,10 @@ void PlotAndAnalyze::start()
     });
 
     connect(m_sendPlotsTimer, &QTimer::timeout, this, [this] () {
-        for (int i = 0; i < m_plotsToSend.size(); i++) {
-            emit imageReady(m_plotsToSend[i], m_plotsDescription[i]);
+        if (m_collectNotificationArtifacts) {
+            for (int i = 0; i < m_plotsToSend.size(); i++) {
+                emit imageReady(m_plotsToSend[i], m_plotsDescription[i]);
+            }
         }
         m_plotsToSend.clear();
         m_plotsDescription.clear();
@@ -459,17 +461,19 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
             }
         }
 
-        if (flagReport) emit reportIntentional(text);
+        if (m_collectNotificationArtifacts && flagReport) emit reportIntentional(text);
 
         emit analyzerResult(text, 100);
     }
 
     const bool classificationAddedToPlot = attachClassificationToPendingPlot(text);
 
-    if (m_metadata.fromFile || classificationAddedToPlot)
-        emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
-    else
-        emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+    if (m_collectNotificationArtifacts) {
+        if (m_metadata.fromFile || classificationAddedToPlot)
+            emit toIncidentLog(NOTIFY::TYPE::AIDONTNOTIFY, "", text);
+        else
+            emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
+    }
 
     //if (!m_metadata.fromFile)
     writeMetaToDisk(allResults, classes);
@@ -863,6 +867,10 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
 
 void PlotAndAnalyze::recordingState()
 {
+    m_collectNotificationArtifacts = true;
+    m_plotsToSend.clear();
+    m_plotsDescription.clear();
+
     if (!m_config->getIqCreateFftPlot())
         createFilename();
 
@@ -877,6 +885,16 @@ void PlotAndAnalyze::recordingState()
     if (traceplotTimeout > tracedataTimeout) m_sendPlotsTimer->start(traceplotTimeout + 10e3);
     else m_sendPlotsTimer->start(tracedataTimeout + 10e3);
 
+}
+
+void PlotAndAnalyze::recordingStartedWithoutAnalysisArtifacts()
+{
+    m_collectNotificationArtifacts = false;
+    m_plotsToSend.clear();
+    m_plotsDescription.clear();
+    m_reqTracedataTimer->stop();
+    m_reqTraceplotTimer->stop();
+    m_sendPlotsTimer->stop();
 }
 
 void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg)
@@ -1221,7 +1239,7 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
     if (signalOverlapsL1)
         ts << " Signal overlaps L1 center frequency +/- 512 kHz.";
 
-    if (m_freqNotificationSentForIncident)
+    if (!m_collectNotificationArtifacts || m_freqNotificationSentForIncident)
         return;
 
     m_freqNotificationSentForIncident = true;
