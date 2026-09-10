@@ -64,6 +64,10 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     cbOpt5->setText("Show RF spectrum and incident log in separate windows");
     cbOpt5->setToolTip("Jammertest mode, restart after changing!");
 
+        layout2->addRow(cbOpt7);
+        cbOpt7->setText("Hide recording start/stop messages in log");
+        cbOpt7->setToolTip("Hide recording lifecycle messages from the incident log");
+
     layout2->addRow(new QLabel("Signal level correction value (dB)"), leOpt9);
     leOpt9->setToolTip("Value will be added to the trace values from the receiver");
 
@@ -129,6 +133,7 @@ GeneralOptions::GeneralOptions(QSharedPointer<Config> c)
     leOpt9->setText(QString::number(config->getCorrValue(), 'f', 1));
     cbOpt5->setChecked(config->getSeparatedWindows());
     sbOpt1->setValue(config->getOverlayFontSize());
+        cbOpt7->setChecked(config->getHideRecordingStartStopMessages());
 
     cbOpt6->setChecked(config->getGeoLimitActive());
     file->setText(config->getGeoLimitFilename());
@@ -166,6 +171,7 @@ void GeneralOptions::saveCurrentSettings()
     config->setCorrValue(leOpt9->text().toDouble());
     config->setSeparatedWindows(cbOpt5->isChecked());
     config->setOverlayFontSize(sbOpt1->value());
+        config->setHideRecordingStartStopMessages(cbOpt7->isChecked());
 
     config->setGeoLimitActive(cbOpt6->isChecked());
     config->setGeoLimitFilename(file->text());

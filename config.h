@@ -122,6 +122,8 @@ public slots:
     void setSeparatedWindows(bool b) { settings->setValue("separatedWindows", b); }
     int getOverlayFontSize() { return settings->value("overlayFontSize", 12).toInt();}
     void setOverlayFontSize(int i) { settings->setValue("overlayFontSize", i); }
+        bool getHideRecordingStartStopMessages() { return settings->value("hideRecordingStartStopMessages", false).toBool();}
+        void setHideRecordingStartStopMessages(bool b) { settings->setValue("hideRecordingStartStopMessages", b); }
 
     // Window settings
     bool getShowReceiverControls() { return settings->value("showReceiverControls", true).toBool();}
