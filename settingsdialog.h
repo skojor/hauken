@@ -9,7 +9,10 @@
 #include <QVBoxLayout>
 #include <QListWidget>
 #include <QStackedWidget>
+#include <QList>
 #include "config.h"
+
+class OptionsBaseClass;
 
 class SettingsDialog : public QDialog
 {
@@ -25,6 +28,7 @@ private:
     QSharedPointer<Config> config;
     QListWidget    *navList;
     QStackedWidget *pages;
+    QList<OptionsBaseClass *> optionPages;
 };
 
 #endif // SETTINGSDIALOG_H
