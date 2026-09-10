@@ -113,10 +113,11 @@ void SdefRecorder::updSettings()
         if (config->getAutoRecorderActivate()) {
             if (!autorecorderTimer->isActive()) {
                 autorecorderTimer->start(10000);
-                emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER,
-                                   "",
-                                   "Auto recording is activated, starting recording of currently "
-                                   "chosen frequency spectrum and resolution in 10 seconds");
+                    if (!config->getHideRecordingStartStopMessages())
+                        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER,
+                                           "",
+                                           "Auto recording is activated, starting recording of currently "
+                                           "chosen frequency spectrum and resolution in 10 seconds");
             }
         } else {
             if (autorecorderTimer and autorecorderTimer->isActive())
@@ -180,7 +181,8 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
 void SdefRecorder::manualTriggeredRecording()
 {
     endRecording();
-    emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
+    if (!config->getHideRecordingStartStopMessages())
+        emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
     triggerRecordingWithoutAnalysisArtifacts();
 }
 
@@ -356,20 +358,21 @@ void SdefRecorder::endRecording()
         emit recordingEnded();
         if (config->getSdefSaveToFile()) {
             if (recordingTimeoutTimer->isActive()) {
-                emit toIncidentLog(
-                    NOTIFY::TYPE::SDEFRECORDER,
-                    "",
-                    "Recording ended after "
-                        + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60
-                               ? QString::number(
-                                     dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
-                                     + " seconds"
-                               : QString::number(
-                                     dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                     + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
-                                                == 1
-                                            ? " minute"
-                                            : " minutes")));
+                if (!config->getHideRecordingStartStopMessages())
+                    emit toIncidentLog(
+                        NOTIFY::TYPE::SDEFRECORDER,
+                        "",
+                        "Recording ended after "
+                            + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60
+                                   ? QString::number(
+                                         dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
+                                         + " seconds"
+                                   : QString::number(
+                                         dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
+                                         + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
+                                                    == 1
+                                                ? " minute"
+                                                : " minutes")));
                 if (autorecorderTimer->isActive())
                     autorecorderTimer->stop();
             }

@@ -8,25 +8,50 @@
 #include "arduinooptions.h"
 #include "mqttoptions.h"
 #include "iqoptions.h"
+#include <QGuiApplication>
+#include <QScreen>
+#include <QScrollArea>
 
 SettingsDialog::SettingsDialog(QWidget *parent, QSharedPointer<Config> c)
     : QDialog{parent}
 {
     config = c;
     setWindowTitle("Options");
-    resize(600, 600);
+    QScreen *targetScreen = parent ? parent->screen() : screen();
+    if (!targetScreen)
+        targetScreen = QGuiApplication::primaryScreen();
+
+    const QSize screenMargin(32, 32);
+    const QSize availableSize = targetScreen
+        ? targetScreen->availableGeometry().size()
+        : QSize(600, 600);
+    const QSize maximumDialogSize = (availableSize - screenMargin).expandedTo(QSize(1, 1));
+    setMaximumSize(maximumDialogSize);
+    resize(QSize(600, 600).boundedTo(maximumDialogSize));
+
     auto mainLayout = new QGridLayout(this);
     navList = new QListWidget(this);
-    navList->setFixedWidth(180);
+    navList->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    navList->setMinimumWidth(120);
+    navList->setMaximumWidth(180);
     navList->setSelectionMode(QAbstractItemView::SingleSelection);
 
     pages = new QStackedWidget(this);
 
     mainLayout->addWidget(navList, 0, 0);
     mainLayout->addWidget(pages, 0, 1);
+    mainLayout->setColumnStretch(1, 1);
+    mainLayout->setRowStretch(0, 1);
 
-    auto addPage = [&](QWidget *w, const QString &title, const QIcon &icon = {}) {
-        pages->addWidget(w);
+    auto addPage = [&](OptionsBaseClass *page, const QString &title, const QIcon &icon = {}) {
+        auto scrollArea = new QScrollArea(pages);
+        scrollArea->setWidget(page);
+        scrollArea->setWidgetResizable(true);
+        scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+        optionPages.append(page);
+        pages->addWidget(scrollArea);
         navList->addItem(new QListWidgetItem(icon, title));
     };
 
@@ -46,7 +71,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, QSharedPointer<Config> c)
 
     auto buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    mainLayout->addWidget(buttons, 2, 0);
+    mainLayout->addWidget(buttons, 1, 0, 1, 2);
 
     connect(buttons, &QDialogButtonBox::accepted, this, &SettingsDialog::save);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -54,11 +79,8 @@ SettingsDialog::SettingsDialog(QWidget *parent, QSharedPointer<Config> c)
 
 void SettingsDialog::save()
 {
-    for (int i = 0; i < pages->count(); ++i) {
-        auto page = qobject_cast<OptionsBaseClass*>(pages->widget(i));
-        if (page)
-            page->saveCurrentSettings();
-    }
+    for (auto *page : optionPages)
+        page->saveCurrentSettings();
 
     config->settingsUpdated();
     accept();
