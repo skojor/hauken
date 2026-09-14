@@ -422,7 +422,7 @@ void CustomPlotController::updSettings()
     fill.fill(-200, plotResolution);
 
     if (config->getInstrNormalizeSpectrum())
-        customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm (normalized)":"dBμV (normalized)"));
+        customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dB (normalized)":"dB (normalized)"));
     else
         customPlotPtr->yAxis->setLabel((config->getUseDbm()?"dBm":"dBμV"));
 

@@ -1158,7 +1158,7 @@ void MainWindow::setSignals()
             config->setInstrNormalizeSpectrum(true);
             btnNormalize->setText("Normalized");
         }
-        traceBuffer->restartCalcAvgLevel(true);
+        //traceBuffer->restartCalcAvgLevel(true);
         customPlotController->doReplot();
         config->settingsUpdated();
     });

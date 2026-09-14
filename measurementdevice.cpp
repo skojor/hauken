@@ -659,7 +659,7 @@ void MeasurementDevice::stateConnected()
 
     if (!autoReconnectInProgress && !muteNotification) { // don't nag user if this is an auto reconnect call
         emit status("Connected, setting up device");
-        emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
+        //emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
     }
     else if (autoReconnectInProgress) {
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Reconnected");
