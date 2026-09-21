@@ -74,7 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     simulator = new Simulator(this);
 
     incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(true);
+    incidentLog->setReadOnly(false);
 
 #ifdef _WIN32
     if (QFile::exists(config->getWorkFolder() + "/notify.wav")) {

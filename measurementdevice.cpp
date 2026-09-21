@@ -337,6 +337,8 @@ void MeasurementDevice::checkId(const QByteArray buffer)
         devicePtr->setType(InstrumentType::PR100);
     else if (buffer.contains("PR200"))
         devicePtr->setType(InstrumentType::PR200);
+    else if (buffer.contains("PR300"))
+        devicePtr->setType(InstrumentType::PR300);
     else if (buffer.contains("EM100"))
         devicePtr->setType(InstrumentType::EM100);
     else if (buffer.contains("EM200"))
