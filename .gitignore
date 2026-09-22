@@ -21,3 +21,5 @@ include/lame
 libs/libmp3lame.lib
 rpi/
 20260922_Bodoe_gnss_1_binary.log
+build-debug.log
+git-diff-check.log
