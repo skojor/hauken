@@ -2,6 +2,7 @@
 
 #include <QHBoxLayout>
 #include <QMessageBox>
+#include <QSignalBlocker>
 #include <QUuid>
 #include <QVBoxLayout>
 
@@ -198,10 +199,20 @@ void GnssOptions::removeProfile()
 
     const int removedIndex = currentProfileIndex;
     currentProfileIndex = -1;
-    profiles.removeAt(removedIndex);
-    delete profileList->takeItem(removedIndex);
-    if (!profiles.isEmpty()) profileList->setCurrentRow(qMin(removedIndex, profiles.size() - 1));
-    else loadProfile(-1);
+
+    {
+        // Removing the current row can make Qt reselect a nearby row synchronously,
+        // re-entering profileSelectionChanged() while profiles/profileList are
+        // briefly out of sync. Block those signals and drive the update ourselves.
+        const QSignalBlocker blocker(profileList);
+        profiles.removeAt(removedIndex);
+        delete profileList->takeItem(removedIndex);
+        if (!profiles.isEmpty())
+            profileList->setCurrentRow(qMin(removedIndex, profiles.size() - 1));
+    }
+
+    currentProfileIndex = profiles.isEmpty() ? -1 : profileList->currentRow();
+    loadProfile(currentProfileIndex);
 }
 
 void GnssOptions::profileSelectionChanged(int row)
@@ -281,7 +292,7 @@ void GnssOptions::storeCurrentProfile()
 
 void GnssOptions::updateProfileListItem(int index)
 {
-    if (index < 0 || index >= profileList->count()) return;
+    if (index < 0 || index >= profiles.size() || index >= profileList->count()) return;
     QString name = index == currentProfileIndex ? receiverName->text().trimmed() : profiles.at(index).name;
     if (name.isEmpty()) name = profiles.at(index).id;
     if (profiles.at(index).type == GnssReceiverProfile::Type::Instrument) name += tr(" (instrument)");

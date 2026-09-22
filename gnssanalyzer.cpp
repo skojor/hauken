@@ -176,9 +176,13 @@ void GnssAnalyzer::updDisplay()
         if (!isInstrumentType)
             ts << "<tr><td>C/No (offset)</td><td>" << gnssData.cno << " (" << gnssData.cnoOffset << ") dB</td></tr>";
         if (!gnssData.agcBlocks.isEmpty()) {
-            for (auto iterator = gnssData.agcBlocks.cbegin(); iterator != gnssData.agcBlocks.cend(); ++iterator)
-                ts << "<tr><td>AGC block " << iterator.key() << "</td><td>"
-                   << iterator.value().agc << " %</td></tr>";
+            for (auto iterator = gnssData.agcBlocks.cbegin(); iterator != gnssData.agcBlocks.cend(); ++iterator) {
+                const QString label = iterator.value().frequencyMapped
+                                          ? QString("AGC %1 MHz").arg(qRound(iterator.value().centerHz / 1e6))
+                                          : QString("AGC block %1").arg(iterator.key());
+                ts << "<tr><td>" << label << "</td><td>"
+                   << iterator.value().agc << " (" << iterator.value().agcOffset << ") %</td></tr>";
+            }
         }
         else if (gnssData.agc >= 0)
             ts << "<tr><td>AGC (offset)</td><td>" << gnssData.agc << " (" << gnssData.agcOffset << ") %</td></tr>";

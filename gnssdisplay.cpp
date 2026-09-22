@@ -37,14 +37,15 @@ QString formatSource(const PpsSourceData &source, bool showMetadata)
 
 QString formatAgc(const GnssData &data)
 {
-    if (data.agcBlocks.isEmpty()) return QString::number(data.agc) + " %";
+    if (data.agcBlocks.isEmpty())
+        return QString("%1 (%2) %").arg(data.agc).arg(data.agcOffset);
 
     QStringList values;
     for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
         const QString label = iterator.value().frequencyMapped
-                                  ? QString("Block %1 - %2").arg(iterator.key()).arg(iterator.value().frequencyLabel)
+                                  ? QString("Block %1 - %2 MHz").arg(iterator.key()).arg(qRound(iterator.value().centerHz / 1e6))
                                   : QString("Block %1").arg(iterator.key());
-        values.append(QString("%1: %2 %").arg(label).arg(iterator.value().agc));
+        values.append(QString("%1: %2 (%3) %").arg(label).arg(iterator.value().agc).arg(iterator.value().agcOffset));
     }
     return values.join("<br>");
 }
@@ -57,7 +58,7 @@ QString formatJammingIndicator(const GnssData &data)
     QStringList values;
     for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
         const QString label = iterator.value().frequencyMapped
-                                  ? QString("Block %1 - %2").arg(iterator.key()).arg(iterator.value().frequencyLabel)
+                                  ? QString("Block %1 - %2 MHz").arg(iterator.key()).arg(qRound(iterator.value().centerHz / 1e6))
                                   : QString("Block %1").arg(iterator.key());
         const QString value = iterator.value().jammingIndicator >= 0
                                   ? QString::number(iterator.value().jammingIndicator) + " %"
@@ -219,7 +220,7 @@ void GnssDisplay::rebuildReceiverCards()
         rightLayout->addRow("Altitude offset", card->altOffset);
         rightLayout->addRow("Time offset", card->timeOffset);
         rightLayout->addRow("AGC", card->agc);
-        rightLayout->addRow("Jamming indicator", card->cwJamming);
+        rightLayout->addRow("Jam.ind.", card->cwJamming);
         card->rightGroupBox->setLayout(rightLayout);
 
         cards.insert(profile.id, card);
