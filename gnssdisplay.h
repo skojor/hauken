@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QTextStream>
 #include <QList>
+#include <QMap>
 #include <QStringList>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -32,6 +33,26 @@
  *
 */
 
+struct GnssReceiverCard
+{
+    QGroupBox *leftGroupBox = new QGroupBox;
+    QGroupBox *rightGroupBox = new QGroupBox;
+    QLabel *latitude = new QLabel;
+    QLabel *longitude = new QLabel;
+    QLabel *altitude = new QLabel;
+    QLabel *time = new QLabel;
+    QLabel *dop = new QLabel;
+    QLabel *cno = new QLabel;
+    QLabel *agc = new QLabel;
+    QLabel *sats = new QLabel;
+    QLabel *posValid = new QLabel;
+    QLabel *posOffset = new QLabel;
+    QLabel *altOffset = new QLabel;
+    QLabel *timeOffset = new QLabel;
+    QLabel *cwJamming = new QLabel;
+    GnssData data;
+};
+
 class GnssDisplay : public QObject
 {
     Q_OBJECT
@@ -41,7 +62,7 @@ public:
     void close();
     void updSettings();
     void updText();
-    void updGnssData(GnssData data, int id);
+    void updGnssData(GnssData data, QString id);
     void updPpsData(const PpsData &data);
     void updPpsAvailability(bool online);
     void updPpsError(const QString &error);
@@ -53,33 +74,12 @@ private slots:
 
 private:
     QWidget *wdg = new QWidget;
-    QFormLayout *mainLayout = new QFormLayout;
-    GnssData gnss1, gnss2, instrumentGnss;
+    QGridLayout *receiversLayout = new QGridLayout;
+    QMap<QString, GnssReceiverCard *> cards;
     bool isClosing = false;
-    QGroupBox *gnss1LeftGroupBox = new QGroupBox;
-    QGroupBox *gnss1RightGroupBox = new QGroupBox;
-    QGroupBox *gnss2LeftGroupBox = new QGroupBox;
-    QGroupBox *gnss2RightGroupBox = new QGroupBox;
     QGroupBox *ppsGroupBox = new QGroupBox;
 
-    QLabel *gnss1Latitude = new QLabel, *gnss2Latitude = new QLabel;
-    QLabel *gnss1Longitude = new QLabel, *gnss2Longitude = new QLabel;
-    QLabel *gnss1Altitude = new QLabel, *gnss2Altitude = new QLabel;
-    QLabel *gnss1Time = new QLabel, *gnss2Time = new QLabel;
-    QLabel *gnss1Dop = new QLabel, *gnss2Dop = new QLabel;
-    QLabel *gnss1CNo = new QLabel, *gnss2CNo = new QLabel;
-    QLabel *gnss1Agc = new QLabel, *gnss2Agc = new QLabel;
-    QLabel *gnss1Sats = new QLabel, *gnss2Sats = new QLabel;
-
-    QLabel *gnss1PosValid = new QLabel, *gnss2PosValid = new QLabel;
-    QLabel *gnss1PosOffset = new QLabel, *gnss2PosOffset = new QLabel;
-    QLabel *gnss1AltOffset = new QLabel, *gnss2AltOffset = new QLabel;
-    QLabel *gnss1TimeOffset = new QLabel, *gnss2TimeOffset = new QLabel;
-    QLabel *gnss1CwJamming = new QLabel, *gnss2CwJamming = new QLabel;
-    QLabel *gnss1JammingState = new QLabel, *gnss2JammingState = new QLabel;
-
     QTimer *updateGnssDataTimer = new QTimer;
-    QString gnss1Name, gnss2Name;
     PpsData ppsData;
     bool ppsDataReceived = false;
     bool ppsAvailabilityKnown = false;
@@ -103,7 +103,8 @@ private:
     QTimer *ppsPlotTimer = new QTimer;
     double ppsPlotStartTime = 0;
 
-    void updateReceiverVisibility();
+    void rebuildReceiverCards();
+    void updateCardText(const QString &id, GnssReceiverCard *card);
     void updatePpsText();
     void updatePpsPlot();
     void resetPpsPlot();
@@ -112,7 +113,7 @@ private:
     QSharedPointer<Config> config;
 
 signals:
-    void requestGnssData(int);
+    void requestGnssData(QString);
 };
 
 #endif // GNSSDISPLAY_H

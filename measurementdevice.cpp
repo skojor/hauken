@@ -661,7 +661,7 @@ void MeasurementDevice::stateConnected()
 
     if (!autoReconnectInProgress && !muteNotification) { // don't nag user if this is an auto reconnect call
         emit status("Connected, setting up device");
-        //emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
+        if (!config->getNotificationLargeFonts()) emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Connected to " + devicePtr->longId);
     }
     else if (autoReconnectInProgress) {
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, "Reconnected");
@@ -954,7 +954,7 @@ void MeasurementDevice::updSettings()
         restartStream();
     }
 
-    if ((config->getSdefAddPosition() && config->getSdefGpsSource().contains("Instrument")) || config->getGnssUseInstrumentGnss())  {// only ask device for position if it is needed
+    if ((config->getSdefAddPosition() && config->getSdefGpsSource() == "instrument") || config->getGnssReceiverProfile("instrument").enabled)  {// only ask device for position if it is needed
         if (!askForPosition) {
             askForPosition = true;
             restartStream(); // user changed this live, lets reconnect streams
@@ -993,10 +993,11 @@ void MeasurementDevice::updGnssDisplay()
     ts << "<tr><td>Altitude</td><td align=right>" << devicePtr->altitude / 100 << "</td></tr>"
        << "<tr><td>DOP</td><td align=right>" << devicePtr->dop << "</td></tr>"
        << "</font></table>";
-    if (connected && config->getSdefAddPosition() && !config->getGnssUseInstrumentGnss());// emit displayGnssData(out, 3, devicePtr->positionValid); // WHY?
-    else if (connected && config->getGnssUseInstrumentGnss()) {
+    const bool instrumentGnssEnabled = config->getGnssReceiverProfile("instrument").enabled;
+    if (connected && config->getSdefAddPosition() && !instrumentGnssEnabled);// emit displayGnssData(out, "instrument", devicePtr->positionValid); // WHY?
+    else if (connected && instrumentGnssEnabled) {
         GnssData data;
-        data.id = 3; // 3 = instrumentGnss
+        data.id = "instrument";
         data.inUse = true;
         data.gnssType = devicePtr->id;
         data.posValid = devicePtr->positionValid;
@@ -1013,7 +1014,7 @@ void MeasurementDevice::updGnssDisplay()
 GnssData MeasurementDevice::sendGnssData()
 {
     GnssData data;
-    data.id = 3; // 3 = instrumentGnss
+    data.id = "instrument";
     data.inUse = true;
     data.gnssType = devicePtr->id;
     data.posValid = devicePtr->positionValid;

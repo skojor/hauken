@@ -15,6 +15,7 @@ Config::Config(QObject *parent)
     if (!basicSettings->value("lastFile").isValid()) basicSettings->setValue("lastFile", defaultConfigFile);
 
     settings = new QSettings(curFile, QSettings::IniFormat);
+    migrateGnssProfilesIfNeeded();
 
     const QString configuredWorkFolder = settings->value("workFolder").toString();
     const QString oldDefaultConfigFile = QDir(findWorkFolderName()).filePath("default.ini");
@@ -39,6 +40,7 @@ void Config::newFileName(const QString file)
     delete settings;
     settings = new QSettings(curFile, QSettings::IniFormat);
     settings->setValue("SW_VERSION", FULL_VERSION);
+    migrateGnssProfilesIfNeeded();
 }
 
 QStringList Config::getMqttBrokerProfileIds() const
@@ -123,6 +125,136 @@ void Config::removeMqttBrokerProfile(const QString &id)
 bool Config::hasMqttBrokerProfiles() const
 {
     return !getMqttBrokerProfileIds().isEmpty();
+}
+
+QStringList Config::getGnssReceiverProfileIds() const
+{
+    return settings->value("gnss/receiverProfileIds").toStringList();
+}
+
+QList<GnssReceiverProfile> Config::getGnssReceiverProfiles() const
+{
+    QList<GnssReceiverProfile> profiles;
+    const QStringList ids = getGnssReceiverProfileIds();
+    profiles.reserve(ids.size());
+    for (const QString &id : ids) {
+        const GnssReceiverProfile profile = getGnssReceiverProfile(id);
+        if (!profile.id.isEmpty()) profiles.append(profile);
+    }
+    return profiles;
+}
+
+GnssReceiverProfile Config::getGnssReceiverProfile(const QString &id) const
+{
+    GnssReceiverProfile profile;
+    if (id.isEmpty() || !getGnssReceiverProfileIds().contains(id)) return profile;
+
+    const QString prefix = "gnss/receivers/" + id + "/";
+    profile.id = id;
+    profile.name = settings->value(prefix + "name", id).toString().trimmed();
+    profile.type = settings->value(prefix + "type", "Serial").toString() == "Instrument"
+                       ? GnssReceiverProfile::Type::Instrument : GnssReceiverProfile::Type::Serial;
+    profile.enabled = settings->value(prefix + "enabled", false).toBool();
+    profile.portName = settings->value(prefix + "portName").toString().trimmed();
+    profile.baudrate = settings->value(prefix + "baudrate", "4800").toString();
+    profile.ublox = settings->value(prefix + "ublox", false).toBool();
+    profile.logToFile = settings->value(prefix + "logToFile", false).toBool();
+    profile.triggerRecording = settings->value(prefix + "triggerRecording", false).toBool();
+    profile.nonRemovable = settings->value(prefix + "nonRemovable", false).toBool();
+    return profile;
+}
+
+void Config::setGnssReceiverProfile(const GnssReceiverProfile &profile)
+{
+    const QString id = profile.id.trimmed();
+    if (id.isEmpty()) return;
+
+    const QString prefix = "gnss/receivers/" + id + "/";
+    settings->setValue(prefix + "name", profile.name.trimmed());
+    settings->setValue(prefix + "type", profile.type == GnssReceiverProfile::Type::Instrument ? "Instrument" : "Serial");
+    settings->setValue(prefix + "enabled", profile.enabled);
+    settings->setValue(prefix + "portName", profile.portName.trimmed());
+    settings->setValue(prefix + "baudrate", profile.baudrate.trimmed());
+    settings->setValue(prefix + "ublox", profile.ublox);
+    settings->setValue(prefix + "logToFile", profile.logToFile);
+    settings->setValue(prefix + "triggerRecording", profile.triggerRecording);
+    settings->setValue(prefix + "nonRemovable", profile.nonRemovable);
+
+    QStringList ids = getGnssReceiverProfileIds();
+    if (!ids.contains(id)) {
+        ids.append(id);
+        settings->setValue("gnss/receiverProfileIds", ids);
+    }
+}
+
+void Config::removeGnssReceiverProfile(const QString &id)
+{
+    QStringList ids = getGnssReceiverProfileIds();
+    if (!ids.removeOne(id)) return;
+
+    settings->remove("gnss/receivers/" + id);
+    settings->setValue("gnss/receiverProfileIds", ids);
+}
+
+bool Config::hasGnssReceiverProfiles() const
+{
+    return !getGnssReceiverProfileIds().isEmpty();
+}
+
+void Config::migrateGnssProfilesIfNeeded()
+{
+    if (settings->value("gnss/migratedToProfiles", false).toBool()) return;
+    settings->setValue("gnss/migratedToProfiles", true);
+    if (hasGnssReceiverProfiles()) return; // user already has profiles, e.g. from a shared config file
+
+    GnssReceiverProfile receiver1;
+    receiver1.id = "legacy-1";
+    receiver1.name = settings->value("gnss/gnss1Name", "GNSS 1").toString().trimmed();
+    if (receiver1.name.isEmpty()) receiver1.name = "GNSS 1";
+    receiver1.type = GnssReceiverProfile::Type::Serial;
+    receiver1.enabled = settings->value("gnss/SerialPort1activate", false).toBool();
+    receiver1.portName = settings->value("gnss/SerialPort1Name").toString().trimmed();
+    receiver1.baudrate = settings->value("gnss/SerialPort1Baudrate", "4800").toString();
+    receiver1.ublox = settings->value("gnss/SerialPort1MonitorAgc", false).toBool();
+    receiver1.logToFile = settings->value("gnss/SerialPort1LogToFile", false).toBool();
+    receiver1.triggerRecording = settings->value("gnss/SerialPort1TriggerRecording", false).toBool();
+    setGnssReceiverProfile(receiver1);
+
+    GnssReceiverProfile receiver2;
+    receiver2.id = "legacy-2";
+    receiver2.name = settings->value("gnss/gnss2Name", "GNSS 2").toString().trimmed();
+    if (receiver2.name.isEmpty()) receiver2.name = "GNSS 2";
+    receiver2.type = GnssReceiverProfile::Type::Serial;
+    receiver2.enabled = settings->value("gnss/SerialPort2activate", false).toBool();
+    receiver2.portName = settings->value("gnss/SerialPort2Name").toString().trimmed();
+    receiver2.baudrate = settings->value("gnss/SerialPort2Baudrate", "4800").toString();
+    receiver2.ublox = settings->value("gnss/SerialPort2MonitorAgc", false).toBool();
+    receiver2.logToFile = settings->value("gnss/SerialPort2LogToFile", false).toBool();
+    receiver2.triggerRecording = settings->value("gnss/SerialPort2TriggerRecording", false).toBool();
+    setGnssReceiverProfile(receiver2);
+
+    GnssReceiverProfile instrument;
+    instrument.id = "instrument";
+    instrument.name = "Instrument GNSS";
+    instrument.type = GnssReceiverProfile::Type::Instrument;
+    instrument.enabled = settings->value("gnss/UseInstrumentGnss", false).toBool();
+    instrument.triggerRecording = settings->value("gnss/InstrumentGnssTriggerRecording", false).toBool();
+    instrument.nonRemovable = true;
+    setGnssReceiverProfile(instrument);
+
+    // Remap legacy free-text position-source selections to the new profile ids
+    const QString oldSdefSource = settings->value("sdef/GpsSource").toString();
+    if (oldSdefSource == "InstrumentGnss") settings->setValue("sdef/GpsSource", "instrument");
+    else if (oldSdefSource.contains("1")) settings->setValue("sdef/GpsSource", "legacy-1");
+    else if (oldSdefSource.contains("2")) settings->setValue("sdef/GpsSource", "legacy-2");
+
+    const QString oldPosReportSource = settings->value("posReport/source").toString();
+    if (oldPosReportSource.isEmpty() || oldPosReportSource.compare("InstrumentGNSS", Qt::CaseInsensitive) == 0)
+        settings->setValue("posReport/source", "instrument");
+    else if (oldPosReportSource.contains("1")) settings->setValue("posReport/source", "legacy-1");
+    else if (oldPosReportSource.contains("2")) settings->setValue("posReport/source", "legacy-2");
+    else if (oldPosReportSource.compare("Manual position", Qt::CaseInsensitive) == 0)
+        settings->setValue("posReport/source", "Manual");
 }
 
 QString Config::getWorkFolder()

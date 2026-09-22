@@ -93,12 +93,7 @@ void SdefRecorder::updSettings()
         maxRecordTime = config->getSdefMaxRecordTime() * 60e3;
         addPosition = config->getSdefAddPosition();
         QString src = config->getSdefGpsSource();
-        if (src == "InstrumentGnss")
-            positionSource = POSITIONSOURCE::INSTRUMENTGNSS;
-        else if (src.contains("1"))
-            positionSource = POSITIONSOURCE::GNSSDEVICE1;
-        else
-            positionSource = POSITIONSOURCE::GNSSDEVICE2;
+        positionSource = src;
         //prevLat = config->getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
         //prevLng = config->getStnLongitude().toDouble();
 

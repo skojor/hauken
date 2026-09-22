@@ -4,12 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QDateTime>
-
-enum class POSITIONSOURCE {
-    INSTRUMENTGNSS,
-    GNSSDEVICE1,
-    GNSSDEVICE2
-};
+#include <QMap>
 
 namespace NOTIFY {
 enum class TYPE {
@@ -105,6 +100,21 @@ enum class JAMMINGSTATE
     NOJAMMING,
     WARNINGFIXOK,
     CRITICALNOFIX
+};
+
+class GnssAgcBlockData
+{
+public:
+    int agc = -1;
+    int jammingIndicator = -1;
+    bool frequencyMapped = false;
+    quint32 centerHz = 0;
+    quint32 spanHz = 0;
+    quint32 resolutionHz = 0;
+    QString frequencyLabel;
+    QList<int> avgAgcArray;
+    int avgAgc = -1;
+    int agcOffset = 0;
 };
 
 enum class MODULATIONTYPE { FM, AM, PULSE, PM, IQ, ISB, CW, USB, LSB };
@@ -902,9 +912,10 @@ public:
     int fixQuality = 0;
     int cno = 0;
     int agc = -1;
+    QMap<int, GnssAgcBlockData> agcBlocks;
     int jammingIndicator = -1;
     QDateTime timestamp = QDateTime();
-    int id = 0;
+    QString id; // GnssReceiverProfile id ("instrument" for the instrument-GNSS pseudo profile)
     QList<int> avgCnoArray;
     int avgCno = 0;
     QList<int> avgAgcArray;

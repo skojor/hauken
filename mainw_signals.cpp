@@ -160,10 +160,10 @@ void MainWindow::setSignals()
     connect(measurementDevice, &MeasurementDevice::connectedStateChanged, this, [this](bool b) {
         if (b) {
             QTimer::singleShot(1500, this, [this] {
-                this->gnssAnalyzer3->updStateInstrumentGnss(true);
+                gnssManager->setInstrumentGnssConnected(true);
             });
         } else {
-            gnssAnalyzer3->updStateInstrumentGnss(false);
+            gnssManager->setInstrumentGnssConnected(false);
         }
     });
 
@@ -310,11 +310,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, traceAnalyzer, &TraceAnalyzer::updSettings);
     connect(config.data(), &Config::settingsUpdated, traceBuffer, &TraceBuffer::updSettings);
     connect(config.data(), &Config::settingsUpdated, sdefRecorder, &SdefRecorder::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssDevice1, &GnssDevice::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssDevice2, &GnssDevice::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer1, &GnssAnalyzer::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer2, &GnssAnalyzer::updSettings);
-    connect(config.data(), &Config::settingsUpdated, gnssAnalyzer3, &GnssAnalyzer::updSettings);
+    connect(config.data(), &Config::settingsUpdated, gnssManager, &GnssManager::updSettings);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
     connect(config.data(), &Config::settingsUpdated, iqPlot, &IqPlot::updSettings);
@@ -423,12 +419,8 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this]() {
         recordIncidentAlarm(false);
     });
-    connect(gnssAnalyzer1, &GnssAnalyzer::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
-    connect(gnssAnalyzer1, &GnssAnalyzer::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
-    connect(gnssAnalyzer2, &GnssAnalyzer::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
-    connect(gnssAnalyzer2, &GnssAnalyzer::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
-    connect(gnssAnalyzer3, &GnssAnalyzer::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
-    connect(gnssAnalyzer3, &GnssAnalyzer::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
+    connect(gnssManager, &GnssManager::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
+    connect(gnssManager, &GnssManager::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
     connect(sdefRecorder, &SdefRecorder::recordingDisabled, this, [this] { recordEnabled(false); });
     connect(sdefRecorder, &SdefRecorder::recordingEnabled, this, [this] { recordEnabled(true); });
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
@@ -444,30 +436,10 @@ void MainWindow::setSignals()
     connect(iqPlotThread, &QThread::finished, iqPlot, &IqPlot::end);
     connect(iqPlotThread, &QThread::finished, plotAndAnalyze, &PlotAndAnalyze::end);
 
-    connect(gnssAnalyzer1, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(gnssDevice1, &GnssDevice::analyzeThisData, gnssAnalyzer1, &GnssAnalyzer::getData);
-    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(gnssAnalyzer1,
-            &GnssAnalyzer::toIncidentLog,
-            notifications,
-            &Notifications::toIncidentLog);
-    connect(gnssDevice1, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(gnssAnalyzer2, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(gnssDevice2, &GnssDevice::analyzeThisData, gnssAnalyzer2, &GnssAnalyzer::getData);
-    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(gnssAnalyzer2,
-            &GnssAnalyzer::toIncidentLog,
-            notifications,
-            &Notifications::toIncidentLog);
-    connect(gnssDevice2, &GnssDevice::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(gnssDevice1, &GnssDevice::gnssDisabled, this, [this] {
-        gnssAnalyzer1->updStateInstrumentGnss(false);
-        gnssStatus->clear();
-        rightBox->setTitle("GNSS status");
-    });
-
-    connect(gnssDevice2, &GnssDevice::gnssDisabled, this, [this] {
-        gnssAnalyzer2->updStateInstrumentGnss(false);
+    connect(gnssManager, &GnssManager::displayGnssData, this, &MainWindow::updGnssBox);
+    connect(gnssManager, &GnssManager::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssManager, &GnssManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(gnssManager, &GnssManager::gnssDisabled, this, [this] {
         gnssStatus->clear();
         rightBox->setTitle("GNSS status");
     });
@@ -480,24 +452,8 @@ void MainWindow::setSignals()
             &SdefRecorder::triggerRecordingWithoutAnalysisArtifacts);
     connect(mqttManager, &MqttManager::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
-    connect(measurementDevice, &MeasurementDevice::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(measurementDevice,
-            &MeasurementDevice::updGnssData,
-            gnssAnalyzer3,
-            &GnssAnalyzer::getData);
-    connect(gnssAnalyzer3, &GnssAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
-    connect(gnssAnalyzer3,
-            &GnssAnalyzer::toIncidentLog,
-            notifications,
-            &Notifications::toIncidentLog);
-    connect(gnssAnalyzer3, &GnssAnalyzer::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(positionReport, &PositionReport::reqPosition, this, [this](QString s) {
-        if (s.contains("1"))
-            positionReport->updPosition(this->gnssDevice1->sendGnssData());
-        else if (s.contains("2"))
-            positionReport->updPosition(this->gnssDevice2->sendGnssData());
-        else
-            positionReport->updPosition(this->measurementDevice->sendGnssData());
+    connect(positionReport, &PositionReport::reqPosition, this, [this](QString profileId) {
+        positionReport->updPosition(gnssManager->dataFor(profileId));
     });
     connect(positionReport, &PositionReport::reqMeasurementDevicePtr, this, [this] {
         if (measurementDevice)
@@ -574,24 +530,17 @@ void MainWindow::setSignals()
             [this] {
                 GnssData data;
                 const QString gpsSource = config->getSdefGpsSource();
-
-                if (gpsSource == "InstrumentGnss")
-                    data = measurementDevice->sendGnssData();
-                else if (gpsSource.contains("1"))
-                    data = gnssDevice1->sendGnssData();
-                else if (gpsSource.contains("2"))
-                    data = gnssDevice2->sendGnssData();
-                else
-                    data = measurementDevice->sendGnssData();
+                data = gnssManager->dataFor(gpsSource);
 
                 if (!data.posValid) {
-                    GnssData fallbackData = gnssDevice1->sendGnssData();
-                    if (!fallbackData.posValid)
-                        fallbackData = gnssDevice2->sendGnssData();
-                    if (!fallbackData.posValid)
-                        fallbackData = measurementDevice->sendGnssData();
-                    if (fallbackData.posValid)
-                        data = fallbackData;
+                    for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles()) {
+                        if (!profile.enabled) continue;
+                        GnssData fallbackData = gnssManager->dataFor(profile.id);
+                        if (fallbackData.posValid) {
+                            data = fallbackData;
+                            break;
+                        }
+                    }
                 }
 
                 notifications->getLatitudeLongitude(data.posValid, data.latitude, data.longitude);
@@ -609,19 +558,13 @@ void MainWindow::setSignals()
         }
     });
 
-    connect(gnssDevice1, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
-    connect(gnssDevice2, &GnssDevice::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
+    connect(gnssManager, &GnssManager::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
     connect(measurementDevice,
             &MeasurementDevice::positionUpdate,
             sdefRecorder,
             &SdefRecorder::updPosition);
-    connect(sdefRecorder, &SdefRecorder::reqPositionFrom, this, [this](POSITIONSOURCE p) {
-        if (p == POSITIONSOURCE::GNSSDEVICE1)
-            gnssDevice1->reqPosition();
-        else if (p == POSITIONSOURCE::GNSSDEVICE2)
-            gnssDevice2->reqPosition();
-        else
-            measurementDevice->reqPosition();
+    connect(sdefRecorder, &SdefRecorder::reqPositionFrom, this, [this](QString profileId) {
+        gnssManager->reqPositionForProfile(profileId);
     });
 
     connect(btnTrigRecording,
@@ -635,11 +578,11 @@ void MainWindow::setSignals()
     connect(geoLimit, &GeoLimit::warning, this, &MainWindow::generatePopup);
     connect(geoLimit, &GeoLimit::requestPosition, this, [this] {
         GnssData data;
-        data = gnssDevice1->sendGnssData();
-        if (!data.posValid)
-            data = gnssDevice2->sendGnssData();
-        if (!data.posValid)
-            data = measurementDevice->sendGnssData();
+        for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles()) {
+            if (!profile.enabled) continue;
+            data = gnssManager->dataFor(profile.id);
+            if (data.posValid) break;
+        }
         geoLimit->receivePosition(data);
     });
     connect(geoLimit, &GeoLimit::currentPositionOk, this, [this](bool weAreInsidePolygon) {
@@ -696,12 +639,8 @@ void MainWindow::setSignals()
             &TraceAnalyzer::alarm,
             aiPtr,
             &AI::startAiTimer); // will start analyze of data after x seconds
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer1, &GnssAnalyzer::traceIncidentStarted);
-    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer1, &GnssAnalyzer::traceIncidentEnded);
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer2, &GnssAnalyzer::traceIncidentStarted);
-    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer2, &GnssAnalyzer::traceIncidentEnded);
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssAnalyzer3, &GnssAnalyzer::traceIncidentStarted);
-    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssAnalyzer3, &GnssAnalyzer::traceIncidentEnded);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssManager, &GnssManager::traceIncidentStarted);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, gnssManager, &GnssManager::traceIncidentEnded);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, plotAndAnalyze, &PlotAndAnalyze::traceIncidentStarted);
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, plotAndAnalyze, &PlotAndAnalyze::traceIncidentEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, aiPtr, &AI::recordingHasEnded);
@@ -767,13 +706,8 @@ void MainWindow::setSignals()
             },
             Qt::QueuedConnection);
 
-    connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](int id) {
-        if (id == 1)
-            gnssDisplay->updGnssData(gnssDevice1->sendGnssData(), 1);
-        else if (id == 2)
-            gnssDisplay->updGnssData(gnssDevice2->sendGnssData(), 2);
-        else
-            gnssDisplay->updGnssData(measurementDevice->sendGnssData(), 3);
+    connect(gnssDisplay, &GnssDisplay::requestGnssData, this, [this](QString id) {
+        gnssDisplay->updGnssData(gnssManager->dataFor(id), id);
     });
 
     connect(read1809Data, &Read1809Data::freqChanged, this, [this](double a, double b) {
@@ -805,12 +739,13 @@ void MainWindow::setSignals()
     connect(this, &MainWindow::ffmCenterFrequencyChanged, iqPlot, &IqPlot::getIqCenterFrequency);
 
     connect(cameraRecorder, &CameraRecorder::reqPosition, this, [this]() {
-        if (gnssDevice1->isValid())
-            cameraRecorder->updPosition(gnssDevice1->sendGnssData());
-        else if (gnssDevice2->isValid())
-            cameraRecorder->updPosition(gnssDevice2->sendGnssData());
-        else if (measurementDevice->isPositionValid())
-            cameraRecorder->updPosition(measurementDevice->sendGnssData());
+        for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles()) {
+            if (!profile.enabled) continue;
+            if (gnssManager->isValid(profile.id)) {
+                cameraRecorder->updPosition(gnssManager->dataFor(profile.id));
+                break;
+            }
+        }
     });
     connect(traceAnalyzer, &TraceAnalyzer::maxLevelMeasured, cameraRecorder, &CameraRecorder::receivedSignalLevel);
     connect(traceAnalyzer, &TraceAnalyzer::signalStatisticsUpdated, notifications, &Notifications::recSignalStatistics);
@@ -1140,14 +1075,8 @@ void MainWindow::setSignals()
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAtt, QOverload<int>::of(&QSpinBox::valueChanged), sdefRecorder, &SdefRecorder::closeTempFile);
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
-    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
-    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, gnssDevice1, &GnssDevice::setIncidenceStartedDateTime);
-    connect(gnssAnalyzer1, &GnssAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
-    connect(gnssAnalyzer2, &GnssAnalyzer::alarm, gnssDevice2, &GnssDevice::setIncidenceStartedDateTime);
-    connect(gnssDevice1, &GnssDevice::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename);
-    connect(gnssDevice2, &GnssDevice::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename2);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssManager, &GnssManager::markIncidenceStarted);
+    connect(gnssManager, &GnssManager::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename);
 
     connect(btnNormalize, &QPushButton::clicked, this, [this] () {
         if (config->getInstrNormalizeSpectrum()) {
@@ -1283,8 +1212,7 @@ void MainWindow::setSignals()
     //connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot);
 
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot);
-    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, gnssDevice1, &GnssDevice::saveBacklog); // Not really what this signal was meant for, but the timing is good...
-    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, gnssDevice2, &GnssDevice::saveBacklog);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, gnssManager, &GnssManager::saveAllBacklogs); // Not really what this signal was meant for, but the timing is good...
 
     connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {

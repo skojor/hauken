@@ -64,8 +64,9 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     fileLayout->addRow(new QLabel("Log folder"), leOpt6);
     leOpt6->setToolTip("Folder where SDeF and GNSS logs are stored");
 
-    comboOpt1->setToolTip("Select which device should be used for SDEF file position updates.\nGNSS device 1 and 2 are the ones selected in the GNSS options dialog");
-    comboOpt1->addItems(QStringList() << "InstrumentGnss" << "GNSS device 1" << "GNSS device 2");
+    comboOpt1->setToolTip("Select which GNSS receiver should be used for SDEF file position updates.\nReceivers are configured in the GNSS options dialog");
+    for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles())
+        comboOpt1->addItem(profile.name, profile.id);
 
     fileLayout->addRow(new QLabel("Recording time after incident ended (min)"), sbOpt1);
     sbOpt1->setToolTip("Duration of recording in minutes after last incident triggered");
@@ -127,7 +128,7 @@ SdefOptions::SdefOptions(QSharedPointer<Config> c)
     comboOpt1->setEnabled(cbOpt3->isChecked());
     sbOpt1->setValue(config->getSdefRecordTime());
     sbOpt2->setValue(config->getSdefMaxRecordTime());
-    comboOpt1->setCurrentText(config->getSdefGpsSource());
+    comboOpt1->setCurrentIndex(comboOpt1->findData(config->getSdefGpsSource()));
     sbOpt3->setValue(config->getSdefPreRecordTime());
     leOpt6->setText(config->getLogFolder());
     cbOpt6->setChecked(config->getNewLogFolder());
@@ -162,7 +163,7 @@ void SdefOptions::saveCurrentSettings()
 {
     config->setSdefSaveToFile(cbOpt1->isChecked());
     config->setSdefUploadFile(cbOpt2->isChecked());
-    config->setSdefGpsSource(comboOpt1->currentText());
+    config->setSdefGpsSource(comboOpt1->currentData().toString());
     config->setSdefAddPosition(cbOpt3->isChecked());
     config->setSdefZipFiles(cbOpt4->isChecked());
     config->setSdefZipAllIncidentFiles(cbOpt13->isChecked());

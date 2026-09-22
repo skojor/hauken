@@ -462,10 +462,11 @@ void Notifications::sendMail()
                 iter++;
             }
 
-            ts <<
-                (gnssPlot.isEmpty() ? "" : "<br><p>GNSS 1 data</p><img src='cid:image2'>") <<
-                (gnssPlot2.isEmpty() ? "" : "<br><p>GNSS 2 data</p><img src='cid:image3'>") <<
-                "<hr></body></table>   /";
+            for (auto &&gnssPlot : gnssPlots) {
+                if (!gnssPlot.isEmpty())
+                    ts << "<br><p>" << gnssPlot.description << "</p><img src='cid:" << gnssPlot.contentId << "'>";
+            }
+                ts << "<hr></body></table>   /";
 
             //qDebug() << "mail debug:" << mimeHtml->data();
 
@@ -479,10 +480,10 @@ void Notifications::sendMail()
             }
 
             QList<SimpleMail::MimeInlineFile *> inlineAttachments;
-            if (!gnssPlot.isEmpty())
-                inlineAttachments.append(createInlineFile(gnssPlot));
-            if (!gnssPlot2.isEmpty())
-                inlineAttachments.append(createInlineFile(gnssPlot2));
+            for (auto &&gnssPlot : gnssPlots) {
+                if (!gnssPlot.isEmpty())
+                    inlineAttachments.append(createInlineFile(gnssPlot));
+            }
             for (auto &&iqPlot : iqPlots) {
                 if (!iqPlot.isEmpty())
                     inlineAttachments.append(createInlineFile(iqPlot));
@@ -728,14 +729,17 @@ void Notifications::recIqPlot(const QString &filename, const QString &descriptio
     iqPlots.append(readAttachment(filename, contentId, description));
 }
 
-void Notifications::setGnssPlotFilename(QString name)
+void Notifications::setGnssPlotFilename(const QString &profileId, const QString &profileName, QString name)
 {
-    gnssPlot = readAttachment(name, "image2", "GNSS 1 data");
-}
-
-void Notifications::setGnssPlotFilename2(QString name)
-{
-    gnssPlot2 = readAttachment(name, "image3", "GNSS 2 data");
+    const QByteArray contentId = "gnssplot_" + profileId.toLocal8Bit();
+    const EmailAttachmentBuffer attachment = readAttachment(name, contentId, profileName + " data");
+    for (EmailAttachmentBuffer &existing : gnssPlots) {
+        if (existing.contentId == contentId) {
+            existing = attachment;
+            return;
+        }
+    }
+    gnssPlots.append(attachment);
 }
 
 void Notifications::updSettings()
@@ -849,13 +853,11 @@ void Notifications::generateGraphEmail()
         att.insert("isInline", "true");
         attachments.append(att);
     }*/
-    if (!gnssPlot.isEmpty()) {
-        fileOk = true;
-        appendGraphAttachment(attachments, gnssPlot);
-    }
-    if (!gnssPlot2.isEmpty()) {
-        fileOk = true;
-        appendGraphAttachment(attachments, gnssPlot2);
+    for (auto &&gnssPlot : gnssPlots) {
+        if (!gnssPlot.isEmpty()) {
+            fileOk = true;
+            appendGraphAttachment(attachments, gnssPlot);
+        }
     }
     for (auto &&iqPlot : iqPlots) {
         if (!iqPlot.isEmpty()) {
@@ -1022,7 +1024,6 @@ SimpleMail::MimeInlineFile *Notifications::createInlineFile(const EmailAttachmen
 
 void Notifications::clearBufferedAttachments()
 {
-    gnssPlot = EmailAttachmentBuffer();
-    gnssPlot2 = EmailAttachmentBuffer();
+    gnssPlots.clear();
     iqPlots.clear();
 }

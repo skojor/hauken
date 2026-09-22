@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include "mqttbrokerprofile.h"
+#include "gnssreceiverprofile.h"
 
 class Config : public QObject
 {
@@ -237,37 +238,6 @@ public slots:
     void setOAuth2StartDataProcessingAfterUpload(bool b) { settings->setValue("OAuth2/StartDataProcessingAfterUpload", b); }
 
     // GNSS options
-    QString getGnssSerialPort1Name() { return settings->value("gnss/SerialPort1Name").toString();}
-    void setGnssSerialPort1Name(QString s) { settings->setValue("gnss/SerialPort1Name", s); }
-    QString getGnssSerialPort1Baudrate() { return settings->value("gnss/SerialPort1Baudrate", "4800").toString();}
-    void setGnssSerialPort1Baudrate(QString s) { settings->setValue("gnss/SerialPort1Baudrate", s); }
-    bool getGnssSerialPort1Activate() { return settings->value("gnss/SerialPort1activate", false).toBool();}
-    void setGnssSerialPort1Activate(bool b) { settings->setValue("gnss/SerialPort1activate", b); }
-    bool getGnssSerialPort1LogToFile() { return settings->value("gnss/SerialPort1LogToFile", false).toBool();}
-    void setGnssSerialPort1LogToFile(bool b) { settings->setValue("gnss/SerialPort1LogToFile", b); }
-    bool getGnssSerialPort1MonitorAgc() { return settings->value("gnss/SerialPort1MonitorAgc", false).toBool();}
-    void setGnssSerialPort1MonitorAgc(bool b) { settings->setValue("gnss/SerialPort1MonitorAgc", b); }
-    bool getGnssSerialPort1TriggerRecording() { return settings->value("gnss/SerialPort1TriggerRecording", false).toBool();}
-    void setGnssSerialPort1TriggerRecording(bool b) { settings->setValue("gnss/SerialPort1TriggerRecording", b); }
-
-    QString getGnssSerialPort2Name() { return settings->value("gnss/SerialPort2Name").toString();}
-    void setGnssSerialPort2Name(QString s) { settings->setValue("gnss/SerialPort2Name", s); }
-    QString getGnssSerialPort2Baudrate() { return settings->value("gnss/SerialPort2Baudrate", "4800").toString();}
-    void setGnssSerialPort2Baudrate(QString s) { settings->setValue("gnss/SerialPort2Baudrate", s); }
-    bool getGnssSerialPort2Activate() { return settings->value("gnss/SerialPort2activate", false).toBool();}
-    void setGnssSerialPort2Activate(bool b) { settings->setValue("gnss/SerialPort2activate", b); }
-    bool getGnssSerialPort2LogToFile() { return settings->value("gnss/SerialPort2LogToFile", false).toBool();}
-    void setGnssSerialPort2LogToFile(bool b) { settings->setValue("gnss/SerialPort2LogToFile", b); }
-    bool getGnssSerialPort2MonitorAgc() { return settings->value("gnss/SerialPort2MonitorAgc", false).toBool();}
-    void setGnssSerialPort2MonitorAgc(bool b) { settings->setValue("gnss/SerialPort2MonitorAgc", b); }
-    bool getGnssSerialPort2TriggerRecording() { return settings->value("gnss/SerialPort2TriggerRecording", false).toBool();}
-    void setGnssSerialPort2TriggerRecording(bool b) { settings->setValue("gnss/SerialPort2TriggerRecording", b); }
-
-    bool getGnssUseInstrumentGnss() { return settings->value("gnss/UseInstrumentGnss", false).toBool();}
-    void setGnssUseInstrumentGnss(bool b) { settings->setValue("gnss/UseInstrumentGnss", b); }
-    bool getGnssInstrumentGnssTriggerRecording() { return settings->value("gnss/InstrumentGnssTriggerRecording", false).toBool();}
-    void setGnssInstrumentGnssTriggerRecording(bool b) { settings->setValue("gnss/InstrumentGnssTriggerRecording", b); }
-
     bool getGnssDisplayWidget() { return settings->value("gnss/displayWidget", false).toBool();}
     void setGnssDisplayWidget(bool b) { settings->setValue("gnss/displayWidget", b); }
     bool getGnssPpsDisplayEnabled() { return settings->value("gnss/pps/displayEnabled", false).toBool();}
@@ -282,12 +252,16 @@ public slots:
     void setGnssPpsAvailabilityTopic(QString s) { settings->setValue("gnss/pps/availabilityTopic", s.trimmed()); }
     int getGnssPpsStaleTimeoutSec() { return settings->value("gnss/pps/staleTimeoutSec", 5).toInt();}
     void setGnssPpsStaleTimeoutSec(int i) { settings->setValue("gnss/pps/staleTimeoutSec", i); }
-    QString getGnss1Name() { return settings->value("gnss/gnss1Name", "").toString();}
-    void setGnss1Name(QString s) { settings->setValue("gnss/gnss1Name", s); }
-    QString getGnss2Name() { return settings->value("gnss/gnss2Name", "").toString();}
-    void setGnss2Name(QString s) { settings->setValue("gnss/gnss2Name", s); }
     bool getGnssShowNotifications() { return settings->value("gnss/showNotifications", true).toBool();}
     void setGnssShowNotifications(bool b) { settings->setValue("gnss/showNotifications", b); }
+
+    // GNSS receiver profiles (arbitrary number of receivers, mirrors MqttBrokerProfile)
+    QStringList getGnssReceiverProfileIds() const;
+    QList<GnssReceiverProfile> getGnssReceiverProfiles() const;
+    GnssReceiverProfile getGnssReceiverProfile(const QString &id) const;
+    void setGnssReceiverProfile(const GnssReceiverProfile &profile);
+    void removeGnssReceiverProfile(const QString &id);
+    bool hasGnssReceiverProfiles() const;
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}
@@ -439,7 +413,7 @@ public slots:
     // Position report
     bool getPosReportActivated() { return settings->value("posReport/activated", false).toBool();}
     void setPosReportActivated(bool b) { settings->setValue("posReport/activated", b); }
-    QString getPosReportSource() { return settings->value("posReport/source", "InstrumentGNSS").toString();}
+    QString getPosReportSource() { return settings->value("posReport/source", "instrument").toString();}
     void setPosReportSource(QString s) { settings->setValue("posReport/source", s); }
     QString getPosReportUrl() { return settings->value("posReport/url", "").toString().trimmed();}
     void setPosReportUrl(QString s) { settings->setValue("posReport/url", s); }
@@ -536,6 +510,8 @@ public slots:
 private slots:
 
 private:
+    void migrateGnssProfilesIfNeeded();
+
     QSettings *basicSettings;
     QString curFile;
     bool ready = false;

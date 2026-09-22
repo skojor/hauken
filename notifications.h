@@ -79,8 +79,7 @@ public slots:
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon);
     void recPrediction(const QString &text);
-    void setGnssPlotFilename(QString name);
-    void setGnssPlotFilename2(QString name);
+    void setGnssPlotFilename(const QString &profileId, const QString &profileName, QString name);
 
     void appendIncidentLog(QDateTime dt, const QString string);
     void appendLogFile(QDateTime dt, const QString string);
@@ -150,8 +149,7 @@ private:
     int probability = 0;
     bool predictionReceived = false;
     bool notifyPriorityRecipients = false;
-    EmailAttachmentBuffer gnssPlot;
-    EmailAttachmentBuffer gnssPlot2;
+    QList<EmailAttachmentBuffer> gnssPlots;
     QList<EmailAttachmentBuffer> iqPlots;
     QString m_instrData;
     DailySummaryStatistics dailySummaryStatistics;

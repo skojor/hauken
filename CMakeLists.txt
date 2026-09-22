@@ -74,7 +74,9 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     gnssanalyzer.cpp gnssanalyzer.h
     gnssdevice.cpp gnssdevice.h
     gnssdisplay.cpp gnssdisplay.h
+    gnssmanager.cpp gnssmanager.h
     gnssoptions.cpp gnssoptions.h
+    gnssreceiverprofile.h
     instrumentlist.cpp instrumentlist.h
     iqoptions.cpp iqoptions.h
     led/ledindicator.cpp led/ledindicator.h
@@ -102,6 +104,9 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     traceanalyzer.cpp traceanalyzer.h
     tracebuffer.cpp tracebuffer.h
     typedefs.h
+    ubloxmonrfparser.cpp ubloxmonrfparser.h
+    ubloxmonspanparser.cpp ubloxmonspanparser.h
+    ubloxrfbandcorrelator.cpp ubloxrfbandcorrelator.h
     udpdatastream.cpp udpdatastream.h
     versionupdater.cpp versionupdater.h
     vifstreamtcp.cpp vifstreamtcp.h
@@ -249,6 +254,31 @@ if (BUILD_TESTING)
     target_include_directories(ppsstatusparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(ppsstatusparser_test PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME ppsstatusparser_test COMMAND ppsstatusparser_test)
+
+    qt_add_executable(ubloxmonrfparser_test
+        tests/ubloxmonrfparser_test.cpp
+        ubloxmonrfparser.cpp ubloxmonrfparser.h
+    )
+    target_include_directories(ubloxmonrfparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ubloxmonrfparser_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME ubloxmonrfparser_test COMMAND ubloxmonrfparser_test)
+
+    qt_add_executable(ubloxmonspanparser_test
+        tests/ubloxmonspanparser_test.cpp
+        ubloxmonspanparser.cpp ubloxmonspanparser.h
+    )
+    target_include_directories(ubloxmonspanparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ubloxmonspanparser_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME ubloxmonspanparser_test COMMAND ubloxmonspanparser_test)
+
+    qt_add_executable(ubloxrfbandcorrelator_test
+        tests/ubloxrfbandcorrelator_test.cpp
+        ubloxrfbandcorrelator.cpp ubloxrfbandcorrelator.h
+        ubloxmonrfparser.h ubloxmonspanparser.h
+    )
+    target_include_directories(ubloxrfbandcorrelator_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ubloxrfbandcorrelator_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME ubloxrfbandcorrelator_test COMMAND ubloxrfbandcorrelator_test)
 endif()
 
 if (MSVC)

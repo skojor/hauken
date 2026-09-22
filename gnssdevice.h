@@ -17,6 +17,7 @@
 //#include <QHostInfo>
 #include "config.h"
 #include "typedefs.h"
+#include "ubloxrfbandcorrelator.h"
 
 /*
  *  Class connecting to and reading data from one gnss receiver.
@@ -43,7 +44,7 @@ class GnssDevice : public QObject
 {
     Q_OBJECT
 public:
-    explicit GnssDevice(QSharedPointer<Config>, int id);
+    explicit GnssDevice(QSharedPointer<Config>, const QString &profileId);
 
 public slots:
     void start();
@@ -110,14 +111,19 @@ private:
     QList<QDateTime> backlogTimestamp;
     QList<QByteArray> backlogData;
     QVector<double> backlogCno, backlogAgc, backlogJam;
+    QMap<int, QVector<double>> backlogAgcBlocks;
+    QMap<int, QString> backlogAgcBlockLabels;
     QTimer *backlogCleanupTimer = new QTimer;
     QDateTime incidenceStartedDateTime;
 
     // Config cache
     bool activate = false;
     QString portName, baudrate;
+    QString profileLabel; // sanitized profile name, used for filenames/log titles
     bool uBloxDevice;
     QString uBloxID, uBloxFirmware;
+    UbloxRfBandCorrelator rfBandCorrelator;
+    quint64 binaryMessageSequence = 0;
     UBLOX uBloxState = UBLOX::NODEVICE;
     bool checkedAllSatSystems = false;
 };

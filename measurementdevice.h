@@ -43,7 +43,7 @@ signals:
     void resetBuffers();
     void positionUpdate(bool b, double lat, double lng);
     void deviceStreamTimeout(); // signal to stop eventual recording
-    void displayGnssData(QString, int, bool);
+    void displayGnssData(QString, QString, bool);
     void updGnssData(GnssData &);
     void deviceBusy(QString); // For HTTP status updates
     void ipOfUser(QString);
