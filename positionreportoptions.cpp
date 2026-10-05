@@ -33,10 +33,9 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     cbOpt1->setToolTip("Enable to send periodic id/timestamp/position/other reports as a HTTP POST json packet.");
 
     reportLayout->addRow(new QLabel("GNSS receiver to use for reports"), comboOpt1);
-    comboOpt1->addItem("InstrumentGNSS");
-    comboOpt1->addItem("GNSS receiver 1");
-    comboOpt1->addItem("GNSS receiver 2");
-    comboOpt1->addItem("Manual position");
+    for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles())
+        comboOpt1->addItem(profile.name, profile.id);
+    comboOpt1->addItem("Manual position", "Manual");
     comboOpt1->setToolTip("Which position source should be used for the position data");
 
     reportLayout->addRow(new QLabel("Receiver http(s) address"), leOpt1);
@@ -83,7 +82,7 @@ PositionReportOptions::PositionReportOptions(QSharedPointer<Config> c)
     leOpt8->setText(config->getIpAddressServer());
 
     cbOpt1->setChecked(config->getPosReportActivated());
-    comboOpt1->setCurrentIndex(comboOpt1->findText(config->getPosReportSource()));
+    comboOpt1->setCurrentIndex(comboOpt1->findData(config->getPosReportSource()));
     leOpt1->setText(config->getPosReportUrl());
     leOpt2->setText(config->getPosReportId());
     sbOpt1->setValue(config->getPosReportSendInterval());
@@ -114,7 +113,7 @@ void PositionReportOptions::saveCurrentSettings()
     config->setIpAddressServer(leOpt8->text());
 
     config->setPosReportActivated(cbOpt1->isChecked());
-    config->setPosReportSource(comboOpt1->currentText());
+    config->setPosReportSource(comboOpt1->currentData().toString());
     config->setPosReportUrl(leOpt1->text());
     config->setPosReportId(leOpt2->text());
     config->setPosReportSendInterval(sbOpt1->value());

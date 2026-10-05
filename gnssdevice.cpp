@@ -1,11 +1,48 @@
 #include "gnssdevice.h"
 #include "asciitranslator.h"
 #include "qcustomplot.h"
+#include "ubloxmonrfparser.h"
+#include "ubloxmonspanparser.h"
 
-GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
+namespace {
+QString frequencyLabel(const UbloxRfBandMetadata &metadata)
+{
+    QString window = "RF";
+    if (metadata.centerHz >= 1520000000 && metadata.centerHz <= 1620000000)
+        window = "Upper/L1";
+    else if (metadata.centerHz >= 1140000000 && metadata.centerHz < 1220000000)
+        window = "Lower/L5-E5";
+    else if (metadata.centerHz >= 1220000000 && metadata.centerHz < 1320000000)
+        window = "L2";
+
+    return QString("%1 (%2 MHz)").arg(window).arg(metadata.centerHz / 1e6, 0, 'f', 6);
+}
+
+void applyRfBandMapping(GnssData &data, const QMap<int, UbloxRfBandMetadata> &mapping)
+{
+    for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
+        const auto metadata = mapping.constFind(iterator.key());
+        iterator.value().frequencyMapped = metadata != mapping.cend();
+        if (metadata != mapping.cend()) {
+            iterator.value().centerHz = metadata->centerHz;
+            iterator.value().spanHz = metadata->spanHz;
+            iterator.value().resolutionHz = metadata->resolutionHz;
+            iterator.value().frequencyLabel = frequencyLabel(*metadata);
+        }
+        else {
+            iterator.value().centerHz = 0;
+            iterator.value().spanHz = 0;
+            iterator.value().resolutionHz = 0;
+            iterator.value().frequencyLabel.clear();
+        }
+    }
+}
+}
+
+GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
 {
     config = c;
-    gnssData.id = id;
+    gnssData.id = profileId;
 
     connect(gnss, &QSerialPort::readyRead, this, [this] {
         QByteArray buffer = gnss->readAll();
@@ -42,7 +79,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, int id)
 
 void GnssDevice::start()
 {
-    if (((gnssData.id == 1 && config->getGnssSerialPort1Activate()) || (gnssData.id == 2 && config->getGnssSerialPort2Activate())) &&
+    if (config->getGnssReceiverProfile(gnssData.id).enabled &&
         (!gnss->isOpen() || tcpSocket->state() == QAbstractSocket::UnconnectedState)) connectToPort();
     sendToAnalyzerTimer->stop();
 
@@ -101,7 +138,7 @@ void GnssDevice::handleBuffer()
 
         if (binaryIndex != -1 && gnssBuffer.size() > binaryIndex + 6) {
             binarySize = 8 + (quint8)gnssBuffer.at(binaryIndex + 4) + (gnssBuffer.at(binaryIndex + 5) << 8);
-            if (gnssBuffer.size() > binaryIndex + binarySize) {
+            if (gnssBuffer.size() >= binaryIndex + binarySize) {
                 binarySentence = gnssBuffer.mid(binaryIndex, binarySize);
                 gnssBuffer.remove(binaryIndex, binarySize);
             }
@@ -317,13 +354,23 @@ QDateTime GnssDevice::convFromGnssTimeToQDateTime(const QByteArray date, const Q
 
 void GnssDevice::decodeBinary(const QByteArray &val)
 {
+    ++binaryMessageSequence;
     QByteArray MONHW(QByteArray::fromHex("0a09"));
     QByteArray MONRF(QByteArray::fromHex("0a38"));
+    QByteArray MONSPAN(QByteArray::fromHex("0a31"));
     //qDebug() << "BIN:" << (int)val.at(2) << (int)val.at(3);
-    if (checkBinaryChecksum(val)) {
+    if (!checkBinaryChecksum(val)) {
+        if (uBloxID == "X20P" && (val.indexOf(MONRF) == 2 || val.indexOf(MONSPAN) == 2)) {
+            rfBandCorrelator.invalidate();
+            applyRfBandMapping(gnssData, {});
+        }
+        return;
+    }
+
+    {
         if (val.indexOf(MONHW) == 2) {
             int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
-            if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192; // Changed 181123 JSK: Percentage value, 8192 = 100% gain
+            if (agc >= 0 && agc <= 8191) gnssData.agc = agc * 100 / 8191; // Changed 181123 JSK: Percentage value, 8191 = 100% gain
 
             int jamInd = (quint8)val.at(51);
             if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
@@ -337,17 +384,64 @@ void GnssDevice::decodeBinary(const QByteArray &val)
         }
 
         else if (val.indexOf(MONRF) == 2) {
-            int agc = (quint8)val[24] + ((quint8)val[25] << 8);
-            if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192;
+            if (uBloxID == "X20P") {
+                QVector<UbloxMonRfBlock> orderedBlocks;
+                if (UbloxMonRfParser::parseAgcBlocks(val, orderedBlocks)) {
+                    QMap<int, int> agcBlocks;
+                    for (const UbloxMonRfBlock &block : orderedBlocks) {
+                        agcBlocks.insert(block.blockId, block.agcPercent);
+                        gnssData.agcBlocks[block.blockId].agc = block.agcPercent;
+                        gnssData.agcBlocks[block.blockId].jammingIndicator = block.jammingIndicatorPercent;
+                    }
 
-            int jamInd = (quint8)val.at(26);
-            if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
+                    const auto previousBlockIds = gnssData.agcBlocks.keys();
+                    for (int blockId : previousBlockIds) {
+                        if (!agcBlocks.contains(blockId)) gnssData.agcBlocks.remove(blockId);
+                    }
+                    if (!gnssData.agcBlocks.isEmpty()) {
+                        gnssData.agc = gnssData.agcBlocks.first().agc;
+                        gnssData.jammingIndicator = gnssData.agcBlocks.first().jammingIndicator;
+                    }
 
-            int jamState = (int)val[11];
-            if (jamState == 0) gnssData.jammingState = JAMMINGSTATE::UNKNOWN;
-            else if (jamState == 1) gnssData.jammingState = JAMMINGSTATE::NOJAMMING;
-            else if (jamState == 2) gnssData.jammingState = JAMMINGSTATE::WARNINGFIXOK;
-            else if (jamState == 3) gnssData.jammingState = JAMMINGSTATE::CRITICALNOFIX;
+                    rfBandCorrelator.observeMonRf(orderedBlocks, QDateTime::currentMSecsSinceEpoch(),
+                                                  binaryMessageSequence);
+                    applyRfBandMapping(gnssData, rfBandCorrelator.mapping());
+                }
+                else {
+                    rfBandCorrelator.invalidate();
+                    applyRfBandMapping(gnssData, {});
+                }
+            }
+            else if (val.size() > 26) {
+                int agc = (quint8)val[24] + ((quint8)val[25] << 8);
+                if (agc >= 0 && agc <= 8191) gnssData.agc = agc * 100 / 8191;
+            }
+
+            if (val.size() > 26) {
+                int jamInd = (quint8)val.at(26);
+                if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
+            }
+
+            if (val.size() > 11) {
+                int jamState = (int)val[11];
+                if (jamState == 0) gnssData.jammingState = JAMMINGSTATE::UNKNOWN;
+                else if (jamState == 1) gnssData.jammingState = JAMMINGSTATE::NOJAMMING;
+                else if (jamState == 2) gnssData.jammingState = JAMMINGSTATE::WARNINGFIXOK;
+                else if (jamState == 3) gnssData.jammingState = JAMMINGSTATE::CRITICALNOFIX;
+            }
+        }
+
+        else if (val.indexOf(MONSPAN) == 2 && uBloxID == "X20P") {
+            QVector<UbloxMonSpanBlock> spanBlocks;
+            if (UbloxMonSpanParser::parse(val, spanBlocks)) {
+                rfBandCorrelator.observeMonSpan(spanBlocks, QDateTime::currentMSecsSinceEpoch(),
+                                                binaryMessageSequence);
+                applyRfBandMapping(gnssData, rfBandCorrelator.mapping());
+            }
+            else {
+                rfBandCorrelator.invalidate();
+                applyRfBandMapping(gnssData, {});
+            }
         }
     }
 }
@@ -401,22 +495,18 @@ bool GnssDevice::checkChecksum(const QByteArray &val)
 
 void GnssDevice::updSettings() // caching these settings in memory since they are used often
 {
-    if (gnssData.id == 1 && !config->getGnssSerialPort1Activate()) gnss->close();
-    else if (gnssData.id == 2 && !config->getGnssSerialPort2Activate()) gnss->close();
-    if (gnssData.id == 1) {
-        activate = config->getGnssSerialPort1Activate();
-        portName = config->getGnssSerialPort1Name();
-        baudrate = config->getGnssSerialPort1Baudrate();
-        logToFile = config->getGnssSerialPort1LogToFile();
-        uBloxDevice = config->getGnssSerialPort1MonitorAgc();
-    }
-    else {
-        activate = config->getGnssSerialPort2Activate();
-        portName = config->getGnssSerialPort2Name();
-        baudrate = config->getGnssSerialPort2Baudrate();
-        logToFile = config->getGnssSerialPort2LogToFile();
-        uBloxDevice = config->getGnssSerialPort2MonitorAgc();
-    }
+    const GnssReceiverProfile profile = config->getGnssReceiverProfile(gnssData.id);
+    if (!profile.enabled) gnss->close();
+
+    activate = profile.enabled;
+    portName = profile.portName;
+    baudrate = profile.baudrate;
+    logToFile = profile.logToFile;
+    uBloxDevice = profile.ublox;
+    AsciiTranslator::Options filenameOptions;
+    filenameOptions.restrictToSafeAscii = true;
+    profileLabel = AsciiTranslator::toAscii(profile.name, filenameOptions).simplified().replace(' ', '_');
+    if (profileLabel.isEmpty()) profileLabel = gnssData.id;
 
     if (!gnss->isOpen() && !tcpSocket->isOpen() && activate) start(); // reconnect if needed
     if (!activate && tcpSocket->isOpen()) {
@@ -437,7 +527,7 @@ void GnssDevice::appendToLogfile(const QByteArray &data)
         logfile.setFileName(config->getLogFolder() + "/gnssLogs/" +
                             QDate::currentDate().toString("yyyyMMdd_") +
                             AsciiTranslator::toAscii(config->getStationName().trimmed()) +
-                            "_gnss_" + QString::number(gnssData.id) +
+                            "_gnss_" + profileLabel +
                             "_nmea.log");
 
         if (!logfile.open(QIODevice::Append)) {
@@ -463,7 +553,7 @@ void GnssDevice::appendToBinaryfile(const QByteArray &data)
         binaryFile.setFileName(config->getLogFolder() + "/gnssLogs/" +
                                QDate::currentDate().toString("yyyyMMdd_") +
                                AsciiTranslator::toAscii(config->getStationName().trimmed()) +
-                               "_gnss_" + QString::number(gnssData.id) +
+                               "_gnss_" + profileLabel +
                                "_binary.log");
 
         if (!binaryFile.open(QIODevice::Append)) {
@@ -502,7 +592,7 @@ void GnssDevice::checkPosValid()
     else if (gnssData.posValid && posInvalidTriggered && !delayedReportTimer->isActive()) {
         delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
     }
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, msg);
 }
 
 void GnssDevice::connectTcpSocket()
@@ -543,11 +633,13 @@ void GnssDevice::askUbloxVersion()
 
 void GnssDevice::decodeBinary0a04(const QByteArray &val)
 {
-    if (val.contains("M91")) { // Cool, this is a very fancy GPS chip!
+    ++binaryMessageSequence;
+    uBloxFirmware = QString::fromLatin1(val.mid(6, 30)).trimmed();
+    if (val.contains("M91")) {
         qDebug() << "uBlox: M9 chip identified";
         uBloxID = "M91";
     }
-    else if (val.contains("M8") || val.contains("00080000")) { // Ok then
+    else if (val.contains("M8") || val.contains("00080000")) {
         qDebug() << "uBlox: M8 chip identified";
         uBloxID = "M8";
     }
@@ -556,16 +648,20 @@ void GnssDevice::decodeBinary0a04(const QByteArray &val)
         uBloxID = "X20P";
     }
 
-    else if (val.contains("M10")) { // Cool, this is a very fancy GPS chip!
+    else if (val.contains("M10")) {
         qDebug() << "uBlox: M10 chip identified";
         uBloxID = "M10";
     }
+
+    const QString receiverIdentity = uBloxID + "/" + QString::fromLatin1(val.mid(6, val.size() - 8).toHex());
 
     if (uBloxID.isEmpty()) {
         qDebug() << "Unknown GPS chip, trying to proceed anyway" << val;
         uBloxState = UBLOX::READY; // skip programming, we have no idea what to do
     }
     else {
+        rfBandCorrelator.setReceiverIdentity(receiverIdentity);
+        applyRfBandMapping(gnssData, {});
         qDebug() << "Trying to set up uBlox chip according to version...";
         setupUbloxDevice();
     }
@@ -638,14 +734,14 @@ void GnssDevice::delayedReportHandler()
     }
     else if (!posInvalidTriggered && !gnssData.posValid) { // Position invalid for more than truncate time, report
         posInvalidTriggered = true;
-        if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), "Position invalid");
+        if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "Position invalid");
     }
     else if (posInvalidTriggered && !gnssData.posValid) { // Already reported invalid, do nothing
         //
     }
     else if (posInvalidTriggered && gnssData.posValid) { // Pos. was invalid, now ok. Report.
         posInvalidTriggered = false;
-        if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, QString::number(gnssData.id), "Position valid");
+        if (config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "Position valid");
     }
 }
 
@@ -660,7 +756,7 @@ QString GnssDevice::createFilename()
 
     ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
        << "_" << AsciiTranslator::toAscii(config->getStationName())
-       << "_" << "gnss-" << gnssData.id << ".log";
+       << "_" << "gnss-" << profileLabel << ".log";
 
     return filename;
 }
@@ -670,6 +766,17 @@ void GnssDevice::updateBacklog(QByteArray &data)
     backlogTimestamp.append(QDateTime::currentDateTime());
     backlogData.append(data);
     backlogAgc.append(gnssData.agc);
+    for (auto iterator = backlogAgcBlocks.begin(); iterator != backlogAgcBlocks.end(); ++iterator)
+        iterator.value().append(qQNaN());
+    for (auto iterator = gnssData.agcBlocks.cbegin(); iterator != gnssData.agcBlocks.cend(); ++iterator) {
+        if (!backlogAgcBlocks.contains(iterator.key()))
+            backlogAgcBlocks.insert(iterator.key(), QVector<double>(backlogTimestamp.size(), qQNaN()));
+        backlogAgcBlocks[iterator.key()].last() = iterator.value().agc;
+        if (iterator.value().frequencyMapped)
+            backlogAgcBlockLabels[iterator.key()] = iterator.value().frequencyLabel;
+        else
+            backlogAgcBlockLabels.remove(iterator.key());
+    }
     backlogCno.append(gnssData.cno);
     backlogJam.append(gnssData.jammingIndicator);
 
@@ -681,6 +788,9 @@ void GnssDevice::cleanupBacklog()
         backlogTimestamp.removeFirst();
         backlogData.removeFirst();
         backlogAgc.removeFirst();
+        for (auto iterator = backlogAgcBlocks.begin(); iterator != backlogAgcBlocks.end(); ++iterator) {
+            if (!iterator.value().isEmpty()) iterator.value().removeFirst();
+        }
         backlogCno.removeFirst();
         backlogJam.removeFirst();
     }
@@ -720,15 +830,12 @@ void GnssDevice::createGnssPlot()
     QCustomPlot *plot = new QCustomPlot;
     plot->addGraph();
     plot->addGraph();
-    plot->addGraph();
     plot->graph(0)->setPen(QPen(Qt::green));
-    plot->graph(1)->setPen(QPen(Qt::red));
-    plot->graph(2)->setPen(QPen(Qt::blue));
+    plot->graph(1)->setPen(QPen(Qt::blue));
 
     plot->setAutoAddPlottableToLegend(true);
     plot->graph(0)->setName("C/N0");
-    plot->graph(1)->setName("AGC");
-    plot->graph(2)->setName("Jamming ind");
+    plot->graph(1)->setName("Jamming ind");
     plot->legend->setVisible(true);
     plot->xAxis->setLabel("Seconds since incident");
     plot->yAxis->setLabel("Value");
@@ -738,8 +845,27 @@ void GnssDevice::createGnssPlot()
         keyVals.append(-1 * timestamp.secsTo(incidenceStartedDateTime));
     }
     plot->graph(0)->setData(keyVals, backlogCno);
-    plot->graph(1)->setData(keyVals, backlogAgc);
-    plot->graph(2)->setData(keyVals, backlogJam);
+    plot->graph(1)->setData(keyVals, backlogJam);
+    if (backlogAgcBlocks.isEmpty()) {
+        plot->addGraph();
+        plot->graph(2)->setPen(QPen(Qt::red));
+        plot->graph(2)->setName("AGC");
+        plot->graph(2)->setData(keyVals, backlogAgc);
+    }
+    else {
+        const QList<QColor> colors = {Qt::red, Qt::magenta, Qt::darkRed, Qt::darkYellow};
+        int graphIndex = 2;
+        for (auto iterator = backlogAgcBlocks.cbegin(); iterator != backlogAgcBlocks.cend(); ++iterator) {
+            plot->addGraph();
+            plot->graph(graphIndex)->setPen(QPen(colors.at((graphIndex - 2) % colors.size())));
+            const QString label = backlogAgcBlockLabels.value(iterator.key());
+            plot->graph(graphIndex)->setName(label.isEmpty()
+                                                  ? QString("AGC block %1").arg(iterator.key())
+                                                  : QString("AGC block %1 - %2").arg(iterator.key()).arg(label));
+            plot->graph(graphIndex)->setData(keyVals, iterator.value());
+            ++graphIndex;
+        }
+    }
     plot->rescaleAxes();
     plot->replot();
     QString filename = createFilename().split(".log")[0] + ".jpg";

@@ -83,7 +83,7 @@ signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void reqTraceHistory(int);
     void warning(QString);
-    void reqPositionFrom(POSITIONSOURCE);
+    void reqPositionFrom(QString);
     void recordingEnabled();
     void recordingDisabled();
     void loginSuccessful();
@@ -116,7 +116,7 @@ private:
     bool addPosition;
     QProcess *process;
     double prevLat = 0, prevLng = 0;
-    POSITIONSOURCE positionSource;
+    QString positionSource;
     QList<QPair<double, double>> positionHistory;
     bool deviceConnected = false;
     QString finishedFilename;

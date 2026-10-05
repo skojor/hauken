@@ -53,7 +53,6 @@ int main(int argc, char *argv[])
     qRegisterMetaType<QList<QDateTime> >("QList<QDateTime>");
     qRegisterMetaType<NOTIFY::TYPE>("NOTIFY::TYPE");
     qRegisterMetaType<QVector<double> >("QVector<double>");
-    qRegisterMetaType<POSITIONSOURCE>("POSITIONSOURCE");
     qRegisterMetaType<QList<qint16> >("QList<qint16>");
     qRegisterMetaType<IqMetadata>("IqMetaData");
 

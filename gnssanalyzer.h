@@ -14,7 +14,7 @@ class GnssAnalyzer : public QObject
 {
     Q_OBJECT
 public:
-    GnssAnalyzer(QSharedPointer<Config>, int id);
+    GnssAnalyzer(QSharedPointer<Config>, const QString &profileId);
 
 public slots:
     void getData(GnssData &data);
@@ -28,7 +28,7 @@ signals:
     void visualAlarm();
     void alarmEnded();
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
-    void displayGnssData(QString, int, bool);
+    void displayGnssData(QString, QString, bool);
 
 private slots:
     void calcAvgs(GnssData &data);
@@ -41,6 +41,7 @@ private slots:
     void checkTimeOffset(GnssData &data);
     void checkCnoOffset(GnssData &data);
     void checkAgcOffset(GnssData &data);
+    void checkAgcBlockOffsets(GnssData &data);
     void checkJammingIndicator(GnssData &data);
     void tests();
     bool shouldPauseSignalAverages();
@@ -54,6 +55,9 @@ private:
     bool timeOffsetTriggered = false;
     bool cnoLimitTriggered = false;
     bool agcLimitTriggered = false;
+    QMap<int, bool> agcBlockLimitTriggered;
+    QMap<int, QElapsedTimer> agcBlockTimers;
+    QMap<int, QElapsedTimer> agcBlockFilterTimers;
     bool jamIndTriggered = false;
 
     // config cache below here
@@ -61,6 +65,7 @@ private:
     double posOffsetLimit, altOffsetLimit, timeOffsetLimit;
     double ownLatitude, ownLongitude, ownAltitude;
     bool checkAgc, logToFile;
+    bool isInstrumentType = false;
 
     // pos. calculation constants here
     const double EARTH_RADIUS_IN_METERS = 6372797.560856;

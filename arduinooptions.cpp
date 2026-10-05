@@ -49,7 +49,7 @@ ArduinoOptions::ArduinoOptions(QSharedPointer<Config> c)
     mainLayout->addRow(new QLabel("RF relay off text"), leOpt2);
 
     mainLayout->addRow(new QLabel("A restart is needed to activate any changes here"));
-    mainLayout->addWidget(btnBox);
+    //mainLayout->addWidget(btnBox);
 
     comboOpt1->setCurrentIndex(comboOpt1->findText(config->getArduinoSerialName()));
     comboOpt2->setCurrentIndex(comboOpt2->findText(config->getArduinoBaudrate()));

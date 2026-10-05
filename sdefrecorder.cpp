@@ -93,12 +93,7 @@ void SdefRecorder::updSettings()
         maxRecordTime = config->getSdefMaxRecordTime() * 60e3;
         addPosition = config->getSdefAddPosition();
         QString src = config->getSdefGpsSource();
-        if (src == "InstrumentGnss")
-            positionSource = POSITIONSOURCE::INSTRUMENTGNSS;
-        else if (src.contains("1"))
-            positionSource = POSITIONSOURCE::GNSSDEVICE1;
-        else
-            positionSource = POSITIONSOURCE::GNSSDEVICE2;
+        positionSource = src;
         //prevLat = config->getStnLatitude().toDouble(); // failsafe if position is missing BUG, removed 010422: Creates header of position 0 in random occasions...
         //prevLng = config->getStnLongitude().toDouble();
 
@@ -245,7 +240,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
                                 / 10.0);
         }
 
-        if (addPosition) {
+        if (addPosition and !positionHistory.isEmpty()) {
             if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed
                 dateIterator++;
                 startTime = datetime.at(i);
@@ -256,6 +251,8 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6));
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6));
         }
+        else if (addPosition and positionHistory.isEmpty())
+            emit warning("No GNSS source is selected as position source for CEF data");
 
         for (auto &&val : data.at(i)) {
             buffer.append(',').append(QByteArray::number(val / 10));

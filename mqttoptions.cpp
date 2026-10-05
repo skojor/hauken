@@ -4,6 +4,7 @@
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QMessageBox>
+#include <QSignalBlocker>
 #include <QUuid>
 #include <QVBoxLayout>
 
@@ -148,10 +149,20 @@ void MqttOptions::removeProfile()
 
     const int removedIndex = currentProfileIndex;
     currentProfileIndex = -1;
-    profiles.removeAt(removedIndex);
-    delete profileList->takeItem(removedIndex);
-    if (!profiles.isEmpty()) profileList->setCurrentRow(qMin(removedIndex, profiles.size() - 1));
-    else loadProfile(-1);
+
+    {
+        // Removing the current row can make Qt reselect a nearby row synchronously,
+        // re-entering profileSelectionChanged() while profiles/profileList are
+        // briefly out of sync. Block those signals and drive the update ourselves.
+        const QSignalBlocker blocker(profileList);
+        profiles.removeAt(removedIndex);
+        delete profileList->takeItem(removedIndex);
+        if (!profiles.isEmpty())
+            profileList->setCurrentRow(qMin(removedIndex, profiles.size() - 1));
+    }
+
+    currentProfileIndex = profiles.isEmpty() ? -1 : profileList->currentRow();
+    loadProfile(currentProfileIndex);
 }
 
 void MqttOptions::profileSelectionChanged(int row)
@@ -267,7 +278,7 @@ void MqttOptions::storeCurrentProfile()
 
 void MqttOptions::updateProfileListItem(int index)
 {
-    if (index < 0 || index >= profileList->count()) return;
+    if (index < 0 || index >= profiles.size() || index >= profileList->count()) return;
     QString name = index == currentProfileIndex ? profileName->text().trimmed() : profiles.at(index).name;
     if (name.isEmpty()) name = profiles.at(index).id;
     if (profiles.at(index).primary) name += tr(" (primary)");

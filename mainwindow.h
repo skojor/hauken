@@ -62,9 +62,8 @@
 #include "camerarecorder.h"
 #include "customplotcontroller.h"
 #include "geolimit.h"
-#include "gnssanalyzer.h"
-#include "gnssdevice.h"
 #include "gnssdisplay.h"
+#include "gnssmanager.h"
 #include "instrumentlist.h"
 #include "led/ledindicator.h"
 #include "mqttmanager.h"
@@ -199,7 +198,7 @@ private slots:
     void showBytesPerSec(int val);
     void triggerSettingsUpdate();
 
-    void updGnssBox(const QString txt, const int id, bool valid);
+    void updGnssBox(const QString txt, const QString id, bool valid);
     void setWaterfallOption(QString s);
     void closeEvent(QCloseEvent *event) override;
 
@@ -273,11 +272,7 @@ private:
     QLabel *labelInstrListLedText = new QLabel("Instr.list");
 
     MeasurementDevice *measurementDevice = new MeasurementDevice(config);
-    GnssDevice *gnssDevice1 = new GnssDevice(config, 1);
-    GnssDevice *gnssDevice2 = new GnssDevice(config, 2);
-    GnssAnalyzer *gnssAnalyzer1 = new GnssAnalyzer(config, 1);
-    GnssAnalyzer *gnssAnalyzer2 = new GnssAnalyzer(config, 2);
-    GnssAnalyzer *gnssAnalyzer3 = new GnssAnalyzer(config, 3);
+    GnssManager *gnssManager = new GnssManager(config, measurementDevice, this);
 
     QAction *newAct;
     QAction *openAct;
@@ -359,7 +354,7 @@ private:
     InstrumentList *instrumentList = nullptr;
     GnssDisplay *gnssDisplay = nullptr;
 
-    int gnssLastDisplayedId = 0;
+    QString gnssLastDisplayedId;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
     bool dispWaterfall;
 

@@ -34,6 +34,39 @@ QString formatSource(const PpsSourceData &source, bool showMetadata)
     }
     return coloredText(text, source.metadataValid || !showMetadata ? "green" : "orange");
 }
+
+QString formatAgc(const GnssData &data)
+{
+    if (data.agcBlocks.isEmpty())
+        return QString("%1 (%2) %").arg(data.agc).arg(data.agcOffset);
+
+    QStringList values;
+    for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
+        const QString label = iterator.value().frequencyMapped
+                                  ? QString("Block %1 - %2 MHz").arg(iterator.key()).arg(qRound(iterator.value().centerHz / 1e6))
+                                  : QString("Block %1").arg(iterator.key());
+        values.append(QString("%1: %2 (%3) %").arg(label).arg(iterator.value().agc).arg(iterator.value().agcOffset));
+    }
+    return values.join("<br>");
+}
+
+QString formatJammingIndicator(const GnssData &data)
+{
+    if (data.agcBlocks.isEmpty())
+        return data.jammingIndicator >= 0 ? QString::number(data.jammingIndicator) + " %" : "n/a";
+
+    QStringList values;
+    for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
+        const QString label = iterator.value().frequencyMapped
+                                  ? QString("Block %1 - %2 MHz").arg(iterator.key()).arg(qRound(iterator.value().centerHz / 1e6))
+                                  : QString("Block %1").arg(iterator.key());
+        const QString value = iterator.value().jammingIndicator >= 0
+                                  ? QString::number(iterator.value().jammingIndicator) + " %"
+                                  : "n/a";
+        values.append(QString("%1: %2").arg(label, value));
+    }
+    return values.join("<br>");
+}
 }
 
 GnssDisplay::GnssDisplay(QSharedPointer<Config> c)
@@ -71,12 +104,12 @@ void GnssDisplay::close()
 
 }
 
-void GnssDisplay::updGnssData(GnssData g, int id)
+void GnssDisplay::updGnssData(GnssData g, QString id)
 {
-    if (id == 1) gnss1 = g;
-    else if (id == 2) gnss2 = g;
-    else instrumentGnss = g;
+    GnssReceiverCard *card = cards.value(id);
+    if (!card) return;
 
+    card->data = g;
     updText();
 }
 
@@ -105,60 +138,8 @@ void GnssDisplay::setupWidget()
 {
     //wdg->resize(640, 480);
     wdg->setWindowTitle("GNSS data");
-    QGridLayout *mainLayout = new QGridLayout;
-
-    gnss1LeftGroupBox->setTitle("GNSS receiver 1");
-    QFormLayout *gnss1LeftLayout = new QFormLayout;
-    gnss1LeftLayout->addRow("Latitude", gnss1Latitude);
-    gnss1LeftLayout->addRow("Longitude", gnss1Longitude);
-    gnss1LeftLayout->addRow("Altitude", gnss1Altitude);
-    gnss1LeftLayout->addRow("GNSS time", gnss1Time);
-    gnss1LeftLayout->addRow("DOP", gnss1Dop);
-    gnss1LeftLayout->addRow("C/No", gnss1CNo);
-    //gnss1LeftLayout->addRow("AGC", gnss1Agc);
-    gnss1LeftLayout->addRow("Sats tracked", gnss1Sats);
-    //gnss1LeftLayout->setFormAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    gnss1LeftGroupBox->setLayout(gnss1LeftLayout);
-
-    gnss1RightGroupBox->setTitle("Info/calculations");
-    QFormLayout *gnss1RightLayout = new QFormLayout;
-    gnss1RightLayout->addRow("Position valid", gnss1PosValid);
-    gnss1RightLayout->addRow("Position offset", gnss1PosOffset);
-    gnss1RightLayout->addRow("Altitude offset", gnss1AltOffset);
-    gnss1RightLayout->addRow("Time offset", gnss1TimeOffset);
-    gnss1RightLayout->addRow("AGC", gnss1Agc);
-    /*gnss1RightLayout->addRow("CW jamming indicator", gnss1CwJamming);
-    gnss1RightLayout->addRow("Jamming state", gnss1JammingState);*/
-    gnss1RightGroupBox->setLayout(gnss1RightLayout);
-
-    gnss2LeftGroupBox->setTitle("GNSS receiver 2");
-    QFormLayout *gnss2LeftLayout = new QFormLayout;
-    gnss2LeftLayout->addRow("Latitude", gnss2Latitude);
-    gnss2LeftLayout->addRow("Longitude", gnss2Longitude);
-    gnss2LeftLayout->addRow("Altitude", gnss2Altitude);
-    gnss2LeftLayout->addRow("GNSS time", gnss2Time);
-    gnss2LeftLayout->addRow("DOP", gnss2Dop);
-    gnss2LeftLayout->addRow("C/No", gnss2CNo);
-    gnss2LeftLayout->addRow("Sats tracked", gnss2Sats);
-    //gnss1LeftLayout->setFormAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    gnss2LeftGroupBox->setLayout(gnss2LeftLayout);
-
-    gnss2RightGroupBox->setTitle("Info/calculations");
-    QFormLayout *gnss2RightLayout = new QFormLayout;
-    gnss2RightLayout->addRow("Position valid", gnss2PosValid);
-    gnss2RightLayout->addRow("Position offset", gnss2PosOffset);
-    gnss2RightLayout->addRow("Altitude offset", gnss2AltOffset);
-    gnss2RightLayout->addRow("Time offset", gnss2TimeOffset);
-    gnss2RightLayout->addRow("AGC", gnss2Agc);
-    /*gnss2RightLayout->addRow("CW jamming indicator", gnss2CwJamming);
-    gnss2RightLayout->addRow("Jamming state", gnss2JammingState);*/
-    gnss2RightGroupBox->setLayout(gnss2RightLayout);
-
-    mainLayout->addWidget(gnss1LeftGroupBox, 0, 0);
-    mainLayout->addWidget(gnss1RightGroupBox, 0, 1);
-
-    mainLayout->addWidget(gnss2LeftGroupBox, 1, 0);
-    mainLayout->addWidget(gnss2RightGroupBox, 1, 1);
+    auto outerLayout = new QVBoxLayout;
+    outerLayout->addLayout(receiversLayout);
 
     ppsGroupBox->setTitle(tr("PPS timing"));
     auto ppsLayout = new QGridLayout(ppsGroupBox);
@@ -179,9 +160,10 @@ void GnssDisplay::setupWidget()
     ppsOffsetLayout->addRow(tr("Status"), ppsError);
     ppsLayout->addLayout(ppsSourceLayout, 0, 0);
     ppsLayout->addLayout(ppsOffsetLayout, 0, 1);
-    mainLayout->addWidget(ppsGroupBox, 2, 0, 1, 2);
-    wdg->setLayout(mainLayout);
-    updateReceiverVisibility();
+    outerLayout->addWidget(ppsGroupBox);
+
+    wdg->setLayout(outerLayout);
+    rebuildReceiverCards();
     //wdg->adjustSize();
 }
 
@@ -196,17 +178,69 @@ bool GnssDisplay::eventFilter(QObject *obj, QEvent *event)
     return QObject::eventFilter(obj, event);
 }
 
-void GnssDisplay::updateReceiverVisibility()
+void GnssDisplay::rebuildReceiverCards()
 {
-    const bool useInstrumentGnss = config->getGnssUseInstrumentGnss();
-    const bool showGnss1 = useInstrumentGnss || config->getGnssSerialPort1Activate();
-    const bool showGnss2 = !useInstrumentGnss && config->getGnssSerialPort2Activate();
+    const QList<GnssReceiverProfile> profiles = config->getGnssReceiverProfiles();
+    QStringList desiredIds;
+    for (const GnssReceiverProfile &profile : profiles)
+        if (profile.enabled) desiredIds.append(profile.id);
 
-    gnss1LeftGroupBox->setVisible(showGnss1);
-    gnss1RightGroupBox->setVisible(showGnss1);
-    gnss2LeftGroupBox->setVisible(showGnss2);
-    gnss2RightGroupBox->setVisible(showGnss2);
-    ppsGroupBox->setVisible(config->getGnssPpsDisplayEnabled());
+    // Remove cards for receivers that were deleted or disabled
+    for (auto it = cards.begin(); it != cards.end();) {
+        if (desiredIds.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        receiversLayout->removeWidget(it.value()->leftGroupBox);
+        receiversLayout->removeWidget(it.value()->rightGroupBox);
+        it.value()->leftGroupBox->deleteLater();
+        it.value()->rightGroupBox->deleteLater();
+        delete it.value();
+        it = cards.erase(it);
+    }
+
+    // Create cards for newly enabled receivers
+    for (const GnssReceiverProfile &profile : profiles) {
+        if (!profile.enabled || cards.contains(profile.id)) continue;
+
+        GnssReceiverCard *card = new GnssReceiverCard;
+        QFormLayout *leftLayout = new QFormLayout;
+        leftLayout->addRow("Latitude", card->latitude);
+        leftLayout->addRow("Longitude", card->longitude);
+        leftLayout->addRow("Altitude", card->altitude);
+        leftLayout->addRow("GNSS time", card->time);
+        leftLayout->addRow("DOP", card->dop);
+        leftLayout->addRow("C/No", card->cno);
+        leftLayout->addRow("Sats tracked", card->sats);
+        card->leftGroupBox->setLayout(leftLayout);
+
+        QFormLayout *rightLayout = new QFormLayout;
+        rightLayout->addRow("Position valid", card->posValid);
+        rightLayout->addRow("Position offset", card->posOffset);
+        rightLayout->addRow("Altitude offset", card->altOffset);
+        rightLayout->addRow("Time offset", card->timeOffset);
+        rightLayout->addRow("AGC", card->agc);
+        rightLayout->addRow("Jam.ind.", card->cwJamming);
+        card->rightGroupBox->setLayout(rightLayout);
+
+        cards.insert(profile.id, card);
+    }
+
+    // Reposition every current card in configured order, wrapping after 2 receivers per row
+    int index = 0;
+    for (const GnssReceiverProfile &profile : profiles) {
+        GnssReceiverCard *card = cards.value(profile.id);
+        if (!card) continue;
+
+        card->leftGroupBox->setTitle(profile.name);
+        card->rightGroupBox->setTitle(profile.name + " - info/calculations");
+
+        const int row = index / 2;
+        const int col = (index % 2) * 2;
+        receiversLayout->addWidget(card->leftGroupBox, row, col);
+        receiversLayout->addWidget(card->rightGroupBox, row, col + 1);
+        ++index;
+    }
 }
 
 void GnssDisplay::setupPpsPlot()
@@ -279,13 +313,7 @@ void GnssDisplay::updSettings()
         wdg->restoreGeometry(config->getGnssDisplayWindowState());
     }
     else if (!config->getGnssDisplayWidget() && wdg->isVisible()) wdg->close();
-    updateReceiverVisibility();
-    gnss1Name = config->getGnssUseInstrumentGnss() ? tr("Instrument GNSS") : config->getGnss1Name();
-    gnss2Name = config->getGnss2Name();
-    if (gnss1Name.isEmpty()) gnss1RightGroupBox->setTitle("GNSS receiver 1 - info/calculations");
-    else gnss1RightGroupBox->setTitle(gnss1Name);
-    if (gnss2Name.isEmpty()) gnss2RightGroupBox->setTitle("GNSS receiver 2 - info/calculations");
-    else gnss2RightGroupBox->setTitle(gnss2Name);
+    rebuildReceiverCards();
     if (config->getGnssPpsPlotEnabled()) {
         setupPpsPlot();
         ppsPlotWindow->show();
@@ -353,141 +381,72 @@ void GnssDisplay::updatePpsText()
     ppsError->setText(status.isEmpty() ? coloredText("normal", "green") : coloredText(status, stale ? "orange" : "red"));
 }
 
+void GnssDisplay::updateCardText(const QString &id, GnssReceiverCard *card)
+{
+    const GnssReceiverProfile profile = config->getGnssReceiverProfile(id);
+    const QString name = profile.name.isEmpty() ? id : profile.name;
+    const GnssData &data = card->data;
+
+    if (data.posValid) {
+        card->leftGroupBox->setTitle(name + " - position valid");
+        card->latitude->setText("<span style='font-size:normal;'>" + QString::number(data.latitude, 'f', 7) + "</span>");
+        card->longitude->setText("<span style='font-size:normal;'>" + QString::number(data.longitude, 'f', 7) + "</span>");
+        card->altitude->setText("<span style='font-size:normal;'>" + QString::number(data.altitude, 'f', 0) + "</span>");
+        card->time->setText("<span style='font-size:normal;'>" + data.timestamp.toString("dd.MM.yy HH:mm:ss") + "</span>");
+        card->dop->setText("<span style='font-size:normal;'>" + QString::number(data.hdop, 'f', 1) + "</span>");
+        card->cno->setText("<span style='font-size:normal;'>" + QString::number(data.cno) + "</span>");
+        card->agc->setText("<span style='font-size:normal;'>" + formatAgc(data) + "</span>");
+        card->cwJamming->setText("<span style='font-size:normal;'>" + formatJammingIndicator(data) + "</span>");
+        card->sats->setText("<span style='font-size:normal;'>" + QString::number(data.satsTracked) + "</span>");
+
+        card->posValid->setText("<span style='font-size:normal;color:green;'>yes, tracking " + QString::number(data.satsTracked) + " sats</span>");
+
+        if (abs(data.posOffset) < 10) card->posOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
+        else if (abs(data.posOffset) < 50) card->posOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(data.posOffset), 'f', 0) + " m</span>");
+        else if (abs(data.posOffset) < 1000) card->posOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.posOffset), 'f', 0) + " m</span>");
+        else card->posOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.posOffset / 1000), 'f', 0) + " km</span>");
+
+        if (abs(data.altOffset) < 10) card->altOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
+        else if (abs(data.altOffset) < 50) card->altOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(data.altOffset), 'f', 0) + " m</span>");
+        else if (abs(data.altOffset) < 1000) card->altOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.altOffset), 'f', 0) + " m</span>");
+        else card->altOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.altOffset / 1000), 'f', 0) + " km</span>");
+
+        if (data.timeOffset < 1000) card->timeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
+        else if (data.timeOffset < 5000) card->timeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(data.timeOffset / 1000) + " sec(s)</span>");
+        else if (data.timeOffset < 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 1000) + " sec(s)</span>");
+        else if (data.timeOffset < 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 60000) + " min(s)</span>");
+        else if (data.timeOffset < 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 3600000) + " hour(s)</span>");
+        else if (data.timeOffset < 24UL * 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 24UL * 3600000) + " hour(s)</span>");
+    }
+    else {
+        card->leftGroupBox->setTitle(name + " - position invalid");
+        card->latitude->setText("<span style='font-size:normal;'>n/a</span>");
+        card->longitude->setText("<span style='font-size:normal;'>n/a</span>");
+        card->altitude->setText("<span style='font-size:normal;'>n/a</span>");
+        card->time->setText("<span style='font-size:normal;'>n/a</span>");
+        card->dop->setText("<span style='font-size:normal;'>n/a</span>");
+        card->cno->setText("<span style='font-size:normal;'>n/a</span>");
+        card->sats->setText("<span style='font-size:normal;'>n/a</span>");
+
+        card->posValid->setText("<span style='font-size:normal;color:red;'>no</span>");
+        card->agc->setText("<span style='font-size:normal;'>" + formatAgc(data) + "</span>");
+        card->cwJamming->setText("<span style='font-size:normal;'>" + formatJammingIndicator(data) + "</span>");
+
+        card->posOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
+        card->altOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
+        card->timeOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
+    }
+}
+
 void GnssDisplay::updText()
 {
-    const bool useInstrumentGnss = config->getGnssUseInstrumentGnss();
-    GnssData displayGnss1 = useInstrumentGnss ? instrumentGnss : gnss1;
-    updateReceiverVisibility();
     updatePpsText();
-
-    if (displayGnss1.posValid) {
-        if (gnss1Name.isEmpty()) gnss1LeftGroupBox->setTitle("GNSS receiver 1 - position valid");
-        else  gnss1LeftGroupBox->setTitle(gnss1Name + " - position valid");
-        gnss1Latitude->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.latitude, 'f', 7) + "</span>");
-        gnss1Longitude->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.longitude, 'f', 7) + "</span>");
-        gnss1Altitude->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.altitude, 'f', 0) + "</span>");
-        gnss1Time->setText("<span style='font-size:normal;'>" + displayGnss1.timestamp.toString("dd.MM.yy HH:mm:ss") + "</span>");
-        gnss1Dop->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.hdop, 'f', 1) + "</span>");
-        gnss1CNo->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.cno) + "</span>");
-        gnss1Agc->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.agc) + " %</span>");
-        gnss1Sats->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.satsTracked) + "</span>");
-
-        gnss1PosValid->setText("<span style='font-size:normal;color:green;'>yes, tracking " + QString::number(displayGnss1.satsTracked) + " sats</span>");
-
-        if (abs(displayGnss1.posOffset) < 10) gnss1PosOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
-        else if (abs(displayGnss1.posOffset) < 50) gnss1PosOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(displayGnss1.posOffset), 'f', 0) + " m</span>");
-        else if (abs(displayGnss1.posOffset) < 1000) gnss1PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.posOffset), 'f', 0) + " m</span>");
-        else gnss1PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.posOffset / 1000), 'f', 0) + " km</span>");
-
-        if (abs(displayGnss1.altOffset) < 10) gnss1AltOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
-        else if (abs(displayGnss1.altOffset) < 50) gnss1AltOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(displayGnss1.altOffset), 'f', 0) + " m</span>");
-        else if (abs(displayGnss1.altOffset) < 1000) gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.altOffset), 'f', 0) + " m</span>");
-        else gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(displayGnss1.altOffset / 1000), 'f', 0) + " km</span>");
-
-        if (displayGnss1.timeOffset < 1000) gnss1TimeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
-        else if (displayGnss1.timeOffset < 5000) gnss1TimeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(displayGnss1.timeOffset / 1000) + " sec(s)</span>");
-        else if (displayGnss1.timeOffset < 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 1000) + " sec(s)</span>");
-        else if (displayGnss1.timeOffset < 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 60000) + " min(s)</span>");
-        else if (displayGnss1.timeOffset < 60 * 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 3600000) + " hour(s)</span>");
-        else if (displayGnss1.timeOffset < 24UL * 60 * 60 * 60000) gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(displayGnss1.timeOffset / 24UL * 3600000) + " hour(s)</span>");
-
-        /*gnss1CwJamming->setText("<span style='font-size:normal;'>" + QString::number(gnss1.jammingIndicator) + "</span>");
-        QString jam;
-        if (gnss1.jammingState == JAMMINGSTATE::NOJAMMING) jam = "No jamming";
-        else if (gnss1.jammingState == JAMMINGSTATE::WARNINGFIXOK) jam = "Warning, fix ok";
-        else if (gnss1.jammingState == JAMMINGSTATE::CRITICALNOFIX) jam = "Critical, no fix";
-        else jam = "Unknown";
-        gnss1JammingState->setText(tr("<span style='font-size:normal;'>") + jam + tr("</span>"));*/
-
-    }
-    else {
-        if (gnss1Name.isEmpty()) gnss1LeftGroupBox->setTitle("GNSS receiver 1 - position invalid");
-        else  gnss1LeftGroupBox->setTitle(gnss1Name + " - position invalid");
-        gnss1Latitude->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss1Longitude->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss1Altitude->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss1Time->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss1Dop->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss1CNo->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss1Sats->setText("<span style='font-size:normal;'>n/a</span>");
-
-        gnss1PosValid->setText("<span style='font-size:normal;color:red;'>no</span>");
-        gnss1Agc->setText("<span style='font-size:normal;'>" + QString::number(displayGnss1.agc) + " %</span>");
-
-        gnss1PosOffset->setText(QString("<span style='font-size:normal;color:red;'>n/a</span>"));
-        gnss1AltOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
-        gnss1TimeOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
-        /*gnss1CwJamming->setText("<span style='font-size:normal;'> n/a</span>");
-        gnss1JammingState->setText("<span style='font-size:normal;'> n/a</span>");*/
-    }
-
-    if (gnss2.posValid) {
-        if (gnss2Name.isEmpty()) gnss2LeftGroupBox->setTitle("GNSS receiver 2 - position valid");
-        else  gnss2LeftGroupBox->setTitle(gnss2Name + " - position valid");
-        gnss2Latitude->setText("<span style='font-size:normal;'>" + QString::number(gnss2.latitude, 'f', 7) + "</span>");
-        gnss2Longitude->setText("<span style='font-size:normal;'>" + QString::number(gnss2.longitude, 'f', 7) + "</span>");
-        gnss2Altitude->setText("<span style='font-size:normal;'>" + QString::number(gnss2.altitude, 'f', 0) + "</span>");
-        gnss2Time->setText("<span style='font-size:normal;'>" + gnss2.timestamp.toString("dd.MM.yy HH:mm:ss") + "</span>");
-        gnss2Dop->setText("<span style='font-size:normal;'>" + QString::number(gnss2.hdop, 'f', 1) + "</span>");
-        gnss2CNo->setText("<span style='font-size:normal;'>" + QString::number(gnss2.cno) + "</span>");
-        gnss2Agc->setText("<span style='font-size:normal;'>" + QString::number(gnss2.agc) + " %</span>");
-        gnss2Sats->setText("<span style='font-size:normal;'>" + QString::number(gnss2.satsTracked) + "</span>");
-
-        gnss2PosValid->setText("<span style='font-size:normal;color:green;'>yes, tracking " + QString::number(gnss2.satsTracked) + " sats</span>");
-
-        if (abs(gnss2.posOffset) < 10) gnss2PosOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
-        else if (abs(gnss2.posOffset) < 50) gnss2PosOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(gnss2.posOffset), 'f', 0) + " m</span>");
-        else if (abs(gnss2.posOffset) < 1000) gnss2PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss2.posOffset), 'f', 0) + " m</span>");
-        else gnss2PosOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss2.posOffset / 1000), 'f', 0) + " km</span>");
-
-        if (abs(gnss2.altOffset) < 10) gnss2AltOffset->setText("<span style='font-size:normal;color:green;'>Normal, &lt; 10 m</span>");
-        else if (abs(gnss2.altOffset) < 50) gnss2AltOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(abs(gnss2.altOffset), 'f', 0) + " m</span>");
-        else if (abs(gnss2.altOffset) < 1000) gnss2AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss2.altOffset), 'f', 0) + " m</span>");
-        else gnss2AltOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(gnss2.altOffset / 1000), 'f', 0) + " km</span>");
-
-        if (gnss2.timeOffset < 1000) gnss2TimeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
-        else if (gnss2.timeOffset < 5000) gnss2TimeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(gnss2.timeOffset / 1000) + " sec(s)</span>");
-        else if (gnss2.timeOffset < 60000) gnss2TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss2.timeOffset / 1000) + " sec(s)</span>");
-        else if (gnss2.timeOffset < 60 * 60000) gnss2TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss2.timeOffset / 60000) + " min(s)</span>");
-        else if (gnss2.timeOffset < 60 * 60 * 60000) gnss2TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss2.timeOffset / 3600000) + " hour(s)</span>");
-        else if (gnss2.timeOffset < 24UL * 60 * 60 * 60000) gnss2TimeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(gnss2.timeOffset / 24UL * 3600000) + " hour(s)</span>");
-        /*gnss2CwJamming->setText("<span style='font-size:normal;'>" + QString::number(gnss2.jammingIndicator) + "</span>");
-        QString jam;
-        if (gnss2.jammingState == JAMMINGSTATE::NOJAMMING) jam = "No jamming";
-        else if (gnss2.jammingState == JAMMINGSTATE::WARNINGFIXOK) jam = "Warning, fix ok";
-        else if (gnss2.jammingState == JAMMINGSTATE::CRITICALNOFIX) jam = "Critical, no fix";
-        else jam = "Unknown";
-        gnss2JammingState->setText(tr("<span style='font-size:normal;'>") + jam + tr("</span>"));*/
-    }
-    else {
-        if (gnss2Name.isEmpty()) gnss2LeftGroupBox->setTitle("GNSS receiver 1 - position invalid");
-        else  gnss2LeftGroupBox->setTitle(gnss2Name + " - position invalid");
-        gnss2Latitude->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss2Longitude->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss2Altitude->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss2Time->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss2Dop->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss2CNo->setText("<span style='font-size:normal;'>n/a</span>");
-        gnss2Sats->setText("<span style='font-size:normal;'>n/a</span>");
-
-        gnss2PosValid->setText("<span style='font-size:normal;color:red;'>no</span>");
-        gnss2Agc->setText("<span style='font-size:normal;'>" + QString::number(gnss2.agc) + " %</span>");
-
-        gnss2PosOffset->setText(QString("<span style='font-size:normal;color:red;'>n/a</span>"));
-        gnss2AltOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
-        gnss2TimeOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
-        /*gnss2CwJamming->setText("<span style='font-size:normal;'> n/a</span>");
-        gnss2JammingState->setText("<span style='font-size:normal;'> n/a</span>");*/
-    }
+    for (auto it = cards.cbegin(); it != cards.cend(); ++it)
+        updateCardText(it.key(), it.value());
 }
 
 void GnssDisplay::reqGnssData()
 {
-    if (config->getGnssUseInstrumentGnss()) {
-        emit requestGnssData(3);
-        return;
-    }
-
-    if (config->getGnssSerialPort1Activate()) emit requestGnssData(1);
-    if (config->getGnssSerialPort2Activate()) emit requestGnssData(2);
+    for (auto it = cards.cbegin(); it != cards.cend(); ++it)
+        emit requestGnssData(it.key());
 }

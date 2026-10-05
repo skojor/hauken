@@ -4,12 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QDateTime>
-
-enum class POSITIONSOURCE {
-    INSTRUMENTGNSS,
-    GNSSDEVICE1,
-    GNSSDEVICE2
-};
+#include <QMap>
 
 namespace NOTIFY {
 enum class TYPE {
@@ -92,6 +87,7 @@ enum class InstrumentType
     USRP,
     ESMW,
     DDF255,
+    PR300,
     UNKNOWN
 };
 
@@ -104,6 +100,21 @@ enum class JAMMINGSTATE
     NOJAMMING,
     WARNINGFIXOK,
     CRITICALNOFIX
+};
+
+class GnssAgcBlockData
+{
+public:
+    int agc = -1;
+    int jammingIndicator = -1;
+    bool frequencyMapped = false;
+    quint32 centerHz = 0;
+    quint32 spanHz = 0;
+    quint32 resolutionHz = 0;
+    QString frequencyLabel;
+    QList<int> avgAgcArray;
+    int avgAgc = -1;
+    int agcOffset = 0;
 };
 
 enum class MODULATIONTYPE { FM, AM, PULSE, PM, IQ, ISB, CW, USB, LSB };
@@ -773,6 +784,38 @@ public:
             maxFrequency = 8e9;
             hasAntNames = false;
         }
+        else if (type == Instrument::InstrumentType::PR300) { //TODO: Kan PR200 lagre antennenavn?
+            udpStream = true;
+            tcpStream = true;
+            systManLocName = true;
+            advProtocol = true;
+            id = "EM200";
+            hasPscan = true;
+            hasAvgType = true;
+            hasAutoAtt = true;
+            hasGainControl = true;
+
+            pscanResolutions.clear();
+            ffmSpans.clear();
+            antPorts.clear();
+            fftModes.clear();
+            antPorts.clear();
+            demodBwList.clear();
+            demodTypeList.clear();
+            pscanResolutions << "0.1" << "0.125" << "0.2" << "0.250" << "0.5" << "0.625" << "1"
+                             << "1.25" << "2" << "2.5" << "3.125" << "5" << "6.25" << "10" << "12.5"
+                             << "20" << "25" << "50" << "100" << "200" << "500" << "1000" << "2000";
+            ffmSpans << "1" << "2" << "5" << "10" << "20" << "50" << "100" << "200"
+                     << "500" << "1000" << "2000" << "5000" << "10000" << "20000" << "40000" << "80000" << "125000" << "250000" << "10000000";
+            fftModes << "Off" << "Min" << "Max" << "Scalar" << "APeak";
+            demodBwList << "0.15" << "0.3" << "0.6" << "1.5" << "2.4" << "6" << "9" << "12" << "15" << "25"
+                        << "30" << "50" << "120" << "150" << "250" << "300" << "500" << "1000" << "5000" << "10000" << "20000" << "40000";
+            demodTypeList << "FM" << "AM" << "Pulse" << "PM" << "IQ" << "ISB" << "CW" << "USB" << "LSB";
+            minFrequency = 8e3;
+            maxFrequency = 8e9;
+            hasAntNames = false;
+        }
+
         else if (type == Instrument::InstrumentType::USRP) {
             udpStream = true;
             tcpStream = true;
@@ -869,9 +912,10 @@ public:
     int fixQuality = 0;
     int cno = 0;
     int agc = -1;
+    QMap<int, GnssAgcBlockData> agcBlocks;
     int jammingIndicator = -1;
     QDateTime timestamp = QDateTime();
-    int id = 0;
+    QString id; // GnssReceiverProfile id ("instrument" for the instrument-GNSS pseudo profile)
     QList<int> avgCnoArray;
     int avgCno = 0;
     QList<int> avgAgcArray;

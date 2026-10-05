@@ -74,7 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     simulator = new Simulator(this);
 
     incidentLog->setAcceptRichText(true);
-    incidentLog->setReadOnly(true);
+    incidentLog->setReadOnly(false);
 
 #ifdef _WIN32
     if (QFile::exists(config->getWorkFolder() + "/notify.wav")) {
@@ -929,17 +929,17 @@ void MainWindow::updConfigSettings()
 
 void MainWindow::triggerSettingsUpdate() {}
 
-void MainWindow::updGnssBox(const QString txt, const int id, bool valid)
+void MainWindow::updGnssBox(const QString txt, const QString id, bool valid)
 {
+    const QString title = config->getGnssReceiverProfile(id).name + " status ("
+                          + (valid ? "pos. valid" : "pos. invalid") + ")";
     if (id == gnssLastDisplayedId) { // same as previous update, just show result
         gnssStatus->setText(txt);
-        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status ("
-                           + (valid ? "pos. valid" : "pos. invalid") + ")");
+        rightBox->setTitle(title);
     } else if (gnssLastDisplayedTime.secsTo(QDateTime::currentDateTime()) >= 5) {
         gnssLastDisplayedId = id;
         gnssLastDisplayedTime = QDateTime::currentDateTime();
-        rightBox->setTitle((id < 3 ? "GNSS " + QString::number(id) : "InstrumentGNSS") + " status ("
-                           + (valid ? "pos. valid" : "pos. invalid") + ")");
+        rightBox->setTitle(title);
         gnssStatus->setText(txt);
     }
 }

@@ -1,8 +1,8 @@
 #include "gnssanalyzer.h"
 
-GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, int id)
+GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, const QString &profileId)
 {
-    gnssData.id = id;
+    gnssData.id = profileId;
     config = c;
     connect(updDisplayTimer, &QTimer::timeout, this, &GnssAnalyzer::updDisplay);
 
@@ -43,6 +43,20 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         data.avgAgc /= data.avgAgcArray.size();
         while (data.avgAgcArray.size() > 300)
             data.avgAgcArray.pop_front();
+    }
+    if (!pauseSignalAverages) {
+        for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
+            GnssAgcBlockData &block = iterator.value();
+            if (block.agc <= 0) continue;
+
+            block.avgAgcArray.append(block.agc);
+            block.avgAgc = 0;
+            for (int value : block.avgAgcArray)
+                block.avgAgc += value;
+            block.avgAgc /= block.avgAgcArray.size();
+            while (block.avgAgcArray.size() > 300)
+                block.avgAgcArray.pop_front();
+        }
     }
     if (data.jammingIndicator >= 0) {
         data.avgJammingIndicatorArray.append(data.jammingIndicator);
@@ -87,13 +101,18 @@ void GnssAnalyzer::analyze(GnssData &data)
     data.posOffset = distanceInMeters(data);
     data.altOffset = abs(ownAltitude - data.altitude);
     data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
-    if (data.id < 3) {
+    if (data.id != "instrument") {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);
+        for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
+            GnssAgcBlockData &block = iterator.value();
+            if (block.avgAgc >= 0) block.agcOffset = abs(block.agc - block.avgAgc);
+        }
         data.jammingIndicatorOffset = abs(data.jammingIndicator - data.jammingIndicatorOffset);
         checkCnoOffset(data);
         if (checkAgc) {
-            checkAgcOffset(data);
+            if (data.agcBlocks.isEmpty()) checkAgcOffset(data);
+            else checkAgcBlockOffsets(data);
             checkJammingIndicator(data);
         }
     }
@@ -130,17 +149,11 @@ void GnssAnalyzer::updSettings()
     ownLatitude = config->getStnLatitude().toDouble();
     ownLongitude = config->getStnLongitude().toDouble();
     ownAltitude = config->getStnAltitude().toDouble();
-    if (gnssData.id == 1) {
-        checkAgc = config->getGnssSerialPort1MonitorAgc();
-        logToFile = config->getGnssSerialPort1TriggerRecording();
-    }
-    else if (gnssData.id == 2) {
-        checkAgc = config->getGnssSerialPort2MonitorAgc();
-        logToFile = config->getGnssSerialPort2TriggerRecording();
-    }
-    else if (gnssData.id == 3) {
-        logToFile = config->getGnssInstrumentGnssTriggerRecording();
-    }
+
+    const GnssReceiverProfile profile = config->getGnssReceiverProfile(gnssData.id);
+    isInstrumentType = profile.type == GnssReceiverProfile::Type::Instrument;
+    logToFile = profile.triggerRecording;
+    checkAgc = !isInstrumentType && profile.ublox;
     emit alarmEnded(); // To update led indicator/text
     //qDebug() << "gnss updsettings";
 }
@@ -160,19 +173,19 @@ void GnssAnalyzer::updDisplay()
         ts << "<tr><td>Pos. offset</td><td align>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << " m</td></tr>"
            << "<tr><td>Alt. offset</td><td align>" << gnssData.altOffset << " m</td></tr>"
            << "<tr><td>Time offset</td><td>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << " ms</td></tr>";
-        if (gnssData.id != 3)
+        if (!isInstrumentType)
             ts << "<tr><td>C/No (offset)</td><td>" << gnssData.cno << " (" << gnssData.cnoOffset << ") dB</td></tr>";
-        if (gnssData.agc >= 0)
-            ts << "<tr><td>AGC (offset)</td><td>" << gnssData.agc << " (" << gnssData.agcOffset << ") %</td></tr>";
-        if (gnssData.jammingIndicator >= 0)
-            ts << "<tr><td>CW jammer ind.</td><td>" << gnssData.jammingIndicator  << " %</td></tr>";
-        if (gnssData.jammingState != JAMMINGSTATE::UNKNOWN) {
-            ts << "<tr><td>Jamming state</td><td>";
-            if (gnssData.jammingState == JAMMINGSTATE::NOJAMMING) ts << "No jamming";
-            else if (gnssData.jammingState == JAMMINGSTATE::WARNINGFIXOK) ts << "Warning, fix ok";
-            else if (gnssData.jammingState == JAMMINGSTATE::CRITICALNOFIX) ts << "Critical, fix lost";
-            ts << "</td></tr>";
+        if (!gnssData.agcBlocks.isEmpty()) {
+            for (auto iterator = gnssData.agcBlocks.cbegin(); iterator != gnssData.agcBlocks.cend(); ++iterator) {
+                const QString label = iterator.value().frequencyMapped
+                                          ? QString("AGC %1 MHz").arg(qRound(iterator.value().centerHz / 1e6))
+                                          : QString("AGC block %1").arg(iterator.key());
+                ts << "<tr><td>" << label << "</td><td>"
+                   << iterator.value().agc << " (" << iterator.value().agcOffset << ") %</td></tr>";
+            }
         }
+        else if (gnssData.agc >= 0)
+            ts << "<tr><td>AGC (offset)</td><td>" << gnssData.agc << " (" << gnssData.agcOffset << ") %</td></tr>";
         ts << "<tr><td>Sats tracked</td><td>" << gnssData.satsTracked;
         if (gnssData.satsTracked == -1) ts << " (man.pos!)";
         ts << "</td></tr>";
@@ -229,7 +242,7 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
         posOffsetFilterTimer.invalidate();
         qDebug() << "Inc. gone before filter time";
     }
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
 }
 
 void GnssAnalyzer::checkAltOffset(GnssData &data)
@@ -264,7 +277,7 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
     else if (altOffsetFilterTimer.isValid() && data.posValid)
         altOffsetFilterTimer.invalidate();
 
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
 }
 
 void GnssAnalyzer::checkTimeOffset(GnssData &data)
@@ -300,7 +313,7 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     else if (timeOffsetFilterTimer.isValid() && data.posValid)
         timeOffsetFilterTimer.invalidate();
 
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
 }
 
 void GnssAnalyzer::checkCnoOffset(GnssData &data)
@@ -335,7 +348,7 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
     else if (cnoFilterTimer.isValid() && data.posValid)
         cnoFilterTimer.invalidate();
 
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
 }
 
 void GnssAnalyzer::checkAgcOffset(GnssData &data)
@@ -370,7 +383,67 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
     else if (agcFilterTimer.isValid() && data.posValid)
         agcFilterTimer.invalidate();
 
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
+}
+
+void GnssAnalyzer::checkAgcBlockOffsets(GnssData &data)
+{
+    QStringList messages;
+    const bool previouslyTriggered = agcLimitTriggered;
+    const auto knownBlockIds = agcBlockLimitTriggered.keys();
+    for (int blockId : knownBlockIds) {
+        if (!data.agcBlocks.contains(blockId)) {
+            agcBlockLimitTriggered.remove(blockId);
+            agcBlockTimers.remove(blockId);
+            agcBlockFilterTimers.remove(blockId);
+        }
+    }
+
+    for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
+        const int blockId = iterator.key();
+        const GnssAgcBlockData &block = iterator.value();
+        bool &triggered = agcBlockLimitTriggered[blockId];
+        QElapsedTimer &filterTimer = agcBlockFilterTimers[blockId];
+
+        if (data.posValid && agcLimit > 0 && block.agcOffset > agcLimit) {
+            if (!triggered && !filterTimer.isValid()) {
+                filterTimer.start();
+            }
+            else if (!triggered && filterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
+                const QString blockLabel = block.frequencyMapped
+                                               ? QString("%1 - %2").arg(blockId).arg(block.frequencyLabel)
+                                               : QString::number(blockId);
+                messages.append(QString("AGC block %1 offset triggered, current offset: %2%3")
+                                    .arg(blockLabel).arg(block.agcOffset)
+                                    .arg(logToFile ? ". Recording" : ""));
+                triggered = true;
+                agcBlockTimers[blockId].start();
+                filterTimer.invalidate();
+                emit visualAlarm();
+            }
+            if (logToFile) emit alarm();
+        }
+        else if (data.posValid && triggered) {
+            const QString blockLabel = block.frequencyMapped
+                                           ? QString("%1 - %2").arg(blockId).arg(block.frequencyLabel)
+                                           : QString::number(blockId);
+            messages.append(QString("AGC block %1 offset normal after %2 seconds")
+                                .arg(blockLabel).arg(agcBlockTimers[blockId].elapsed() / 1e3));
+            agcBlockTimers.remove(blockId);
+            triggered = false;
+        }
+        else if (data.posValid && filterTimer.isValid()) {
+            filterTimer.invalidate();
+        }
+    }
+
+    agcLimitTriggered = false;
+    for (bool triggered : std::as_const(agcBlockLimitTriggered))
+        agcLimitTriggered |= triggered;
+    if (previouslyTriggered && !agcLimitTriggered) emitAlarmEndedIfNoOffsetTriggered();
+
+    if (!messages.isEmpty() && config->getGnssShowNotifications())
+        emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, messages.join("; "));
 }
 
 void GnssAnalyzer::checkJammingIndicator(GnssData &data)
@@ -404,7 +477,7 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
     else if (jamIndFilterTimer.isValid() && data.posValid)
         jamIndFilterTimer.invalidate();
 
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, QString::number(data.id), msg);
+    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
 }
 
 void GnssAnalyzer::tests()
