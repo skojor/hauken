@@ -240,7 +240,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
                                 / 10.0);
         }
 
-        if (addPosition) {
+        if (addPosition and !positionHistory.isEmpty()) {
             if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed
                 dateIterator++;
                 startTime = datetime.at(i);

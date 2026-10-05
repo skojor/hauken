@@ -370,7 +370,7 @@ void GnssDevice::decodeBinary(const QByteArray &val)
     {
         if (val.indexOf(MONHW) == 2) {
             int agc = (quint8)val.at(24) + (quint16)(val.at(25) << 8);
-            if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8192; // Changed 181123 JSK: Percentage value, 8192 = 100% gain
+            if (agc >= 0 && agc <= 8191) gnssData.agc = agc * 100 / 8191; // Changed 181123 JSK: Percentage value, 8191 = 100% gain
 
             int jamInd = (quint8)val.at(51);
             if (jamInd >= 0 && jamInd < 256) gnssData.jammingIndicator = jamInd * 100 / 255;
@@ -414,7 +414,7 @@ void GnssDevice::decodeBinary(const QByteArray &val)
             }
             else if (val.size() > 26) {
                 int agc = (quint8)val[24] + ((quint8)val[25] << 8);
-                if (agc >= 0 && agc <= 8192) gnssData.agc = agc * 100 / 8191;
+                if (agc >= 0 && agc <= 8191) gnssData.agc = agc * 100 / 8191;
             }
 
             if (val.size() > 26) {

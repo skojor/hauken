@@ -1,6 +1,7 @@
 #include "ubloxmonrfparser.h"
 
 #include <QtEndian>
+#include <QDebug>
 
 bool UbloxMonRfParser::parseAgcBlocks(const QByteArray &frame, QVector<UbloxMonRfBlock> &agcBlocks)
 {
