@@ -48,8 +48,9 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     receiverUblox->setText("U-blox M8/M9/M10/X20P and Septentrio support");
     receiverUblox->setToolTip("If checked the GPS will be configured as a uBlox receiver with enhanced binary protocol. \n"\
                        "Will enable several cool features, for now AGC and jamming indicator levels.\n"\
-                       "Of course this will only work if the connected GNSS device is a uBlox. Use at your own risk!\n" \
-                       "Septentrio support is limited to reading out AGC for each band on the main antenna for now, \n" \
+                       "Of course this will only work if the connected GNSS device is a uBlox or Septentrio. Use at your own risk!\n" \
+                       "Septentrio support reads out AGC per band for the main antenna, labelled by frequency band. \n" \
+                       "Bands with no actively tracked signal are hidden if the MeasEpoch SBF block is also enabled, \n" \
                        "although all binary and NMEA messages will be logged if logging is enabled.");
 
     receiverLayout->addRow(receiverTriggerRecording);

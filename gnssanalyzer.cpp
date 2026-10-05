@@ -35,7 +35,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgCnoArray.size() > 300)
             data.avgCnoArray.pop_front();
     }
-    if (!pauseSignalAverages && data.agc > 0) {
+    if (!pauseSignalAverages && data.agc >= 0) {
         data.avgAgcArray.append(data.agc);
         data.avgAgc = 0;
         for (auto &val : data.avgAgcArray)
@@ -47,7 +47,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
     if (!pauseSignalAverages) {
         for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
             GnssAgcBlockData &block = iterator.value();
-            if (block.agc <= 0) continue;
+            if (block.agc < 0) continue;
 
             block.avgAgcArray.append(block.agc);
             block.avgAgc = 0;
@@ -178,7 +178,7 @@ void GnssAnalyzer::updDisplay()
         if (!gnssData.agcBlocks.isEmpty()) {
             for (auto iterator = gnssData.agcBlocks.cbegin(); iterator != gnssData.agcBlocks.cend(); ++iterator) {
                 const QString label = iterator.value().frequencyMapped
-                                          ? QString("AGC %1 MHz").arg(qRound(iterator.value().centerHz / 1e6))
+                                          ? QString("AGC %1").arg(iterator.value().frequencyLabel)
                                           : QString("AGC block %1").arg(iterator.key());
                 ts << "<tr><td>" << label << "</td><td>"
                    << iterator.value().agc << " (" << iterator.value().agcOffset << ") %</td></tr>";

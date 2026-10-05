@@ -43,7 +43,7 @@ QString formatAgc(const GnssData &data)
     QStringList values;
     for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
         const QString label = iterator.value().frequencyMapped
-                                  ? QString("Block %1 - %2 MHz").arg(iterator.key()).arg(qRound(iterator.value().centerHz / 1e6))
+                                  ? QString("Block %1 - %2").arg(iterator.key()).arg(iterator.value().frequencyLabel)
                                   : QString("Block %1").arg(iterator.key());
         values.append(QString("%1: %2 (%3) %").arg(label).arg(iterator.value().agc).arg(iterator.value().agcOffset));
     }
@@ -57,15 +57,13 @@ QString formatJammingIndicator(const GnssData &data)
 
     QStringList values;
     for (auto iterator = data.agcBlocks.cbegin(); iterator != data.agcBlocks.cend(); ++iterator) {
+        if (iterator.value().jammingIndicator < 0) continue; // not provided by this receiver/band (e.g. Septentrio)
         const QString label = iterator.value().frequencyMapped
-                                  ? QString("Block %1 - %2 MHz").arg(iterator.key()).arg(qRound(iterator.value().centerHz / 1e6))
+                                  ? QString("Block %1 - %2").arg(iterator.key()).arg(iterator.value().frequencyLabel)
                                   : QString("Block %1").arg(iterator.key());
-        const QString value = iterator.value().jammingIndicator >= 0
-                                  ? QString::number(iterator.value().jammingIndicator) + " %"
-                                  : "n/a";
-        values.append(QString("%1: %2").arg(label, value));
+        values.append(QString("%1: %2 %").arg(label).arg(iterator.value().jammingIndicator));
     }
-    return values.join("<br>");
+    return values.isEmpty() ? "n/a" : values.join("<br>");
 }
 }
 

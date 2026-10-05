@@ -14,6 +14,7 @@
 #include <QDir>
 #include <QHostAddress>
 #include <QTcpSocket>
+#include <QSet>
 //#include <QHostInfo>
 #include "config.h"
 #include "typedefs.h"
@@ -79,6 +80,7 @@ private slots:
     void checkPosValid();
     void connectTcpSocket();
     void handleTcpStateChange(QAbstractSocket::SocketState state);
+    void checkTcpConnection();
     void setupUbloxDevice();
     void askUbloxVersion();
     void decodeBinary0a04(const QByteArray &val);
@@ -88,6 +90,8 @@ private slots:
     void cleanupBacklog();
     void createGnssPlot();
     void decodeSbf4014(const QByteArray &data);
+    void decodeSbf4027(const QByteArray &data);
+    void decodeSbf4013(const QByteArray &data);
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -106,6 +110,10 @@ private:
     //QHostInfo *hostInfo = new QHostInfo;
     QHostAddress *hostAddress = new QHostAddress;
     QTcpSocket *tcpSocket = new QTcpSocket;
+    QTimer *tcpWatchdogTimer = new QTimer;
+    QElapsedTimer tcpLastDataTimer;
+    bool tcpWasConnected = false;
+    static constexpr int tcpDataTimeoutMs = 10000; // force reconnect if no data arrives within this time
     int portnumber = 0;
     QSharedPointer<Config> config;
     QList<QDateTime> backlogTimestamp;
@@ -127,6 +135,11 @@ private:
     quint64 binaryMessageSequence = 0;
     UBLOX uBloxState = UBLOX::NODEVICE;
     bool checkedAllSatSystems = false;
+
+    // Septentrio: signal types (SBF 4.1.10) currently tracked on the main antenna, from MeasEpoch (4027)
+    QSet<int> septentrioActiveSignalTypes;
+    bool septentrioMeasEpochSeen = false;
+    bool septentrioChannelStatusSeen = false; // once true, satsTracked comes from SBF ChannelStatus (4013) instead of NMEA
 };
 
 
