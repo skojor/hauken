@@ -251,6 +251,8 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6));
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6));
         }
+        else if (addPosition and positionHistory.isEmpty())
+            emit warning("No GNSS source is selected as position source for CEF data");
 
         for (auto &&val : data.at(i)) {
             buffer.append(',').append(QByteArray::number(val / 10));
