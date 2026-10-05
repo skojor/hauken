@@ -83,8 +83,8 @@ private slots:
     void askUbloxVersion();
     void decodeBinary0a04(const QByteArray &val);
     void delayedReportHandler();
-    QString createFilename();
-    void updateBacklog(QByteArray &data);
+    QString createFilename(const QString &suffix = QString());
+    void updateBacklog(QByteArray &data, bool isBinary);
     void cleanupBacklog();
     void createGnssPlot();
     void decodeSbf4014(const QByteArray &data);
@@ -110,6 +110,7 @@ private:
     QSharedPointer<Config> config;
     QList<QDateTime> backlogTimestamp;
     QList<QByteArray> backlogData;
+    QList<bool> backlogIsBinary;
     QVector<double> backlogCno, backlogAgc, backlogJam;
     QMap<int, QVector<double>> backlogAgcBlocks;
     QMap<int, QString> backlogAgcBlockLabels;
