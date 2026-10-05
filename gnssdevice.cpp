@@ -182,7 +182,7 @@ void GnssDevice::handleBuffer()
                     decodeGsv(nmeaSentence);
                 else if (nmeaSentence.contains("GNS"))
                     decodeGns(nmeaSentence);
-                updateBacklog(nmeaSentence);
+                updateBacklog(nmeaSentence, false);
             }
             gnssBuffer.remove(nmeaIndex, nmeaSize+1);
             if (logToFile) appendToLogfile(nmeaSentence + '\n');
@@ -193,11 +193,11 @@ void GnssDevice::handleBuffer()
                 && checkBinaryChecksum(binarySentence)
                 && (quint8)binarySentence[2] == 0x0a && (quint8)binarySentence[3] == 0x04) {
                 decodeBinary0a04(binarySentence);
-                updateBacklog(binarySentence);
+                updateBacklog(binarySentence, true);
             }
             else if (binarySentence.size() == binarySize) {
                 decodeBinary(binarySentence);
-                updateBacklog(binarySentence);
+                updateBacklog(binarySentence, true);
             }
             if (logToFile) {
                 appendToBinaryfile(binarySentence);
@@ -206,7 +206,7 @@ void GnssDevice::handleBuffer()
         if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty()) {
             quint16 id = qFromLittleEndian<quint16>(reinterpret_cast<const uchar*>(sbfBinSentence.constData() + 4));
             id = id & 0x1fff;
-            updateBacklog(sbfBinSentence);
+            updateBacklog(sbfBinSentence, true);
             if (id == 4014)
                 decodeSbf4014(sbfBinSentence);
 
@@ -745,7 +745,7 @@ void GnssDevice::delayedReportHandler()
     }
 }
 
-QString GnssDevice::createFilename()
+QString GnssDevice::createFilename(const QString &suffix)
 {
     QString dir = config->incidentFolder();
     QString filename;
@@ -756,15 +756,16 @@ QString GnssDevice::createFilename()
 
     ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
        << "_" << AsciiTranslator::toAscii(config->getStationName())
-       << "_" << "gnss-" << profileLabel << ".log";
+       << "_" << "gnss-" << profileLabel << suffix << ".log";
 
     return filename;
 }
 
-void GnssDevice::updateBacklog(QByteArray &data)
+void GnssDevice::updateBacklog(QByteArray &data, bool isBinary)
 {
     backlogTimestamp.append(QDateTime::currentDateTime());
     backlogData.append(data);
+    backlogIsBinary.append(isBinary);
     backlogAgc.append(gnssData.agc);
     for (auto iterator = backlogAgcBlocks.begin(); iterator != backlogAgcBlocks.end(); ++iterator)
         iterator.value().append(qQNaN());
@@ -787,6 +788,7 @@ void GnssDevice::cleanupBacklog()
     while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(QDateTime::currentDateTime()) > 120) { // Keep backlog at 120 secs age
         backlogTimestamp.removeFirst();
         backlogData.removeFirst();
+        backlogIsBinary.removeFirst();
         backlogAgc.removeFirst();
         for (auto iterator = backlogAgcBlocks.begin(); iterator != backlogAgcBlocks.end(); ++iterator) {
             if (!iterator.value().isEmpty()) iterator.value().removeFirst();
@@ -806,16 +808,37 @@ void GnssDevice::saveBacklog()
 
         createGnssPlot();
 
-        QFile file(createFilename());
-        if (file.open(QIODevice::WriteOnly)) {
-            for (int i = 0; i < backlogData.size(); i++) {
-                //file.write(backlogTimestamp[i].toString("yyyyMMddhhmmss,").toLocal8Bit());
-                file.write(backlogData[i] + "\n");
+        // Mirror the continuous log scheme: separate timestamped text and binary files.
+        QFile incidentTextFile, incidentBinaryFile;
+        for (int i = 0; i < backlogData.size(); i++) {
+            if (backlogIsBinary[i]) {
+                if (!incidentBinaryFile.isOpen()) {
+                    incidentBinaryFile.setFileName(createFilename("_binary"));
+                    if (!incidentBinaryFile.open(QIODevice::WriteOnly))
+                        qWarning() << "Could not open file" << incidentBinaryFile.fileName() << "for writing";
+                }
+                if (incidentBinaryFile.isOpen()) {
+                    quint64 timestamp = backlogTimestamp[i].toMSecsSinceEpoch();
+                    quint32 size = backlogData[i].size();
+                    incidentBinaryFile.write(reinterpret_cast<const char*>(&timestamp), sizeof(timestamp));
+                    incidentBinaryFile.write(reinterpret_cast<const char*>(&size), sizeof(size));
+                    incidentBinaryFile.write(backlogData[i]);
+                }
             }
-            file.close();
+            else {
+                if (!incidentTextFile.isOpen()) {
+                    incidentTextFile.setFileName(createFilename("_nmea"));
+                    if (!incidentTextFile.open(QIODevice::WriteOnly))
+                        qWarning() << "Could not open file" << incidentTextFile.fileName() << "for writing";
+                }
+                if (incidentTextFile.isOpen()) {
+                    QString ts = backlogTimestamp[i].toUTC().toString(Qt::ISODateWithMs);
+                    incidentTextFile.write(ts.toLocal8Bit() + "," + backlogData[i] + "\n");
+                }
+            }
         }
-        else
-            qWarning() << "Could not open file" << file.fileName() << "for writing";
+        if (incidentTextFile.isOpen()) incidentTextFile.close();
+        if (incidentBinaryFile.isOpen()) incidentBinaryFile.close();
     }
     else {
         // Do not carry an alarm timestamp into the next incident when this
@@ -837,6 +860,7 @@ void GnssDevice::createGnssPlot()
     plot->graph(0)->setName("C/N0");
     plot->graph(1)->setName("Jamming ind");
     plot->legend->setVisible(true);
+    plot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignBottom | Qt::AlignLeft);
     plot->xAxis->setLabel("Seconds since incident");
     plot->yAxis->setLabel("Value");
 
