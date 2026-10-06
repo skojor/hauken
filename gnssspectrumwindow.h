@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QDialog>
+#include <QImage>
 #include <QMap>
 #include <QSharedPointer>
 #include <QSpinBox>
@@ -34,11 +35,41 @@ private slots:
     void bandSelectionChanged(int index);
     void manualYRangeChanged();
     void autoScaleChanged(bool enabled);
+    void maxholdTimeChanged(int seconds);
+    void waterfallModeChanged(const QString &mode);
+    void waterfallTimeChanged(int seconds);
 
 private:
     void plotBlock(const GnssSpectrumBlock &block);
     void saveGeometryToConfig();
     void applyManualYRange();
+    void updateBandHistory(const GnssSpectrumBlock &block);
+    void updateWaterfall(int blockIndex, const GnssSpectrumBlock &block, qint64 timestampMs);
+    void displaySelectedWaterfall();
+    void clearWaterfallHistory();
+
+    struct MaxholdFrame
+    {
+        qint64 timestampMs = 0;
+        QVector<double> levels;
+    };
+
+    struct BandDisplayState
+    {
+        quint64 centerHz = 0;
+        quint32 spanHz = 0;
+        quint32 resolutionHz = 0;
+        int levelCount = 0;
+        bool geometryInitialized = false;
+        qint64 lastTimestampMs = -1;
+        qint64 maxholdBucketStartMs = -1;
+        qint64 maxholdBucketLastMs = -1;
+        QVector<double> maxholdBucket;
+        QVector<MaxholdFrame> maxholdFrames;
+        QImage waterfallImage;
+        QVector<double> waterfallLastLevels;
+        qint64 lastWaterfallRowMs = -1;
+    };
 
     QSharedPointer<Config> config;
     QString profileId;
@@ -53,6 +84,7 @@ private:
     QSpinBox *waterfallTime = new QSpinBox;
     QCheckBox *overlayEnabled = new QCheckBox;
     QMap<int, GnssSpectrumBlock> lastBlockByIndex; // blockIndex -> most recently received block
+    QMap<int, BandDisplayState> bandDisplayState;
     int selectedBlockIndex = 0;
 };
 
