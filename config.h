@@ -390,6 +390,22 @@ public slots:
     int getPlotResolution() { return plotResolution;}
     QByteArray getGnssDisplayWindowState() { return settings->value("gnssDisplay/windowState", "").toByteArray();}
     void setGnssDisplayWindowState(QByteArray arr)  { settings->setValue("gnssDisplay/windowState", arr); emit settingsUpdated();}
+    QByteArray getGnssSpectrumWindowGeometry(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrumWindowGeometry", "").toByteArray();}
+    void setGnssSpectrumWindowGeometry(const QString &profileId, QByteArray arr) { settings->setValue("gnss/receivers/" + profileId + "/spectrumWindowGeometry", arr); emit settingsUpdated();}
+    int getGnssSpectrumMaxholdTime(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/maxholdTime", 30).toInt();}
+    void setGnssSpectrumMaxholdTime(const QString &profileId, int seconds) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/maxholdTime", seconds); }
+    QString getGnssSpectrumWaterfallMode(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/waterfallMode", "Off").toString();}
+    void setGnssSpectrumWaterfallMode(const QString &profileId, const QString &mode) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/waterfallMode", mode); }
+    int getGnssSpectrumWaterfallTime(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/waterfallTime", 120).toInt();}
+    void setGnssSpectrumWaterfallTime(const QString &profileId, int seconds) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/waterfallTime", seconds); }
+    bool getGnssSpectrumAutoScale(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/autoScale", true).toBool();}
+    void setGnssSpectrumAutoScale(const QString &profileId, bool enabled) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/autoScale", enabled); }
+    int getGnssSpectrumYMin(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/yMin", -30).toInt();}
+    void setGnssSpectrumYMin(const QString &profileId, int value) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/yMin", value); }
+    int getGnssSpectrumYMax(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/yMax", 50).toInt();}
+    void setGnssSpectrumYMax(const QString &profileId, int value) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/yMax", value); }
+    bool getGnssSpectrumOverlayEnabled(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrum/overlayEnabled", false).toBool();}
+    void setGnssSpectrumOverlayEnabled(const QString &profileId, bool enabled) { settings->setValue("gnss/receivers/" + profileId + "/spectrum/overlayEnabled", enabled); }
 
 
     // trig line

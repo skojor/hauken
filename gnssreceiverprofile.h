@@ -17,6 +17,7 @@ struct GnssReceiverProfile
     bool logToFile = false;
     bool triggerRecording = false;
     bool nonRemovable = false; // true for the singleton instrument-GNSS entry
+    bool showSpectrumWindow = false; // open a separate window showing this receiver's spectrum trace, if supported
 };
 
 #endif // GNSSRECEIVERPROFILE_H

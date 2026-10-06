@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "version.h"
 #include "versionupdater.h"
+#include <QSet>
 
 
 void restartApplication()
@@ -111,6 +112,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     qInfo() << "MainWindow: applying config and startup state";
     getConfigValues();
+    updateGnssSpectrumWindows();
     QTimer::singleShot(50, customPlotController, [this] {
         //customPlotController->updSettings();
         waterfall->updSize(
@@ -183,6 +185,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
             window->close();
     }
     iqPlotWindows.clear();
+
+    const auto spectrumWindows = gnssSpectrumWindows.values();
+    for (auto *window : spectrumWindows) window->close();
 
     QMainWindow::closeEvent(event);
 }
@@ -962,6 +967,33 @@ void MainWindow::setWaterfallOption(QString s)
 
     config->setShowWaterfall(s);
 }
+
+void MainWindow::updateGnssSpectrumWindows()
+{
+    if (updatingGnssSpectrumWindows) return; // guard against Config::settingsUpdated reentering this while a window is still being constructed below
+    updatingGnssSpectrumWindows = true;
+
+    QSet<QString> wantedProfileIds;
+    for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles()) {
+        if (!profile.enabled || profile.type != GnssReceiverProfile::Type::Serial
+            || !profile.ublox || !profile.showSpectrumWindow)
+            continue;
+        wantedProfileIds.insert(profile.id);
+        if (!gnssSpectrumWindows.contains(profile.id)) {
+            GnssSpectrumWindow *window = new GnssSpectrumWindow(config, profile.id, profile.name, this);
+            window->show();
+            gnssSpectrumWindows.insert(profile.id, window);
+        }
+    }
+
+    const QStringList existingIds = gnssSpectrumWindows.keys();
+    for (const QString &id : existingIds) {
+        if (!wantedProfileIds.contains(id)) delete gnssSpectrumWindows.take(id);
+    }
+
+    updatingGnssSpectrumWindows = false;
+}
+
 
 void MainWindow::traceIncidentAlarm(bool state)
 {

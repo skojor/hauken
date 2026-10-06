@@ -14,7 +14,6 @@ torch/lib
 build/
 *.user
 version.h
-
 include/msal
 libs/msalruntime.lib
 include/lame
@@ -23,3 +22,6 @@ rpi/
 20260922_Bodoe_gnss_1_binary.log
 build-debug.log
 git-diff-check.log
+.vscode/
+buildlog3.txt
+AsteRx*

@@ -3,6 +3,7 @@
 #include "qcustomplot.h"
 #include "ubloxmonrfparser.h"
 #include "ubloxmonspanparser.h"
+#include "fftw3.h"
 
 namespace {
 QString frequencyLabel(const UbloxRfBandMetadata &metadata)
@@ -37,6 +38,59 @@ void applyRfBandMapping(GnssData &data, const QMap<int, UbloxRfBandMetadata> &ma
         }
     }
 }
+
+// Septentrio SBF ReceiverStatus (4014) AGCState FrontEndID bits 0-4, per SBF Reference Guide section 4.2.16.
+// This enum is fixed by the SBF spec, not receiver-model-specific.
+QString septentrioFrontEndLabel(int frontEndCode, quint32 centerHz)
+{
+    static const QMap<int, QString> names = {
+        {0, "GPS L1 / Galileo E1"}, {1, "GLONASS L1"}, {2, "Galileo E6"}, {3, "GPS L2"},
+        {4, "GLONASS L2"}, {5, "L5 / E5a / B2a"}, {6, "E5b / B2b"}, {7, "Galileo E5 AltBOC"},
+        {8, "GPS/GLONASS/SBAS/Galileo L1 (combined)"}, {9, "GPS/GLONASS L2 (combined)"},
+        {10, "L-band / MSS"}, {11, "BeiDou B1"}, {12, "BeiDou B3"}, {13, "S-band"},
+        {14, "BeiDou B3 + Galileo E6 (combined)"}
+    };
+    QString name = names.value(frontEndCode, QString("Frontend %1").arg(frontEndCode));
+    if (centerHz > 0) return QString("%1 (%2 MHz)").arg(name).arg(centerHz / 1e6, 0, 'f', 2);
+    return name;
+}
+
+quint32 septentrioFrontEndCenterHz(int frontEndCode)
+{
+    // Nominal carrier frequencies from SBF Reference Guide section 4.1.10 (Signal Type table).
+    static const QMap<int, quint32> centerHz = {
+        {0, 1575420000}, {1, 1602000000}, {2, 1278750000}, {3, 1227600000}, {4, 1246000000},
+        {5, 1176450000}, {6, 1207140000}, {7, 1191795000}, {8, 1575420000}, {9, 1227600000},
+        {11, 1561098000}, {12, 1268520000}
+        // 10 (L-band/MSS), 13 (S-band) and 14 (combined) have no single representative carrier
+    };
+    return centerHz.value(frontEndCode, 0);
+}
+
+// Which SBF signal types (section 4.1.10) a given AGCData front-end code can carry.
+const QSet<int> &septentrioFrontEndSignalTypes(int frontEndCode)
+{
+    static const QMap<int, QSet<int>> table = {
+        {0,  {0, 1, 5, 6, 13, 17, 24, 32, 33, 37, 38}}, // GPS/QZSS/SBAS/NavIC L1, Galileo E1, BeiDou B1C
+        {1,  {8, 9}},                                    // GLONASS L1
+        {2,  {19}},                                      // Galileo E6
+        {3,  {2, 3, 7}},                                 // GPS/QZSS L2
+        {4,  {10, 11}},                                   // GLONASS L2
+        {5,  {4, 14, 15, 20, 25, 26}},                    // L5/E5a/B2a (GPS, BeiDou, NavIC, Galileo, SBAS, QZSS)
+        {6,  {21, 29, 34}},                                // E5b/B2b (Galileo, BeiDou)
+        {7,  {22}},                                        // Galileo E5 AltBOC
+        {8,  {0, 1, 5, 6, 8, 9, 13, 17, 24, 32, 33, 37, 38}}, // combined L1
+        {9,  {2, 3, 7, 10, 11}},                           // combined L2
+        {10, {23}},                                        // L-band/MSS
+        {11, {28}},                                        // BeiDou B1I
+        {12, {30}},                                        // BeiDou B3I
+        {14, {19, 30}}                                      // combined BeiDou B3 + Galileo E6
+        // 13 (S-band) carries no GNSS signal type and is never correlated against MeasEpoch
+    };
+    static const QSet<int> empty;
+    auto it = table.constFind(frontEndCode);
+    return it != table.cend() ? it.value() : empty;
+}
 }
 
 GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
@@ -58,6 +112,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
             });
 
     connect(tcpSocket, &QTcpSocket::readyRead, this, [this] {
+        tcpLastDataTimer.restart();
         QByteArray buffer = tcpSocket->readAll();
         gnssBuffer.append(buffer);
         //if (logToFile) appendToLogfile(buffer);
@@ -65,6 +120,8 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
     });
 
     connect(tcpSocket, &QTcpSocket::stateChanged, this, &GnssDevice::handleTcpStateChange);
+    connect(tcpWatchdogTimer, &QTimer::timeout, this, &GnssDevice::checkTcpConnection);
+    tcpWatchdogTimer->start(1000);
     connect(delayedReportTimer, &QTimer::timeout, this, &GnssDevice::delayedReportHandler);
     connect(backlogCleanupTimer, &QTimer::timeout, this, &GnssDevice::cleanupBacklog);
     backlogCleanupTimer->start(1000);
@@ -209,6 +266,12 @@ void GnssDevice::handleBuffer()
             updateBacklog(sbfBinSentence, true);
             if (id == 4014)
                 decodeSbf4014(sbfBinSentence);
+            else if (id == 4027)
+                decodeSbf4027(sbfBinSentence);
+            else if (id == 4013)
+                decodeSbf4013(sbfBinSentence);
+            else if (id == 4040)
+                decodeSbf4040(sbfBinSentence);
 
             if (logToFile) {
                 appendToBinaryfile(sbfBinSentence);
@@ -251,7 +314,7 @@ bool GnssDevice::decodeGga(const QByteArray &val)
     if (split.size() > 9) {
         gnssData.ggaValid = true;
 
-        if (!gnssData.gnsValid) gnssData.satsTracked = split.at(7).toInt();
+        if (!gnssData.gnsValid && !septentrioChannelStatusSeen) gnssData.satsTracked = split.at(7).toInt();
         gnssData.fixQuality = split.at(6).toInt();
         gnssData.altitude = split.at(9).toDouble();
         //gnssData.hdop = split.at(8).toDouble();
@@ -333,7 +396,7 @@ bool GnssDevice::decodeGns(const QByteArray &val)
 {
     gnssData.gnsValid = true;
     QList<QByteArray> split = val.split(',');
-    if (split.size() > 7) {
+    if (split.size() > 7 && !septentrioChannelStatusSeen) {
         gnssData.satsTracked = split[7].toInt();
     }
     return true;
@@ -437,6 +500,20 @@ void GnssDevice::decodeBinary(const QByteArray &val)
                 rfBandCorrelator.observeMonSpan(spanBlocks, QDateTime::currentMSecsSinceEpoch(),
                                                 binaryMessageSequence);
                 applyRfBandMapping(gnssData, rfBandCorrelator.mapping());
+
+                for (int blockIndex = 0; blockIndex < spanBlocks.size(); blockIndex++) {
+                    const UbloxMonSpanBlock &spanBlock = spanBlocks.at(blockIndex);
+                    GnssSpectrumBlock spectrumBlock;
+                    spectrumBlock.levels.reserve(spanBlock.spectrum.size());
+                    for (char byte : spanBlock.spectrum) spectrumBlock.levels.append(static_cast<quint8>(byte));
+                    spectrumBlock.centerHz = spanBlock.centerHz;
+                    spectrumBlock.spanHz = spanBlock.spanHz;
+                    spectrumBlock.resolutionHz = spanBlock.resolutionHz;
+                    spectrumBlock.timestamp = QDateTime::currentDateTime();
+                    spectrumBlock.blockIndex = blockIndex;
+                    spectrumBlock.blockCount = spanBlocks.size();
+                    emit spectrumReady(spectrumBlock);
+                }
             }
             else {
                 rfBandCorrelator.invalidate();
@@ -610,16 +687,32 @@ void GnssDevice::handleTcpStateChange(QAbstractSocket::SocketState state)
         qDebug() << "Connected to" << portName << baudrate;
         if (!sendToAnalyzerTimer->isActive()) sendToAnalyzerTimer->start(1000);
         gnssData.inUse = true;
+        tcpLastDataTimer.start();
+        tcpWasConnected = true;
     }
     else {
         gnssData.inUse = false;
         sendToAnalyzerTimer->stop();
     }
     if (state == QAbstractSocket::UnconnectedState) { // retry conn. every 5 sec if valid settings
+        if (tcpWasConnected) {
+            emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "GNSS TCP connection lost, will attempt to reconnect");
+            tcpWasConnected = false;
+        }
         QTimer::singleShot(5000, this, [this] {
             if (activate) connectTcpSocket();
         });
     }
+}
+
+void GnssDevice::checkTcpConnection()
+{
+    if (tcpSocket->state() != QAbstractSocket::ConnectedState) return;
+    if (!tcpLastDataTimer.isValid() || tcpLastDataTimer.elapsed() < tcpDataTimeoutMs) return;
+
+    emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel,
+                        QString("GNSS TCP connection stalled (no data for %1 s), reconnecting").arg(tcpDataTimeoutMs / 1000));
+    tcpSocket->abort(); // triggers handleTcpStateChange(UnconnectedState), which schedules the reconnect
 }
 
 void GnssDevice::askUbloxVersion()
@@ -902,22 +995,163 @@ void GnssDevice::createGnssPlot()
 void GnssDevice::decodeSbf4014(const QByteArray &data)
 {
     const uchar* p = reinterpret_cast<const uchar*>(data.constData());
+    if (data.size() < 32) return;
 
     uint8_t N = p[28];
     uint8_t sbLen = p[29];
+    if (sbLen < 2 || data.size() < 32 + N * sbLen) return;
     const uchar* sb = p + 32;
-    int avgAgc = 0, ctr = 0;
+
+    QMap<int, int> agcBlocks; // frontEnd band id -> gain, main antenna only
     for (int i = 0; i < N; i++) {
         AGCEntry e;
         e.frontEnd = (uint8_t)sb[0] & 0x1f;
         e.gain = (int8_t)sb[1];
         e.ant = (uint8_t)sb[0] >> 5;
-        if (e.ant == 0) {
-            avgAgc += e.gain;
-            ctr++;
+        // Gain -128 means the frontend PLL is not locked (Do-Not-Use value)
+        if (e.ant == 0 && e.gain != -128) {
+            // Hide bands with no active tracked signal, once we've actually seen MeasEpoch data.
+            // Front-end 13 (S-band) carries no GNSS signal and is always shown if present.
+            const bool hasTrackedSignal = !septentrioMeasEpochSeen || e.frontEnd == 13
+                || septentrioFrontEndSignalTypes(e.frontEnd).intersects(septentrioActiveSignalTypes);
+            if (hasTrackedSignal) {
+                agcBlocks.insert(e.frontEnd, e.gain);
+                GnssAgcBlockData &block = gnssData.agcBlocks[e.frontEnd];
+                block.agc = e.gain;
+                block.frequencyMapped = true;
+                block.centerHz = septentrioFrontEndCenterHz(e.frontEnd);
+                block.frequencyLabel = septentrioFrontEndLabel(e.frontEnd, block.centerHz);
+            }
         }
         sb += sbLen;
     }
-    if (ctr) avgAgc /= ctr;
-    gnssData.agc = avgAgc;
+
+    const auto previousBlockIds = gnssData.agcBlocks.keys();
+    for (int blockId : previousBlockIds) {
+        if (!agcBlocks.contains(blockId)) gnssData.agcBlocks.remove(blockId);
+    }
+
+    if (!agcBlocks.isEmpty()) {
+        int sum = 0;
+        for (int gain : agcBlocks) sum += gain;
+        gnssData.agc = sum / agcBlocks.size();
+    }
+}
+
+void GnssDevice::decodeSbf4027(const QByteArray &data)
+{
+    const uchar* p = reinterpret_cast<const uchar*>(data.constData());
+    if (data.size() < 20) return;
+
+    uint8_t N1 = p[12];
+    uint8_t SB1Length = p[13];
+    uint8_t SB2Length = p[14];
+    if (SB1Length < 20 || SB2Length < 1) return;
+
+    QSet<int> activeSignalTypes;
+    int off = 20;
+    for (int i = 0; i < N1; i++) {
+        if (off + SB1Length > data.size()) return; // malformed/truncated, keep previous state
+        const uchar *type1 = p + off;
+        uint8_t type = type1[1];
+        uint8_t antenna = type >> 5;
+        uint8_t sigIdxLo = type & 0x1f;
+        uint8_t obsInfo = type1[18];
+        if (antenna == 0) {
+            int sigIdx = sigIdxLo == 31 ? 32 + (obsInfo >> 3) : sigIdxLo;
+            activeSignalTypes.insert(sigIdx);
+        }
+        uint8_t N2 = type1[19];
+
+        int type2Off = off + SB1Length;
+        for (int j = 0; j < N2; j++) {
+            if (type2Off + SB2Length > data.size()) return;
+            const uchar *type2 = p + type2Off;
+            uint8_t type2Field = type2[0];
+            uint8_t antenna2 = type2Field >> 5;
+            uint8_t sigIdxLo2 = type2Field & 0x1f;
+            if (antenna2 == 0) {
+                uint8_t obsInfo2 = SB2Length > 5 ? type2[5] : 0;
+                int sigIdx2 = sigIdxLo2 == 31 ? 32 + (obsInfo2 >> 3) : sigIdxLo2;
+                activeSignalTypes.insert(sigIdx2);
+            }
+            type2Off += SB2Length;
+        }
+        off = type2Off;
+    }
+
+    septentrioActiveSignalTypes = activeSignalTypes;
+    septentrioMeasEpochSeen = true;
+}
+
+void GnssDevice::decodeSbf4013(const QByteArray &data)
+{
+    // ChannelStatus: N is the number of ChannelSatInfo sub-blocks, i.e. satellites currently
+    // allocated to a tracking channel (section 4.2.16). Inactive channels are not included.
+    const uchar* p = reinterpret_cast<const uchar*>(data.constData());
+    if (data.size() < 20) return;
+
+    uint8_t N = p[14];
+    gnssData.satsTracked = N;
+    septentrioChannelStatusSeen = true;
+}
+
+void GnssDevice::decodeSbf4040(const QByteArray &data)
+{
+    // BBSamples: raw complex baseband I/Q samples (section 4.2.x). No pre-computed spectrum is
+    // available from Septentrio, unlike u-blox MON-SPAN, so the spectrum is built here with an FFT.
+    const uchar *p = reinterpret_cast<const uchar*>(data.constData());
+    if (data.size() < 28) return;
+
+    const quint16 N = qFromLittleEndian<quint16>(p + 14);
+    const quint8 antenna = p[16] & 0x07;
+    if (antenna != 0) return; // main antenna only, consistent with the rest of the Septentrio decoding
+    if (N == 0 || data.size() < 28 + 2 * N) return;
+
+    const quint32 sampleFreq = qFromLittleEndian<quint32>(p + 20);
+    const quint32 loFreq = qFromLittleEndian<quint32>(p + 24);
+    if (sampleFreq == 0) return;
+
+    fftw_complex *in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
+    fftw_complex *out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
+    for (quint16 i = 0; i < N; i++) {
+        // Each sample is a little-endian u2: low byte Q, high byte I, both two's complement (section 4.2.x)
+        in[i][0] = static_cast<double>(static_cast<qint8>(p[28 + i * 2 + 1])); // I
+        in[i][1] = static_cast<double>(static_cast<qint8>(p[28 + i * 2]));     // Q
+    }
+
+    fftw_plan plan = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_execute(plan);
+
+    GnssSpectrumBlock block;
+    block.levels.resize(N);
+    int index = 0;
+    for (int i = N / 2; i < N; i++) { // reorder so negative frequencies come first, like IqPlot's FFT display
+        double magnitude = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]);
+        block.levels[index++] = 20 * log10(magnitude > 1e-10 ? magnitude : 1e-10);
+    }
+    for (int i = 0; i < N / 2; i++) {
+        double magnitude = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]);
+        block.levels[index++] = 20 * log10(magnitude > 1e-10 ? magnitude : 1e-10);
+    }
+
+    fftw_destroy_plan(plan);
+    fftw_free(in);
+    fftw_free(out);
+
+    block.centerHz = loFreq;
+    block.spanHz = sampleFreq; // complex I/Q sampling: unambiguous span is the full sample rate, centered on loFreq
+    block.resolutionHz = sampleFreq / N;
+    block.timestamp = QDateTime::currentDateTime();
+
+    // The receiver retunes its front-end across different GNSS bands over time to build a full
+    // spectrum view (section 1.28), so successive BBSamples messages can report different LOFreq
+    // values - track each distinct one as its own selectable band, same concept as u-blox's
+    // per-message band array.
+    if (!septentrioSpectrumBandIndexByCenterHz.contains(loFreq))
+        septentrioSpectrumBandIndexByCenterHz.insert(loFreq, septentrioSpectrumBandIndexByCenterHz.size());
+    block.blockIndex = septentrioSpectrumBandIndexByCenterHz.value(loFreq);
+    block.blockCount = septentrioSpectrumBandIndexByCenterHz.size();
+
+    emit spectrumReady(block);
 }

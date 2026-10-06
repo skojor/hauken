@@ -64,6 +64,7 @@
 #include "geolimit.h"
 #include "gnssdisplay.h"
 #include "gnssmanager.h"
+#include "gnssspectrumwindow.h"
 #include "instrumentlist.h"
 #include "led/ledindicator.h"
 #include "mqttmanager.h"
@@ -200,6 +201,7 @@ private slots:
 
     void updGnssBox(const QString txt, const QString id, bool valid);
     void setWaterfallOption(QString s);
+    void updateGnssSpectrumWindows();
     void closeEvent(QCloseEvent *event) override;
 
     void traceIncidentAlarm(bool state);
@@ -327,6 +329,8 @@ private:
     QSpinBox *plotMaxholdTime = new QSpinBox;
     QComboBox *showWaterfall = new QComboBox;
     QSpinBox *waterfallTime = new QSpinBox;
+    QMap<QString, GnssSpectrumWindow *> gnssSpectrumWindows; // profileId -> window, only for profiles with showSpectrumWindow enabled
+    bool updatingGnssSpectrumWindows = false; // reentrancy guard, see MainWindow::updateGnssSpectrumWindows()
     QCPItemPixmap *qcpImage;
 
     TraceBuffer *traceBuffer = new TraceBuffer(config);

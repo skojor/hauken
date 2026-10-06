@@ -48,13 +48,22 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     receiverUblox->setText("U-blox M8/M9/M10/X20P and Septentrio support");
     receiverUblox->setToolTip("If checked the GPS will be configured as a uBlox receiver with enhanced binary protocol. \n"\
                        "Will enable several cool features, for now AGC and jamming indicator levels.\n"\
-                       "Of course this will only work if the connected GNSS device is a uBlox. Use at your own risk!\n" \
-                       "Septentrio support is limited to reading out AGC for each band on the main antenna for now, \n" \
+                       "Of course this will only work if the connected GNSS device is a uBlox or Septentrio. Use at your own risk!\n" \
+                       "Septentrio support reads out AGC per band for the main antenna, labelled by frequency band. \n" \
+                       "Bands with no actively tracked signal are hidden if the MeasEpoch SBF block is also enabled, \n" \
                        "although all binary and NMEA messages will be logged if logging is enabled.");
 
     receiverLayout->addRow(receiverTriggerRecording);
     receiverTriggerRecording->setText("Detected incidents triggers spectrum recording");
     receiverTriggerRecording->setToolTip("Any incidents detected will cause a recording to be started, and uploaded if configured");
+
+    receiverLayout->addRow(receiverShowSpectrumWindow);
+    receiverShowSpectrumWindow->setText("View spectrum in own window");
+    receiverShowSpectrumWindow->setToolTip("Opens a separate window showing this receiver's spectrum trace.\n"\
+                       "Only available for u-blox and Septentrio receivers that support sending spectrum data: "\
+                       "u-blox X20P (MON-SPAN), or Septentrio receivers with the BBSamples (4040) SBF block "\
+                       "enabled on the connected port (configured on the receiver itself, e.g. via RxTools or its "\
+                       "web interface - Hauken only decodes what the receiver is already configured to send).");
 
     receiversLayout->addWidget(receiverGroupBox, 3);
     pageLayout->addLayout(receiversLayout);
@@ -237,6 +246,7 @@ void GnssOptions::loadProfile(int index)
         receiverBaudrate->setCurrentText("4800");
         receiverLogToFile->setChecked(false);
         receiverUblox->setChecked(false);
+        receiverShowSpectrumWindow->setChecked(false);
         receiverTriggerRecording->setChecked(false);
         receiverGroupBox->setEnabled(false);
         return;
@@ -259,6 +269,7 @@ void GnssOptions::loadProfile(int index)
     receiverBaudrate->setVisible(isSerial);
     receiverLogToFile->setVisible(isSerial);
     receiverUblox->setVisible(isSerial);
+    receiverShowSpectrumWindow->setVisible(isSerial);
 
     if (isSerial) {
         if (!profile.portName.isEmpty() && receiverPort->findText(profile.portName) < 0)
@@ -267,6 +278,7 @@ void GnssOptions::loadProfile(int index)
         receiverBaudrate->setCurrentText(profile.baudrate);
         receiverLogToFile->setChecked(profile.logToFile);
         receiverUblox->setChecked(profile.ublox);
+        receiverShowSpectrumWindow->setChecked(profile.showSpectrumWindow);
     }
 }
 
@@ -285,6 +297,7 @@ void GnssOptions::storeCurrentProfile()
         profile.baudrate = receiverBaudrate->currentText().trimmed();
         profile.logToFile = receiverLogToFile->isChecked();
         profile.ublox = receiverUblox->isChecked();
+        profile.showSpectrumWindow = receiverShowSpectrumWindow->isChecked();
     }
 
     updateProfileListItem(currentProfileIndex);
