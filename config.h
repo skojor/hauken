@@ -390,6 +390,8 @@ public slots:
     int getPlotResolution() { return plotResolution;}
     QByteArray getGnssDisplayWindowState() { return settings->value("gnssDisplay/windowState", "").toByteArray();}
     void setGnssDisplayWindowState(QByteArray arr)  { settings->setValue("gnssDisplay/windowState", arr); emit settingsUpdated();}
+    QByteArray getGnssSpectrumWindowGeometry(const QString &profileId) { return settings->value("gnss/receivers/" + profileId + "/spectrumWindowGeometry", "").toByteArray();}
+    void setGnssSpectrumWindowGeometry(const QString &profileId, QByteArray arr) { settings->setValue("gnss/receivers/" + profileId + "/spectrumWindowGeometry", arr); emit settingsUpdated();}
 
 
     // trig line

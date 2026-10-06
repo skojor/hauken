@@ -23,3 +23,7 @@ rpi/
 20260922_Bodoe_gnss_1_binary.log
 build-debug.log
 git-diff-check.log
+.vscode/
+AsteRx RB3 Pro Firmware v2.0.0 Reference Guide.pdf AsteRx-U3 Firmware v4.15.2 Reference Guide.pdf
+buildlog3.txt
+AsterRx*

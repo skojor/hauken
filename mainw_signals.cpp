@@ -197,6 +197,9 @@ void MainWindow::setSignals()
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+    connect(gnssManager, &GnssManager::gnssSpectrumReady, this, [this](const QString &profileId, const GnssSpectrumBlock &block) {
+        if (gnssSpectrumWindows.contains(profileId)) gnssSpectrumWindows.value(profileId)->receiveSpectrum(block);
+    });
 
     connect(traceBuffer,
             &TraceBuffer::newDispMaxhold,
@@ -311,6 +314,7 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, traceBuffer, &TraceBuffer::updSettings);
     connect(config.data(), &Config::settingsUpdated, sdefRecorder, &SdefRecorder::updSettings);
     connect(config.data(), &Config::settingsUpdated, gnssManager, &GnssManager::updSettings);
+    connect(config.data(), &Config::settingsUpdated, this, &MainWindow::updateGnssSpectrumWindows);
     connect(config.data(), &Config::settingsUpdated, notifications, &Notifications::updSettings);
     connect(config.data(), &Config::settingsUpdated, waterfall, &Waterfall::updSettings);
     connect(config.data(), &Config::settingsUpdated, iqPlot, &IqPlot::updSettings);

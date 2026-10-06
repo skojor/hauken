@@ -77,6 +77,8 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     gnssmanager.cpp gnssmanager.h
     gnssoptions.cpp gnssoptions.h
     gnssreceiverprofile.h
+    gnssspectrumblock.h
+    gnssspectrumwindow.cpp gnssspectrumwindow.h
     instrumentlist.cpp instrumentlist.h
     iqoptions.cpp iqoptions.h
     led/ledindicator.cpp led/ledindicator.h

@@ -70,6 +70,15 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
     connect(device, &GnssDevice::analyzeThisData, analyzer, &GnssAnalyzer::getData);
     connect(device, &GnssDevice::toIncidentLog, this, &GnssManager::toIncidentLog);
     connect(device, &GnssDevice::positionUpdate, this, &GnssManager::positionUpdate);
+    connect(device, &GnssDevice::spectrumReady, this, [this, profile](const GnssSpectrumBlock &block) {
+        // Queued: display-side code triggered from this can end up back in Config::settingsUpdated ->
+        // GnssManager::updSettings() -> this same device's updSettings(), which must not reenter
+        // while GnssDevice::decodeBinary()/handleBuffer() is still on the call stack.
+        const QString profileId = profile.id;
+        QMetaObject::invokeMethod(this, [this, profileId, block] {
+            emit gnssSpectrumReady(profileId, block);
+        }, Qt::QueuedConnection);
+    });
     connect(device, &GnssDevice::sendGnssPlotFilename, this, [this, profile](const QString &filename) {
         emit sendGnssPlotFilename(profile.id, config->getGnssReceiverProfile(profile.id).name, filename);
     });

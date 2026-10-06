@@ -57,6 +57,14 @@ GnssOptions::GnssOptions(QSharedPointer<Config> c)
     receiverTriggerRecording->setText("Detected incidents triggers spectrum recording");
     receiverTriggerRecording->setToolTip("Any incidents detected will cause a recording to be started, and uploaded if configured");
 
+    receiverLayout->addRow(receiverShowSpectrumWindow);
+    receiverShowSpectrumWindow->setText("View spectrum in own window");
+    receiverShowSpectrumWindow->setToolTip("Opens a separate window showing this receiver's spectrum trace.\n"\
+                       "Only available for u-blox and Septentrio receivers that support sending spectrum data: "\
+                       "u-blox X20P (MON-SPAN), or Septentrio receivers with the BBSamples (4040) SBF block "\
+                       "enabled on the connected port (configured on the receiver itself, e.g. via RxTools or its "\
+                       "web interface - Hauken only decodes what the receiver is already configured to send).");
+
     receiversLayout->addWidget(receiverGroupBox, 3);
     pageLayout->addLayout(receiversLayout);
 
@@ -238,6 +246,7 @@ void GnssOptions::loadProfile(int index)
         receiverBaudrate->setCurrentText("4800");
         receiverLogToFile->setChecked(false);
         receiverUblox->setChecked(false);
+        receiverShowSpectrumWindow->setChecked(false);
         receiverTriggerRecording->setChecked(false);
         receiverGroupBox->setEnabled(false);
         return;
@@ -260,6 +269,7 @@ void GnssOptions::loadProfile(int index)
     receiverBaudrate->setVisible(isSerial);
     receiverLogToFile->setVisible(isSerial);
     receiverUblox->setVisible(isSerial);
+    receiverShowSpectrumWindow->setVisible(isSerial);
 
     if (isSerial) {
         if (!profile.portName.isEmpty() && receiverPort->findText(profile.portName) < 0)
@@ -268,6 +278,7 @@ void GnssOptions::loadProfile(int index)
         receiverBaudrate->setCurrentText(profile.baudrate);
         receiverLogToFile->setChecked(profile.logToFile);
         receiverUblox->setChecked(profile.ublox);
+        receiverShowSpectrumWindow->setChecked(profile.showSpectrumWindow);
     }
 }
 
@@ -286,6 +297,7 @@ void GnssOptions::storeCurrentProfile()
         profile.baudrate = receiverBaudrate->currentText().trimmed();
         profile.logToFile = receiverLogToFile->isChecked();
         profile.ublox = receiverUblox->isChecked();
+        profile.showSpectrumWindow = receiverShowSpectrumWindow->isChecked();
     }
 
     updateProfileListItem(currentProfileIndex);

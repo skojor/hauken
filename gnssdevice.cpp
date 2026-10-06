@@ -3,6 +3,7 @@
 #include "qcustomplot.h"
 #include "ubloxmonrfparser.h"
 #include "ubloxmonspanparser.h"
+#include "fftw3.h"
 
 namespace {
 QString frequencyLabel(const UbloxRfBandMetadata &metadata)
@@ -269,6 +270,8 @@ void GnssDevice::handleBuffer()
                 decodeSbf4027(sbfBinSentence);
             else if (id == 4013)
                 decodeSbf4013(sbfBinSentence);
+            else if (id == 4040)
+                decodeSbf4040(sbfBinSentence);
 
             if (logToFile) {
                 appendToBinaryfile(sbfBinSentence);
@@ -497,6 +500,20 @@ void GnssDevice::decodeBinary(const QByteArray &val)
                 rfBandCorrelator.observeMonSpan(spanBlocks, QDateTime::currentMSecsSinceEpoch(),
                                                 binaryMessageSequence);
                 applyRfBandMapping(gnssData, rfBandCorrelator.mapping());
+
+                for (int blockIndex = 0; blockIndex < spanBlocks.size(); blockIndex++) {
+                    const UbloxMonSpanBlock &spanBlock = spanBlocks.at(blockIndex);
+                    GnssSpectrumBlock spectrumBlock;
+                    spectrumBlock.levels.reserve(spanBlock.spectrum.size());
+                    for (char byte : spanBlock.spectrum) spectrumBlock.levels.append(static_cast<quint8>(byte));
+                    spectrumBlock.centerHz = spanBlock.centerHz;
+                    spectrumBlock.spanHz = spanBlock.spanHz;
+                    spectrumBlock.resolutionHz = spanBlock.resolutionHz;
+                    spectrumBlock.timestamp = QDateTime::currentDateTime();
+                    spectrumBlock.blockIndex = blockIndex;
+                    spectrumBlock.blockCount = spanBlocks.size();
+                    emit spectrumReady(spectrumBlock);
+                }
             }
             else {
                 rfBandCorrelator.invalidate();
@@ -1077,4 +1094,64 @@ void GnssDevice::decodeSbf4013(const QByteArray &data)
     uint8_t N = p[14];
     gnssData.satsTracked = N;
     septentrioChannelStatusSeen = true;
+}
+
+void GnssDevice::decodeSbf4040(const QByteArray &data)
+{
+    // BBSamples: raw complex baseband I/Q samples (section 4.2.x). No pre-computed spectrum is
+    // available from Septentrio, unlike u-blox MON-SPAN, so the spectrum is built here with an FFT.
+    const uchar *p = reinterpret_cast<const uchar*>(data.constData());
+    if (data.size() < 28) return;
+
+    const quint16 N = qFromLittleEndian<quint16>(p + 14);
+    const quint8 antenna = p[16] & 0x07;
+    if (antenna != 0) return; // main antenna only, consistent with the rest of the Septentrio decoding
+    if (N == 0 || data.size() < 28 + 2 * N) return;
+
+    const quint32 sampleFreq = qFromLittleEndian<quint32>(p + 20);
+    const quint32 loFreq = qFromLittleEndian<quint32>(p + 24);
+    if (sampleFreq == 0) return;
+
+    fftw_complex *in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
+    fftw_complex *out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
+    for (quint16 i = 0; i < N; i++) {
+        // Each sample is a little-endian u2: low byte Q, high byte I, both two's complement (section 4.2.x)
+        in[i][0] = static_cast<double>(static_cast<qint8>(p[28 + i * 2 + 1])); // I
+        in[i][1] = static_cast<double>(static_cast<qint8>(p[28 + i * 2]));     // Q
+    }
+
+    fftw_plan plan = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_execute(plan);
+
+    GnssSpectrumBlock block;
+    block.levels.resize(N);
+    int index = 0;
+    for (int i = N / 2; i < N; i++) { // reorder so negative frequencies come first, like IqPlot's FFT display
+        double magnitude = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]);
+        block.levels[index++] = 20 * log10(magnitude > 1e-10 ? magnitude : 1e-10);
+    }
+    for (int i = 0; i < N / 2; i++) {
+        double magnitude = sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]);
+        block.levels[index++] = 20 * log10(magnitude > 1e-10 ? magnitude : 1e-10);
+    }
+
+    fftw_destroy_plan(plan);
+    fftw_free(in);
+    fftw_free(out);
+
+    block.centerHz = loFreq;
+    block.spanHz = sampleFreq; // complex I/Q sampling: unambiguous span is the full sample rate, centered on loFreq
+    block.resolutionHz = sampleFreq / N;
+    block.timestamp = QDateTime::currentDateTime();
+
+    // The receiver retunes its front-end across different GNSS bands over time to build a full
+    // spectrum view (section 1.28), so successive BBSamples messages can report different LOFreq
+    // values - track each distinct one as its own selectable band, same concept as u-blox's
+    // per-message band array.
+    if (!septentrioSpectrumBandIndexByCenterHz.contains(loFreq))
+        septentrioSpectrumBandIndexByCenterHz.insert(loFreq, septentrioSpectrumBandIndexByCenterHz.size());
+    block.blockIndex = septentrioSpectrumBandIndexByCenterHz.value(loFreq);
+    block.blockCount = septentrioSpectrumBandIndexByCenterHz.size();
+
+    emit spectrumReady(block);
 }

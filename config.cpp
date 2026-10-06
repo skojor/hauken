@@ -161,6 +161,7 @@ GnssReceiverProfile Config::getGnssReceiverProfile(const QString &id) const
     profile.logToFile = settings->value(prefix + "logToFile", false).toBool();
     profile.triggerRecording = settings->value(prefix + "triggerRecording", false).toBool();
     profile.nonRemovable = settings->value(prefix + "nonRemovable", false).toBool();
+    profile.showSpectrumWindow = settings->value(prefix + "showSpectrumWindow", false).toBool();
     return profile;
 }
 
@@ -179,6 +180,7 @@ void Config::setGnssReceiverProfile(const GnssReceiverProfile &profile)
     settings->setValue(prefix + "logToFile", profile.logToFile);
     settings->setValue(prefix + "triggerRecording", profile.triggerRecording);
     settings->setValue(prefix + "nonRemovable", profile.nonRemovable);
+    settings->setValue(prefix + "showSpectrumWindow", profile.showSpectrumWindow);
 
     QStringList ids = getGnssReceiverProfileIds();
     if (!ids.contains(id)) {

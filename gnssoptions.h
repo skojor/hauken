@@ -48,6 +48,7 @@ private:
     QComboBox *receiverBaudrate = new QComboBox;
     QCheckBox *receiverLogToFile = new QCheckBox;
     QCheckBox *receiverUblox = new QCheckBox;
+    QCheckBox *receiverShowSpectrumWindow = new QCheckBox;
     QCheckBox *receiverTriggerRecording = new QCheckBox;
 };
 

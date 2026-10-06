@@ -44,6 +44,7 @@ signals:
     void positionUpdate(bool valid, double lat, double lng);
     void sendGnssPlotFilename(const QString &profileId, const QString &profileName, QString filename);
     void gnssDisabled(const QString &profileId);
+    void gnssSpectrumReady(const QString &profileId, const GnssSpectrumBlock &block);
 
 private:
     void addReceiver(const GnssReceiverProfile &profile);

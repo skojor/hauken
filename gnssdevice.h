@@ -19,6 +19,7 @@
 #include "config.h"
 #include "typedefs.h"
 #include "ubloxrfbandcorrelator.h"
+#include "gnssspectrumblock.h"
 
 /*
  *  Class connecting to and reading data from one gnss receiver.
@@ -63,6 +64,7 @@ signals:
     void positionUpdate(bool b, double lat, double lng);
     void gnssDisabled();
     void sendGnssPlotFilename(QString);
+    void spectrumReady(const GnssSpectrumBlock &block);
 
 private slots:
     void handleBuffer();
@@ -92,6 +94,7 @@ private slots:
     void decodeSbf4014(const QByteArray &data);
     void decodeSbf4027(const QByteArray &data);
     void decodeSbf4013(const QByteArray &data);
+    void decodeSbf4040(const QByteArray &data);
 
 private:
     QSerialPort *gnss = new QSerialPort;
@@ -140,6 +143,7 @@ private:
     QSet<int> septentrioActiveSignalTypes;
     bool septentrioMeasEpochSeen = false;
     bool septentrioChannelStatusSeen = false; // once true, satsTracked comes from SBF ChannelStatus (4013) instead of NMEA
+    QMap<quint32, int> septentrioSpectrumBandIndexByCenterHz; // stable band index per distinct BBSamples (4040) LOFreq seen
 };
 
 
