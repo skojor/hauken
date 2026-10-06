@@ -541,6 +541,7 @@ public:
             hasPscan = true;
             hasAvgType = true;
             hasAutoAtt = true;
+            hasGainControl = true;
             id = "EB500";
             attrHeader = true;
             optHeaderEb500 = true;
