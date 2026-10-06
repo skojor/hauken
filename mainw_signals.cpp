@@ -334,6 +334,8 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
+    connect(gnssManager, &GnssManager::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
+    connect(gnssManager, &GnssManager::alarm, iqPlot, &IqPlot::requestIqData);
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::resetTimer);
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::requestIqData);
 
