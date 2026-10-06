@@ -4,8 +4,10 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QDialog>
+#include <QColor>
 #include <QImage>
 #include <QMap>
+#include <QMouseEvent>
 #include <QSharedPointer>
 #include <QSpinBox>
 #include "config.h"
@@ -38,6 +40,9 @@ private slots:
     void maxholdTimeChanged(int seconds);
     void waterfallModeChanged(const QString &mode);
     void waterfallTimeChanged(int seconds);
+    void showSpectrumToolTip(QMouseEvent *event);
+    void spectrumMousePress(QMouseEvent *event);
+    void spectrumMouseRelease(QMouseEvent *event);
 
 private:
     void plotBlock(const GnssSpectrumBlock &block);
@@ -47,6 +52,14 @@ private:
     void updateWaterfall(int blockIndex, const GnssSpectrumBlock &block, qint64 timestampMs);
     void displaySelectedWaterfall();
     void clearWaterfallHistory();
+    void loadBandOverlays();
+    void updateBandOverlays();
+    void overlayEnabledChanged(bool enabled);
+    void addSpectrumMarker(double frequencyMHz);
+    void removeSpectrumMarker(int markerIndex);
+    void updateSpectrumMarkers();
+    int spectrumMarkerAt(const QPoint &position) const;
+    double spectrumLevelAt(double frequencyMHz) const;
 
     struct MaxholdFrame
     {
@@ -71,6 +84,27 @@ private:
         qint64 lastWaterfallRowMs = -1;
     };
 
+    struct BandPlanOverlay
+    {
+        double lowerMHz = 0;
+        double upperMHz = 0;
+        double centerMHz = 0;
+        int labelOffset = 0;
+        QString name;
+        QColor color;
+        QCPItemRect *area = nullptr;
+        QCPItemText *label = nullptr;
+        QCPItemStraightLine *centerLine = nullptr;
+    };
+
+    struct SpectrumMarker
+    {
+        double frequencyMHz = 0;
+        QColor color;
+        QCPItemStraightLine *line = nullptr;
+        QCPItemText *label = nullptr;
+    };
+
     QSharedPointer<Config> config;
     QString profileId;
     bool initializing = true; // true while still being constructed, to avoid saving/emitting on the initial resize
@@ -85,6 +119,14 @@ private:
     QCheckBox *overlayEnabled = new QCheckBox;
     QMap<int, GnssSpectrumBlock> lastBlockByIndex; // blockIndex -> most recently received block
     QMap<int, BandDisplayState> bandDisplayState;
+    QVector<BandPlanOverlay> bandPlanOverlays;
+    QVector<double> currentTraceFrequencies;
+    QVector<double> currentTraceLevels;
+    QVector<SpectrumMarker> spectrumMarkers;
+    int draggedSpectrumMarker = -1;
+    QPoint markerDragStartPosition;
+    QPoint leftMousePressPosition;
+    bool markerDragMoved = false;
     int selectedBlockIndex = 0;
 };
 
