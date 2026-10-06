@@ -14,7 +14,6 @@ torch/lib
 build/
 *.user
 version.h
-
 include/msal
 libs/msalruntime.lib
 include/lame
@@ -24,6 +23,8 @@ rpi/
 build-debug.log
 git-diff-check.log
 .vscode/
-AsteRx RB3 Pro Firmware v2.0.0 Reference Guide.pdf AsteRx-U3 Firmware v4.15.2 Reference Guide.pdf
 buildlog3.txt
-AsterRx*
+AsteRx*
+gnssspectrumblock.h 
+gnssspectrumwindow.cpp 
+gnssspectrumwindow.h
