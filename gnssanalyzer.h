@@ -81,6 +81,7 @@ private:
 
     bool anyOffsetTriggered() const;
     void emitAlarmEndedIfNoOffsetTriggered();
+    void reportRecordingTrigger(const QString &reason);
 
     QElapsedTimer posOffsetTimer, altOffsetTimer, cnoTimer, agcTimer, timeOffsetTimer, jamIndTimer;
     QElapsedTimer posOffsetFilterTimer, altOffsetFilterTimer, cnoFilterTimer, agcFilterTimer, timeOffsetFilterTimer, jamIndFilterTimer;
