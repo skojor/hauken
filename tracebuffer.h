@@ -62,6 +62,7 @@ public slots:
     void recorderEnded();
     void incidenceTriggered();
     void saveAvgLevelsForIncident(const QString &basePath);
+    bool loadAvgLevelsFromFile(const QString &path, double startHz, double stopHz, int dataPoints);
 
 signals:
     void newDispTrace(const QVector<double> &data);

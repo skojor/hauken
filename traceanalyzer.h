@@ -31,6 +31,8 @@ public slots:
     void setAnalyzerNotReady() { ready = false; resetSignificantLevelChangeState();}
     void freqChanged(double a, double b) { startFreq = a * 1e-6; stopFreq = b * 1e-6;}
     void resChanged(double a) { resolution = a * 1e-3;}
+    void forceAlarm(const QString &reason);
+    void forceAlarmEnded();
 
 signals:
     void alarm();

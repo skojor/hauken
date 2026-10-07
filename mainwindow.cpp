@@ -72,6 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     arduinoPtr = new Arduino(config);
     read1809Data = new Read1809Data(config);
+    recordingReplayer = new RecordingReplayer(config, this);
     simulator = new Simulator(this);
 
     incidentLog->setAcceptRichText(true);

@@ -423,7 +423,7 @@ void MainWindow::setSignals()
             &SdefRecorder::endRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this]() {
-        if (measurementDevice->isConnected() || read1809Data->isRunning()) {
+        if (measurementDevice->isConnected() || read1809Data->isRunning() || recordingReplayer->isRunning()) {
             ledTraceStatus->setState(false);
             ledTraceStatus->setOffColor(Qt::yellow);
             ledTraceStatus->setToolTip("RF average level calculation");
@@ -670,6 +670,56 @@ void MainWindow::setSignals()
         tracesPerSecond = d;
         showBytesPerSec(0); // to force tracePerSecond view
     });
+
+    connect(recordingReplayer, &RecordingReplayer::traceReady, traceBuffer, &TraceBuffer::addTrace);
+    connect(recordingReplayer, &RecordingReplayer::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+    connect(recordingReplayer, &RecordingReplayer::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+    connect(recordingReplayer, &RecordingReplayer::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
+    connect(recordingReplayer, &RecordingReplayer::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+    connect(recordingReplayer, &RecordingReplayer::frequencyChanged, this, [this](double a, double b) {
+        traceAnalyzer->freqChanged(a, b);
+        customPlotController->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+        traceAnalyzer->updTrigFrequencyTable();
+        traceBuffer->emptyBuffer();
+    });
+    connect(recordingReplayer, &RecordingReplayer::resolutionChanged, this, [this](double a) {
+        traceAnalyzer->resChanged(a);
+        customPlotController->resChanged(a);
+        aiPtr->resChanged(a);
+        traceBuffer->emptyBuffer();
+    });
+    connect(recordingReplayer, &RecordingReplayer::tracesPerSecondChanged, this, [this](double d) {
+        sdefRecorder->updTracesPerSecond(d);
+        tracesPerSecond = d;
+        showBytesPerSec(0);
+    });
+    connect(recordingReplayer, &RecordingReplayer::playbackRunning, this, [this](bool b) {
+        customPlotController->updDeviceConnected(b);
+        if (!b)
+            traceBuffer->deviceDisconnected();
+    });
+    connect(recordingReplayer, &RecordingReplayer::playbackRunning, waterfall, &Waterfall::stopPlot);
+    connect(recordingReplayer, &RecordingReplayer::playbackRunning, sdefRecorder, &SdefRecorder::setDeviceCconnectedState);
+    connect(recordingReplayer, &RecordingReplayer::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(recordingReplayer, &RecordingReplayer::triggerAlarm, this, [this](const QString &source) {
+        static const QHash<QString, SdefRecorder::TriggerSource> manualSources = {
+            {"Manual", SdefRecorder::TriggerSource::Manual},
+            {"Mqtt", SdefRecorder::TriggerSource::Mqtt},
+            {"AutoRecorder", SdefRecorder::TriggerSource::AutoRecorder}};
+        if (manualSources.contains(source)) {
+            iqPlot->requestIqData();
+            SdefRecorder *recorder = sdefRecorder;
+            const SdefRecorder::TriggerSource triggerSource = manualSources.value(source);
+            QMetaObject::invokeMethod(recorder, [recorder, triggerSource] {
+                recorder->setTriggerSource(triggerSource);
+                recorder->triggerRecordingWithoutAnalysisArtifacts();
+            }, Qt::QueuedConnection);
+        }
+        else
+            traceAnalyzer->forceAlarm("Recording triggered by replay at original trigger time");
+    });
+    connect(recordingReplayer, &RecordingReplayer::triggerAlarmEnded, traceAnalyzer, &TraceAnalyzer::forceAlarmEnded);
 
     connect(traceAnalyzer,
             &TraceAnalyzer::alarm,

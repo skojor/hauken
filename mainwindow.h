@@ -73,6 +73,7 @@
 #include "pmrtablewdg.h"
 #include "positionreport.h"
 #include "read1809data.h"
+#include "recordingreplayer.h"
 #include "restapi.h"
 #include "sdefrecorder.h"
 #include "tcpdatastream.h"
@@ -355,6 +356,7 @@ private:
 
     Arduino *arduinoPtr;
     Read1809Data *read1809Data;
+    RecordingReplayer *recordingReplayer = nullptr;
     InstrumentList *instrumentList = nullptr;
     GnssDisplay *gnssDisplay = nullptr;
 

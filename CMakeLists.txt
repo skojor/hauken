@@ -97,6 +97,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     positionreportoptions.cpp positionreportoptions.h
     qcustomplot.cpp qcustomplot.h
     read1809data.cpp read1809data.h
+    recordingreplayer.cpp recordingreplayer.h
     receiveroptions.cpp receiveroptions.h
     restapi.cpp restapi.h
     sdefoptions.cpp sdefoptions.h

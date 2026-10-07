@@ -326,9 +326,11 @@ void TraceBuffer::finishAvgLevelCalc()
 void TraceBuffer::restartCalcAvgLevel(bool startFresh)
 {
     flagAvgLevelRestarted = true;
-    if (!useSavedAvgLevels or startFresh) {
-        QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
-        file.remove();
+    if (!useSavedAvgLevels or startFresh or config->isReplayMode()) {
+        if (!config->isReplayMode()) {
+            QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
+            file.remove();
+        }
 
         init = true;
         tracesUsedInAvg = 0;
@@ -486,6 +488,9 @@ void TraceBuffer::saveAvgLevelsForIncident(const QString &basePath)
 
 void TraceBuffer::saveAvgLevels(const QString &path)
 {
+    if (path.isEmpty() && config->isReplayMode())
+        return;
+
     QFile file (path.isEmpty() ? config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName() : path);
     if (file.open(QIODevice::WriteOnly)) {
         QBuffer buffer;
@@ -580,6 +585,46 @@ bool TraceBuffer::restoreAvgLevels()
         //qWarning() << "Could not open file" << config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName() << "for reading";
     }
     return false;
+}
+
+bool TraceBuffer::loadAvgLevelsFromFile(const QString &path, double startHz, double stopHz, int dataPoints)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return false;
+
+    quint64 a_startfreq = 0, a_stopfreq = 0, a_ffmCenterFreq = 0;
+    int a_res = 0, a_sp = 0;
+    Instrument::FftMode a_fftm = Instrument::FftMode::OFF;
+    int a_antPort = 0, a_autoAtt = 0, a_att = 0, a_gainControl = 0;
+
+    QDataStream ds(&file);
+    ds >> a_startfreq >> a_stopfreq >> a_res >> a_ffmCenterFreq >> a_sp >> a_fftm >> a_antPort >> a_autoAtt >> a_att >> a_gainControl;
+
+    QVector<qint16> levels;
+    while (ds.status() == QDataStream::Ok && !ds.atEnd()) {
+        qint16 val;
+        ds >> val;
+        levels.append(val);
+    }
+
+    // Tolerance covers kHz rounding in the .cef header
+    if (ds.status() != QDataStream::Ok || levels.size() != dataPoints
+        || qAbs((double)a_startfreq - startHz) > 1e3 || qAbs((double)a_stopfreq - stopHz) > 1e3) {
+        qWarning() << "Replay: average level file" << path << "does not match recording, ignoring";
+        return false;
+    }
+
+    averageLevel = levels;
+    maxholdBuffer.clear();
+    maxholdBufferAggregate.clear();
+    averageDispLevel.clear();
+    averageDispLevel.resize(plotResolution);
+    averageDispLevelNormalized.clear();
+    tracesUsedInAvg = tracesNeededForAvg - 1;
+    avgFactor = 1;
+    flagAvgLevelRestarted = true;
+    return true;
 }
 
 QVector<double> TraceBuffer::retMaxhold()
