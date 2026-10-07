@@ -232,14 +232,17 @@ void IqPlot::requestIqData()
     emit reqIqCenterFrequency();
     lastIqRequestTimer->start(75e3); // Reset timer as long as incident is ongoing
 
-    if (config->getIqCreateFftPlot() && !flagOngoingAlarm) // New alarm signal received
+    if ((config->getIqCreateFftPlot() || !replayFreqs.isEmpty()) && !flagOngoingAlarm) // New alarm signal received
     {
         flagOngoingAlarm = true;
 
         samplesNeeded = 0; //(int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
 
         listFreqs.clear();
-        if (config->getIqRecordMultipleBands()) {
+        if (!replayFreqs.isEmpty()) {
+            listFreqs = replayFreqs;
+        }
+        else if (config->getIqRecordMultipleBands()) {
             listFreqs = config->getIqMultibandCenterFreqs();
         }
 
@@ -250,7 +253,7 @@ void IqPlot::requestIqData()
             if ((int)centerFrequency != 0) listFreqs.append(centerFrequency / 1e6);
         }
 
-        if (config->getIqRecordAllTrigArea() || listFreqs.isEmpty()) {
+        if ((config->getIqRecordAllTrigArea() && replayFreqs.isEmpty()) || listFreqs.isEmpty()) {
             QStringList stringListTrigFreqs = config->getTrigFrequencies();
             if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here? Shouldn't happen, set center to FFM center for now
                 listFreqs.append(1e-6 * config->getInstrFfmCenterFreq());
@@ -408,9 +411,10 @@ void IqPlot::updSettings()
 
 void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 timestamp)
 {
+    const quint32 expectedBw = replayBandwidth ? replayBandwidth : (quint32)(config->getIqFftPlotBw() * 1e3);
     if (!listFreqs.isEmpty()
         && freq == (quint64)(listFreqs.first() * 1e6)
-        && bw == (quint32)(config->getIqFftPlotBw() * 1e3))
+        && bw == expectedBw)
     {
         flagHeaderValidated = true;
         m_iqMetadata.samplerate = rate;
@@ -418,7 +422,9 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         m_iqMetadata.centerfreq = freq;
         m_iqMetadata.timestamp = AppClock::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
         m_iqMetadata.trigFrequency = trigFrequency;
-        if (!samplesNeeded)
+        if (replaySampleCounts.contains(freq))
+            samplesNeeded = qMin((qint64)(config->getIqLogTime() * rate), replaySampleCounts.value(freq));
+        else if (!samplesNeeded)
             samplesNeeded = (int)(config->getIqLogTime() * rate);
         const qsizetype requiredSamples = qsizetype(samplesNeeded);
         if (iqSamples.capacity() < requiredSamples)
@@ -431,7 +437,7 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         if (!listFreqs.isEmpty()) {
             qDebug() << "I/Q header rejected"
                      << "expectedFreq" << quint64(listFreqs.first() * 1e6)
-                     << "expectedBw" << quint32(config->getIqFftPlotBw() * 1e3)
+                     << "expectedBw" << expectedBw
                      << "gotFreq" << freq
                      << "gotBw" << bw
                      << "gotRate" << rate
@@ -448,8 +454,8 @@ void IqPlot::receiverControl()
     emit resetTimeoutTimer();
 
     if (listFreqs.size() > 1) {// we have more work to do
-        throwFirstSamples = 12 * m_iqMetadata.samplerate / 1e7;
-        if (!throwFirstSamples) throwFirstSamples = 1;
+        throwFirstSamples = replayFreqs.isEmpty() ? 12 * m_iqMetadata.samplerate / 1e7 : 0; // replayed files hold no settling samples
+        if (!throwFirstSamples && replayFreqs.isEmpty()) throwFirstSamples = 1;
         timeoutTimer->start(IQTRANSFERTIMEOUT_MS); // restart timer for new freq
         listFreqs.removeFirst();
         //emit headerValidated(false);
@@ -466,6 +472,16 @@ void IqPlot::receiverControl()
         }
         iqSamplesVector.clear();
     }
+}
+
+void IqPlot::setReplayIqPlan(const QVector<double> &freqsMHz, const QVector<qint64> &sampleCounts, quint32 bandwidthHz)
+{
+    replayFreqs = freqsMHz;
+    replayBandwidth = freqsMHz.isEmpty() ? 0 : bandwidthHz;
+    replaySampleCounts.clear();
+    for (int i = 0; i < freqsMHz.size() && i < sampleCounts.size(); i++)
+        replaySampleCounts.insert((quint64)(freqsMHz[i] * 1e6), sampleCounts[i]);
+    resetTimer();
 }
 
 void IqPlot::readFolder(const QString &folder)

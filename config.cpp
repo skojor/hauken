@@ -427,6 +427,10 @@ bool Config::beginReplay(const QString &snapshotPath, const QString &stationName
 
     if (!stationName.isEmpty())
         replaySettings->setValue("station/Name", stationName);
+    // Live receivers are disconnected during replay, replayed receivers are added as profiles by the replayer
+    replaySettings->remove("gnss/receivers");
+    replaySettings->setValue("gnss/receiverProfileIds", QStringList());
+    replaySettings->setValue("sdef/GpsSource", QString());
     replaySettings->setValue("logFolder", QDir(liveLogFolder).filePath("replay"));
     replaySettings->setValue("sdef/SaveToFile", true);
     replaySettings->setValue("sdef/UploadFile", false);

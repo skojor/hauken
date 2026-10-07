@@ -35,6 +35,7 @@ public slots:
     void saveAllBacklogs();
     void setInstrumentGnssConnected(bool connected);
     void reqPositionForProfile(const QString &profileId);
+    void injectReplayData(const QString &profileId, const QByteArray &data);
 
 signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);

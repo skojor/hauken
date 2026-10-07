@@ -108,7 +108,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
 
     connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
             {
-                if (this->gnss->isOpen() || tcpSocket->isOpen()) emit analyzeThisData(gnssData);
+                if (this->gnss->isOpen() || tcpSocket->isOpen() || replayMode) emit analyzeThisData(gnssData);
                 checkPosValid(); // run once per sec
             });
 
@@ -135,8 +135,27 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
 
 }
 
+GnssDevice::~GnssDevice()
+{
+    // Members are unparented, close the port explicitly so it can be reopened
+    gnss->close();
+    tcpSocket->abort();
+    delete gnss;
+    delete tcpSocket;
+    delete sendToAnalyzerTimer;
+    delete delayedReportTimer;
+    delete tcpWatchdogTimer;
+    delete backlogCleanupTimer;
+    delete hostAddress;
+}
+
 void GnssDevice::start()
 {
+    if (replayMode) {
+        if (!sendToAnalyzerTimer->isActive())
+            sendToAnalyzerTimer->start(1000);
+        return;
+    }
     if (config->getGnssReceiverProfile(gnssData.id).enabled &&
         (!gnss->isOpen() || tcpSocket->state() == QAbstractSocket::UnconnectedState)) connectToPort();
     sendToAnalyzerTimer->stop();
@@ -172,6 +191,20 @@ void GnssDevice::connectToPort()
             gnss->setDataTerminalReady(true);
             if (uBloxDevice) askUbloxVersion();
         }
+    }
+}
+
+void GnssDevice::injectBytes(const QByteArray &data)
+{
+    // Small pieces, handleBuffer() discards the buffer if it grows beyond 15000 bytes
+    constexpr int pieceSize = 2048;
+    for (int pos = 0; pos < data.size(); pos += pieceSize) {
+        gnssBuffer.append(data.mid(pos, pieceSize));
+        qsizetype previousSize;
+        do {
+            previousSize = gnssBuffer.size();
+            handleBuffer();
+        } while (!gnssBuffer.isEmpty() && gnssBuffer.size() < previousSize);
     }
 }
 

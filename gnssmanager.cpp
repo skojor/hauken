@@ -27,6 +27,12 @@ void GnssManager::reqPositionForProfile(const QString &profileId)
     else if (devices.contains(profileId)) devices.value(profileId)->reqPosition();
 }
 
+void GnssManager::injectReplayData(const QString &profileId, const QByteArray &data)
+{
+    if (GnssDevice *device = devices.value(profileId))
+        device->injectBytes(data);
+}
+
 void GnssManager::updSettings()
 {
     QSet<QString> enabledProfileIds;
@@ -75,6 +81,7 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 
     GnssDevice *device = new GnssDevice(config, profile.id);
     device->setParent(this);
+    device->setReplayMode(config->isReplayMode());
     devices.insert(profile.id, device);
 
     connect(device, &GnssDevice::analyzeThisData, analyzer, &GnssAnalyzer::getData);

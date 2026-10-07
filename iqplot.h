@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFuture>
 #include <QFutureWatcher>
+#include <QHash>
 #include <QMutex>
 #include <QObject>
 #include <QPainter>
@@ -45,6 +46,7 @@ public slots:
     void start(); // Called by thread
     void end(); // Called by thread
     void ifStreamStarted(){} // { stopIqStreamTimer->start(500 + config->getIqLogTime() * 8e3);}
+    void setReplayIqPlan(const QVector<double> &freqsMHz, const QVector<qint64> &sampleCounts, quint32 bandwidthHz);
 
 private slots:
     void fillWindow();
@@ -100,6 +102,9 @@ private:
     double centerFrequency = 0;
     bool flagOngoingAlarm = false;
     IqMetadata m_iqMetadata;
+    QVector<double> replayFreqs;
+    QHash<quint64, qint64> replaySampleCounts;
+    quint32 replayBandwidth = 0;
 };
 
 #endif // IQPLOT_H

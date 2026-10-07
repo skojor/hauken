@@ -47,6 +47,7 @@ class GnssDevice : public QObject
     Q_OBJECT
 public:
     explicit GnssDevice(QSharedPointer<Config>, const QString &profileId);
+    ~GnssDevice();
 
 public slots:
     void start();
@@ -57,6 +58,8 @@ public slots:
     bool isValid() { return gnssData.posValid;}
     void saveBacklog();
     void setIncidenceStartedDateTime();
+    void setReplayMode(bool b) { replayMode = b; gnssData.inUse = b; }
+    void injectBytes(const QByteArray &data);
 
 signals:
     void analyzeThisData(GnssData &);
@@ -144,6 +147,7 @@ private:
     bool septentrioMeasEpochSeen = false;
     bool septentrioChannelStatusSeen = false; // once true, satsTracked comes from SBF ChannelStatus (4013) instead of NMEA
     QMap<quint32, int> septentrioSpectrumBandIndexByCenterHz; // stable band index per distinct BBSamples (4040) LOFreq seen
+    bool replayMode = false;
 };
 
 

@@ -720,6 +720,11 @@ void MainWindow::setSignals()
             traceAnalyzer->forceAlarm("Recording triggered by replay at original trigger time");
     });
     connect(recordingReplayer, &RecordingReplayer::triggerAlarmEnded, traceAnalyzer, &TraceAnalyzer::forceAlarmEnded);
+    connect(iqPlot, &IqPlot::setFfmCenterFrequency, recordingReplayer, &RecordingReplayer::requestIqFrequency);
+    connect(iqPlot, &IqPlot::endVifConnection, recordingReplayer, &RecordingReplayer::endIqStream);
+    connect(recordingReplayer, &RecordingReplayer::iqHeader, iqPlot, &IqPlot::validateHeader);
+    connect(recordingReplayer, &RecordingReplayer::iqData, iqPlot, &IqPlot::getIqData);
+    connect(recordingReplayer, &RecordingReplayer::gnssData, gnssManager, &GnssManager::injectReplayData);
 
     connect(traceAnalyzer,
             &TraceAnalyzer::alarm,
