@@ -691,9 +691,7 @@ void MainWindow::setToolTips()
     waterfallTime->setToolTip(
         "Select the time in seconds a signal will be visible in the waterfall");
     btnTrigRecording->setToolTip(
-        "Starts a recording manually. The recording will end after the time specified in File recording and upload "
-        "options: Recording time after incident,\nunless a real trig happens within this time, as "
-        "this will extend the recording further.");
+        "Start a manual recording, or stop the active recording. An enabled automatic recorder may start another recording later.");
     btnPmrTable->setToolTip("Edit the PMR table in the currently chosen frequency range");
 }
 
@@ -1020,6 +1018,8 @@ void MainWindow::traceIncidentAlarm(bool state)
 
 void MainWindow::recordIncidentAlarm(bool state)
 {
+    recordingActive = state;
+    btnTrigRecording->setText(state ? "Stop recording" : "Start recording");
     if (state != recordAlarmRaised) {
         if (state) {
             ledRecordStatus->setState(false);

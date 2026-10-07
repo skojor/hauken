@@ -657,19 +657,16 @@ void GnssDevice::appendToBinaryfile(const QByteArray &data)
 
 void GnssDevice::checkPosValid()
 {
-    QString msg;
-    QTextStream ts(&msg);
-    ts.setRealNumberNotation(QTextStream::FixedNotation);
-    ts.setRealNumberPrecision(1);
-
-    if (!gnssData.posValid && !posInvalidTriggered && !delayedReportTimer->isActive()) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
-        // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
+    if (gnssData.posValid) {
+        delayedReportTimer->stop();
+        if (posInvalidTriggered) {
+            posInvalidTriggered = false;
+            if (config->getGnssShowNotifications())
+                emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "Position valid");
+        }
+    } else if (!posInvalidTriggered && !delayedReportTimer->isActive()) {
         delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
     }
-    else if (gnssData.posValid && posInvalidTriggered && !delayedReportTimer->isActive()) {
-        delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
-    }
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, msg);
 }
 
 void GnssDevice::connectTcpSocket()

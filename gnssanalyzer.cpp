@@ -154,7 +154,7 @@ void GnssAnalyzer::updSettings()
     isInstrumentType = profile.type == GnssReceiverProfile::Type::Instrument;
     logToFile = profile.triggerRecording;
     checkAgc = !isInstrumentType && profile.ublox;
-    emit alarmEnded(); // To update led indicator/text
+    if (!anyOffsetTriggered()) emit alarmEnded(); // To update led indicator/text
     //qDebug() << "gnss updsettings";
 }
 

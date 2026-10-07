@@ -244,7 +244,7 @@ private:
 
     QPushButton *instrConnect = new QPushButton("Connect");
     QPushButton *instrDisconnect = new QPushButton("Disconnect");
-    QPushButton *btnTrigRecording = new QPushButton("Trigger recording");
+    QPushButton *btnTrigRecording = new QPushButton("Start recording");
     QPushButton *btnRestartAvgCalc = new QPushButton("Restart avg. calc.");
     QPushButton *btnPmrTable = new QPushButton("PMR table");
     QPushButton *btnAudioOpt = new QPushButton("Audio");
@@ -368,6 +368,7 @@ private:
     QLineEdit *antPortLineEdit = new QLineEdit;
 
     bool traceAlarmRaised = false, recordAlarmRaised = true, gnssAlarmRaised = true, recordDisabledRaised = false;
+    bool recordingActive = false, rfIncidentActive = false, gnssIncidentActive = false;
     QMediaPlayer *player = new QMediaPlayer;
     QAudioOutput *audioOutput = new QAudioOutput;
     QTimer *notificationTimer = new QTimer;

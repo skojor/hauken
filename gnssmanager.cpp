@@ -57,6 +57,16 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
     connect(analyzer, &GnssAnalyzer::alarm, this, &GnssManager::markIncidenceStarted);
     connect(analyzer, &GnssAnalyzer::visualAlarm, this, &GnssManager::visualAlarm);
     connect(analyzer, &GnssAnalyzer::alarmEnded, this, &GnssManager::alarmEnded);
+    const QString profileId = profile.id;
+    connect(analyzer, &GnssAnalyzer::visualAlarm, this, [this, profileId] {
+        const bool wasInactive = activeIncidentProfiles.isEmpty();
+        activeIncidentProfiles.insert(profileId);
+        if (wasInactive) emit incidentActivityChanged(true);
+    });
+    connect(analyzer, &GnssAnalyzer::alarmEnded, this, [this, profileId] {
+        if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty())
+            emit incidentActivityChanged(false);
+    });
 
     if (profile.type == GnssReceiverProfile::Type::Instrument) {
         connect(measurementDevice, &MeasurementDevice::updGnssData, analyzer, &GnssAnalyzer::getData);
@@ -90,6 +100,8 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 
 void GnssManager::removeReceiver(const QString &profileId)
 {
+    if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty())
+        emit incidentActivityChanged(false);
     if (GnssAnalyzer *analyzer = analyzers.take(profileId)) analyzer->deleteLater();
     if (GnssDevice *device = devices.take(profileId)) device->deleteLater();
 }

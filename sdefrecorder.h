@@ -41,6 +41,8 @@ public slots:
     void triggerRecording(); // to be called as long as incident is happening!
     void triggerRecordingWithoutAnalysisArtifacts();
     void manualTriggeredRecording();
+    void stopRecordingManually(bool suppressIncidentTriggers);
+    void clearIncidentTriggerSuppression();
     void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
     void receiveTrace(const QVector<qint16> data); // new data arrives here
     void updTracesPerSecond(double d);
@@ -110,6 +112,8 @@ private:
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
+    bool incidentTriggersSuppressed = false;
+    bool preserveAutoRecorderSchedule = false;
     bool saveToSdef;
     int recordTime;
     int maxRecordTime;

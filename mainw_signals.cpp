@@ -339,13 +339,27 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::resetTimer);
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::requestIqData);
 
-    connect(btnTrigRecording, &QPushButton::clicked, config.data(), &Config::incidentRestart); // Manual trig = new filename timestamp
+    connect(btnTrigRecording, &QPushButton::clicked, this, [this] {
+        if (recordingActive) {
+            SdefRecorder *recorder = sdefRecorder;
+            const bool suppressIncidentTriggers = rfIncidentActive || gnssIncidentActive;
+            QMetaObject::invokeMethod(recorder, [recorder, suppressIncidentTriggers] {
+                recorder->stopRecordingManually(suppressIncidentTriggers);
+            }, Qt::QueuedConnection);
+            return;
+        }
 
-    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
-    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
-    connect(btnTrigRecording, &QPushButton::clicked, datastreamIf, &DatastreamIf::invalidateHeader);
+        config->incidentRestart();
+        iqPlot->resetTimer();
+        iqPlot->requestIqData();
+        datastreamIf->invalidateHeader();
+        datastreamAmmos->invalidateHeader();
+        SdefRecorder *recorder = sdefRecorder;
+        QMetaObject::invokeMethod(recorder, [recorder] {
+            recorder->manualTriggeredRecording();
+        }, Qt::QueuedConnection);
+    });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamIf, &DatastreamIf::invalidateHeader);
-    connect(btnTrigRecording, &QPushButton::clicked, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
 
 
@@ -415,9 +429,15 @@ void MainWindow::setSignals()
         ledTraceStatus->setToolTip("RF detector ready");
     });
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this]() { traceIncidentAlarm(true); });
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this]() {
+        rfIncidentActive = true;
+        traceIncidentAlarm(true);
+    });
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, this, [this]() {
+        rfIncidentActive = false;
         traceIncidentAlarm(false);
+        if (!gnssIncidentActive)
+            QMetaObject::invokeMethod(sdefRecorder, "clearIncidentTriggerSuppression", Qt::QueuedConnection);
     });
     connect(sdefRecorder, &SdefRecorder::recordingStarted, this, [this]() {
         recordIncidentAlarm(true);
@@ -427,6 +447,11 @@ void MainWindow::setSignals()
     });
     connect(gnssManager, &GnssManager::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
     connect(gnssManager, &GnssManager::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
+    connect(gnssManager, &GnssManager::incidentActivityChanged, this, [this](bool active) {
+        gnssIncidentActive = active;
+        if (!active && !rfIncidentActive)
+            QMetaObject::invokeMethod(sdefRecorder, "clearIncidentTriggerSuppression", Qt::QueuedConnection);
+    });
     connect(sdefRecorder, &SdefRecorder::recordingDisabled, this, [this] { recordEnabled(false); });
     connect(sdefRecorder, &SdefRecorder::recordingEnabled, this, [this] { recordEnabled(true); });
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
@@ -572,11 +597,6 @@ void MainWindow::setSignals()
     connect(sdefRecorder, &SdefRecorder::reqPositionFrom, this, [this](QString profileId) {
         gnssManager->reqPositionForProfile(profileId);
     });
-
-    connect(btnTrigRecording,
-            &QPushButton::clicked,
-            sdefRecorder,
-            &SdefRecorder::manualTriggeredRecording);
 
     connect(btnPmrTable, &QPushButton::clicked, pmrTableWdg, &PmrTableWdg::start);
 

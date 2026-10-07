@@ -130,6 +130,7 @@ void SdefRecorder::updSettings()
 
 void SdefRecorder::triggerRecording()
 {
+    if (incidentTriggersSuppressed) return;
     startRecording(true);
 }
 
@@ -149,10 +150,6 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
             dateTimeRecordingStarted = QDateTime::currentDateTime(); // for incident log
 
             emit recordingStarted();
-            if (includeAnalysisArtifacts)
-                emit recordingStartedWithAnalysisArtifacts();
-            else
-                emit recordingStartedWithoutAnalysisArtifacts();
 
             if (!recordingTimeoutTimer->isActive())
                 recordingTimeoutTimer->start(maxRecordTime); // only call once
@@ -160,10 +157,17 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
             file.setFileName(createFilename());
             if (failed || !file.open(QIODevice::WriteOnly)) {
                 emit warning("Error creating file " + file.fileName());
-                failed = true;
-                endRecording();
+                recording = historicDataSaved = false;
+                recordingStartedTimer->stop();
+                recordingTimeoutTimer->stop();
+                emit recordingEnded();
+                failed = false;
             } else {
                 file.write(createHeader());
+                if (includeAnalysisArtifacts)
+                    emit recordingStartedWithAnalysisArtifacts();
+                else
+                    emit recordingStartedWithoutAnalysisArtifacts();
                 if (config->getSdefPreRecordTime() > 0)
                     emit reqTraceHistory(config->getSdefPreRecordTime());
                 else
@@ -175,10 +179,24 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
 
 void SdefRecorder::manualTriggeredRecording()
 {
+    incidentTriggersSuppressed = false;
     endRecording();
     if (!config->getHideRecordingStartStopMessages())
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
     triggerRecordingWithoutAnalysisArtifacts();
+}
+
+void SdefRecorder::stopRecordingManually(bool suppressIncidentTriggers)
+{
+    incidentTriggersSuppressed = suppressIncidentTriggers;
+    preserveAutoRecorderSchedule = autorecorderTimer && autorecorderTimer->isActive();
+    endRecording();
+    preserveAutoRecorderSchedule = false;
+}
+
+void SdefRecorder::clearIncidentTriggerSuppression()
+{
+    incidentTriggersSuppressed = false;
 }
 
 QString SdefRecorder::createFilename()
@@ -371,7 +389,7 @@ void SdefRecorder::endRecording()
                                                     == 1
                                                 ? " minute"
                                                 : " minutes")));
-                if (autorecorderTimer->isActive())
+                if (autorecorderTimer->isActive() && !preserveAutoRecorderSchedule)
                     autorecorderTimer->stop();
             }
         }
