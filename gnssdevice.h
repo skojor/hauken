@@ -145,8 +145,8 @@ private:
 
     // Septentrio: signal types (SBF 4.1.10) currently tracked on the main antenna, from MeasEpoch (4027)
     QSet<int> septentrioActiveSignalTypes;
+    bool septentrioDetected = false;
     bool septentrioMeasEpochSeen = false;
-    bool septentrioChannelStatusSeen = false; // once true, satsTracked comes from SBF ChannelStatus (4013) instead of NMEA
     QMap<quint32, int> septentrioSpectrumBandIndexByCenterHz; // stable band index per distinct BBSamples (4040) LOFreq seen
     bool replayMode = false;
 };
