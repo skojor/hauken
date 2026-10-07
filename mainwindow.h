@@ -214,6 +214,9 @@ private slots:
     void btnDisconnectPressed();
     void hideLayoutWidgets(QLayout *, bool);
     void cleanupOldMeasurementFiles();
+    void startRecordedReplay();
+    void stopRecordedReplay();
+    void finalizeRecordedReplay();
 
 private:
     QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
@@ -284,6 +287,9 @@ private:
     QAction *openFolderAct;
     QAction *openFolderIqAct;
     QAction *openIqAct;
+    QAction *readRecordedAct;
+    QTimer *replayEndTimer = new QTimer(this);
+    bool replayStopping = false;
 
     QAction *optStation;
     QAction *optGnss;

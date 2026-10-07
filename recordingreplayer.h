@@ -28,6 +28,7 @@ public:
     void close();
     bool isOpen() const { return !cefFiles.isEmpty(); }
     bool isRunning() const { return running; }
+    bool isFeeding() const { return feeding; }
 
     QString recordingName() const { return recordingTitle; }
     QString stationName() const { return station; }

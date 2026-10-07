@@ -243,6 +243,8 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
+    if (config->isReplayMode())
+        return;
     if ((type == NOTIFY::TYPE::TRACEANALYZER ||
          type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE ||
          type == NOTIFY::TYPE::GNSSANALYZER ||
@@ -534,6 +536,8 @@ void Notifications::sendMail()
 
 void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interference)
 {
+    if (config->isReplayMode())
+        return;
     dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference, config->getInstrMinTrigTime());
 }
 

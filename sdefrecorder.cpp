@@ -430,7 +430,7 @@ void SdefRecorder::endRecording()
         if (predictionReceived)
             updFileWithPrediction(file.fileName());
 
-        if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording) {
+        if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording && !config->isReplayMode()) {
             QTimer::singleShot(
                 10000,
                 this,
@@ -441,7 +441,7 @@ void SdefRecorder::endRecording()
             else if (config->getSdefZipFiles() && recording)
                 zipit(); // Zip the file anyways, we don't shit storage space here
         }
-        if (!finishedFilename.isEmpty())
+        if (!finishedFilename.isEmpty() && !config->isReplayMode())
             finishedFileTimer->start(10000);
 
         recordingTimeoutTimer->stop();

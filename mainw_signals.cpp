@@ -487,11 +487,16 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqttManager, &MqttManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
-    connect(mqttManager, &MqttManager::triggerRecording, sdefRecorder, [recorder = sdefRecorder] {
+    connect(mqttManager, &MqttManager::triggerRecording, sdefRecorder, [this, recorder = sdefRecorder] {
+        if (config->isReplayMode())
+            return;
         recorder->setTriggerSource(SdefRecorder::TriggerSource::Mqtt);
         recorder->triggerRecordingWithoutAnalysisArtifacts();
     });
-    connect(mqttManager, &MqttManager::endRecording, sdefRecorder, &SdefRecorder::endRecording);
+    connect(mqttManager, &MqttManager::endRecording, sdefRecorder, [this, recorder = sdefRecorder] {
+        if (!config->isReplayMode())
+            recorder->endRecording();
+    });
 
     connect(positionReport, &PositionReport::reqPosition, this, [this](QString profileId) {
         positionReport->updPosition(gnssManager->dataFor(profileId));
@@ -725,6 +730,20 @@ void MainWindow::setSignals()
     connect(recordingReplayer, &RecordingReplayer::iqHeader, iqPlot, &IqPlot::validateHeader);
     connect(recordingReplayer, &RecordingReplayer::iqData, iqPlot, &IqPlot::getIqData);
     connect(recordingReplayer, &RecordingReplayer::gnssData, gnssManager, &GnssManager::injectReplayData);
+    connect(recordingReplayer, &RecordingReplayer::progress, this, [this](int percent) {
+        updateStatusLine(tr("Replaying %1: %2 %").arg(recordingReplayer->recordingName()).arg(percent));
+    });
+    // Give plots, GNSS backlog and zipping time to finish after the recording ends
+    connect(recordingReplayer, &RecordingReplayer::finished, this, [this] {
+        if (recordingActive)
+            updateStatusLine(tr("Replay data finished, waiting for the recording to end"));
+        else
+            replayEndTimer->start(15000);
+    });
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this] {
+        if (recordingReplayer->isRunning() && !recordingReplayer->isFeeding())
+            replayEndTimer->start(15000);
+    });
 
     connect(traceAnalyzer,
             &TraceAnalyzer::alarm,

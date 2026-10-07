@@ -63,7 +63,7 @@ void OAuthFileUploader::fileUploadRequest(const QString filename)
     file.setFileName(tmpFilename);
     if (!file.exists()) {
         qDebug() << "OAuthUploader: Nope, no zip either. Giving up.";
-    } else if (config->getOauth2Enable()) {
+    } else if (config->getOauth2Enable() && !config->isReplayMode()) {
         m_uploadBacklog.append(tmpFilename); // In case upload fails, this list keeps filenames still to be uploaded
 
         if (!m_uploadInProgress) {

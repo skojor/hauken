@@ -174,6 +174,10 @@ void MainWindow::closeEvent(QCloseEvent *event)
     arduinoPtr->close();
     read1809Data->close();
     if (simulator) simulator->stopSimulation();
+    if (config->isReplayMode()) {
+        recordingReplayer->close();
+        config->endReplay();
+    }
     measurementDevice->instrDisconnect();
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
@@ -294,6 +298,17 @@ void MainWindow::createActions()
                                                              config->getLogFolder(),
                                                              "IQ data (*.iq)"));
     });
+
+    readRecordedAct = new QAction(tr("&Read recorded folder..."), this);
+    readRecordedAct->setStatusTip(tr("Replay a recorded incident (folder or _incident.zip) through the analysis, as if it happened live"));
+    connect(readRecordedAct, &QAction::triggered, this, [this] {
+        if (config->isReplayMode())
+            stopRecordedReplay();
+        else
+            startRecordedReplay();
+    });
+    replayEndTimer->setSingleShot(true);
+    connect(replayEndTimer, &QTimer::timeout, this, &MainWindow::stopRecordedReplay);
 
     openFolderIqAct = new QAction(tr("Open I/&Q data in folder (DEBUG)"), this);
     openFolderIqAct->setStatusTip(
@@ -429,6 +444,7 @@ void MainWindow::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(open1809Act);
     fileMenu->addAction(openIqAct);
+    fileMenu->addAction(readRecordedAct);
     //fileMenu->addAction(openFolderAct);
     //fileMenu->addAction(openFolderIqAct);
     fileMenu->addSeparator();
@@ -850,6 +866,10 @@ void MainWindow::sdefConfig()
 
 void MainWindow::newFile()
 {
+    if (config->isReplayMode()) {
+        QMessageBox::warning(this, "Hauken", "Stop the replay of recorded data before changing configuration file");
+        return;
+    }
     qDebug() << config->getWorkFolder();
     QString filename = QFileDialog::getSaveFileName(this,
                                                     tr("New configuration file"),
@@ -865,6 +885,10 @@ void MainWindow::newFile()
 
 void MainWindow::open()
 {
+    if (config->isReplayMode()) {
+        QMessageBox::warning(this, "Hauken", "Stop the replay of recorded data before changing configuration file");
+        return;
+    }
     QString fileName = QFileDialog::getOpenFileName(this,
                                                     tr("Open configuraton file"),
                                                     config->getWorkFolder(),
@@ -879,6 +903,10 @@ void MainWindow::open()
 
 void MainWindow::save()
 {
+    if (config->isReplayMode()) {
+        QMessageBox::warning(this, "Hauken", "Stop the replay of recorded data before changing configuration file");
+        return;
+    }
     QString fileName = QFileDialog::getSaveFileName(this,
                                                     tr("Save current configuration"),
                                                     config->getWorkFolder(),
@@ -894,6 +922,95 @@ void MainWindow::save()
 void MainWindow::saveConfigValues()
 {
 
+}
+
+void MainWindow::startRecordedReplay()
+{
+    if (measurementDevice->isConnected()) {
+        QMessageBox::warning(this, "Hauken", "Disconnect the measurement device before replaying recorded data");
+        return;
+    }
+    if (read1809Data->isRunning() || (simulator && simulator->isRunning())) {
+        QMessageBox::warning(this, "Hauken", "Stop the 1809 playback or simulator before replaying recorded data");
+        return;
+    }
+
+    // Picking any .cef inside a recording folder selects the whole folder
+    QString path = QFileDialog::getOpenFileName(this,
+                                                tr("Read recorded folder"),
+                                                config->getLogFolder(),
+                                                tr("Recorded incident (*.zip *.cef)"));
+    if (path.isEmpty())
+        return;
+    if (path.endsWith(".cef", Qt::CaseInsensitive))
+        path = QFileInfo(path).absolutePath();
+
+    QString error;
+    if (!recordingReplayer->open(path, error)) {
+        QMessageBox::warning(this, "Hauken", error);
+        return;
+    }
+    if (!config->beginReplay(recordingReplayer->snapshotPath(), recordingReplayer->stationName())) {
+        recordingReplayer->close();
+        return;
+    }
+
+    for (const GnssReceiverProfile &profile : recordingReplayer->gnssReplayProfiles())
+        config->setGnssReceiverProfile(profile);
+    config->setSdefGpsSource(recordingReplayer->gnssPositionSource());
+    emit config->settingsUpdated();
+
+    IqPlot *plot = iqPlot;
+    const QVector<double> iqFreqs = recordingReplayer->iqFrequenciesMHz();
+    const QVector<qint64> iqSamples = recordingReplayer->iqSampleCounts();
+    const quint32 iqBw = recordingReplayer->iqBandwidthHz();
+    QMetaObject::invokeMethod(plot, [plot, iqFreqs, iqSamples, iqBw] {
+        plot->setReplayIqPlan(iqFreqs, iqSamples, iqBw);
+    }, Qt::QueuedConnection);
+
+    replayStopping = false;
+    replayEndTimer->stop();
+    traceBuffer->emptyBuffer();
+    recordingReplayer->configureStream();
+
+    bool baselineLoaded = false;
+    if (!recordingReplayer->avgDataPath().isEmpty())
+        baselineLoaded = traceBuffer->loadAvgLevelsFromFile(recordingReplayer->avgDataPath(),
+                                                            recordingReplayer->startFrequencyHz(),
+                                                            recordingReplayer->stopFrequencyHz(),
+                                                            recordingReplayer->dataPoints());
+
+    readRecordedAct->setText(tr("Stop &replay of recorded data"));
+    recordingReplayer->play(baselineLoaded);
+    updateStatusLine(tr("Replaying %1%2").arg(recordingReplayer->recordingName(),
+                                               baselineLoaded ? "" : tr(" (no baseline, using original trigger time)")));
+}
+
+void MainWindow::stopRecordedReplay()
+{
+    if (!config->isReplayMode() || replayStopping)
+        return;
+    replayStopping = true;
+    replayEndTimer->stop();
+    recordingReplayer->stop(); // ends an ongoing recording via the recorder's connected state
+    // Let the recorder thread close and zip the files while replay settings and clock are still active
+    QTimer::singleShot(3000, this, &MainWindow::finalizeRecordedReplay);
+}
+
+void MainWindow::finalizeRecordedReplay()
+{
+    IqPlot *plot = iqPlot;
+    QMetaObject::invokeMethod(plot, [plot] {
+        plot->setReplayIqPlan({}, {}, 0);
+    }, Qt::QueuedConnection);
+
+    const QString name = recordingReplayer->recordingName();
+    recordingReplayer->close();
+    config->endReplay();
+    traceBuffer->emptyBuffer();
+    replayStopping = false;
+    readRecordedAct->setText(tr("&Read recorded folder..."));
+    updateStatusLine(tr("Replay of %1 ended").arg(name));
 }
 
 void MainWindow::showBytesPerSec(int val)
