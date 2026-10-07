@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QDateTime>
 #include <QMap>
+#include "septentrio_rfstatusparser.h"
 
 namespace NOTIFY {
 enum class TYPE {
@@ -915,6 +916,9 @@ public:
     int agc = -1;
     QMap<int, GnssAgcBlockData> agcBlocks;
     int jammingIndicator = -1;
+    bool septentrioReceiver = false;
+    SeptentrioRfStatus septentrioRfStatus;
+    QDateTime septentrioRfStatusTimestamp;
     QDateTime timestamp = QDateTime();
     QString id; // GnssReceiverProfile id ("instrument" for the instrument-GNSS pseudo profile)
     QList<int> avgCnoArray;

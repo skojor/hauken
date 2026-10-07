@@ -309,6 +309,7 @@ void GnssDevice::handleBuffer()
             }
         }
         if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty() && checkSbfChecksum(sbfBinSentence)) {
+            gnssData.septentrioReceiver = true;
             if (!septentrioDetected) {
                 septentrioDetected = true;
                 gnssData.satsTracked = 0;
@@ -326,6 +327,8 @@ void GnssDevice::handleBuffer()
                 decodeSbf4027(sbfBinSentence);
             else if (id == 4013)
                 decodeSbf4013(sbfBinSentence);
+            else if (id == 4092)
+                decodeSbf4092(sbfBinSentence);
             else if (id == 4040)
                 decodeSbf4040(sbfBinSentence);
 
@@ -1109,6 +1112,15 @@ void GnssDevice::decodeSbf4014(const QByteArray &data)
         int sum = 0;
         for (int gain : agcBlocks) sum += gain;
         gnssData.agc = sum / agcBlocks.size();
+    }
+}
+
+void GnssDevice::decodeSbf4092(const QByteArray &data)
+{
+    SeptentrioRfStatus status;
+    if (SeptentrioRfStatusParser::parse(data, status)) {
+        gnssData.septentrioRfStatus = status;
+        gnssData.septentrioRfStatusTimestamp = AppClock::nowUtc();
     }
 }
 

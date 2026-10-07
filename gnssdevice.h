@@ -96,6 +96,7 @@ private slots:
     void cleanupBacklog();
     void createGnssPlot();
     void decodeSbf4014(const QByteArray &data);
+    void decodeSbf4092(const QByteArray &data);
     void decodeSbf4027(const QByteArray &data);
     void decodeSbf4013(const QByteArray &data);
     void decodeSbf4040(const QByteArray &data);
