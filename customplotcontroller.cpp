@@ -1,4 +1,5 @@
 #include "customplotcontroller.h"
+#include "appclock.h"
 
 #include <algorithm>
 #include <cmath>
@@ -681,7 +682,7 @@ void CustomPlotController::reqTracePlot()
         customPlotPtr->replot();
     }
     mutex.unlock();
-    emit retTracePlot(tracePlot, QDateTime::currentDateTime());
+    emit retTracePlot(tracePlot, AppClock::now());
 }
 
 void CustomPlotController::updOverlayText()

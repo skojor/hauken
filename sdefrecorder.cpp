@@ -2,6 +2,8 @@
 #include "version.h"
 #include "asciitranslator.h"
 #include "JlCompress.h"
+#include <QMetaEnum>
+#include "appclock.h"
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
     config = c;
@@ -32,10 +34,10 @@ void SdefRecorder::start()
         emit reqPositionFrom(positionSource);
     });
     connect(periodicCheckUploadsTimer, &QTimer::timeout, this, &SdefRecorder::curlUpload);
-    connect(autorecorderTimer,
-            &QTimer::timeout,
-            this,
-            &SdefRecorder::triggerRecordingWithoutAnalysisArtifacts); // auto recording triggers recording here
+    connect(autorecorderTimer, &QTimer::timeout, this, [this] {
+        setTriggerSource(TriggerSource::AutoRecorder);
+        triggerRecordingWithoutAnalysisArtifacts();
+    });
 
     connect(tempFileTimer, &QTimer::timeout, this, &SdefRecorder::saveDataToTempFile);
 
@@ -147,7 +149,7 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
 
         if (!recording && saveToSdef) {
             recording = true;
-            dateTimeRecordingStarted = QDateTime::currentDateTime(); // for incident log
+            dateTimeRecordingStarted = AppClock::now(); // for incident log
 
             emit recordingStarted();
 
@@ -164,6 +166,7 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
                 failed = false;
             } else {
                 file.write(createHeader());
+                writeSettingsSnapshot();
                 if (includeAnalysisArtifacts)
                     emit recordingStartedWithAnalysisArtifacts();
                 else
@@ -183,6 +186,7 @@ void SdefRecorder::manualTriggeredRecording()
     endRecording();
     if (!config->getHideRecordingStartStopMessages())
         emit toIncidentLog(NOTIFY::TYPE::SDEFRECORDER, "", "Recording triggered manually");
+    setTriggerSource(TriggerSource::Manual);
     triggerRecordingWithoutAnalysisArtifacts();
 }
 
@@ -199,22 +203,52 @@ void SdefRecorder::clearIncidentTriggerSuppression()
     incidentTriggersSuppressed = false;
 }
 
-QString SdefRecorder::createFilename()
+QString SdefRecorder::incidentBasePath()
 {
     QString dir = config->incidentFolder();
-    QString filename;
-    QTextStream ts(&filename);
 
     if (!QDir().exists(dir))
         QDir().mkpath(dir);
 
-    ts << dir << "/" << config->incidentTimestamp().toString("yyyyMMddhhmmss")
-       << "_" << AsciiTranslator::toAscii(config->getStationName())
-       << "_" << QString::number(1e-3 * startfreq, 'f', 0) << "-"
-       << QString::number(1e-3 * stopfreq, 'f', 0)
-       << ".cef";
+    return dir + "/" + config->incidentTimestamp().toString("yyyyMMddhhmmss")
+           + "_" + AsciiTranslator::toAscii(config->getStationName());
+}
 
-    return filename;
+QString SdefRecorder::createFilename()
+{
+    return incidentBasePath()
+           + "_" + QString::number(1e-3 * startfreq, 'f', 0) + "-"
+           + QString::number(1e-3 * stopfreq, 'f', 0)
+           + ".cef";
+}
+
+void SdefRecorder::writeSettingsSnapshot()
+{
+    const QString basePath = incidentBasePath();
+    const QMetaEnum sourceEnum = QMetaEnum::fromType<TriggerSource>();
+
+    QVariantMap runtime;
+    runtime["swVersion"] = QString(PROJECT_VERSION);
+    runtime["instrId"] = config->getInstrId();
+    runtime["streamStartFreqHz"] = QString::number(startfreq, 'f', 0);
+    runtime["streamStopFreqHz"] = QString::number(stopfreq, 'f', 0);
+    runtime["streamResolutionHz"] = resolution;
+    runtime["dataPoints"] = datapoints;
+    runtime["tracesPerSecond"] = tracePerSecond;
+    runtime["plotResolution"] = config->getPlotResolution();
+    runtime["modeUsed"] = modeUsed;
+    runtime["antennaName"] = antName;
+    runtime["triggerSource"] = QString(sourceEnum.valueToKey(static_cast<int>(triggerSource)));
+    runtime["recordingStarted"] = dateTimeRecordingStarted.toString(Qt::ISODateWithMs);
+    runtime["incidentTimestamp"] = config->incidentTimestamp().toString(Qt::ISODateWithMs);
+    runtime["cefFile"] = QFileInfo(file.fileName()).fileName();
+    runtime["levelsUnit"] = "dBuV, integer (0.1 dB internal values divided by 10)";
+    runtime["normalizedTraces"] = config->getInstrNormalizeSpectrum();
+
+    if (!config->writeSettingsSnapshot(basePath + "_settings.ini", runtime))
+        qWarning() << "Could not write settings snapshot" << basePath + "_settings.ini";
+
+    emit incidentFilesBasePath(basePath);
 }
 void SdefRecorder::receiveTrace(const QVector<qint16> data)
 {
@@ -326,7 +360,7 @@ QByteArray SdefRecorder::createHeader(const int saveInterval)
            << "AntennaGain NA" << "\n"
            << "FilterBandwidth " << QString::number(resolution / 1e3, 'f', 3) << '\n'
            << "LevelUnits dBuV" << '\n'
-           << "Date " << QDateTime::currentDateTime().toString("yyyy-M-d") << '\n'
+           << "Date " << AppClock::now().toString("yyyy-M-d") << '\n'
            << "DataPoints " << datapoints << '\n'
            << "ScanTime "
            << QString::number((double) scanTime, 'f', 3) << '\n'
@@ -374,21 +408,14 @@ void SdefRecorder::endRecording()
         emit recordingEnded();
         if (config->getSdefSaveToFile()) {
             if (recordingTimeoutTimer->isActive()) {
+                const qint64 secs = dateTimeRecordingStarted.secsTo(AppClock::now());
                 if (!config->getHideRecordingStartStopMessages())
                     emit toIncidentLog(
                         NOTIFY::TYPE::SDEFRECORDER,
                         "",
                         "Recording ended after "
-                            + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) < 60
-                                   ? QString::number(
-                                         dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()))
-                                         + " seconds"
-                                   : QString::number(
-                                         dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60)
-                                         + (dateTimeRecordingStarted.secsTo(QDateTime::currentDateTime()) / 60
-                                                    == 1
-                                                ? " minute"
-                                                : " minutes")));
+                            + (secs < 60 ? QString::number(secs) + " seconds"
+                                         : QString::number(secs / 60) + (secs / 60 == 1 ? " minute" : " minutes")));
                 if (autorecorderTimer->isActive() && !preserveAutoRecorderSchedule)
                     autorecorderTimer->stop();
             }
@@ -422,6 +449,7 @@ void SdefRecorder::endRecording()
 
         if (!failed)
             recording = historicDataSaved = failed = false;
+        triggerSource = TriggerSource::Unknown;
     }
 }
 
@@ -762,9 +790,9 @@ QByteArray SdefRecorder::genSdefTraceLine(double lat, double lng, const QVector<
     buffer.reserve(line.size() * 4 + 128);
 
     if (useNewMsFormat)
-        buffer.append(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
+        buffer.append(AppClock::now().toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
     else
-        buffer.append(QDateTime::currentDateTime().toString("hh:mm:ss").toUtf8());
+        buffer.append(AppClock::now().toString("hh:mm:ss").toUtf8());
 
     if (addPosition) {
         buffer.append(',').append(QByteArray::number(lat,  'f', 6));

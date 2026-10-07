@@ -4,6 +4,7 @@
 #include "ubloxmonrfparser.h"
 #include "ubloxmonspanparser.h"
 #include "fftw3.h"
+#include "appclock.h"
 
 namespace {
 QString frequencyLabel(const UbloxRfBandMetadata &metadata)
@@ -797,7 +798,7 @@ void GnssDevice::setupUbloxDevice()
 
 void GnssDevice::setIncidenceStartedDateTime()
 {
-    const QDateTime now = QDateTime::currentDateTime();
+    const QDateTime now = AppClock::now();
 
     // Trace/GNSS alarm signals can be emitted repeatedly while an incident is
     // active, so keep the first timestamp for the current backlog window.  If
@@ -853,7 +854,7 @@ QString GnssDevice::createFilename(const QString &suffix)
 
 void GnssDevice::updateBacklog(QByteArray &data, bool isBinary)
 {
-    backlogTimestamp.append(QDateTime::currentDateTime());
+    backlogTimestamp.append(AppClock::now());
     backlogData.append(data);
     backlogIsBinary.append(isBinary);
     backlogAgc.append(gnssData.agc);
@@ -875,7 +876,7 @@ void GnssDevice::updateBacklog(QByteArray &data, bool isBinary)
 
 void GnssDevice::cleanupBacklog()
 {
-    while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(QDateTime::currentDateTime()) > 120) { // Keep backlog at 120 secs age
+    while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(AppClock::now()) > 120) { // Keep backlog at 120 secs age
         backlogTimestamp.removeFirst();
         backlogData.removeFirst();
         backlogIsBinary.removeFirst();
@@ -894,7 +895,7 @@ void GnssDevice::saveBacklog()
 
     if (backlogData.size()) { // Save only if there are any data in buffer (daah)
         if (!incidenceStartedDateTime.isValid())
-            incidenceStartedDateTime = QDateTime::currentDateTime();
+            incidenceStartedDateTime = AppClock::now();
 
         createGnssPlot();
 

@@ -331,7 +331,10 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, accessHandler, &AccessHandler::updSettings);
     connect(config.data(), &Config::settingsUpdated, ptrNetwork, &Network::updSettings);
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, [recorder = sdefRecorder] {
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::TraceAnalyzer);
+        recorder->triggerRecording();
+    });
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
     connect(gnssManager, &GnssManager::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -371,6 +374,10 @@ void MainWindow::setSignals()
             &SdefRecorder::recordingStarted,
             traceBuffer,
             &TraceBuffer::recorderStarted);
+    connect(sdefRecorder,
+            &SdefRecorder::incidentFilesBasePath,
+            traceBuffer,
+            &TraceBuffer::saveAvgLevelsForIncident);
     connect(sdefRecorder,
             &SdefRecorder::recordingEnded,
             traceAnalyzer,
@@ -468,7 +475,10 @@ void MainWindow::setSignals()
     connect(iqPlotThread, &QThread::finished, plotAndAnalyze, &PlotAndAnalyze::end);
 
     connect(gnssManager, &GnssManager::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(gnssManager, &GnssManager::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssManager, &GnssManager::alarm, sdefRecorder, [recorder = sdefRecorder] {
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::Gnss);
+        recorder->triggerRecording();
+    });
     connect(gnssManager, &GnssManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssManager, &GnssManager::gnssDisabled, this, [this] {
         gnssStatus->clear();
@@ -477,10 +487,10 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqttManager, &MqttManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
-        connect(mqttManager,
-            &MqttManager::triggerRecording,
-            sdefRecorder,
-            &SdefRecorder::triggerRecordingWithoutAnalysisArtifacts);
+    connect(mqttManager, &MqttManager::triggerRecording, sdefRecorder, [recorder = sdefRecorder] {
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::Mqtt);
+        recorder->triggerRecordingWithoutAnalysisArtifacts();
+    });
     connect(mqttManager, &MqttManager::endRecording, sdefRecorder, &SdefRecorder::endRecording);
 
     connect(positionReport, &PositionReport::reqPosition, this, [this](QString profileId) {

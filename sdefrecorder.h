@@ -32,6 +32,9 @@ class SdefRecorder : public QObject
 {
     Q_OBJECT
 public:
+    enum class TriggerSource { Unknown, TraceAnalyzer, Gnss, Manual, Mqtt, AutoRecorder };
+    Q_ENUM(TriggerSource)
+
     SdefRecorder(QSharedPointer<Config> c);
 
 public slots:
@@ -63,11 +66,14 @@ public slots:
     void updAntName(QString s) {antName = s.remove(' ');}
     void updScanTime(int i);
     void setIntentional(QString s) {flagUploadIntentionalOnly = true;} // FIXME - shortcut in code!
+    void setTriggerSource(SdefRecorder::TriggerSource source) { if (!recording) triggerSource = source; }
 
 private slots:
     QByteArray createHeader(const int saveInterval = 0);
     QString convertDdToddmmss(const double d, const bool lat = true);
     QString createFilename();
+    QString incidentBasePath();
+    void writeSettingsSnapshot();
     bool curlLogin();
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
@@ -93,6 +99,7 @@ signals:
     void reqAuthentication();
     void fileReadyForUpload(QString);
     void folderDateTimeSet();
+    void incidentFilesBasePath(const QString &basePath);
 
 private:
     void startRecording(bool includeAnalysisArtifacts);
@@ -144,6 +151,7 @@ private:
     QString antName = "NA";
 
     bool flagUploadIntentionalOnly = false;
+    TriggerSource triggerSource = TriggerSource::Unknown;
 
     // Config cache
     bool useNewMsFormat;

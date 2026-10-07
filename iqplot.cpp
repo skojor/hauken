@@ -1,6 +1,7 @@
 #include "iqplot.h"
 #include "asciitranslator.h"
 #include "fftw3.h"
+#include "appclock.h"
 #include <QRegularExpression>
 #include <QtConcurrent>
 #include <QFileInfo>
@@ -415,7 +416,7 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         m_iqMetadata.samplerate = rate;
         m_iqMetadata.bandwidth = bw;
         m_iqMetadata.centerfreq = freq;
-        m_iqMetadata.timestamp = QDateTime::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
+        m_iqMetadata.timestamp = AppClock::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
         m_iqMetadata.trigFrequency = trigFrequency;
         if (!samplesNeeded)
             samplesNeeded = (int)(config->getIqLogTime() * rate);

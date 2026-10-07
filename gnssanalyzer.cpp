@@ -1,4 +1,5 @@
 #include "gnssanalyzer.h"
+#include "appclock.h"
 
 GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, const QString &profileId)
 {
@@ -100,7 +101,7 @@ void GnssAnalyzer::analyze(GnssData &data)
 {
     data.posOffset = distanceInMeters(data);
     data.altOffset = abs(ownAltitude - data.altitude);
-    data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
+    data.timeOffset = abs(data.timestamp.msecsTo(AppClock::nowUtc()));
     if (data.id != "instrument") {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);

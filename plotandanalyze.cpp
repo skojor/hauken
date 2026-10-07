@@ -3,6 +3,7 @@
 #include "gif.h"
 #include "opencv2/opencv.hpp"
 #include "version.h"
+#include "appclock.h"
 #include <complex>
 #include <QFileInfo>
 #include <QPainter>
@@ -1046,7 +1047,7 @@ void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
 
     root["program"] = "Hauken";
     root["version"] = QString(PROJECT_VERSION);
-    root["fileCreated"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+    root["fileCreated"] = AppClock::nowUtc().toString(Qt::ISODateWithMs);
 
     metadata["ffmCenterFreq"]  = QString::number(m_metadata.centerfreq);
     metadata["ffmBandwidth"]   = QString::number(m_metadata.bandwidth);

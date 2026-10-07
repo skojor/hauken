@@ -106,6 +106,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     traceanalyzer.cpp traceanalyzer.h
     tracebuffer.cpp tracebuffer.h
     typedefs.h
+    appclock.h
     ubloxmonrfparser.cpp ubloxmonrfparser.h
     ubloxmonspanparser.cpp ubloxmonspanparser.h
     ubloxrfbandcorrelator.cpp ubloxrfbandcorrelator.h

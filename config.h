@@ -520,6 +520,10 @@ public slots:
     void incidentRestart() { incidentEnded(); incidentStarted();}
     QString incidentFolder();
     QDateTime incidentTimestamp() { return incidentDateTime;}
+    bool writeSettingsSnapshot(const QString &path, const QVariantMap &runtime);
+    bool beginReplay(const QString &snapshotPath, const QString &stationName);
+    void endReplay();
+    bool isReplayMode() const { return replayMode; }
     void setLocation(QString s) { m_location = s;}
     QString location() { if (!m_location.isEmpty()) return m_location; else return getStationName();}
 
@@ -536,6 +540,10 @@ private:
     bool flagIncident = false;
     QDateTime incidentDateTime;
     QString m_location;
+    bool replayMode = false;
+    QSettings *liveSettings = nullptr;
+    QString replayIniPath;
+    QString liveLocation;
 };
 
 #endif // CONFIG_H

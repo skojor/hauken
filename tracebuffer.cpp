@@ -1,4 +1,5 @@
 #include "tracebuffer.h"
+#include "appclock.h"
 
 TraceBuffer::TraceBuffer(QSharedPointer<Config> c)
 {
@@ -28,7 +29,7 @@ void TraceBuffer::deleteOlderThan()
 {
     //mutex.lock();
     if (traceBuffer.size() > 2) {
-        while (!traceBuffer.isEmpty() && !datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(QDateTime::currentDateTime()) > bufferAge) {
+        while (!traceBuffer.isEmpty() && !datetimeBuffer.isEmpty() && datetimeBuffer.first().secsTo(AppClock::now()) > bufferAge) {
             datetimeBuffer.removeFirst();
             traceBuffer.removeFirst();
             if (!normTraceBuffer.isEmpty())
@@ -78,7 +79,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 
         emit traceData(traceBuffer.last());
 
-        datetimeBuffer.append(QDateTime::currentDateTime());
+        datetimeBuffer.append(AppClock::now());
 
         addDisplayBufferTrace(data);
         calcMaxhold();
@@ -97,7 +98,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 
 void TraceBuffer::getSecondsOfBuffer(int secs)
 {
-    QDateTime currentDateTime = QDateTime::currentDateTime();
+    QDateTime currentDateTime = AppClock::now();
     QVector<QDateTime> dateBuffer;
     QVector<QVector<qint16> > databuffer;
     int iterator = qMin(traceBuffer.size(), datetimeBuffer.size()) - 1;
@@ -112,7 +113,7 @@ TraceDataStruct TraceBuffer::retSecondsOfBuffer(int secs)
 {
     TraceDataStruct traceDataStruct;
 
-    QDateTime currentDateTime = QDateTime::currentDateTime();
+    QDateTime currentDateTime = AppClock::now();
     int iterator = qMin(traceBuffer.size(), datetimeBuffer.size()) - 1;
     while (iterator >= 0 && datetimeBuffer.at(iterator).secsTo(currentDateTime) < secs) {
         traceDataStruct.timestamp.append(datetimeBuffer[iterator]);
@@ -476,9 +477,16 @@ void TraceBuffer::incidenceTriggered() // called whenever sth is above trig line
     }
 }
 
-void TraceBuffer::saveAvgLevels()
+void TraceBuffer::saveAvgLevelsForIncident(const QString &basePath)
 {
-    QFile file (config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName());
+    if (averageLevel.isEmpty() || tracesUsedInAvg < tracesNeededForAvg)
+        return;
+    saveAvgLevels(basePath + ".avgdata");
+}
+
+void TraceBuffer::saveAvgLevels(const QString &path)
+{
+    QFile file (path.isEmpty() ? config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName() : path);
     if (file.open(QIODevice::WriteOnly)) {
         QBuffer buffer;
         buffer.open(QIODevice::WriteOnly);
@@ -503,7 +511,7 @@ void TraceBuffer::saveAvgLevels()
         file.close();
     }
     else {
-        qWarning() << "Could not open file" << config->getWorkFolder() + "/" + avgFilename + "_" + config->getStationName() << "for writing";
+        qWarning() << "Could not open file" << file.fileName() << "for writing";
     }
 }
 
