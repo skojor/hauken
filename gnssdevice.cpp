@@ -705,7 +705,7 @@ void GnssDevice::checkPosValid()
 
 void GnssDevice::connectTcpSocket()
 {
-    if (!portName.isEmpty() && !baudrate.isEmpty() && tcpSocket->state() == QAbstractSocket::UnconnectedState && baudrate.toInt() > 0) {
+    if (activate && !portName.isEmpty() && !baudrate.isEmpty() && tcpSocket->state() == QAbstractSocket::UnconnectedState && baudrate.toInt() > 0) {
         hostAddress->setAddress(portName);
         tcpSocket->connectToHost(*hostAddress, baudrate.toInt());
     }
@@ -726,6 +726,10 @@ void GnssDevice::handleTcpStateChange(QAbstractSocket::SocketState state)
         sendToAnalyzerTimer->stop();
     }
     if (state == QAbstractSocket::UnconnectedState) { // retry conn. every 5 sec if valid settings
+        if (!activate) {
+            tcpWasConnected = false;
+            return;
+        }
         if (tcpWasConnected) {
             emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "GNSS TCP connection lost, will attempt to reconnect");
             tcpWasConnected = false;
