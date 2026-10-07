@@ -250,6 +250,16 @@ install(SCRIPT ${deploy_script})
 
 include(CTest)
 if (BUILD_TESTING)
+    qt_add_executable(gnssanalyzer_test
+        tests/gnssanalyzer_test.cpp
+        gnssanalyzer.cpp gnssanalyzer.h
+        config.cpp config.h
+        asciitranslator.cpp asciitranslator.h
+    )
+    target_include_directories(gnssanalyzer_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(gnssanalyzer_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME gnssanalyzer_test COMMAND gnssanalyzer_test)
+
     qt_add_executable(ppsstatusparser_test
         tests/ppsstatusparser_test.cpp
         ppsstatusparser.cpp ppsstatusparser.h

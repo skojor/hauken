@@ -53,7 +53,7 @@ void GnssManager::updSettings()
 
 void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 {
-    GnssAnalyzer *analyzer = new GnssAnalyzer(config, profile.id);
+    GnssAnalyzer *analyzer = new GnssAnalyzer(config, profile.id, incidentState);
     analyzer->setParent(this);
     analyzers.insert(profile.id, analyzer);
 
@@ -67,11 +67,16 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
     connect(analyzer, &GnssAnalyzer::visualAlarm, this, [this, profileId] {
         const bool wasInactive = activeIncidentProfiles.isEmpty();
         activeIncidentProfiles.insert(profileId);
-        if (wasInactive) emit incidentActivityChanged(true);
+        if (wasInactive) {
+            incidentState->setGnssIncidentActive(true);
+            emit incidentActivityChanged(true);
+        }
     });
     connect(analyzer, &GnssAnalyzer::alarmEnded, this, [this, profileId] {
-        if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty())
+        if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty()) {
+            incidentState->setGnssIncidentActive(false);
             emit incidentActivityChanged(false);
+        }
     });
 
     if (profile.type == GnssReceiverProfile::Type::Instrument) {
@@ -107,20 +112,22 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 
 void GnssManager::removeReceiver(const QString &profileId)
 {
-    if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty())
+    if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty()) {
+        incidentState->setGnssIncidentActive(false);
         emit incidentActivityChanged(false);
+    }
     if (GnssAnalyzer *analyzer = analyzers.take(profileId)) analyzer->deleteLater();
     if (GnssDevice *device = devices.take(profileId)) device->deleteLater();
 }
 
 void GnssManager::traceIncidentStarted()
 {
-    for (auto it = analyzers.cbegin(); it != analyzers.cend(); ++it) it.value()->traceIncidentStarted();
+    incidentState->setTraceIncidentActive(true);
 }
 
 void GnssManager::traceIncidentEnded()
 {
-    for (auto it = analyzers.cbegin(); it != analyzers.cend(); ++it) it.value()->traceIncidentEnded();
+    incidentState->setTraceIncidentActive(false);
 }
 
 void GnssManager::markIncidenceStarted()

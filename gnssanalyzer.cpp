@@ -1,10 +1,12 @@
 #include "gnssanalyzer.h"
 #include "appclock.h"
 
-GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, const QString &profileId)
+GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, const QString &profileId,
+                           QSharedPointer<GnssIncidentState> sharedIncidentState)
 {
     gnssData.id = profileId;
     config = c;
+    incidentState = sharedIncidentState ? sharedIncidentState : QSharedPointer<GnssIncidentState>::create();
     connect(updDisplayTimer, &QTimer::timeout, this, &GnssAnalyzer::updDisplay);
 
     if (RUNTESTS) tests();
@@ -74,27 +76,18 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
 void GnssAnalyzer::traceIncidentStarted()
 {
     QMutexLocker locker(&mutex);
-    traceIncidentActive = true;
-    traceIncidentGraceTimer.invalidate();
+    incidentState->setTraceIncidentActive(true);
 }
 
 void GnssAnalyzer::traceIncidentEnded()
 {
     QMutexLocker locker(&mutex);
-    traceIncidentActive = false;
-    traceIncidentGraceTimer.start();
+    incidentState->setTraceIncidentActive(false);
 }
 
 bool GnssAnalyzer::shouldPauseSignalAverages()
 {
-    if (traceIncidentActive) return true;
-
-    if (!traceIncidentGraceTimer.isValid()) return false;
-
-    if (traceIncidentGraceTimer.elapsed() < traceIncidentAverageGraceTimeMs) return true;
-
-    traceIncidentGraceTimer.invalidate();
-    return false;
+    return incidentState->shouldPauseSignalAverages();
 }
 
 void GnssAnalyzer::analyze(GnssData &data)

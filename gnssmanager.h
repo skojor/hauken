@@ -58,6 +58,7 @@ private:
     QMap<QString, GnssDevice *> devices; // Serial-type profiles only
     QMap<QString, GnssAnalyzer *> analyzers; // Serial and Instrument profiles
     QSet<QString> activeIncidentProfiles;
+    QSharedPointer<GnssIncidentState> incidentState = QSharedPointer<GnssIncidentState>::create();
 };
 
 #endif // GNSSMANAGER_H

@@ -5,16 +5,54 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <math.h>
+#include <chrono>
 #include "config.h"
 #include "typedefs.h"
 
 #define RUNTESTS false
 
+class GnssIncidentState
+{
+public:
+    using Clock = std::chrono::steady_clock;
+    void setTraceIncidentActive(bool active, Clock::time_point now = Clock::now())
+    {
+        setActive(traceIncidentActive, active, now);
+    }
+    void setGnssIncidentActive(bool active, Clock::time_point now = Clock::now())
+    {
+        setActive(gnssIncidentActive, active, now);
+    }
+    bool shouldPauseSignalAverages(Clock::time_point now = Clock::now()) const
+    {
+        return traceIncidentActive || gnssIncidentActive
+               || (graceActive && now < graceEndsAt);
+    }
+
+private:
+    void setActive(bool &state, bool active, Clock::time_point now)
+    {
+        if (state == active) return;
+        state = active;
+        if (active) graceActive = false;
+        else if (!traceIncidentActive && !gnssIncidentActive) {
+            graceEndsAt = now + std::chrono::seconds(60);
+            graceActive = true;
+        }
+    }
+
+    bool traceIncidentActive = false;
+    bool gnssIncidentActive = false;
+    bool graceActive = false;
+    Clock::time_point graceEndsAt;
+};
+
 class GnssAnalyzer : public QObject
 {
     Q_OBJECT
 public:
-    GnssAnalyzer(QSharedPointer<Config>, const QString &profileId);
+    GnssAnalyzer(QSharedPointer<Config>, const QString &profileId,
+                 QSharedPointer<GnssIncidentState> incidentState = {});
 
 public slots:
     void getData(GnssData &data);
@@ -72,9 +110,7 @@ private:
     const double DEG_TO_RAD = 0.017453292519943295769236907684886;
 
     bool stateInstrumentGnss = true; // goes false if instrumentGnss is used and stream disappears
-    bool traceIncidentActive = false;
-    QElapsedTimer traceIncidentGraceTimer;
-    const int traceIncidentAverageGraceTimeMs = 60000;
+    QSharedPointer<GnssIncidentState> incidentState;
 
     const int jammingIndicatorTriggerValue = 98; // effectively disabled for now TBD what to use this for
     QSharedPointer<Config> config;
