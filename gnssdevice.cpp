@@ -294,7 +294,7 @@ void GnssDevice::handleBuffer()
                 appendToBinaryfile(binarySentence);
             }
         }
-        if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty()) {
+        if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty() && checkSbfChecksum(sbfBinSentence)) {
             quint16 id = qFromLittleEndian<quint16>(reinterpret_cast<const uchar*>(sbfBinSentence.constData() + 4));
             id = id & 0x1fff;
             updateBacklog(sbfBinSentence, true);
@@ -579,6 +579,32 @@ bool GnssDevice::checkBinaryChecksum(const QByteArray &val)
     else return false;
 }
 
+
+bool GnssDevice::checkSbfChecksum(const QByteArray &val)
+{
+    if (val.size() < 8) {
+        qDebug() << "GNSS SBF CRC failed: incomplete header, receiver" << profileLabel;
+        return false;
+    }
+
+    quint16 crc = 0;
+    for (qsizetype index = 4; index < val.size(); ++index) {
+        crc ^= static_cast<quint16>(static_cast<quint8>(val.at(index))) << 8;
+        for (int bit = 0; bit < 8; ++bit)
+            crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+
+    const auto *bytes = reinterpret_cast<const uchar *>(val.constData());
+    const quint16 receivedCrc = qFromLittleEndian<quint16>(bytes + 2);
+    if (crc != receivedCrc) {
+        qDebug() << "GNSS SBF CRC failed, receiver" << profileLabel
+                 << "block" << (qFromLittleEndian<quint16>(bytes + 4) & 0x1fff)
+                 << "length" << val.size()
+                 << "received" << Qt::hex << receivedCrc << "calculated" << crc;
+        return false;
+    }
+    return true;
+}
 
 bool GnssDevice::checkChecksum(const QByteArray &val)
 {

@@ -80,6 +80,7 @@ private slots:
     QDateTime convFromGnssTimeToQDateTime(const QByteArray date, const QByteArray time);
     void decodeBinary(const QByteArray &val);
     bool checkBinaryChecksum(const QByteArray &val);
+    bool checkSbfChecksum(const QByteArray &val);
     void appendToLogfile(const QByteArray &data);
     void appendToBinaryfile(const QByteArray &data);
     void checkPosValid();
