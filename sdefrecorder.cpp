@@ -275,6 +275,7 @@ QByteArray SdefRecorder::createHeader(const int saveInterval)
 
     QString gain;
     if (config->getInstrId().contains("em200", Qt::CaseInsensitive)
+        || config->getInstrId().contains("eb500", Qt::CaseInsensitive)
         || config->getInstrId().contains("pr200", Qt::CaseInsensitive)
         || config->getInstrId().contains("esmw", Qt::CaseInsensitive)
         || config->getInstrId().contains("esmd", Qt::CaseInsensitive)) {

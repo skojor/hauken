@@ -727,9 +727,9 @@ void MainWindow::getConfigValues()
                &QComboBox::currentIndexChanged,
                this,
                &MainWindow::instrGainControlChanged);
-    instrGainControl->addItems(QStringList() << "Low noise"
-                                             << "Normal"
-                                             << "Low distortion");
+    instrGainControl->addItem("Low noise", 0);
+    instrGainControl->addItem("Normal", 1);
+    instrGainControl->addItem("Low distortion", 2);
     connect(instrGainControl,
             &QComboBox::currentIndexChanged,
             this,

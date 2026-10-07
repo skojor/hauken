@@ -181,6 +181,17 @@ void MainWindow::instrConnected(bool state) // takes care of enabling/disabling 
         setResolutionFunction();
         setDeviceAntPorts();
         setDeviceFftModes();
+        const bool signalsBlocked = instrGainControl->blockSignals(true);
+        instrGainControl->clear();
+        if (measurementDevice->measurementDeviceData()->type == Instrument::InstrumentType::EB500) {
+            instrGainControl->addItem("Normal", 1);
+            instrGainControl->addItem("Low distortion", 2);
+        } else {
+            instrGainControl->addItem("Low noise", 0);
+            instrGainControl->addItem("Normal", 1);
+            instrGainControl->addItem("Low distortion", 2);
+        }
+        instrGainControl->blockSignals(signalsBlocked);
         instrGainControlChanged();
         instrStartFreq->setMinimum(measurementDevice->deviceMinFreq() / 1e6);
         instrStopFreq->setMaximum(measurementDevice->deviceMaxFreq() / 1e6);
@@ -204,10 +215,18 @@ void MainWindow::instrGainControlChanged(int index)
     sdefRecorder->closeTempFile(); // Renew temp file if gain is changed
     if (index == -1)
         index = config->getInstrGainControl();
-    else
+    else {
+        index = instrGainControl->itemData(index).toInt();
         config->setInstrGainControl(index);
+    }
 
-    instrGainControl->setCurrentIndex(index);
+    int comboIndex = instrGainControl->findData(index);
+    if (comboIndex < 0) {
+        index = 1;
+        comboIndex = instrGainControl->findData(index);
+        config->setInstrGainControl(index);
+    }
+    instrGainControl->setCurrentIndex(comboIndex);
 
     if (measurementDevice->deviceHasGainControl()) {
         measurementDevice->setGainControl(index);
