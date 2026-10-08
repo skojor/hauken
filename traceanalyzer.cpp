@@ -111,6 +111,23 @@ bool TraceAnalyzer::traceAnalyzerIncidentHasHappened() const
     return alarmEmitted;
 }
 
+void TraceAnalyzer::forceAlarm(const QString &reason)
+{
+    if (!alarmEmitted) {
+        alarmEmitted = true;
+        emit toIncidentLog(NOTIFY::TYPE::TRACEANALYZER, "", reason);
+    }
+    emit alarm();
+}
+
+void TraceAnalyzer::forceAlarmEnded()
+{
+    if (alarmEmitted) {
+        alarmEmitted = false;
+        emit alarmEnded();
+    }
+}
+
 void TraceAnalyzer::checkSignificantLevelChange(qint16 currentMaxLevel)
 {
     if (!significantLevelReferenceValid) {

@@ -1,9 +1,12 @@
 #include "gnssanalyzer.h"
+#include "appclock.h"
 
-GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, const QString &profileId)
+GnssAnalyzer::GnssAnalyzer(QSharedPointer<Config> c, const QString &profileId,
+                           QSharedPointer<GnssIncidentState> sharedIncidentState)
 {
     gnssData.id = profileId;
     config = c;
+    incidentState = sharedIncidentState ? sharedIncidentState : QSharedPointer<GnssIncidentState>::create();
     connect(updDisplayTimer, &QTimer::timeout, this, &GnssAnalyzer::updDisplay);
 
     if (RUNTESTS) tests();
@@ -26,7 +29,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
 {
     const bool pauseSignalAverages = shouldPauseSignalAverages();
 
-    if (!pauseSignalAverages && data.cno > 0) {
+    if (data.cno > 0 && (!pauseSignalAverages || (data.avgCnoArray.isEmpty() && data.avgCno <= 0))) {
         data.avgCnoArray.append(data.cno);
         data.avgCno = 0;
         for (auto &val : data.avgCnoArray)
@@ -35,7 +38,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgCnoArray.size() > 300)
             data.avgCnoArray.pop_front();
     }
-    if (!pauseSignalAverages && data.agc >= 0) {
+    if (data.agc >= 0 && (!pauseSignalAverages || (data.avgAgcArray.isEmpty() && data.avgAgc < 0))) {
         data.avgAgcArray.append(data.agc);
         data.avgAgc = 0;
         for (auto &val : data.avgAgcArray)
@@ -44,19 +47,18 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgAgcArray.size() > 300)
             data.avgAgcArray.pop_front();
     }
-    if (!pauseSignalAverages) {
-        for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
-            GnssAgcBlockData &block = iterator.value();
-            if (block.agc < 0) continue;
+    for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
+        GnssAgcBlockData &block = iterator.value();
+        if (block.agc < 0 || (pauseSignalAverages &&
+                              (!block.avgAgcArray.isEmpty() || block.avgAgc >= 0))) continue;
 
-            block.avgAgcArray.append(block.agc);
-            block.avgAgc = 0;
-            for (int value : block.avgAgcArray)
-                block.avgAgc += value;
-            block.avgAgc /= block.avgAgcArray.size();
-            while (block.avgAgcArray.size() > 300)
-                block.avgAgcArray.pop_front();
-        }
+        block.avgAgcArray.append(block.agc);
+        block.avgAgc = 0;
+        for (int value : block.avgAgcArray)
+            block.avgAgc += value;
+        block.avgAgc /= block.avgAgcArray.size();
+        while (block.avgAgcArray.size() > 300)
+            block.avgAgcArray.pop_front();
     }
     if (data.jammingIndicator >= 0) {
         data.avgJammingIndicatorArray.append(data.jammingIndicator);
@@ -73,34 +75,25 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
 void GnssAnalyzer::traceIncidentStarted()
 {
     QMutexLocker locker(&mutex);
-    traceIncidentActive = true;
-    traceIncidentGraceTimer.invalidate();
+    incidentState->setTraceIncidentActive(true);
 }
 
 void GnssAnalyzer::traceIncidentEnded()
 {
     QMutexLocker locker(&mutex);
-    traceIncidentActive = false;
-    traceIncidentGraceTimer.start();
+    incidentState->setTraceIncidentActive(false);
 }
 
 bool GnssAnalyzer::shouldPauseSignalAverages()
 {
-    if (traceIncidentActive) return true;
-
-    if (!traceIncidentGraceTimer.isValid()) return false;
-
-    if (traceIncidentGraceTimer.elapsed() < traceIncidentAverageGraceTimeMs) return true;
-
-    traceIncidentGraceTimer.invalidate();
-    return false;
+    return incidentState->shouldPauseSignalAverages();
 }
 
 void GnssAnalyzer::analyze(GnssData &data)
 {
     data.posOffset = distanceInMeters(data);
     data.altOffset = abs(ownAltitude - data.altitude);
-    data.timeOffset = abs(data.timestamp.msecsTo(QDateTime::currentDateTimeUtc()));
+    data.timeOffset = abs(data.timestamp.msecsTo(AppClock::nowUtc()));
     if (data.id != "instrument") {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);
@@ -154,7 +147,7 @@ void GnssAnalyzer::updSettings()
     isInstrumentType = profile.type == GnssReceiverProfile::Type::Instrument;
     logToFile = profile.triggerRecording;
     checkAgc = !isInstrumentType && profile.ublox;
-    emit alarmEnded(); // To update led indicator/text
+    if (!anyOffsetTriggered()) emit alarmEnded(); // To update led indicator/text
     //qDebug() << "gnss updsettings";
 }
 
@@ -208,6 +201,15 @@ void GnssAnalyzer::emitAlarmEndedIfNoOffsetTriggered()
     if (!anyOffsetTriggered()) emit alarmEnded();
 }
 
+void GnssAnalyzer::reportRecordingTrigger(const QString &reason)
+{
+    if (logToFile && config->getGnssShowNotifications()) {
+        emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER,
+                           config->getGnssReceiverProfile(gnssData.id).name,
+                           "GNSS recording trigger: " + reason);
+    }
+}
+
 void GnssAnalyzer::checkPosOffset(GnssData &data)
 {
     QString msg;
@@ -218,11 +220,14 @@ void GnssAnalyzer::checkPosOffset(GnssData &data)
     if (data.posValid && posOffsetLimit > 0 && data.posOffset > posOffsetLimit) {
         if (!posOffsetTriggered && !posOffsetFilterTimer.isValid()) { // First activation, start timer to filter short term events
             posOffsetFilterTimer.start();
+            reportRecordingTrigger(QString("Position offset exceeded, current offset: %1 m")
+                                       .arg(data.posOffset, 0, 'f', 1));
         }
         else if (!posOffsetTriggered && posOffsetFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
-            ts << "Position offset triggered, current offset: "
-               << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m"
-               << (logToFile ? ". Recording":"");
+            if (!logToFile) {
+                ts << "Position offset triggered, current offset: "
+                   << (data.posOffset > 999?">999":QString::number(data.posOffset, 'f', 1)) << " m";
+            }
             posOffsetTriggered = true;
             posOffsetTimer.start();
             posOffsetFilterTimer.invalidate();
@@ -254,11 +259,13 @@ void GnssAnalyzer::checkAltOffset(GnssData &data)
 
     if (data.posValid && altOffsetLimit > 0 && data.altOffset > altOffsetLimit) {
         if (!altOffsetTriggered && !altOffsetFilterTimer.isValid())
+        {
             altOffsetFilterTimer.start();
+            reportRecordingTrigger(QString("Altitude offset exceeded, current offset: %1 m").arg(data.altOffset));
+        }
 
         else if (!altOffsetTriggered && altOffsetFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
-            ts << "Altitude offset triggered, current offset: "
-               << data.altOffset << " m" << (logToFile ? ". Recording":"");
+            if (!logToFile) ts << "Altitude offset triggered, current offset: " << data.altOffset << " m";
             altOffsetTriggered = true;
             altOffsetTimer.start();
             altOffsetFilterTimer.invalidate();
@@ -289,12 +296,16 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
 
     if (data.posValid && timeOffsetLimit > 0 && data.timeOffset > timeOffsetLimit) {
         if (!timeOffsetTriggered && !timeOffsetFilterTimer.isValid())
+        {
             timeOffsetFilterTimer.start();
+            reportRecordingTrigger(QString("Time offset exceeded, current offset: %1 ms").arg(data.timeOffset));
+        }
 
         else if (!timeOffsetTriggered && timeOffsetFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
-            ts << "Time offset triggered, current offset: "
-               << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms"
-               << (logToFile ? ". Recording":"");
+            if (!logToFile) {
+                ts << "Time offset triggered, current offset: "
+                   << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms";
+            }
             timeOffsetTriggered = true;
             timeOffsetTimer.start();
             timeOffsetFilterTimer.invalidate();
@@ -325,11 +336,13 @@ void GnssAnalyzer::checkCnoOffset(GnssData &data)
 
     if (data.posValid && cnoLimit > 0 && data.cnoOffset > cnoLimit) {
         if (!cnoLimitTriggered && !cnoFilterTimer.isValid())
+        {
             cnoFilterTimer.start();
+            reportRecordingTrigger(QString("C/No offset exceeded, current offset: %1 dB").arg(data.cnoOffset));
+        }
 
         else if (!cnoLimitTriggered && cnoFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
-            ts << "C/No offset triggered, current offset: " << data.cnoOffset << " dB"
-               << (logToFile ? ". Recording":"");
+            if (!logToFile) ts << "C/No offset triggered, current offset: " << data.cnoOffset << " dB";
             cnoLimitTriggered = true;
             cnoTimer.start();
             cnoFilterTimer.invalidate();
@@ -360,11 +373,13 @@ void GnssAnalyzer::checkAgcOffset(GnssData &data)
 
     if (data.posValid && agcLimit > 0 && data.agcOffset > agcLimit) {
         if (!agcLimitTriggered && !agcFilterTimer.isValid())
+        {
             agcFilterTimer.start();
+            reportRecordingTrigger(QString("AGC offset exceeded, current offset: %1").arg(data.agcOffset));
+        }
 
         else if (!agcLimitTriggered && agcFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
-            ts << "AGC offset triggered, current offset: "
-               << data.agcOffset << (logToFile ? ". Recording":"");
+            if (!logToFile) ts << "AGC offset triggered, current offset: " << data.agcOffset;
             agcLimitTriggered = true;
             agcTimer.start();
             agcFilterTimer.invalidate();
@@ -408,14 +423,20 @@ void GnssAnalyzer::checkAgcBlockOffsets(GnssData &data)
         if (data.posValid && agcLimit > 0 && block.agcOffset > agcLimit) {
             if (!triggered && !filterTimer.isValid()) {
                 filterTimer.start();
+                const QString blockLabel = block.frequencyMapped
+                                               ? QString("%1 - %2").arg(blockId).arg(block.frequencyLabel)
+                                               : QString::number(blockId);
+                reportRecordingTrigger(QString("AGC block %1 offset exceeded, current offset: %2")
+                                           .arg(blockLabel).arg(block.agcOffset));
             }
             else if (!triggered && filterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
                 const QString blockLabel = block.frequencyMapped
                                                ? QString("%1 - %2").arg(blockId).arg(block.frequencyLabel)
                                                : QString::number(blockId);
-                messages.append(QString("AGC block %1 offset triggered, current offset: %2%3")
-                                    .arg(blockLabel).arg(block.agcOffset)
-                                    .arg(logToFile ? ". Recording" : ""));
+                if (!logToFile) {
+                    messages.append(QString("AGC block %1 offset triggered, current offset: %2")
+                                        .arg(blockLabel).arg(block.agcOffset));
+                }
                 triggered = true;
                 agcBlockTimers[blockId].start();
                 filterTimer.invalidate();
@@ -455,10 +476,13 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
 
     if (data.posValid && data.jammingIndicator > jammingIndicatorTriggerValue) {
         if (!jamIndTriggered && !jamIndFilterTimer.isValid())
+        {
             jamIndFilterTimer.start();
+            reportRecordingTrigger(QString("Jamming indicator high: %1").arg(data.avgJammingIndicator));
+        }
 
         else if (!jamIndTriggered && jamIndFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
-            ts << "Jamming indicator high: " << data.avgJammingIndicator << (logToFile ? ". Recording":"");
+            if (!logToFile) ts << "Jamming indicator high: " << data.avgJammingIndicator;
             jamIndTriggered = true;
             jamIndTimer.start();
             jamIndFilterTimer.invalidate();

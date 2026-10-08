@@ -61,6 +61,8 @@ public slots:
     void recorderStarted();
     void recorderEnded();
     void incidenceTriggered();
+    void saveAvgLevelsForIncident(const QString &basePath);
+    bool loadAvgLevelsFromFile(const QString &path, double startHz, double stopHz, int dataPoints);
 
 signals:
     void newDispTrace(const QVector<double> &data);
@@ -89,7 +91,7 @@ private slots:
     void finishAvgLevelCalc();
     QVector<qint16> calcNormalizedTrace(const QVector<qint16> &data);
     void maintainAvgLevel();
-    void saveAvgLevels();
+    void saveAvgLevels(const QString &path = QString());
     bool restoreAvgLevels();
 
 private:

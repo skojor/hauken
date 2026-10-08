@@ -32,6 +32,9 @@ class SdefRecorder : public QObject
 {
     Q_OBJECT
 public:
+    enum class TriggerSource { Unknown, TraceAnalyzer, Gnss, Manual, Mqtt, AutoRecorder };
+    Q_ENUM(TriggerSource)
+
     SdefRecorder(QSharedPointer<Config> c);
 
 public slots:
@@ -41,6 +44,8 @@ public slots:
     void triggerRecording(); // to be called as long as incident is happening!
     void triggerRecordingWithoutAnalysisArtifacts();
     void manualTriggeredRecording();
+    void stopRecordingManually(bool suppressIncidentTriggers);
+    void clearIncidentTriggerSuppression();
     void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
     void receiveTrace(const QVector<qint16> data); // new data arrives here
     void updTracesPerSecond(double d);
@@ -61,11 +66,14 @@ public slots:
     void updAntName(QString s) {antName = s.remove(' ');}
     void updScanTime(int i);
     void setIntentional(QString s) {flagUploadIntentionalOnly = true;} // FIXME - shortcut in code!
+    void setTriggerSource(SdefRecorder::TriggerSource source) { if (!recording) triggerSource = source; }
 
 private slots:
     QByteArray createHeader(const int saveInterval = 0);
     QString convertDdToddmmss(const double d, const bool lat = true);
     QString createFilename();
+    QString incidentBasePath();
+    void writeSettingsSnapshot();
     bool curlLogin();
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
@@ -91,6 +99,7 @@ signals:
     void reqAuthentication();
     void fileReadyForUpload(QString);
     void folderDateTimeSet();
+    void incidentFilesBasePath(const QString &basePath);
 
 private:
     void startRecording(bool includeAnalysisArtifacts);
@@ -110,6 +119,8 @@ private:
     bool historicDataSaved = false;
     bool recording = false;
     bool failed = false;
+    bool incidentTriggersSuppressed = false;
+    bool preserveAutoRecorderSchedule = false;
     bool saveToSdef;
     int recordTime;
     int maxRecordTime;
@@ -140,6 +151,7 @@ private:
     QString antName = "NA";
 
     bool flagUploadIntentionalOnly = false;
+    TriggerSource triggerSource = TriggerSource::Unknown;
 
     // Config cache
     bool useNewMsFormat;

@@ -4,8 +4,23 @@
 #include "ubloxmonrfparser.h"
 #include "ubloxmonspanparser.h"
 #include "fftw3.h"
+#include "appclock.h"
+#include <algorithm>
 
 namespace {
+QString septentrioSatelliteSystem(int satelliteId)
+{
+    if (satelliteId >= 1 && satelliteId <= 37) return "GPS";
+    if (satelliteId >= 38 && satelliteId <= 68) return "GLONASS";
+    if (satelliteId >= 71 && satelliteId <= 106) return "Galileo";
+    if (satelliteId >= 107 && satelliteId <= 119) return "L-Band";
+    if ((satelliteId >= 120 && satelliteId <= 140) || (satelliteId >= 198 && satelliteId <= 215)) return "SBAS";
+    if ((satelliteId >= 141 && satelliteId <= 180) || (satelliteId >= 223 && satelliteId <= 245)) return "BeiDou";
+    if (satelliteId >= 181 && satelliteId <= 190) return "QZSS";
+    if ((satelliteId >= 191 && satelliteId <= 197) || (satelliteId >= 216 && satelliteId <= 222)) return "NavIC";
+    return {};
+}
+
 QString frequencyLabel(const UbloxRfBandMetadata &metadata)
 {
     QString window = "RF";
@@ -107,7 +122,7 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
 
     connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
             {
-                if (this->gnss->isOpen() || tcpSocket->isOpen()) emit analyzeThisData(gnssData);
+                if (this->gnss->isOpen() || tcpSocket->isOpen() || replayMode) emit analyzeThisData(gnssData);
                 checkPosValid(); // run once per sec
             });
 
@@ -134,8 +149,27 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
 
 }
 
+GnssDevice::~GnssDevice()
+{
+    // Members are unparented, close the port explicitly so it can be reopened
+    gnss->close();
+    tcpSocket->abort();
+    delete gnss;
+    delete tcpSocket;
+    delete sendToAnalyzerTimer;
+    delete delayedReportTimer;
+    delete tcpWatchdogTimer;
+    delete backlogCleanupTimer;
+    delete hostAddress;
+}
+
 void GnssDevice::start()
 {
+    if (replayMode) {
+        if (!sendToAnalyzerTimer->isActive())
+            sendToAnalyzerTimer->start(1000);
+        return;
+    }
     if (config->getGnssReceiverProfile(gnssData.id).enabled &&
         (!gnss->isOpen() || tcpSocket->state() == QAbstractSocket::UnconnectedState)) connectToPort();
     sendToAnalyzerTimer->stop();
@@ -171,6 +205,20 @@ void GnssDevice::connectToPort()
             gnss->setDataTerminalReady(true);
             if (uBloxDevice) askUbloxVersion();
         }
+    }
+}
+
+void GnssDevice::injectBytes(const QByteArray &data)
+{
+    // Small pieces, handleBuffer() discards the buffer if it grows beyond 15000 bytes
+    constexpr int pieceSize = 2048;
+    for (int pos = 0; pos < data.size(); pos += pieceSize) {
+        gnssBuffer.append(data.mid(pos, pieceSize));
+        qsizetype previousSize;
+        do {
+            previousSize = gnssBuffer.size();
+            handleBuffer();
+        } while (!gnssBuffer.isEmpty() && gnssBuffer.size() < previousSize);
     }
 }
 
@@ -260,7 +308,16 @@ void GnssDevice::handleBuffer()
                 appendToBinaryfile(binarySentence);
             }
         }
-        if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty()) {
+        if (sbfBinIndex != -1 && !sbfBinSentence.isEmpty() && checkSbfChecksum(sbfBinSentence)) {
+            gnssData.septentrioReceiver = true;
+            if (!septentrioDetected) {
+                septentrioDetected = true;
+                gnssData.satsTracked = 0;
+                gnssData.cno = 0;
+                gnssData.gnssType.clear();
+                gsvSentences.clear();
+                qDebug() << "Septentrio GNSS receiver detected:" << gnssData.id << portName;
+            }
             quint16 id = qFromLittleEndian<quint16>(reinterpret_cast<const uchar*>(sbfBinSentence.constData() + 4));
             id = id & 0x1fff;
             updateBacklog(sbfBinSentence, true);
@@ -270,6 +327,8 @@ void GnssDevice::handleBuffer()
                 decodeSbf4027(sbfBinSentence);
             else if (id == 4013)
                 decodeSbf4013(sbfBinSentence);
+            else if (id == 4092)
+                decodeSbf4092(sbfBinSentence);
             else if (id == 4040)
                 decodeSbf4040(sbfBinSentence);
 
@@ -314,7 +373,7 @@ bool GnssDevice::decodeGga(const QByteArray &val)
     if (split.size() > 9) {
         gnssData.ggaValid = true;
 
-        if (!gnssData.gnsValid && !septentrioChannelStatusSeen) gnssData.satsTracked = split.at(7).toInt();
+        if (!gnssData.gnsValid && !septentrioDetected) gnssData.satsTracked = split.at(7).toInt();
         gnssData.fixQuality = split.at(6).toInt();
         gnssData.altitude = split.at(9).toDouble();
         //gnssData.hdop = split.at(8).toDouble();
@@ -349,6 +408,7 @@ bool GnssDevice::decodeRmc(const QByteArray &val)
 
 bool GnssDevice::decodeGsv(const QByteArray &val)
 {
+    if (septentrioDetected) return true;
     if (!checkedAllSatSystems) {
         if (val.contains("$GP") && !gnssData.gnssType.contains("GPS")) gnssData.gnssType += "GPS ";
         else if (val.contains("$GL") && !gnssData.gnssType.contains("GLONASS")) gnssData.gnssType += "GLONASS ";
@@ -396,7 +456,7 @@ bool GnssDevice::decodeGns(const QByteArray &val)
 {
     gnssData.gnsValid = true;
     QList<QByteArray> split = val.split(',');
-    if (split.size() > 7 && !septentrioChannelStatusSeen) {
+    if (split.size() > 7 && !septentrioDetected) {
         gnssData.satsTracked = split[7].toInt();
     }
     return true;
@@ -546,6 +606,22 @@ bool GnssDevice::checkBinaryChecksum(const QByteArray &val)
 }
 
 
+bool GnssDevice::checkSbfChecksum(const QByteArray &val)
+{
+    if (val.size() < 8) return false;
+
+    quint16 crc = 0;
+    for (qsizetype index = 4; index < val.size(); ++index) {
+        crc ^= static_cast<quint16>(static_cast<quint8>(val.at(index))) << 8;
+        for (int bit = 0; bit < 8; ++bit)
+            crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+
+    const auto *bytes = reinterpret_cast<const uchar *>(val.constData());
+    const quint16 receivedCrc = qFromLittleEndian<quint16>(bytes + 2);
+    return crc == receivedCrc;
+}
+
 bool GnssDevice::checkChecksum(const QByteArray &val)
 {
     uint checksum = 0;
@@ -657,24 +733,21 @@ void GnssDevice::appendToBinaryfile(const QByteArray &data)
 
 void GnssDevice::checkPosValid()
 {
-    QString msg;
-    QTextStream ts(&msg);
-    ts.setRealNumberNotation(QTextStream::FixedNotation);
-    ts.setRealNumberPrecision(1);
-
-    if (!gnssData.posValid && !posInvalidTriggered && !delayedReportTimer->isActive()) { // any recording triggered because position goes invalid will only last for minutes set in sdef config (record time after incident).
-        // this to not always record, in case gnss has failed somehow. other triggers will renew as long as the trigger is valid.
+    if (gnssData.posValid) {
+        delayedReportTimer->stop();
+        if (posInvalidTriggered) {
+            posInvalidTriggered = false;
+            if (config->getGnssShowNotifications())
+                emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "Position valid");
+        }
+    } else if (!posInvalidTriggered && !delayedReportTimer->isActive()) {
         delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
     }
-    else if (gnssData.posValid && posInvalidTriggered && !delayedReportTimer->isActive()) {
-        delayedReportTimer->start(config->getNotifyTruncateTime() * 1e3);
-    }
-    if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, msg);
 }
 
 void GnssDevice::connectTcpSocket()
 {
-    if (!portName.isEmpty() && !baudrate.isEmpty() && tcpSocket->state() == QAbstractSocket::UnconnectedState && baudrate.toInt() > 0) {
+    if (activate && !portName.isEmpty() && !baudrate.isEmpty() && tcpSocket->state() == QAbstractSocket::UnconnectedState && baudrate.toInt() > 0) {
         hostAddress->setAddress(portName);
         tcpSocket->connectToHost(*hostAddress, baudrate.toInt());
     }
@@ -695,6 +768,10 @@ void GnssDevice::handleTcpStateChange(QAbstractSocket::SocketState state)
         sendToAnalyzerTimer->stop();
     }
     if (state == QAbstractSocket::UnconnectedState) { // retry conn. every 5 sec if valid settings
+        if (!activate) {
+            tcpWasConnected = false;
+            return;
+        }
         if (tcpWasConnected) {
             emit toIncidentLog(NOTIFY::TYPE::GNSSDEVICE, profileLabel, "GNSS TCP connection lost, will attempt to reconnect");
             tcpWasConnected = false;
@@ -800,7 +877,7 @@ void GnssDevice::setupUbloxDevice()
 
 void GnssDevice::setIncidenceStartedDateTime()
 {
-    const QDateTime now = QDateTime::currentDateTime();
+    const QDateTime now = AppClock::now();
 
     // Trace/GNSS alarm signals can be emitted repeatedly while an incident is
     // active, so keep the first timestamp for the current backlog window.  If
@@ -856,7 +933,7 @@ QString GnssDevice::createFilename(const QString &suffix)
 
 void GnssDevice::updateBacklog(QByteArray &data, bool isBinary)
 {
-    backlogTimestamp.append(QDateTime::currentDateTime());
+    backlogTimestamp.append(AppClock::now());
     backlogData.append(data);
     backlogIsBinary.append(isBinary);
     backlogAgc.append(gnssData.agc);
@@ -878,7 +955,7 @@ void GnssDevice::updateBacklog(QByteArray &data, bool isBinary)
 
 void GnssDevice::cleanupBacklog()
 {
-    while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(QDateTime::currentDateTime()) > 120) { // Keep backlog at 120 secs age
+    while (backlogTimestamp.size() && backlogData.size() && backlogTimestamp.first().secsTo(AppClock::now()) > 120) { // Keep backlog at 120 secs age
         backlogTimestamp.removeFirst();
         backlogData.removeFirst();
         backlogIsBinary.removeFirst();
@@ -897,7 +974,7 @@ void GnssDevice::saveBacklog()
 
     if (backlogData.size()) { // Save only if there are any data in buffer (daah)
         if (!incidenceStartedDateTime.isValid())
-            incidenceStartedDateTime = QDateTime::currentDateTime();
+            incidenceStartedDateTime = AppClock::now();
 
         createGnssPlot();
 
@@ -1038,17 +1115,39 @@ void GnssDevice::decodeSbf4014(const QByteArray &data)
     }
 }
 
+void GnssDevice::decodeSbf4092(const QByteArray &data)
+{
+    SeptentrioRfStatus status;
+    if (SeptentrioRfStatusParser::parse(data, status)) {
+        gnssData.septentrioRfStatus = status;
+        gnssData.septentrioRfStatusTimestamp = AppClock::nowUtc();
+    }
+}
+
 void GnssDevice::decodeSbf4027(const QByteArray &data)
 {
     const uchar* p = reinterpret_cast<const uchar*>(data.constData());
     if (data.size() < 20) return;
 
-    uint8_t N1 = p[12];
-    uint8_t SB1Length = p[13];
-    uint8_t SB2Length = p[14];
-    if (SB1Length < 20 || SB2Length < 1) return;
+    uint8_t N1 = p[14];
+    uint8_t SB1Length = p[15];
+    uint8_t SB2Length = p[16];
+    if (SB1Length < 20 || SB2Length < 12) return;
 
     QSet<int> activeSignalTypes;
+    QSet<int> trackedSatellites;
+    QMap<int, double> satelliteCno;
+    QStringList satelliteSystems;
+    const auto addMeasurement = [&](int satelliteId, int signalIndex, quint8 rawCno) {
+        const QString system = septentrioSatelliteSystem(satelliteId);
+        if (system.isEmpty()) return;
+        trackedSatellites.insert(satelliteId);
+        if (!satelliteSystems.contains(system)) satelliteSystems.append(system);
+        if (rawCno == 255) return;
+        const double cno = rawCno * 0.25 + ((signalIndex == 1 || signalIndex == 2) ? 0 : 10);
+        if (!satelliteCno.contains(satelliteId) || cno > satelliteCno.value(satelliteId))
+            satelliteCno[satelliteId] = cno;
+    };
     int off = 20;
     for (int i = 0; i < N1; i++) {
         if (off + SB1Length > data.size()) return; // malformed/truncated, keep previous state
@@ -1060,6 +1159,7 @@ void GnssDevice::decodeSbf4027(const QByteArray &data)
         if (antenna == 0) {
             int sigIdx = sigIdxLo == 31 ? 32 + (obsInfo >> 3) : sigIdxLo;
             activeSignalTypes.insert(sigIdx);
+            addMeasurement(type1[2], sigIdx, type1[15]);
         }
         uint8_t N2 = type1[19];
 
@@ -1074,6 +1174,7 @@ void GnssDevice::decodeSbf4027(const QByteArray &data)
                 uint8_t obsInfo2 = SB2Length > 5 ? type2[5] : 0;
                 int sigIdx2 = sigIdxLo2 == 31 ? 32 + (obsInfo2 >> 3) : sigIdxLo2;
                 activeSignalTypes.insert(sigIdx2);
+                addMeasurement(type1[2], sigIdx2, type2[2]);
             }
             type2Off += SB2Length;
         }
@@ -1082,6 +1183,14 @@ void GnssDevice::decodeSbf4027(const QByteArray &data)
 
     septentrioActiveSignalTypes = activeSignalTypes;
     septentrioMeasEpochSeen = true;
+    gnssData.satsTracked = trackedSatellites.size();
+    gnssData.gnssType = satelliteSystems.join(' ');
+    QList<double> cnoValues = satelliteCno.values();
+    std::sort(cnoValues.begin(), cnoValues.end(), [](double first, double second) { return first > second; });
+    double cnoSum = 0;
+    const qsizetype cnoCount = qMin(qsizetype(4), cnoValues.size());
+    for (qsizetype index = 0; index < cnoCount; ++index) cnoSum += cnoValues.at(index);
+    gnssData.cno = cnoCount > 0 ? cnoSum / cnoCount : 0;
 }
 
 void GnssDevice::decodeSbf4013(const QByteArray &data)
@@ -1092,8 +1201,7 @@ void GnssDevice::decodeSbf4013(const QByteArray &data)
     if (data.size() < 20) return;
 
     uint8_t N = p[14];
-    gnssData.satsTracked = N;
-    septentrioChannelStatusSeen = true;
+    if (!septentrioMeasEpochSeen) gnssData.satsTracked = N;
 }
 
 void GnssDevice::decodeSbf4040(const QByteArray &data)

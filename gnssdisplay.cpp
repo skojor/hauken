@@ -1,4 +1,5 @@
 #include "gnssdisplay.h"
+#include "appclock.h"
 
 namespace {
 QString coloredText(const QString &text, const QString &color)
@@ -64,6 +65,52 @@ QString formatJammingIndicator(const GnssData &data)
         values.append(QString("%1: %2 %").arg(label).arg(iterator.value().jammingIndicator));
     }
     return values.isEmpty() ? "n/a" : values.join("<br>");
+}
+
+QString formatInterferenceSpoofing(const GnssData &data)
+{
+    const SeptentrioRfStatus &status = data.septentrioRfStatus;
+    if (data.septentrioReceiver && !status.received)
+        return "RFStatus unavailable";
+    if (data.septentrioReceiver
+        && (!data.septentrioRfStatusTimestamp.isValid()
+            || data.septentrioRfStatusTimestamp.msecsTo(AppClock::nowUtc()) > 5000)) {
+        return "RFStatus stale";
+    }
+    if (!data.septentrioReceiver)
+        return QString("Jamming indicator: %1<br>Spoofing: n/a").arg(formatJammingIndicator(data));
+
+    QStringList interference;
+    for (const SeptentrioRfBandStatus &band : status.bands) {
+        QString mode;
+        switch (band.mode) {
+        case 1: mode = "suppressed by manual notch"; break;
+        case 2: mode = "detected and canceled"; break;
+        case 8: mode = "detected, not mitigated"; break;
+        default: mode = QString("unknown mode %1").arg(band.mode); break;
+        }
+
+        QString antenna = QString("antenna %1").arg(band.antennaId);
+        if (band.antennaId == 0) antenna = "main antenna";
+        else if (band.antennaId == 1) antenna = "Aux1 antenna";
+        else if (band.antennaId == 2) antenna = "Aux2 antenna";
+
+        QString value = QString("%1 MHz, %2 kHz, %3: %4")
+                            .arg(band.frequencyHz / 1e6, 0, 'f', 3)
+                            .arg(band.bandwidthKHz)
+                            .arg(antenna, mode);
+        if (band.interferencePowerDbm != 0 && band.mode != 1)
+            value += QString(" (%1 dBm)").arg(band.interferencePowerDbm);
+        interference.append(value);
+    }
+
+    QStringList spoofingWarnings;
+    if (status.flags & 0x01) spoofingWarnings.append("GNSS signal authenticity warning");
+    if (status.flags & 0x02) spoofingWarnings.append("non-authentic navigation message detected");
+
+    return QString("Interference: %1<br>Spoofing: %2")
+        .arg(interference.isEmpty() ? "none reported" : interference.join("<br>"),
+             spoofingWarnings.isEmpty() ? "none reported" : spoofingWarnings.join("; "));
 }
 }
 
@@ -218,7 +265,7 @@ void GnssDisplay::rebuildReceiverCards()
         rightLayout->addRow("Altitude offset", card->altOffset);
         rightLayout->addRow("Time offset", card->timeOffset);
         rightLayout->addRow("AGC", card->agc);
-        rightLayout->addRow("Jam.ind.", card->cwJamming);
+        rightLayout->addRow("Interference / spoofing", card->cwJamming);
         card->rightGroupBox->setLayout(rightLayout);
 
         cards.insert(profile.id, card);
@@ -394,7 +441,7 @@ void GnssDisplay::updateCardText(const QString &id, GnssReceiverCard *card)
         card->dop->setText("<span style='font-size:normal;'>" + QString::number(data.hdop, 'f', 1) + "</span>");
         card->cno->setText("<span style='font-size:normal;'>" + QString::number(data.cno) + "</span>");
         card->agc->setText("<span style='font-size:normal;'>" + formatAgc(data) + "</span>");
-        card->cwJamming->setText("<span style='font-size:normal;'>" + formatJammingIndicator(data) + "</span>");
+        card->cwJamming->setText("<span style='font-size:normal;'>" + formatInterferenceSpoofing(data) + "</span>");
         card->sats->setText("<span style='font-size:normal;'>" + QString::number(data.satsTracked) + "</span>");
 
         card->posValid->setText("<span style='font-size:normal;color:green;'>yes, tracking " + QString::number(data.satsTracked) + " sats</span>");
@@ -428,7 +475,7 @@ void GnssDisplay::updateCardText(const QString &id, GnssReceiverCard *card)
 
         card->posValid->setText("<span style='font-size:normal;color:red;'>no</span>");
         card->agc->setText("<span style='font-size:normal;'>" + formatAgc(data) + "</span>");
-        card->cwJamming->setText("<span style='font-size:normal;'>" + formatJammingIndicator(data) + "</span>");
+        card->cwJamming->setText("<span style='font-size:normal;'>" + formatInterferenceSpoofing(data) + "</span>");
 
         card->posOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");
         card->altOffset->setText("<span style='font-size:normal;color:red;'>n/a</span>");

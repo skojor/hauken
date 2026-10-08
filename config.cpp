@@ -1,6 +1,7 @@
 #include "config.h"
 #include "version.h"
 #include "asciitranslator.h"
+#include "appclock.h"
 
 
 Config::Config(QObject *parent)
@@ -348,9 +349,122 @@ void Config::incidentStarted()
 {
     if (!flagIncident) { // First call to inc. started
         flagIncident = true;
-        incidentDateTime = QDateTime::currentDateTime();
+        incidentDateTime = AppClock::now();
         //qDebug() << "Suggesting inc. file datestamp" << incidentDateTime.toString();
     }
+}
+
+bool Config::writeSettingsSnapshot(const QString &path, const QVariantMap &runtime)
+{
+    static const QStringList excludedKeys = {"sdef/Username", "sdef/Password", "sdef/AuthAddress", "sdef/Server",
+                                             "email/SmtpUser", "email/smtpPassword", "email/graphApplicationId",
+                                             "email/graphTenantId", "email/graphSecret", "mqtt/username",
+                                             "mqtt/password", "restKey", "restSecret"};
+    static const QStringList excludedSubstrings = {"password", "secret", "token", "username"};
+
+    settings->sync();
+    QFile::remove(path);
+    QSettings snapshot(path, QSettings::IniFormat);
+
+    const QStringList keys = settings->allKeys();
+    for (const QString &key : keys) {
+        if (excludedKeys.contains(key, Qt::CaseInsensitive) || key.startsWith("OAuth2/", Qt::CaseInsensitive))
+            continue;
+        bool sensitive = false;
+        for (const QString &sub : excludedSubstrings) {
+            if (key.contains(sub, Qt::CaseInsensitive)) {
+                sensitive = true;
+                break;
+            }
+        }
+        if (!sensitive)
+            snapshot.setValue(key, settings->value(key));
+    }
+
+    for (auto it = runtime.cbegin(); it != runtime.cend(); ++it)
+        snapshot.setValue("runtime/" + it.key(), it.value());
+
+    snapshot.sync();
+    return snapshot.status() == QSettings::NoError;
+}
+
+bool Config::beginReplay(const QString &snapshotPath, const QString &stationName)
+{
+    if (replayMode)
+        return false;
+
+    // Settings from the recording that affect analysis and output, never connection or account details
+    static const QStringList overlayPrefixes = {"instr/", "iq/", "sdef/", "station/", "plot/MaxholdTime",
+                                                "trigFrequencies", "gnss/CnoDeviation", "gnss/AgcDeviation"};
+    static const QStringList overlayExcluded = {"instr/IpAddr", "instr/Port", "instr/ConnectOnStartup",
+                                                "instr/AutoReconnect", "instr/UseTcpDatastream",
+                                                "instr/customEntry", "iq/showPlotsInWindow", "sdef/GpsSource"};
+
+    const QString liveLogFolder = getLogFolder();
+    settings->sync();
+    replayIniPath = QDir(getWorkFolder()).filePath(".replay.ini");
+    QFile::remove(replayIniPath);
+
+    auto *replaySettings = new QSettings(replayIniPath, QSettings::IniFormat, this);
+    const QStringList liveKeys = settings->allKeys();
+    for (const QString &key : liveKeys)
+        replaySettings->setValue(key, settings->value(key));
+
+    if (!snapshotPath.isEmpty() && QFile::exists(snapshotPath)) {
+        QSettings snapshot(snapshotPath, QSettings::IniFormat);
+        const QStringList snapshotKeys = snapshot.allKeys();
+        for (const QString &key : snapshotKeys) {
+            if (overlayExcluded.contains(key, Qt::CaseInsensitive))
+                continue;
+            for (const QString &prefix : overlayPrefixes) {
+                if (key.startsWith(prefix, Qt::CaseInsensitive)) {
+                    replaySettings->setValue(key, snapshot.value(key));
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!stationName.isEmpty())
+        replaySettings->setValue("station/Name", stationName);
+    // Live receivers are disconnected during replay, replayed receivers are added as profiles by the replayer
+    replaySettings->remove("gnss/receivers");
+    replaySettings->setValue("gnss/receiverProfileIds", QStringList());
+    replaySettings->setValue("sdef/GpsSource", QString());
+    replaySettings->setValue("logFolder", QDir(liveLogFolder).filePath("replay"));
+    replaySettings->setValue("sdef/SaveToFile", true);
+    replaySettings->setValue("sdef/UploadFile", false);
+    replaySettings->setValue("sdef/DeleteLocalFilesAfterUpload", false);
+    replaySettings->setValue("sdef/DeleteOldMeasurementFiles", false);
+    replaySettings->setValue("autorecorder/activate", false);
+    replaySettings->sync();
+
+    liveSettings = settings;
+    settings = replaySettings;
+    liveLocation = m_location;
+    m_location.clear();
+    replayMode = true;
+    incidentEnded();
+    emit settingsUpdated();
+    return true;
+}
+
+void Config::endReplay()
+{
+    if (!replayMode)
+        return;
+
+    QSettings *replaySettings = settings;
+    settings = liveSettings;
+    liveSettings = nullptr;
+    m_location = liveLocation;
+    replayMode = false;
+    incidentEnded();
+    emit settingsUpdated();
+
+    replaySettings->sync();
+    replaySettings->deleteLater();
+    QFile::remove(replayIniPath);
 }
 
 void Config::incidentEnded()
@@ -362,7 +476,7 @@ void Config::incidentEnded()
 QString Config::incidentFolder()
 {
     if (!incidentDateTime.isValid()) {
-        incidentDateTime = QDateTime::currentDateTime();
+        incidentDateTime = AppClock::now();
         flagIncident = true;
     }
     if (getNewLogFolder()) return getLogFolder() + "/" + incidentDateTime.toString("yyyyMMdd_hhmmss_") + AsciiTranslator::toAscii(getStationName());

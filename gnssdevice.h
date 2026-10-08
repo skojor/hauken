@@ -47,6 +47,7 @@ class GnssDevice : public QObject
     Q_OBJECT
 public:
     explicit GnssDevice(QSharedPointer<Config>, const QString &profileId);
+    ~GnssDevice();
 
 public slots:
     void start();
@@ -57,6 +58,8 @@ public slots:
     bool isValid() { return gnssData.posValid;}
     void saveBacklog();
     void setIncidenceStartedDateTime();
+    void setReplayMode(bool b) { replayMode = b; gnssData.inUse = b; }
+    void injectBytes(const QByteArray &data);
 
 signals:
     void analyzeThisData(GnssData &);
@@ -77,6 +80,7 @@ private slots:
     QDateTime convFromGnssTimeToQDateTime(const QByteArray date, const QByteArray time);
     void decodeBinary(const QByteArray &val);
     bool checkBinaryChecksum(const QByteArray &val);
+    bool checkSbfChecksum(const QByteArray &val);
     void appendToLogfile(const QByteArray &data);
     void appendToBinaryfile(const QByteArray &data);
     void checkPosValid();
@@ -92,6 +96,7 @@ private slots:
     void cleanupBacklog();
     void createGnssPlot();
     void decodeSbf4014(const QByteArray &data);
+    void decodeSbf4092(const QByteArray &data);
     void decodeSbf4027(const QByteArray &data);
     void decodeSbf4013(const QByteArray &data);
     void decodeSbf4040(const QByteArray &data);
@@ -141,9 +146,10 @@ private:
 
     // Septentrio: signal types (SBF 4.1.10) currently tracked on the main antenna, from MeasEpoch (4027)
     QSet<int> septentrioActiveSignalTypes;
+    bool septentrioDetected = false;
     bool septentrioMeasEpochSeen = false;
-    bool septentrioChannelStatusSeen = false; // once true, satsTracked comes from SBF ChannelStatus (4013) instead of NMEA
     QMap<quint32, int> septentrioSpectrumBandIndexByCenterHz; // stable band index per distinct BBSamples (4040) LOFreq seen
+    bool replayMode = false;
 };
 
 

@@ -25,3 +25,4 @@ git-diff-check.log
 .vscode/
 buildlog3.txt
 AsteRx*
+testdata/

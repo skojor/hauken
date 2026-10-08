@@ -319,6 +319,10 @@ void MainWindow::setDeviceFftModes()
 
 void MainWindow::btnConnectPressed(bool state)
 {
+    if (state && config->isReplayMode()) {
+        updateStatusLine(tr("Stop the replay of recorded data before connecting"));
+        return;
+    }
     const QString currentInstrAddress = instrIpAddr->currentData().isValid()
                                         ? instrIpAddr->currentData().toString()
                                         : instrIpAddr->currentText();

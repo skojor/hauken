@@ -1,4 +1,5 @@
 #include "notifications.h"
+#include "appclock.h"
 
 #include <cmath>
 #include <QFileInfo>
@@ -183,21 +184,21 @@ void Notifications::toIncidentLog(const NOTIFY::TYPE type, const QString name, c
     if (truncateTime && (type == NOTIFY::TYPE::TRACEANALYZER)) { // check if certain notifications should be truncated
         if (!truncateList.isEmpty()) { // check if we recently got a notification from the same type of notifier
             for (int i=0; i < truncateList.size(); i++) {
-                if (truncateList.at(i).type == type && truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) < truncateTime) { // found one, it seems we should truncate this
+                if (truncateList.at(i).type == type && truncateList.at(i).timeReceived.secsTo(AppClock::now()) < truncateTime) { // found one, it seems we should truncate this
                     truncateThis = true;
                     truncateList.removeAt(i);
-                    truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, msg)); // remove the previous buffer line and insert the last one, then wait truncateTime seconds before ev. posting
+                    truncateList.append(NotificationsBuffer(type, AppClock::now(), name, msg)); // remove the previous buffer line and insert the last one, then wait truncateTime seconds before ev. posting
                     truncateTimer->start(1000);
                 }
             }
         }
         else { // not been questioned for truncating before, adding this one
-            truncateList.append(NotificationsBuffer(type, QDateTime::currentDateTime(), name, msg));
+            truncateList.append(NotificationsBuffer(type, AppClock::now(), name, msg));
         }
     }
 
     if (!truncateThis) {
-        generateMsg(type, name, msg, QDateTime::currentDateTime());
+        generateMsg(type, name, msg, AppClock::now());
     }
 }
 
@@ -242,6 +243,8 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
+    if (config->isReplayMode())
+        return;
     if ((type == NOTIFY::TYPE::TRACEANALYZER ||
          type == NOTIFY::TYPE::TRACEANALYZER_SIGNIFICANT_CHANGE ||
          type == NOTIFY::TYPE::GNSSANALYZER ||
@@ -265,7 +268,7 @@ void Notifications::checkTruncate()
 {
     if (!truncateList.isEmpty()) {
         for (int i=0; i<truncateList.size(); i++) {
-            if (truncateList.at(i).timeReceived.secsTo(QDateTime::currentDateTime()) >= truncateTime) { // found msg ready to be shown
+            if (truncateList.at(i).timeReceived.secsTo(AppClock::now()) >= truncateTime) { // found msg ready to be shown
                 generateMsg(truncateList.at(i).type, truncateList.at(i).id, truncateList.at(i).msg, truncateList.at(i).timeReceived);
                 truncateList.removeAt(i);
             }
@@ -533,6 +536,8 @@ void Notifications::sendMail()
 
 void Notifications::recSignalStatistics(bool signalAboveThreshold, bool l1Interference)
 {
+    if (config->isReplayMode())
+        return;
     dailySummaryStatistics.recordSignalState(QDateTime::currentDateTime(), signalAboveThreshold, l1Interference, config->getInstrMinTrigTime());
 }
 

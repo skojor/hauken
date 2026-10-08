@@ -3,6 +3,7 @@
 
 #include <QMap>
 #include <QObject>
+#include <QSet>
 #include <QSharedPointer>
 #include "config.h"
 #include "gnssanalyzer.h"
@@ -34,6 +35,7 @@ public slots:
     void saveAllBacklogs();
     void setInstrumentGnssConnected(bool connected);
     void reqPositionForProfile(const QString &profileId);
+    void injectReplayData(const QString &profileId, const QByteArray &data);
 
 signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
@@ -41,6 +43,7 @@ signals:
     void alarm();
     void visualAlarm();
     void alarmEnded();
+    void incidentActivityChanged(bool active);
     void positionUpdate(bool valid, double lat, double lng);
     void sendGnssPlotFilename(const QString &profileId, const QString &profileName, QString filename);
     void gnssDisabled(const QString &profileId);
@@ -54,6 +57,8 @@ private:
     MeasurementDevice *measurementDevice;
     QMap<QString, GnssDevice *> devices; // Serial-type profiles only
     QMap<QString, GnssAnalyzer *> analyzers; // Serial and Instrument profiles
+    QSet<QString> activeIncidentProfiles;
+    QSharedPointer<GnssIncidentState> incidentState = QSharedPointer<GnssIncidentState>::create();
 };
 
 #endif // GNSSMANAGER_H

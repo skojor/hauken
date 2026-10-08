@@ -27,6 +27,12 @@ void GnssManager::reqPositionForProfile(const QString &profileId)
     else if (devices.contains(profileId)) devices.value(profileId)->reqPosition();
 }
 
+void GnssManager::injectReplayData(const QString &profileId, const QByteArray &data)
+{
+    if (GnssDevice *device = devices.value(profileId))
+        device->injectBytes(data);
+}
+
 void GnssManager::updSettings()
 {
     QSet<QString> enabledProfileIds;
@@ -47,7 +53,7 @@ void GnssManager::updSettings()
 
 void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 {
-    GnssAnalyzer *analyzer = new GnssAnalyzer(config, profile.id);
+    GnssAnalyzer *analyzer = new GnssAnalyzer(config, profile.id, incidentState);
     analyzer->setParent(this);
     analyzers.insert(profile.id, analyzer);
 
@@ -57,6 +63,21 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
     connect(analyzer, &GnssAnalyzer::alarm, this, &GnssManager::markIncidenceStarted);
     connect(analyzer, &GnssAnalyzer::visualAlarm, this, &GnssManager::visualAlarm);
     connect(analyzer, &GnssAnalyzer::alarmEnded, this, &GnssManager::alarmEnded);
+    const QString profileId = profile.id;
+    connect(analyzer, &GnssAnalyzer::visualAlarm, this, [this, profileId] {
+        const bool wasInactive = activeIncidentProfiles.isEmpty();
+        activeIncidentProfiles.insert(profileId);
+        if (wasInactive) {
+            incidentState->setGnssIncidentActive(true);
+            emit incidentActivityChanged(true);
+        }
+    });
+    connect(analyzer, &GnssAnalyzer::alarmEnded, this, [this, profileId] {
+        if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty()) {
+            incidentState->setGnssIncidentActive(false);
+            emit incidentActivityChanged(false);
+        }
+    });
 
     if (profile.type == GnssReceiverProfile::Type::Instrument) {
         connect(measurementDevice, &MeasurementDevice::updGnssData, analyzer, &GnssAnalyzer::getData);
@@ -65,6 +86,7 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 
     GnssDevice *device = new GnssDevice(config, profile.id);
     device->setParent(this);
+    device->setReplayMode(config->isReplayMode());
     devices.insert(profile.id, device);
 
     connect(device, &GnssDevice::analyzeThisData, analyzer, &GnssAnalyzer::getData);
@@ -90,18 +112,22 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
 
 void GnssManager::removeReceiver(const QString &profileId)
 {
+    if (activeIncidentProfiles.remove(profileId) && activeIncidentProfiles.isEmpty()) {
+        incidentState->setGnssIncidentActive(false);
+        emit incidentActivityChanged(false);
+    }
     if (GnssAnalyzer *analyzer = analyzers.take(profileId)) analyzer->deleteLater();
     if (GnssDevice *device = devices.take(profileId)) device->deleteLater();
 }
 
 void GnssManager::traceIncidentStarted()
 {
-    for (auto it = analyzers.cbegin(); it != analyzers.cend(); ++it) it.value()->traceIncidentStarted();
+    incidentState->setTraceIncidentActive(true);
 }
 
 void GnssManager::traceIncidentEnded()
 {
-    for (auto it = analyzers.cbegin(); it != analyzers.cend(); ++it) it.value()->traceIncidentEnded();
+    incidentState->setTraceIncidentActive(false);
 }
 
 void GnssManager::markIncidenceStarted()

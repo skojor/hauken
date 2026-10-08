@@ -331,7 +331,10 @@ void MainWindow::setSignals()
     connect(config.data(), &Config::settingsUpdated, accessHandler, &AccessHandler::updSettings);
     connect(config.data(), &Config::settingsUpdated, ptrNetwork, &Network::updSettings);
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, sdefRecorder, [recorder = sdefRecorder] {
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::TraceAnalyzer);
+        recorder->triggerRecording();
+    });
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
     connect(gnssManager, &GnssManager::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
@@ -339,13 +342,27 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::resetTimer);
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::requestIqData);
 
-    connect(btnTrigRecording, &QPushButton::clicked, config.data(), &Config::incidentRestart); // Manual trig = new filename timestamp
+    connect(btnTrigRecording, &QPushButton::clicked, this, [this] {
+        if (recordingActive) {
+            SdefRecorder *recorder = sdefRecorder;
+            const bool suppressIncidentTriggers = rfIncidentActive || gnssIncidentActive;
+            QMetaObject::invokeMethod(recorder, [recorder, suppressIncidentTriggers] {
+                recorder->stopRecordingManually(suppressIncidentTriggers);
+            }, Qt::QueuedConnection);
+            return;
+        }
 
-    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::resetTimer);
-    connect(btnTrigRecording, &QPushButton::clicked, iqPlot, &IqPlot::requestIqData);
-    connect(btnTrigRecording, &QPushButton::clicked, datastreamIf, &DatastreamIf::invalidateHeader);
+        config->incidentRestart();
+        iqPlot->resetTimer();
+        iqPlot->requestIqData();
+        datastreamIf->invalidateHeader();
+        datastreamAmmos->invalidateHeader();
+        SdefRecorder *recorder = sdefRecorder;
+        QMetaObject::invokeMethod(recorder, [recorder] {
+            recorder->manualTriggeredRecording();
+        }, Qt::QueuedConnection);
+    });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamIf, &DatastreamIf::invalidateHeader);
-    connect(btnTrigRecording, &QPushButton::clicked, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, datastreamAmmos, &DatastreamAmmos::invalidateHeader);
 
 
@@ -357,6 +374,10 @@ void MainWindow::setSignals()
             &SdefRecorder::recordingStarted,
             traceBuffer,
             &TraceBuffer::recorderStarted);
+    connect(sdefRecorder,
+            &SdefRecorder::incidentFilesBasePath,
+            traceBuffer,
+            &TraceBuffer::saveAvgLevelsForIncident);
     connect(sdefRecorder,
             &SdefRecorder::recordingEnded,
             traceAnalyzer,
@@ -402,7 +423,7 @@ void MainWindow::setSignals()
             &SdefRecorder::endRecording); // stops eventual recording if stream times out (someone takes over meas.device)
 
     connect(traceBuffer, &TraceBuffer::averageLevelCalculating, this, [this]() {
-        if (measurementDevice->isConnected() || read1809Data->isRunning()) {
+        if (measurementDevice->isConnected() || read1809Data->isRunning() || recordingReplayer->isRunning()) {
             ledTraceStatus->setState(false);
             ledTraceStatus->setOffColor(Qt::yellow);
             ledTraceStatus->setToolTip("RF average level calculation");
@@ -415,9 +436,15 @@ void MainWindow::setSignals()
         ledTraceStatus->setToolTip("RF detector ready");
     });
 
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this]() { traceIncidentAlarm(true); });
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, this, [this]() {
+        rfIncidentActive = true;
+        traceIncidentAlarm(true);
+    });
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, this, [this]() {
+        rfIncidentActive = false;
         traceIncidentAlarm(false);
+        if (!gnssIncidentActive)
+            QMetaObject::invokeMethod(sdefRecorder, "clearIncidentTriggerSuppression", Qt::QueuedConnection);
     });
     connect(sdefRecorder, &SdefRecorder::recordingStarted, this, [this]() {
         recordIncidentAlarm(true);
@@ -427,6 +454,11 @@ void MainWindow::setSignals()
     });
     connect(gnssManager, &GnssManager::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
     connect(gnssManager, &GnssManager::alarmEnded, this, [this] { gnssIncidentAlarm(false); });
+    connect(gnssManager, &GnssManager::incidentActivityChanged, this, [this](bool active) {
+        gnssIncidentActive = active;
+        if (!active && !rfIncidentActive)
+            QMetaObject::invokeMethod(sdefRecorder, "clearIncidentTriggerSuppression", Qt::QueuedConnection);
+    });
     connect(sdefRecorder, &SdefRecorder::recordingDisabled, this, [this] { recordEnabled(false); });
     connect(sdefRecorder, &SdefRecorder::recordingEnabled, this, [this] { recordEnabled(true); });
     connect(sdefRecorder, &SdefRecorder::warning, this, &MainWindow::generatePopup);
@@ -443,7 +475,10 @@ void MainWindow::setSignals()
     connect(iqPlotThread, &QThread::finished, plotAndAnalyze, &PlotAndAnalyze::end);
 
     connect(gnssManager, &GnssManager::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(gnssManager, &GnssManager::alarm, sdefRecorder, &SdefRecorder::triggerRecording);
+    connect(gnssManager, &GnssManager::alarm, sdefRecorder, [recorder = sdefRecorder] {
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::Gnss);
+        recorder->triggerRecording();
+    });
     connect(gnssManager, &GnssManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssManager, &GnssManager::gnssDisabled, this, [this] {
         gnssStatus->clear();
@@ -452,11 +487,16 @@ void MainWindow::setSignals()
 
     //connect(cameraRecorder, &CameraRecorder::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(mqttManager, &MqttManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
-        connect(mqttManager,
-            &MqttManager::triggerRecording,
-            sdefRecorder,
-            &SdefRecorder::triggerRecordingWithoutAnalysisArtifacts);
-    connect(mqttManager, &MqttManager::endRecording, sdefRecorder, &SdefRecorder::endRecording);
+    connect(mqttManager, &MqttManager::triggerRecording, sdefRecorder, [this, recorder = sdefRecorder] {
+        if (config->isReplayMode())
+            return;
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::Mqtt);
+        recorder->triggerRecordingWithoutAnalysisArtifacts();
+    });
+    connect(mqttManager, &MqttManager::endRecording, sdefRecorder, [this, recorder = sdefRecorder] {
+        if (!config->isReplayMode())
+            recorder->endRecording();
+    });
 
     connect(positionReport, &PositionReport::reqPosition, this, [this](QString profileId) {
         positionReport->updPosition(gnssManager->dataFor(profileId));
@@ -573,11 +613,6 @@ void MainWindow::setSignals()
         gnssManager->reqPositionForProfile(profileId);
     });
 
-    connect(btnTrigRecording,
-            &QPushButton::clicked,
-            sdefRecorder,
-            &SdefRecorder::manualTriggeredRecording);
-
     connect(btnPmrTable, &QPushButton::clicked, pmrTableWdg, &PmrTableWdg::start);
 
     connect(geoLimit, &GeoLimit::toIncidentLog, notifications, &Notifications::toIncidentLog);
@@ -639,6 +674,75 @@ void MainWindow::setSignals()
         sdefRecorder->updTracesPerSecond(d);
         tracesPerSecond = d;
         showBytesPerSec(0); // to force tracePerSecond view
+    });
+
+    connect(recordingReplayer, &RecordingReplayer::traceReady, traceBuffer, &TraceBuffer::addTrace);
+    connect(recordingReplayer, &RecordingReplayer::frequencyChanged, sdefRecorder, &SdefRecorder::updFrequencies);
+    connect(recordingReplayer, &RecordingReplayer::resolutionChanged, sdefRecorder, &SdefRecorder::updResolution);
+    connect(recordingReplayer, &RecordingReplayer::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
+    connect(recordingReplayer, &RecordingReplayer::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+    connect(recordingReplayer, &RecordingReplayer::frequencyChanged, this, [this](double a, double b) {
+        traceAnalyzer->freqChanged(a, b);
+        customPlotController->freqChanged(a, b);
+        aiPtr->freqChanged(a, b);
+        traceAnalyzer->updTrigFrequencyTable();
+        traceBuffer->emptyBuffer();
+    });
+    connect(recordingReplayer, &RecordingReplayer::resolutionChanged, this, [this](double a) {
+        traceAnalyzer->resChanged(a);
+        customPlotController->resChanged(a);
+        aiPtr->resChanged(a);
+        traceBuffer->emptyBuffer();
+    });
+    connect(recordingReplayer, &RecordingReplayer::tracesPerSecondChanged, this, [this](double d) {
+        sdefRecorder->updTracesPerSecond(d);
+        tracesPerSecond = d;
+        showBytesPerSec(0);
+    });
+    connect(recordingReplayer, &RecordingReplayer::playbackRunning, this, [this](bool b) {
+        customPlotController->updDeviceConnected(b);
+        if (!b)
+            traceBuffer->deviceDisconnected();
+    });
+    connect(recordingReplayer, &RecordingReplayer::playbackRunning, waterfall, &Waterfall::stopPlot);
+    connect(recordingReplayer, &RecordingReplayer::playbackRunning, sdefRecorder, &SdefRecorder::setDeviceCconnectedState);
+    connect(recordingReplayer, &RecordingReplayer::toIncidentLog, notifications, &Notifications::toIncidentLog);
+    connect(recordingReplayer, &RecordingReplayer::triggerAlarm, this, [this](const QString &source) {
+        static const QHash<QString, SdefRecorder::TriggerSource> manualSources = {
+            {"Manual", SdefRecorder::TriggerSource::Manual},
+            {"Mqtt", SdefRecorder::TriggerSource::Mqtt},
+            {"AutoRecorder", SdefRecorder::TriggerSource::AutoRecorder}};
+        if (manualSources.contains(source)) {
+            iqPlot->requestIqData();
+            SdefRecorder *recorder = sdefRecorder;
+            const SdefRecorder::TriggerSource triggerSource = manualSources.value(source);
+            QMetaObject::invokeMethod(recorder, [recorder, triggerSource] {
+                recorder->setTriggerSource(triggerSource);
+                recorder->triggerRecordingWithoutAnalysisArtifacts();
+            }, Qt::QueuedConnection);
+        }
+        else
+            traceAnalyzer->forceAlarm("Recording triggered by replay at original trigger time");
+    });
+    connect(recordingReplayer, &RecordingReplayer::triggerAlarmEnded, traceAnalyzer, &TraceAnalyzer::forceAlarmEnded);
+    connect(iqPlot, &IqPlot::setFfmCenterFrequency, recordingReplayer, &RecordingReplayer::requestIqFrequency);
+    connect(iqPlot, &IqPlot::endVifConnection, recordingReplayer, &RecordingReplayer::endIqStream);
+    connect(recordingReplayer, &RecordingReplayer::iqHeader, iqPlot, &IqPlot::validateHeader);
+    connect(recordingReplayer, &RecordingReplayer::iqData, iqPlot, &IqPlot::getIqData);
+    connect(recordingReplayer, &RecordingReplayer::gnssData, gnssManager, &GnssManager::injectReplayData);
+    connect(recordingReplayer, &RecordingReplayer::progress, this, [this](int percent) {
+        updateStatusLine(tr("Replaying %1: %2 %").arg(recordingReplayer->recordingName()).arg(percent));
+    });
+    // Give plots, GNSS backlog and zipping time to finish after the recording ends
+    connect(recordingReplayer, &RecordingReplayer::finished, this, [this] {
+        if (recordingActive)
+            updateStatusLine(tr("Replay data finished, waiting for the recording to end"));
+        else
+            replayEndTimer->start(15000);
+    });
+    connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this] {
+        if (recordingReplayer->isRunning() && !recordingReplayer->isFeeding())
+            replayEndTimer->start(15000);
     });
 
     connect(traceAnalyzer,
