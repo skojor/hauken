@@ -19,6 +19,7 @@ void MeasurementDevice::start()
     tcpTimeoutTimer->setParent(this);
     autoReconnectTimer->setParent(this);
     timedReconnectTimer->setParent(this);
+    availabilityReplyTimer->setParent(this);
     updGnssDisplayTimer->setParent(this);
     updFrequencyData->setParent(this);
     updStreamsTimer->setParent(this);
@@ -32,7 +33,12 @@ void MeasurementDevice::start()
 
     timedReconnectTimer->setSingleShot(true);
     autoReconnectTimer->setSingleShot(true);
+    availabilityReplyTimer->setSingleShot(true);
     connect(autoReconnectTimer, &QTimer::timeout, this, &MeasurementDevice::autoReconnectCheckStatus);
+    connect(availabilityReplyTimer,
+            &QTimer::timeout,
+            this,
+            &MeasurementDevice::availabilityReplyReady);
     emit connectedStateChanged(connected);
 
     connect(updGnssDisplayTimer, &QTimer::timeout, this, &MeasurementDevice::updGnssDisplay);
@@ -113,6 +119,9 @@ void MeasurementDevice::instrDisconnect()
     deviceInUseWarningIssued = false;
     pendingReconnectOwnIpCheck = false;
     pendingReconnectNeedsTcpCheck = false;
+    resetAutoReconnectAvailability("SCPI disconnect");
+    autoReconnectInProgress = false;
+    waitingForReply = false;
     if (instrumentState == InstrumentState::CONNECTED) {
         instrumentState = InstrumentState::DISCONNECTED;
         emit toIncidentLog(NOTIFY::TYPE::MEASUREMENTDEVICE, devicePtr->id, QString("Disconnected") + (scpiReconnect && !discPressed ? ". Trying to reconnect" : " "));
@@ -120,6 +129,8 @@ void MeasurementDevice::instrDisconnect()
     tcpTimeoutTimer->stop();
     autoReconnectTimer->stop();
     timedReconnectTimer->stop();
+    availabilityReplyTimer->stop();
+    availabilityReplyBuffer.clear();
 
     emit instrId(QString());
     if (scpiSocket->state() != QAbstractSocket::UnconnectedState) emit status("Disconnecting measurement device");
@@ -377,12 +388,15 @@ void MeasurementDevice::scpiRead()
 {
     QByteArray buffer = scpiSocket->readAll();
     //qDebug() << "<<" << buffer;
+    if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP ||
+        instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_TCP) {
+        availabilityReplyBuffer.append(buffer);
+        if (MeasurementDeviceAvailability::hasCompleteReply(availabilityReplyBuffer))
+            availabilityReplyTimer->start(100);
+        return;
+    }
     if (instrumentState == InstrumentState::CHECK_INSTR_ID)
         checkId(buffer);
-    else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP)
-        checkUdp(buffer);
-    else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_TCP)
-        checkTcp(buffer);
     else if (instrumentState == InstrumentState::CHECK_INSTR_USERNAME)
         checkUser(buffer);
     else if (instrumentState == InstrumentState::CHECK_USER_ONLY)
@@ -401,13 +415,29 @@ void MeasurementDevice::scpiRead()
         checkFfmSpan(buffer);
 }
 
+void MeasurementDevice::availabilityReplyReady()
+{
+    if (!MeasurementDeviceAvailability::hasCompleteReply(availabilityReplyBuffer))
+        return;
+
+    const QByteArray buffer = availabilityReplyBuffer;
+    availabilityReplyBuffer.clear();
+
+    if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP)
+        checkUdp(buffer);
+    else if (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_TCP)
+        checkTcp(buffer);
+}
+
 void MeasurementDevice::askUdp()
 {
     if (devicePtr->udpStream) {
-        scpiWrite("trac:udp?");
+        availabilityReplyTimer->stop();
+        availabilityReplyBuffer.clear();
         waitingForReply = true;
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_UDP;
         tcpTimeoutTimer->start(tcpTimeoutInMs);
+        scpiWrite("trac:udp?");
     }
 }
 
@@ -467,7 +497,8 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
         if (devicePtr->tcpStream)
             askTcp();
         else
-            stateConnected();
+            finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Clear,
+                                                  "UDP");
     }
     else if (autoReconnectInProgress && inUse) {
         if (ownIpCandidate) {
@@ -476,7 +507,8 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
             askUser(true);
         }
         else {
-            handleStreamTimeout();
+            finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Occupied,
+                                                  "UDP");
         }
     }
 }
@@ -484,13 +516,16 @@ void MeasurementDevice::checkUdp(const QByteArray buffer)
 void MeasurementDevice::askTcp()
 {
     if (devicePtr->tcpStream) {
-        scpiWrite("trac:tcp?");
+        availabilityReplyTimer->stop();
+        availabilityReplyBuffer.clear();
         waitingForReply = true;
         instrumentState = InstrumentState::CHECK_INSTR_AVAILABLE_TCP;
         tcpTimeoutTimer->start(tcpTimeoutInMs);
+        scpiWrite("trac:tcp?");
     }
     else
-        stateConnected();
+        finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Clear,
+                                              "TCP unsupported");
 }
 
 void MeasurementDevice::checkTcp(const QByteArray buffer)
@@ -557,7 +592,8 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
         }
     }
     else if (autoReconnectInProgress && !inUse) { // device available, take it back
-        stateConnected();
+        finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Clear,
+                                              "TCP");
     }
     else if (autoReconnectInProgress && inUse) {
         if (ownIpCandidate) {
@@ -566,7 +602,8 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
             askUser(true);
         }
         else {
-            handleStreamTimeout();
+            finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Occupied,
+                                                  "TCP");
         }
     }
 }
@@ -575,13 +612,15 @@ void MeasurementDevice::checkTcp(const QByteArray buffer)
 void MeasurementDevice::askUser(bool flagCheckUserOnly)
 {
     if (devicePtr->systManLocName) {
-        scpiWrite("syst:man:loc:name?");
+        availabilityReplyTimer->stop();
+        availabilityReplyBuffer.clear();
         waitingForReply = true;
         if (!flagCheckUserOnly)
             instrumentState = InstrumentState::CHECK_INSTR_USERNAME;
         else
             instrumentState = InstrumentState::CHECK_USER_ONLY;
         tcpTimeoutTimer->start(tcpTimeoutInMs);
+        scpiWrite("syst:man:loc:name?");
     }
     else {
         if (!flagCheckUserOnly)
@@ -644,10 +683,12 @@ void MeasurementDevice::checkUserOnly(const QByteArray buffer)
             if (continueWithTcp)
                 askTcp();
             else
-                stateConnected();
+                finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Clear,
+                                                      "UDP username verification");
         }
         else {
-            handleStreamTimeout();
+            finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result::Occupied,
+                                                  "username verification");
         }
         return;
     }
@@ -658,6 +699,8 @@ void MeasurementDevice::checkUserOnly(const QByteArray buffer)
 void MeasurementDevice::stateConnected()
 {
     tcpTimeoutTimer->stop();
+    availabilityReplyTimer->stop();
+    availabilityReplyBuffer.clear();
 
     if (!autoReconnectInProgress && !muteNotification) { // don't nag user if this is an auto reconnect call
         emit status("Connected, setting up device");
@@ -670,6 +713,9 @@ void MeasurementDevice::stateConnected()
 
     scpiConnected();
     autoReconnectInProgress = muteNotification = false;
+    scpiReconnect = false;
+    reconnectSweepInvalidated = false;
+    reconnectSweepMode.clear();
     runAfterConnected();
     instrumentState = InstrumentState::CONNECTED;
 
@@ -681,6 +727,28 @@ void MeasurementDevice::stateConnected()
 void MeasurementDevice::tcpTimeout()
 {
     if (instrumentState != InstrumentState::CONNECTED) {  // sth timed out
+        if (autoReconnectInProgress &&
+            (instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_UDP ||
+             instrumentState == InstrumentState::CHECK_INSTR_AVAILABLE_TCP ||
+             instrumentState == InstrumentState::CHECK_USER_ONLY)) {
+            qDebug() << "MeasurementDevice availability check"
+                     << "event" << "query timed out"
+                     << "query" << static_cast<int>(instrumentState)
+                     << "instrumentState" << static_cast<int>(instrumentState)
+                     << "autoReconnectInProgress" << autoReconnectInProgress
+                     << "mode" << config->getInstrMode()
+                     << "result" << "inconclusive";
+            reconnectAvailability.recordSweep(MeasurementDeviceAvailability::Result::Inconclusive);
+            availabilityReplyTimer->stop();
+            availabilityReplyBuffer.clear();
+            waitingForReply = false;
+            autoReconnectInProgress = false;
+            reconnectSweepInvalidated = false;
+            scpiReconnect = true;
+            instrDisconnect();
+            autoReconnectTimer->start(5000);
+            return;
+        }
         if (firstConnection && config->getInstrConnectOnStartup()) {  // First time connecting and we are set to connect on startup, let's give it some time and retry
             emit status("TCP timeout, retrying in 15 seconds");
             timedReconnectTimer->start(15e3);
@@ -850,6 +918,9 @@ void MeasurementDevice::handleStreamTimeout()
 {
     //qDebug() << "Stream timeout triggered" << connected;
 
+    if (reconnectAvailability.consecutiveClearSweeps() > 0)
+        resetAutoReconnectAvailability("datastream timeout");
+
     if (connected) {
         tcpTimeoutTimer->stop();
         if (autoReconnect) { // check stream settings regularly to see if device is available again
@@ -875,16 +946,162 @@ void MeasurementDevice::handleStreamTimeout()
 
 void MeasurementDevice::autoReconnectCheckStatus()
 {
-    //qDebug() << "Auto reconnect check" << scpiReconnect << scpiSocket->isOpen();
-
     if (scpiReconnect && !scpiSocket->isOpen()) {
+        scpiReconnect = false;
+        autoReconnectInProgress = true;
+        reconnectSweepInvalidated = false;
+        reconnectSweepMode = config->getInstrMode();
+        qDebug() << "MeasurementDevice availability check"
+                 << "event" << "starting sweep"
+                 << "pass" << reconnectAvailability.consecutiveClearSweeps() + 1
+                 << "query" << "SCPI reconnect"
+                 << "instrumentState" << static_cast<int>(instrumentState)
+                 << "autoReconnectInProgress" << autoReconnectInProgress
+                 << "mode" << reconnectSweepMode;
         instrConnect();
     }
     else {
         scpiReconnect = false;
         autoReconnectInProgress = true;
+        reconnectSweepInvalidated = false;
+        reconnectSweepMode = config->getInstrMode();
+        qDebug() << "MeasurementDevice availability check"
+                 << "event" << "starting sweep"
+                 << "pass" << reconnectAvailability.consecutiveClearSweeps() + 1
+                 << "query" << "trac:udp?"
+                 << "instrumentState" << static_cast<int>(instrumentState)
+                 << "autoReconnectInProgress" << autoReconnectInProgress
+                 << "mode" << reconnectSweepMode;
         askUdp(); // the udp routine will call askTcp() for us, no worries
     }
+}
+
+void MeasurementDevice::finishAutoReconnectAvailabilitySweep(
+    MeasurementDeviceAvailability::Result result,
+    const QString &phase)
+{
+    tcpTimeoutTimer->stop();
+    availabilityReplyTimer->stop();
+    availabilityReplyBuffer.clear();
+    waitingForReply = false;
+
+    if (!autoReconnectInProgress) {
+        if (result == MeasurementDeviceAvailability::Result::Clear)
+            stateConnected();
+        return;
+    }
+
+    qDebug() << "MeasurementDevice availability check"
+             << "event" << "sweep completed"
+             << "pass" << reconnectAvailability.consecutiveClearSweeps() + 1
+             << "query" << phase
+             << "instrumentState" << static_cast<int>(instrumentState)
+             << "autoReconnectInProgress" << autoReconnectInProgress
+             << "mode" << config->getInstrMode()
+             << "result" << static_cast<int>(result);
+
+    if (reconnectSweepInvalidated || reconnectSweepMode != config->getInstrMode()) {
+        qDebug() << "MeasurementDevice availability check"
+                 << "event" << "sweep invalidated"
+                 << "query" << phase
+                 << "instrumentState" << static_cast<int>(instrumentState)
+                 << "autoReconnectInProgress" << autoReconnectInProgress
+                 << "mode" << config->getInstrMode()
+                 << "reason" << "instrument mode changed";
+        reconnectAvailability.reset();
+        reconnectSweepInvalidated = false;
+        autoReconnectInProgress = false;
+        instrumentState = InstrumentState::CONNECTED;
+        autoReconnectTimer->start(5000);
+        return;
+    }
+
+    if (result != MeasurementDeviceAvailability::Result::Clear) {
+        const int clearSweepsBeforeReset = reconnectAvailability.consecutiveClearSweeps();
+        reconnectAvailability.recordSweep(result);
+        qDebug() << "MeasurementDevice availability check"
+                 << "event" << "confirmation reset"
+                 << "query" << phase
+                 << "instrumentState" << static_cast<int>(instrumentState)
+                 << "autoReconnectInProgress" << autoReconnectInProgress
+                 << "mode" << config->getInstrMode()
+                 << "clearSweepsBeforeReset" << clearSweepsBeforeReset
+                 << "result" << static_cast<int>(result);
+        if (result == MeasurementDeviceAvailability::Result::Occupied) {
+            handleStreamTimeout();
+        }
+        else {
+            qDebug() << "MeasurementDevice availability check"
+                     << "event" << "retry scheduled"
+                     << "query" << phase
+                     << "instrumentState" << static_cast<int>(instrumentState)
+                     << "autoReconnectInProgress" << autoReconnectInProgress
+                     << "mode" << config->getInstrMode()
+                     << "result" << static_cast<int>(result)
+                     << "reason" << "inconclusive reply";
+            autoReconnectInProgress = false;
+            instrumentState = InstrumentState::CONNECTED;
+            autoReconnectTimer->start(5000);
+        }
+        return;
+    }
+
+    if (reconnectAvailability.recordSweep(result)) {
+        qDebug() << "MeasurementDevice availability check"
+                 << "event" << "reclaim authorized"
+                 << "pass" << MeasurementDeviceAvailability::requiredClearSweeps
+                 << "query" << phase
+                 << "instrumentState" << static_cast<int>(instrumentState)
+                 << "autoReconnectInProgress" << autoReconnectInProgress
+                 << "mode" << config->getInstrMode()
+                 << "result" << "clear";
+        reconnectAvailability.reset();
+        stateConnected();
+        return;
+    }
+
+    instrumentState = InstrumentState::CONNECTED;
+    autoReconnectInProgress = false;
+    autoReconnectTimer->start(5000);
+    qDebug() << "MeasurementDevice availability check"
+             << "event" << "second sweep scheduled"
+             << "pass" << reconnectAvailability.consecutiveClearSweeps() + 1
+             << "query" << "trac:udp?"
+             << "instrumentState" << static_cast<int>(instrumentState)
+             << "autoReconnectInProgress" << autoReconnectInProgress
+             << "mode" << config->getInstrMode()
+             << "delayMs" << 5000;
+}
+
+void MeasurementDevice::resetAutoReconnectAvailability(const QString &reason)
+{
+    if (reconnectAvailability.consecutiveClearSweeps() > 0 ||
+        reconnectSweepInvalidated || autoReconnectInProgress) {
+        qDebug() << "MeasurementDevice availability check"
+                 << "event" << "confirmation reset"
+                 << "instrumentState" << static_cast<int>(instrumentState)
+                 << "autoReconnectInProgress" << autoReconnectInProgress
+                 << "mode" << config->getInstrMode()
+                 << "reason" << reason;
+    }
+    reconnectAvailability.reset();
+    reconnectSweepInvalidated = false;
+    reconnectSweepMode.clear();
+}
+
+void MeasurementDevice::invalidateAutoReconnectAvailability(const QString &reason)
+{
+    if (reconnectAvailability.consecutiveClearSweeps() == 0 && !autoReconnectInProgress)
+        return;
+
+    qDebug() << "MeasurementDevice availability check"
+             << "event" << "confirmation invalidated"
+             << "instrumentState" << static_cast<int>(instrumentState)
+             << "autoReconnectInProgress" << autoReconnectInProgress
+             << "mode" << config->getInstrMode()
+             << "reason" << reason;
+    reconnectAvailability.reset();
+    reconnectSweepInvalidated = autoReconnectInProgress;
 }
 
 void MeasurementDevice::updSettings()
@@ -924,14 +1141,21 @@ void MeasurementDevice::updSettings()
         setAntPort();
     }
 
-    if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive) &&
+    const bool requestedPscan = config->getInstrMode().contains("pscan", Qt::CaseInsensitive);
+    const bool requestedFfm = config->getInstrMode().contains("ffm", Qt::CaseInsensitive);
+    if ((requestedPscan && devicePtr->mode != Instrument::Mode::PSCAN) ||
+        (requestedFfm && devicePtr->mode != Instrument::Mode::FFM)) {
+        invalidateAutoReconnectAvailability("instrument mode changed");
+    }
+
+    if (requestedPscan &&
         devicePtr->mode != Instrument::Mode::PSCAN) {
         devicePtr->mode = Instrument::Mode::PSCAN;
         setMode();
         setPscanFrequency();
         setPscanResolution();
     }
-    else if (config->getInstrMode().contains("ffm", Qt::CaseInsensitive) &&
+    else if (requestedFfm &&
              devicePtr->mode != Instrument::Mode::FFM) {
         devicePtr->mode = Instrument::Mode::FFM;
         setMode();

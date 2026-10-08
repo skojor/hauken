@@ -302,6 +302,14 @@ if (BUILD_TESTING)
     target_include_directories(ubloxrfbandcorrelator_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(ubloxrfbandcorrelator_test PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME ubloxrfbandcorrelator_test COMMAND ubloxrfbandcorrelator_test)
+
+    qt_add_executable(measurementdeviceavailability_test
+        tests/measurementdeviceavailability_test.cpp
+        measurementdeviceavailability.h
+    )
+    target_include_directories(measurementdeviceavailability_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(measurementdeviceavailability_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME measurementdeviceavailability_test COMMAND measurementdeviceavailability_test)
 endif()
 
 if (MSVC)
