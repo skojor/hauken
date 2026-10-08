@@ -354,7 +354,7 @@ void MainWindow::setSignals()
 
         config->incidentRestart();
         iqPlot->resetTimer();
-        iqPlot->requestIqData();
+        iqPlot->requestManualIqData();
         datastreamIf->invalidateHeader();
         datastreamAmmos->invalidateHeader();
         SdefRecorder *recorder = sdefRecorder;
@@ -708,7 +708,7 @@ void MainWindow::setSignals()
             {"Mqtt", SdefRecorder::TriggerSource::Mqtt},
             {"AutoRecorder", SdefRecorder::TriggerSource::AutoRecorder}};
         if (manualSources.contains(source)) {
-            iqPlot->requestIqData();
+            iqPlot->requestManualIqData();
             SdefRecorder *recorder = sdefRecorder;
             const SdefRecorder::TriggerSource triggerSource = manualSources.value(source);
             QMetaObject::invokeMethod(recorder, [recorder, triggerSource] {

@@ -30,6 +30,7 @@ public:
 
 public slots:
     void requestIqData(); // Function call to set up I/Q transfer
+    void requestManualIqData();
     void getIqData(const QVector<complexInt16> &iq16); // New, gather parts of data before doing sth with them
     void parseIqData(const QVector<complexInt16> &iq16, IqMetadata meta); // Data from vifstream class
     void validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 timestamp);
@@ -76,6 +77,9 @@ signals:
     void fftdataReady(const QVector<QVector<double>> &, const IqMetadata &);
 
 private:
+    void requestIqDataImpl(bool manualRequest);
+    double fallbackIqCenterFrequency(bool manualRequest);
+
     QSharedPointer<Config> config;
 
     QVector<double> window;
@@ -91,6 +95,7 @@ private:
     quint64 oldFfmCenterFrequency;
     quint32 oldFfmBandwidth;
     double trigFrequency = 0;
+    double requestedTrigFrequency = 0;
     QVector<double> listFreqs;
     QVector<complexInt16> iqSamples;
     QVector<IqSamplesStruct> iqSamplesVector;
