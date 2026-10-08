@@ -8,7 +8,9 @@ TcpDataStream::TcpDataStream()
 
 void TcpDataStream::openListener(const QHostAddress host, const int port)
 {
-    tcpSocket->close();
+    closeListener();
+    listenerExpectedClosed = false;
+    timeoutTimer->start();
 
     tcpSocket->connectToHost(host, port);
     tcpSocket->waitForConnected(1000);
@@ -20,6 +22,7 @@ void TcpDataStream::openListener(const QHostAddress host, const int port)
 
 void TcpDataStream::closeListener()
 {
+    listenerExpectedClosed = true;
     timeoutTimer->stop();
     bytesPerSecTimer->stop();
     tcpSocket->close();
@@ -28,10 +31,16 @@ void TcpDataStream::closeListener()
 void TcpDataStream::connectionStateChanged(QAbstractSocket::SocketState state)
 {
     //qDebug() << "TCP stream state" << state;
-    /* if (state == QAbstractSocket::UnconnectedState) // Whaat, why?
-        timeoutTimer->stop();*/
-    if (state == QAbstractSocket::ConnectedState) // Update Meas.Dev. class to check if user is this instance
+    if (state == QAbstractSocket::ConnectedState) {
+        timeoutTimer->start();
         emit streamInfo(tcpSocket->localAddress(), tcpSocket->localPort());
+    }
+    else if (state == QAbstractSocket::UnconnectedState && !listenerExpectedClosed) {
+        listenerExpectedClosed = true;
+        timeoutTimer->stop();
+        bytesPerSecTimer->stop();
+        emit timeout();
+    }
 }
 
 void TcpDataStream::newDataHandler()

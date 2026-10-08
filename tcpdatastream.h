@@ -20,6 +20,7 @@ public slots:
 signals:
 
 private:
+    bool listenerExpectedClosed = true;
     bool headerIsRead = false;
     QMutex mutex;
 };

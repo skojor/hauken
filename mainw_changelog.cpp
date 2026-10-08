@@ -7,6 +7,7 @@ void MainWindow::changelog()
     QString txt;
     QTextStream ts(&txt);
     ts << "<table>"
+       << "<tr><td>2.60</td><td>Recorded-session replay, including IQ and GNSS data. Expanded Septentrio GNSS status and spectrum support. Various bugfixes</td></tr>"
        << "<tr><td>2.59</td><td>PPS pulse timing display and graph interface added</td></tr>"
        << "<tr><td>2.58</td><td>OAuth uploads now includes attachments if enabled. Significant signal level changes during an incident will also be notified</td></tr>"
        << "<tr><td>2.57</td><td>Changed baseband transfer protocol to R&S AMMOS. New upload routine with block upload. Spectrum markers</td></tr>"

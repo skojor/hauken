@@ -542,11 +542,6 @@ void MainWindow::setSignals()
             udpStream.data(),
             &UdpDataStream::restartTimeoutTimer);
     connect(measurementDevice,
-            &MeasurementDevice::reconnected,
-            tcpStream.data(),
-            &TcpDataStream::
-            restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
-    connect(measurementDevice,
             &MeasurementDevice::newAntennaNames,
             this,
             &MainWindow::setDeviceAntPorts);
