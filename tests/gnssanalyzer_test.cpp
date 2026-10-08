@@ -13,6 +13,7 @@ private slots:
     void renewedIncidentRestartsGrace();
     void signalAveragesFreeze_data();
     void signalAveragesFreeze();
+    void firstSignalSampleSeedsPausedAverages();
 };
 
 void GnssAnalyzerTest::gnssIncidentGrace()
@@ -121,6 +122,38 @@ void GnssAnalyzerTest::signalAveragesFreeze()
     QCOMPARE(data.avgAgc, 75);
     QCOMPARE(data.agcBlocks[0].avgAgc, 60);
     QCOMPARE(data.agcBlocks[1].avgAgc, 40);
+}
+
+void GnssAnalyzerTest::firstSignalSampleSeedsPausedAverages()
+{
+    auto state = QSharedPointer<GnssIncidentState>::create();
+    state->setTraceIncidentActive(true);
+    GnssAnalyzer analyzer({}, "receiver", state);
+    GnssData data;
+    data.cno = 40;
+    data.agc = 50;
+    data.agcBlocks[0].agc = 30;
+    data.agcBlocks[1].agc = 70;
+
+    const auto calculate = [&data](GnssAnalyzer &target) {
+        return QMetaObject::invokeMethod(&target, "calcAvgs", Qt::DirectConnection,
+                                         Q_ARG(GnssData &, data));
+    };
+    QVERIFY(calculate(analyzer));
+    QCOMPARE(data.avgCno, 40);
+    QCOMPARE(data.avgAgc, 50);
+    QCOMPARE(data.agcBlocks[0].avgAgc, 30);
+    QCOMPARE(data.agcBlocks[1].avgAgc, 70);
+
+    data.cno = 10;
+    data.agc = 90;
+    data.agcBlocks[0].agc = 80;
+    data.agcBlocks[1].agc = 20;
+    QVERIFY(calculate(analyzer));
+    QCOMPARE(data.avgCno, 40);
+    QCOMPARE(data.avgAgc, 50);
+    QCOMPARE(data.agcBlocks[0].avgAgc, 30);
+    QCOMPARE(data.agcBlocks[1].avgAgc, 70);
 }
 
 QTEST_GUILESS_MAIN(GnssAnalyzerTest)

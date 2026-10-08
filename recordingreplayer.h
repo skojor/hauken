@@ -100,7 +100,7 @@ private:
         int lines = 0;
     };
 
-    void collectFiles(const QString &folder);
+    void collectFiles(const QStringList &folders);
     bool parseCef(CefFile &cef) const;
     QDateTime parseTimestamp(const QByteArray &field, const QDate &date) const;
     bool openCef(int index);

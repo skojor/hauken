@@ -29,7 +29,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
 {
     const bool pauseSignalAverages = shouldPauseSignalAverages();
 
-    if (!pauseSignalAverages && data.cno > 0) {
+    if (data.cno > 0 && (!pauseSignalAverages || (data.avgCnoArray.isEmpty() && data.avgCno <= 0))) {
         data.avgCnoArray.append(data.cno);
         data.avgCno = 0;
         for (auto &val : data.avgCnoArray)
@@ -38,7 +38,7 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgCnoArray.size() > 300)
             data.avgCnoArray.pop_front();
     }
-    if (!pauseSignalAverages && data.agc >= 0) {
+    if (data.agc >= 0 && (!pauseSignalAverages || (data.avgAgcArray.isEmpty() && data.avgAgc < 0))) {
         data.avgAgcArray.append(data.agc);
         data.avgAgc = 0;
         for (auto &val : data.avgAgcArray)
@@ -47,19 +47,18 @@ void GnssAnalyzer::calcAvgs(GnssData &data)
         while (data.avgAgcArray.size() > 300)
             data.avgAgcArray.pop_front();
     }
-    if (!pauseSignalAverages) {
-        for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
-            GnssAgcBlockData &block = iterator.value();
-            if (block.agc < 0) continue;
+    for (auto iterator = data.agcBlocks.begin(); iterator != data.agcBlocks.end(); ++iterator) {
+        GnssAgcBlockData &block = iterator.value();
+        if (block.agc < 0 || (pauseSignalAverages &&
+                              (!block.avgAgcArray.isEmpty() || block.avgAgc >= 0))) continue;
 
-            block.avgAgcArray.append(block.agc);
-            block.avgAgc = 0;
-            for (int value : block.avgAgcArray)
-                block.avgAgc += value;
-            block.avgAgc /= block.avgAgcArray.size();
-            while (block.avgAgcArray.size() > 300)
-                block.avgAgcArray.pop_front();
-        }
+        block.avgAgcArray.append(block.agc);
+        block.avgAgc = 0;
+        for (int value : block.avgAgcArray)
+            block.avgAgc += value;
+        block.avgAgc /= block.avgAgcArray.size();
+        while (block.avgAgcArray.size() > 300)
+            block.avgAgcArray.pop_front();
     }
     if (data.jammingIndicator >= 0) {
         data.avgJammingIndicatorArray.append(data.jammingIndicator);

@@ -935,15 +935,13 @@ void MainWindow::startRecordedReplay()
         return;
     }
 
-    // Picking any .cef inside a recording folder selects the whole folder
-    QString path = QFileDialog::getOpenFileName(this,
-                                                tr("Read recorded folder"),
-                                                config->getLogFolder(),
-                                                tr("Recorded incident (*.zip *.cef)"));
+    // Zipped content (.cef.zip or _incident.zip) inside the folder is extracted by the replayer
+    const QString path = QFileDialog::getExistingDirectory(this,
+                                                           tr("Read recorded folder"),
+                                                           config->getLogFolder(),
+                                                           QFileDialog::ShowDirsOnly);
     if (path.isEmpty())
         return;
-    if (path.endsWith(".cef", Qt::CaseInsensitive))
-        path = QFileInfo(path).absolutePath();
 
     QString error;
     if (!recordingReplayer->open(path, error)) {
@@ -958,6 +956,8 @@ void MainWindow::startRecordedReplay()
     for (const GnssReceiverProfile &profile : recordingReplayer->gnssReplayProfiles())
         config->setGnssReceiverProfile(profile);
     config->setSdefGpsSource(recordingReplayer->gnssPositionSource());
+    if (recordingReplayer->iqFiles().isEmpty())
+        config->setIqCreateFftPlot(false); // only affects the replay settings
     emit config->settingsUpdated();
 
     IqPlot *plot = iqPlot;

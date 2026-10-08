@@ -5,6 +5,7 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSet>
 #include <QSettings>
 #include <QtEndian>
 #include <QTimeZone>
@@ -30,7 +31,7 @@ bool RecordingReplayer::open(const QString &path, QString &error)
     close();
 
     const QFileInfo info(path);
-    QString folder;
+    QStringList folders;
 
     if (info.isFile() && info.suffix().compare("zip", Qt::CaseInsensitive) == 0) {
         tempDir = std::make_unique<QTemporaryDir>();
@@ -39,20 +40,21 @@ bool RecordingReplayer::open(const QString &path, QString &error)
             close();
             return false;
         }
-        folder = tempDir->path();
+        folders.append(tempDir->path());
         recordingTitle = info.completeBaseName();
     }
     else if (info.isDir()) {
-        folder = info.absoluteFilePath();
+        folders.append(info.absoluteFilePath());
         recordingTitle = info.fileName();
 
-        QDirIterator cefIt(folder, {"*.cef"}, QDir::Files, QDirIterator::Subdirectories);
+        // The .cef may be zipped on its own (.cef.zip) or together with everything else (_incident.zip)
+        QDirIterator cefIt(info.absoluteFilePath(), {"*.cef"}, QDir::Files, QDirIterator::Subdirectories);
         if (!cefIt.hasNext()) {
-            QDirIterator zipIt(folder, {"*.zip"}, QDir::Files);
+            QDirIterator zipIt(info.absoluteFilePath(), {"*.zip"}, QDir::Files);
             tempDir = std::make_unique<QTemporaryDir>();
             while (zipIt.hasNext() && tempDir->isValid())
                 JlCompress::extractDir(zipIt.next(), tempDir->path());
-            folder = tempDir->path();
+            folders.append(tempDir->path());
         }
     }
     else {
@@ -60,7 +62,7 @@ bool RecordingReplayer::open(const QString &path, QString &error)
         return false;
     }
 
-    collectFiles(folder);
+    collectFiles(folders);
 
     if (cefFiles.isEmpty()) {
         error = "No usable .cef trace file found in " + info.fileName();
@@ -122,29 +124,35 @@ void RecordingReplayer::close()
     tempDir.reset();
 }
 
-void RecordingReplayer::collectFiles(const QString &folder)
+void RecordingReplayer::collectFiles(const QStringList &folders)
 {
-    QDirIterator it(folder, QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        const QString file = it.next();
-        const QString name = QFileInfo(file).fileName();
+    QSet<QString> seenNames;
+    for (const QString &folder : folders) {
+        QDirIterator it(folder, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QString file = it.next();
+            const QString name = QFileInfo(file).fileName();
+            if (seenNames.contains(name))
+                continue;
+            seenNames.insert(name);
 
-        if (name.endsWith(".cef", Qt::CaseInsensitive)) {
-            CefFile cef;
-            cef.path = file;
-            if (parseCef(cef))
-                cefFiles.append(cef);
-            else
-                qWarning() << "Replay: could not parse" << file;
+            if (name.endsWith(".cef", Qt::CaseInsensitive)) {
+                CefFile cef;
+                cef.path = file;
+                if (parseCef(cef))
+                    cefFiles.append(cef);
+                else
+                    qWarning() << "Replay: could not parse" << file;
+            }
+            else if (name.endsWith(".avgdata", Qt::CaseInsensitive))
+                avgDataFile = file;
+            else if (name.endsWith("_settings.ini", Qt::CaseInsensitive))
+                snapshotFile = file;
+            else if (name.endsWith(".iq", Qt::CaseInsensitive))
+                iqFileList.append(file);
+            else if (name.endsWith(".log", Qt::CaseInsensitive) && name.contains("_gnss", Qt::CaseInsensitive))
+                gnssFileList.append(file);
         }
-        else if (name.endsWith(".avgdata", Qt::CaseInsensitive))
-            avgDataFile = file;
-        else if (name.endsWith("_settings.ini", Qt::CaseInsensitive))
-            snapshotFile = file;
-        else if (name.endsWith(".iq", Qt::CaseInsensitive))
-            iqFileList.append(file);
-        else if (name.endsWith(".log", Qt::CaseInsensitive) && name.contains("_gnss", Qt::CaseInsensitive))
-            gnssFileList.append(file);
     }
     iqFileList.sort();
     gnssFileList.sort();
@@ -332,7 +340,8 @@ void RecordingReplayer::play(bool baselineLoaded)
     running = feeding = true;
     emit playbackRunning(true);
     emit toIncidentLog(NOTIFY::TYPE::GENERAL, "", "Replay of recorded data " + recordingTitle + " started"
-                       + (syntheticTriggers.isEmpty() ? "" : ", using the original trigger time"));
+                       + (syntheticTriggers.isEmpty() ? "" : ", using the original trigger time")
+                       + (iqRecordings.isEmpty() ? ", no raw IQ data in recording, IQ capture disabled" : ""));
     scheduleNext();
 }
 
@@ -541,6 +550,14 @@ void RecordingReplayer::parseGnssFiles()
     std::stable_sort(gnssEvents.begin(), gnssEvents.end(), [](const GnssEvent &a, const GnssEvent &b) {
         return a.time < b.time;
     });
+
+    const QDateTime replayStart = cefFiles.first().firstTime;
+    QDateTime replayEnd = replayStart;
+    for (const CefFile &cef : std::as_const(cefFiles))
+        replayEnd = qMax(replayEnd, cef.lastTime);
+    gnssEvents.erase(std::remove_if(gnssEvents.begin(), gnssEvents.end(), [&](const GnssEvent &event) {
+        return event.time < replayStart || event.time > replayEnd;
+    }), gnssEvents.end());
 }
 
 void RecordingReplayer::parseTimestampedNmea(const QString &path, const QString &profileId)
