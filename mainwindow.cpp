@@ -43,8 +43,6 @@ MainWindow::MainWindow(QWidget *parent)
     updWindowTitle();
     //resize(1200, 780);
     //setMinimumSize(1024, 780);
-    restoreGeometry(config->getWindowGeometry());
-    restoreState(config->getWindowState());
 
     useDbm = config->getUseDbm();
 
@@ -103,6 +101,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     qInfo() << "MainWindow: wiring signals";
     setSignals();
+    restoreGeometry(config->getWindowGeometry());
+    restoreState(config->getWindowState());
+    restoringWindowState = false;
     instrumentList->start(); // check if instrument server is available
 
     // Set stream pointers before config/startup actions that may trigger auto-connect.
@@ -1040,14 +1041,14 @@ void MainWindow::showBytesPerSec(int val)
 
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
-    config->setWindowGeometry(saveGeometry());
+    if (!restoringWindowState) config->setWindowGeometry(saveGeometry());
     QWidget::resizeEvent(event);
-    waterfall->updSize(customPlot->axisRect()->rect());
+    if (waterfall && customPlot) waterfall->updSize(customPlot->axisRect()->rect());
 }
 
 void MainWindow::moveEvent(QMoveEvent *event)
 {
-    config->setWindowState(saveState());
+    if (!restoringWindowState) config->setWindowState(saveState());
     QWidget::moveEvent(event);
 }
 

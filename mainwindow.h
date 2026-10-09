@@ -224,7 +224,7 @@ private:
     QWidget *centralWidget = new QWidget(this);
     QStatusBar *statusBar = new QStatusBar;
     QProgressBar *progressBar = new QProgressBar;
-    QCustomPlot *customPlot;
+    QCustomPlot *customPlot = nullptr;
     QMenu *fileMenu, *optionMenu, *helpMenu;
     QDoubleSpinBox *instrStartFreq = new QDoubleSpinBox;
     QDoubleSpinBox *instrStopFreq = new QDoubleSpinBox;
@@ -353,7 +353,7 @@ private:
     SdefRecorder *sdefRecorder;
     QThread *sdefRecorderThread;
 
-    Waterfall *waterfall;
+    Waterfall *waterfall = nullptr;
     QThread *waterfallThread;
 
     CameraRecorder *cameraRecorder;
@@ -414,6 +414,7 @@ private:
     QPushButton *btnDetector = new QPushButton("Detector");
     QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
     bool flagBusyRecordingIQ = false;
+    bool restoringWindowState = true;
     PlotAndAnalyze *plotAndAnalyze = new PlotAndAnalyze(config);
     Simulator *simulator = nullptr;
     QHash<quint64, QPointer<QLabel>> iqPlotWindows;
