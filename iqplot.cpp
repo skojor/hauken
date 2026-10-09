@@ -6,6 +6,7 @@
 #include <QtConcurrent>
 #include <QFileInfo>
 #include <algorithm>
+#include <cmath>
 //#include "opencv2/opencv.hpp"
 
 IqPlot::IqPlot(QSharedPointer<Config> c)
@@ -229,6 +230,44 @@ void IqPlot::fillWindow()
 
 void IqPlot::requestIqData()
 {
+    requestIqDataImpl(false);
+}
+
+void IqPlot::requestManualIqData()
+{
+    requestIqDataImpl(true);
+}
+
+double IqPlot::fallbackIqCenterFrequency(bool manualRequest)
+{
+    if (!manualRequest && trigFrequency > 0 && std::isfinite(trigFrequency))
+        return trigFrequency;
+
+    const QStringList trigFrequencies = config->getTrigFrequencies();
+    for (qsizetype i = 0; i + 1 < trigFrequencies.size(); i += 2) {
+        bool startOk = false;
+        bool stopOk = false;
+        const double startMHz = trigFrequencies.at(i).toDouble(&startOk);
+        const double stopMHz = trigFrequencies.at(i + 1).toDouble(&stopOk);
+        if (startOk && stopOk && startMHz >= 0 && stopMHz > startMHz
+            && std::isfinite(startMHz) && std::isfinite(stopMHz))
+            return startMHz + (stopMHz - startMHz) / 2;
+    }
+
+    const quint64 pscanStart = config->getInstrStartFreq();
+    const quint64 pscanStop = config->getInstrStopFreq();
+    if (pscanStop > pscanStart)
+        return (pscanStart + (pscanStop - pscanStart) / 2) * 1e-6;
+
+    if (config->getInstrMode().contains("pscan", Qt::CaseInsensitive)
+        && centerFrequency > 0 && std::isfinite(centerFrequency))
+        return centerFrequency * 1e-6;
+
+    return 0;
+}
+
+void IqPlot::requestIqDataImpl(bool manualRequest)
+{
     emit reqIqCenterFrequency();
     lastIqRequestTimer->start(75e3); // Reset timer as long as incident is ongoing
 
@@ -237,55 +276,68 @@ void IqPlot::requestIqData()
         flagOngoingAlarm = true;
 
         samplesNeeded = 0; //(int)(config->getIqLogTime() * (double)config->getIqFftPlotBw() * 1.28 * 1e3);
+        requestedTrigFrequency = manualRequest ? 0 : trigFrequency;
 
         listFreqs.clear();
         if (!replayFreqs.isEmpty()) {
             listFreqs = replayFreqs;
         }
         else if (config->getIqRecordMultipleBands()) {
-            listFreqs = config->getIqMultibandCenterFreqs();
+            for (double frequency : config->getIqMultibandCenterFreqs()) {
+                if (frequency > 0 && std::isfinite(frequency))
+                    listFreqs.append(frequency);
+            }
         }
 
-        if (!config->getIqRecordAllTrigArea() && trigFrequency > 0 && listFreqs.isEmpty())
+        if (!config->getIqRecordAllTrigArea() && !manualRequest
+            && trigFrequency > 0 && std::isfinite(trigFrequency) && listFreqs.isEmpty())
             listFreqs.append(trigFrequency);
 
-        if (!config->getIqRecordAllTrigArea() && listFreqs.isEmpty()) { // Still empty list? Probably due to manual triggered recording. Use previously req. center freq from meas.device
-            if ((int)centerFrequency != 0) listFreqs.append(centerFrequency / 1e6);
-        }
+        if (config->getIqRecordAllTrigArea() && replayFreqs.isEmpty()) {
+            const QStringList trigFrequencies = config->getTrigFrequencies();
+            const double currentBandwidth = config->getIqFftPlotBw() * 1e3;
+            for (qsizetype i = 0; i + 1 < trigFrequencies.size(); i += 2) {
+                bool startOk = false;
+                bool stopOk = false;
+                const double start = trigFrequencies.at(i).toDouble(&startOk) * 1e6;
+                const double stop = trigFrequencies.at(i + 1).toDouble(&stopOk) * 1e6;
+                if (!startOk || !stopOk || !std::isfinite(start) || !std::isfinite(stop)
+                    || start < 0 || stop <= start)
+                    continue;
 
-        if ((config->getIqRecordAllTrigArea() && replayFreqs.isEmpty()) || listFreqs.isEmpty()) {
-            QStringList stringListTrigFreqs = config->getTrigFrequencies();
-            if (stringListTrigFreqs.isEmpty() || stringListTrigFreqs.first() == "0") { // What to do here? Shouldn't happen, set center to FFM center for now
-                listFreqs.append(1e-6 * config->getInstrFfmCenterFreq());
-            }
-            else {
-                for (int i=0; i < stringListTrigFreqs.size(); i++) {
-                    double start = stringListTrigFreqs[i].toDouble() * 1e6;
-                    double stop = stringListTrigFreqs[++i].toDouble() * 1e6;
-                    double range = stop - start;
-                    double currentBandwidth = config->getIqFftPlotBw() * 1e3;
+                const double range = stop - start;
+                if (currentBandwidth > 0 && std::isfinite(currentBandwidth)
+                    && range > currentBandwidth) {
+                    double f = 1e6 * (int)((start + range / 2) / 1e6);
+                    do {
+                        listFreqs.append(f / 1e6);
+                        f -= currentBandwidth;
+                    } while (f > start - currentBandwidth);
 
-                    if (range > currentBandwidth) {
-
-                        double f = 1e6 * (int)((start + range / 2) / 1e6); // round to nearest MHz of center
-                        do {
-                            listFreqs.append(f / 1e6);
-                            f -= currentBandwidth;
-                        } while (f > start - currentBandwidth);
-
-                        f = 1e6 * (int)((start + range / 2) / 1e6);
-                        do {
-                            f += currentBandwidth;
-                            listFreqs.append(f / 1e6);
-                        } while (f < stop);
-
-                    }
-                    else {
-                        listFreqs.append((int)((start + range / 2) / 1e6));
-                    }
+                    f = 1e6 * (int)((start + range / 2) / 1e6);
+                    do {
+                        f += currentBandwidth;
+                        listFreqs.append(f / 1e6);
+                    } while (f < stop);
+                }
+                else if (currentBandwidth > 0 && std::isfinite(currentBandwidth)) {
+                    listFreqs.append((start + range / 2) / 1e6);
                 }
             }
         }
+
+        if (listFreqs.isEmpty()) {
+            const double fallbackFrequency = fallbackIqCenterFrequency(manualRequest);
+            if (fallbackFrequency > 0 && std::isfinite(fallbackFrequency))
+                listFreqs.append(fallbackFrequency);
+        }
+
+        if (listFreqs.isEmpty()) {
+            qWarning() << "Unable to request I/Q data: no valid trigger or pscan frequency is available";
+            flagOngoingAlarm = false;
+            return;
+        }
+
         emit busyRecording(true);
         emit reqVifConnection();
         emit setFfmCenterFrequency(listFreqs.first());
@@ -421,7 +473,7 @@ void IqPlot::validateHeader(quint64 freq, quint64 bw, quint64 rate, quint64 time
         m_iqMetadata.bandwidth = bw;
         m_iqMetadata.centerfreq = freq;
         m_iqMetadata.timestamp = AppClock::currentMSecsSinceEpoch() * 1e6; // Giving up timestamp from R&S for now, not following start of IQ transfer
-        m_iqMetadata.trigFrequency = trigFrequency;
+        m_iqMetadata.trigFrequency = requestedTrigFrequency;
         if (replaySampleCounts.contains(freq))
             samplesNeeded = qMin((qint64)(config->getIqLogTime() * rate), replaySampleCounts.value(freq));
         else if (!samplesNeeded)

@@ -375,6 +375,8 @@ public slots:
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}
     int getPlotYMin() { return settings->value("plot/YMin", -30).toInt();}
     void setPlotYMin(int val) { settings->setValue("plot/YMin", val); emit settingsUpdated();}
+    bool getPlotAutoYScale() { return settings->value("plot/AutoYScale", false).toBool();}
+    void setPlotAutoYScale(bool enabled) { settings->setValue("plot/AutoYScale", enabled); emit settingsUpdated();}
     QByteArray getWindowGeometry() { return settings->value("windowGeometry", "").toByteArray();}
     void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr); emit settingsUpdated();}
     QByteArray getWindowState() { return settings->value("windowState", "").toByteArray();}
@@ -387,6 +389,8 @@ public slots:
     void setShowWaterfall(QString b) { settings->setValue("plot/ShowWaterfall", b); emit settingsUpdated();}
     int getWaterfallTime() { return settings->value("plot/WaterfallTime", 120).toInt();}
     void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val); emit settingsUpdated();}
+    QString getWaterfallViewMode() { return settings->value("plot/WaterfallViewMode", "Overlay").toString();}
+    void setWaterfallViewMode(const QString &mode) { settings->setValue("plot/WaterfallViewMode", mode); emit settingsUpdated();}
     int getPlotResolution() { return plotResolution;}
     QByteArray getGnssDisplayWindowState() { return settings->value("gnssDisplay/windowState", "").toByteArray();}
     void setGnssDisplayWindowState(QByteArray arr)  { settings->setValue("gnssDisplay/windowState", arr); emit settingsUpdated();}

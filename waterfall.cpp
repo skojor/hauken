@@ -1,9 +1,10 @@
 #include "waterfall.h"
 
+#include <cstring>
+
 Waterfall::Waterfall(QSharedPointer<Config> c)
 {
     config = c;
-    pixmap = new QPixmap;
 }
 
 void Waterfall::start()
@@ -31,14 +32,18 @@ void Waterfall::receiveTrace(const QVector<double> &trace)
 
 void Waterfall::updTimerCallback()
 {
-    if (!traceCopy.isEmpty()) {
-        mutex.lock(); // this needs exclusive access to containers and pixmap
-        pixmap->scroll(0, 1, pixmap->rect());
+    if (!traceCopy.isEmpty() && !waterfallImage.isNull()
+        && waterfallImage.width() > 0 && waterfallImage.height() > 0) {
+        mutex.lock();
+        if (waterfallImage.height() > 1) {
+            const size_t rowBytes = static_cast<size_t>(waterfallImage.bytesPerLine());
+            std::memmove(waterfallImage.bits() + rowBytes, waterfallImage.constBits(),
+                         rowBytes * static_cast<size_t>(waterfallImage.height() - 1));
+        }
 
-        QImage image = pixmap->toImage();
         QColor color;
 
-        int pixmapSize = pixmap->width();
+        int pixmapSize = waterfallImage.width();
         double ratio = (double) traceCopy.size() / (double) pixmapSize;
         double percent = 0;
 
@@ -61,12 +66,11 @@ void Waterfall::updTimerCallback()
                 //color.setHsv(190 - (190 * percent), 180, 255, 65);
                 color.setHsv(255 - (255 * percent), 255, 240);
 
-            image.setPixel(x, 0, color.rgba());
+            waterfallImage.setPixel(x, 0, color.rgba());
         }
-        *pixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
-        emit imageReady(pixmap);
+        emit imageReady(waterfallImage);
         mutex.unlock(); // done with the exclusive work here
-        double interval = 1000.0 / ((double) pixmap->height() / waterfallTime);
+        double interval = 1000.0 / ((double) waterfallImage.height() / waterfallTime);
         updIntervalTimer->start((int) interval);
     }
 }
@@ -74,14 +78,20 @@ void Waterfall::updTimerCallback()
 void Waterfall::restartPlot()
 {
     mutex.lock();
-    if (pixmap) *pixmap = QPixmap(pixmap->size());
+    if (!waterfallImage.isNull()) waterfallImage.fill(Qt::transparent);
     mutex.unlock();
 }
 
-void Waterfall::updSize(QRect s)
+void Waterfall::updSize(QSize size)
 {
     mutex.lock();
-    *pixmap = QPixmap(s.width(), s.height());
+    if (waterfallImage.isNull()) {
+        waterfallImage = QImage(size, QImage::Format_ARGB32);
+        waterfallImage.fill(Qt::transparent);
+    }
+    else if (waterfallImage.size() != size) {
+        waterfallImage = waterfallImage.scaled(size, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    }
     mutex.unlock();
 }
 

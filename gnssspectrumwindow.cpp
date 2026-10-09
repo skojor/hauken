@@ -17,7 +17,7 @@ GnssSpectrumWindow::GnssSpectrumWindow(QSharedPointer<Config> c, const QString &
 {
     setWindowTitle(profileName + " - GNSS spectrum");
     setAttribute(Qt::WA_QuitOnClose, false); // closing this window alone must not quit the app
-    setWindowFlags(windowFlags() | Qt::WindowMinMaxButtonsHint);
+    setWindowFlags((windowFlags() & ~Qt::WindowType_Mask) | Qt::Window | Qt::WindowMinMaxButtonsHint);
     setSizeGripEnabled(true);
 
     auto *topLayout = new QHBoxLayout;

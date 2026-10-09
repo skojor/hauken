@@ -18,6 +18,7 @@
 #include "vifstreamudp.h"
 #include "vifstreamtcp.h"
 #include "config.h"
+#include "measurementdeviceavailability.h"
 
 using namespace Instrument;
 
@@ -156,7 +157,12 @@ private slots:
 
     void scpiWrite(QByteArray data);
     void scpiRead();
+    void availabilityReplyReady();
     void tcpTimeout();
+    void finishAutoReconnectAvailabilitySweep(MeasurementDeviceAvailability::Result result,
+                                               const QString &phase);
+    void resetAutoReconnectAvailability(const QString &reason);
+    void invalidateAutoReconnectAvailability(const QString &reason);
 
     void abor() { scpiWrite("abor");}
     void initImm() { scpiWrite("init:imm");}
@@ -199,6 +205,7 @@ private:
     QTimer *tcpTimeoutTimer = new QTimer;
     QTimer *autoReconnectTimer = new QTimer;
     QTimer *timedReconnectTimer = new QTimer;
+    QTimer *availabilityReplyTimer = new QTimer;
     QElapsedTimer *scpiThrottleTimer = new QElapsedTimer;
     bool deviceInUseWarningIssued = false;
     bool useUdpStream = true;
@@ -228,12 +235,16 @@ private:
     QString inUseBy, inUseByIp, inUseMode;
     quint64 inUseStart = 0, inUseStop = 0, inUseRes = 0;
     bool waitingForReply = false;
-    const int tcpTimeoutInMs = 25000;
+    const int tcpTimeoutInMs = 60000;
 
     bool modeChangeInProgress = false;
     bool modeChanged = false;
     bool pendingReconnectOwnIpCheck = false;
     bool pendingReconnectNeedsTcpCheck = false;
+    bool reconnectSweepInvalidated = false;
+    QByteArray availabilityReplyBuffer;
+    QString reconnectSweepMode;
+    MeasurementDeviceAvailability reconnectAvailability;
     QList<double> centerFrequencies;
 
 };

@@ -185,6 +185,15 @@ void MainWindow::setSignals()
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),
             &Config::setPlotYMin);
+    connect(plotAutoYScale, &QCheckBox::toggled, this, [this](bool enabled) {
+        plotMaxScroll->setEnabled(!enabled);
+        plotMinScroll->setEnabled(!enabled);
+        config->setPlotAutoYScale(enabled);
+    });
+    connect(waterfallOverlay, &QCheckBox::toggled, this, [this](bool overlay) {
+        config->setWaterfallViewMode(overlay ? QStringLiteral("Overlay") : QStringLiteral("Split"));
+        applyWaterfallViewMode();
+    });
     connect(plotMaxholdTime,
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),
@@ -197,6 +206,8 @@ void MainWindow::setSignals()
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+    connect(this, &MainWindow::waterfallSizeRequested, waterfall, &Waterfall::updSize, Qt::QueuedConnection);
+    connect(this, &MainWindow::restartWaterfallRequested, waterfall, &Waterfall::restartPlot, Qt::QueuedConnection);
     connect(gnssManager, &GnssManager::gnssSpectrumReady, this, [this](const QString &profileId, const GnssSpectrumBlock &block) {
         if (gnssSpectrumWindows.contains(profileId)) gnssSpectrumWindows.value(profileId)->receiveSpectrum(block);
     });
@@ -354,7 +365,7 @@ void MainWindow::setSignals()
 
         config->incidentRestart();
         iqPlot->resetTimer();
-        iqPlot->requestIqData();
+        iqPlot->requestManualIqData();
         datastreamIf->invalidateHeader();
         datastreamAmmos->invalidateHeader();
         SdefRecorder *recorder = sdefRecorder;
@@ -542,11 +553,6 @@ void MainWindow::setSignals()
             udpStream.data(),
             &UdpDataStream::restartTimeoutTimer);
     connect(measurementDevice,
-            &MeasurementDevice::reconnected,
-            tcpStream.data(),
-            &TcpDataStream::
-            restartTimeoutTimer); // Added to ensure program will restart the connection if no data arrives even on reconnection
-    connect(measurementDevice,
             &MeasurementDevice::newAntennaNames,
             this,
             &MainWindow::setDeviceAntPorts);
@@ -593,15 +599,15 @@ void MainWindow::setSignals()
             },
             Qt::BlockingQueuedConnection);
 
-    connect(waterfall, &Waterfall::imageReady, customPlot, [&](QPixmap *pixmap) {
-        if (dispWaterfall) {
-            customPlot->axisRect()->setBackground(*pixmap, false);
-            //customPlot->replot();
-            //qcpImage->setPixmap(*pixmap);
-            //customPlot->layer("image")->replot();
-            //qDebug() << qcpImage->clipAxisRect()->rect() << qcpImage->pixmap().size();
-            customPlot->replot();
-        }
+    connect(waterfall, &Waterfall::imageReady, this, [this](const QImage &image) {
+        latestWaterfallImage = image;
+        if (!dispWaterfall) return;
+
+        if (!waterfallOverlay->isChecked())
+            waterfallView->setPixmap(QPixmap::fromImage(image));
+        else
+            customPlot->axisRect()->setBackground(QPixmap::fromImage(image), false);
+        customPlot->replot();
     });
 
     connect(gnssManager, &GnssManager::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
@@ -633,7 +639,7 @@ void MainWindow::setSignals()
             connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             connect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
 
-            waterfall->restartPlot();
+            emit restartWaterfallRequested();
         } else {
             disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);
@@ -713,7 +719,7 @@ void MainWindow::setSignals()
             {"Mqtt", SdefRecorder::TriggerSource::Mqtt},
             {"AutoRecorder", SdefRecorder::TriggerSource::AutoRecorder}};
         if (manualSources.contains(source)) {
-            iqPlot->requestIqData();
+            iqPlot->requestManualIqData();
             SdefRecorder *recorder = sdefRecorder;
             const SdefRecorder::TriggerSource triggerSource = manualSources.value(source);
             QMetaObject::invokeMethod(recorder, [recorder, triggerSource] {
@@ -1180,6 +1186,10 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
+    // This direct cross-thread callback only updates the controller's atomic display gate.
+    connect(iqPlot, &IqPlot::busyRecording, customPlotController, [controller = customPlotController](bool busy) {
+        if (busy) controller->setIqCapturePaused(true);
+    }, Qt::DirectConnection);
     connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
     connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
@@ -1244,6 +1254,7 @@ void MainWindow::setSignals()
                 connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
                 connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
                 connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+                customPlotController->setIqCapturePaused(false);
             });
         }
     });

@@ -109,7 +109,7 @@ void MainWindow::instrPscanFreqChanged()
     }
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
-        waterfall->restartPlot();
+        emit restartWaterfallRequested();
     }
 
 }
@@ -130,7 +130,7 @@ void MainWindow::instrFfmCenterFreqChanged()
 
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
-        waterfall->restartPlot();
+        emit restartWaterfallRequested();
     }
     emit ffmCenterFrequencyChanged(centerFrequencyHz);
     iqPlot->setFfmFrequency(centerFrequencyMHz); // Sent as MHz, used for image text
@@ -142,7 +142,7 @@ void MainWindow::instrFfmSpanChanged()
     config->setInstrFfmSpan(instrFfmSpan->currentText());
     if (measurementDevice->isConnected()) {
         traceBuffer->restartCalcAvgLevel();
-        waterfall->restartPlot();
+        emit restartWaterfallRequested();
     }
 }
 

@@ -9,6 +9,7 @@
 #include <QAbstractItemView>
 #include <algorithm>
 #include <QApplication>
+#include <QCheckBox>
 #include <QDateTime>
 #include <QDebug>
 #include <QDoubleSpinBox>
@@ -22,6 +23,7 @@
 #include <QFutureWatcher>
 #include <QHostAddress>
 #include <QHash>
+#include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
@@ -33,6 +35,7 @@
 #include <QRegularExpressionValidator>
 #include <QSharedPointer>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStyle>
 #include <QStandardPaths>
 #include <QString>
@@ -149,6 +152,7 @@ protected:
 #ifndef QT_NO_CONTEXTMENU
     void contextMenuEvent(QContextMenuEvent *event) override;
 #endif // QT_NO_CONTEXTMENU
+    bool eventFilter(QObject *object, QEvent *event) override;
 
 private slots:
     void createMenus();
@@ -180,6 +184,9 @@ private slots:
     bool instrCheckSettings();
     void changeAntennaPortName();
     void instrGainControlChanged(int index = -1);
+    void applyWaterfallViewMode();
+    void scheduleWaterfallResize();
+    void updateWaterfallSize();
 
     void generatePopup(const QString msg);
     void updateStatusLine(const QString msg);
@@ -223,7 +230,7 @@ private:
     QWidget *centralWidget = new QWidget(this);
     QStatusBar *statusBar = new QStatusBar;
     QProgressBar *progressBar = new QProgressBar;
-    QCustomPlot *customPlot;
+    QCustomPlot *customPlot = nullptr;
     QMenu *fileMenu, *optionMenu, *helpMenu;
     QDoubleSpinBox *instrStartFreq = new QDoubleSpinBox;
     QDoubleSpinBox *instrStopFreq = new QDoubleSpinBox;
@@ -333,9 +340,18 @@ private:
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;
     QSpinBox *plotMinScroll = new QSpinBox;
+    QCheckBox *plotAutoYScale = new QCheckBox;
     QSpinBox *plotMaxholdTime = new QSpinBox;
     QComboBox *showWaterfall = new QComboBox;
     QSpinBox *waterfallTime = new QSpinBox;
+    QCheckBox *waterfallOverlay = new QCheckBox;
+    QWidget *spectrumHostWindow = nullptr;
+    QWidget *spectrumPlotPane = nullptr;
+    QWidget *waterfallPane = nullptr;
+    QSplitter *spectrumSplitter = nullptr;
+    QLabel *waterfallView = new QLabel;
+    QImage latestWaterfallImage;
+    QTimer *waterfallResizeTimer = nullptr;
     QMap<QString, GnssSpectrumWindow *> gnssSpectrumWindows; // profileId -> window, only for profiles with showSpectrumWindow enabled
     bool updatingGnssSpectrumWindows = false; // reentrancy guard, see MainWindow::updateGnssSpectrumWindows()
     QCPItemPixmap *qcpImage;
@@ -351,7 +367,7 @@ private:
     SdefRecorder *sdefRecorder;
     QThread *sdefRecorderThread;
 
-    Waterfall *waterfall;
+    Waterfall *waterfall = nullptr;
     QThread *waterfallThread;
 
     CameraRecorder *cameraRecorder;
@@ -368,7 +384,7 @@ private:
 
     QString gnssLastDisplayedId;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
-    bool dispWaterfall;
+    bool dispWaterfall = false;
 
     PositionReport *positionReport = nullptr;
     GeoLimit *geoLimit = nullptr;
@@ -412,12 +428,15 @@ private:
     QPushButton *btnDetector = new QPushButton("Detector");
     QHBoxLayout *ffmInfoLayout = new QHBoxLayout;
     bool flagBusyRecordingIQ = false;
+    bool restoringWindowState = true;
     PlotAndAnalyze *plotAndAnalyze = new PlotAndAnalyze(config);
     Simulator *simulator = nullptr;
     QHash<quint64, QPointer<QLabel>> iqPlotWindows;
 
 signals:
     void stopPlot(bool);
+    void waterfallSizeRequested(QSize size);
+    void restartWaterfallRequested();
     void antennaNameEdited(const int index, const QString name);
     void antennaPortChanged();
     void antennaNameChanged(QString);
