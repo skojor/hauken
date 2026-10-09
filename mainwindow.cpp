@@ -1147,9 +1147,10 @@ void MainWindow::setWaterfallOption(QString s)
 void MainWindow::applyWaterfallViewMode()
 {
     const bool split = !waterfallOverlay->isChecked();
+    waterfallPane->setVisible(split && dispWaterfall);
+    waterfallView->setVisible(split && dispWaterfall);
     if (split) {
         customPlot->axisRect()->setBackground(QPixmap(), false);
-        waterfallView->setVisible(dispWaterfall);
         if (dispWaterfall && !latestWaterfallImage.isNull())
             waterfallView->setPixmap(QPixmap::fromImage(latestWaterfallImage));
         else
