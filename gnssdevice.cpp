@@ -2,6 +2,7 @@
 #include "asciitranslator.h"
 #include "qcustomplot.h"
 #include "ubloxmonrfparser.h"
+#include "ubloxsecsigparser.h"
 #include "ubloxmonspanparser.h"
 #include "fftw3.h"
 #include "appclock.h"
@@ -122,6 +123,11 @@ GnssDevice::GnssDevice(QSharedPointer<Config> c, const QString &profileId)
 
     connect(sendToAnalyzerTimer, &QTimer::timeout, this, [this]
             {
+                if (uBloxID == "X20P" && uBloxState == UBLOX::READY) {
+                    const QByteArray secSigPoll = QByteArray::fromHex("b562270900003057");
+                    if (gnss->isOpen()) gnss->write(secSigPoll);
+                    else if (tcpSocket->isOpen()) tcpSocket->write(secSigPoll);
+                }
                 if (this->gnss->isOpen() || tcpSocket->isOpen() || replayMode) emit analyzeThisData(gnssData);
                 checkPosValid(); // run once per sec
             });
@@ -578,6 +584,15 @@ void GnssDevice::decodeBinary(const QByteArray &val)
             else {
                 rfBandCorrelator.invalidate();
                 applyRfBandMapping(gnssData, {});
+            }
+        }
+
+        else if (val.indexOf(QByteArray::fromHex("2709")) == 2 && uBloxID == "X20P") {
+            UbloxSecSigData signalSecurity;
+            if (UbloxSecSigParser::parse(val, signalSecurity)) {
+                gnssData.ubloxSecSig = signalSecurity;
+                gnssData.ubloxSecSigReceived = true;
+                gnssData.ubloxSecSigTimestamp = QDateTime::currentDateTimeUtc();
             }
         }
     }

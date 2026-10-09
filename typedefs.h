@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QMap>
 #include "septentrio_rfstatusparser.h"
+#include "ubloxsecsigparser.h"
 
 namespace NOTIFY {
 enum class TYPE {
@@ -934,6 +935,9 @@ public:
     int agcOffset = 0;
     int jammingIndicatorOffset = 0;
     JAMMINGSTATE jammingState = JAMMINGSTATE::UNKNOWN;
+    bool ubloxSecSigReceived = false;
+    UbloxSecSigData ubloxSecSig;
+    QDateTime ubloxSecSigTimestamp;
 };
 
 struct PpsSourceData

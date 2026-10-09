@@ -110,6 +110,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     appclock.h
     septentrio_rfstatusparser.cpp septentrio_rfstatusparser.h
     ubloxmonrfparser.cpp ubloxmonrfparser.h
+    ubloxsecsigparser.cpp ubloxsecsigparser.h
     ubloxmonspanparser.cpp ubloxmonspanparser.h
     ubloxrfbandcorrelator.cpp ubloxrfbandcorrelator.h
     udpdatastream.cpp udpdatastream.h
@@ -277,6 +278,14 @@ if (BUILD_TESTING)
     target_include_directories(ubloxmonrfparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(ubloxmonrfparser_test PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME ubloxmonrfparser_test COMMAND ubloxmonrfparser_test)
+
+    qt_add_executable(ubloxsecsigparser_test
+        tests/ubloxsecsigparser_test.cpp
+        ubloxsecsigparser.cpp ubloxsecsigparser.h
+    )
+    target_include_directories(ubloxsecsigparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ubloxsecsigparser_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME ubloxsecsigparser_test COMMAND ubloxsecsigparser_test)
 
     qt_add_executable(septentrio_rfstatusparser_test
         tests/septentrio_rfstatusparser_test.cpp

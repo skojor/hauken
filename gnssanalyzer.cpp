@@ -107,6 +107,7 @@ void GnssAnalyzer::analyze(GnssData &data)
             if (data.agcBlocks.isEmpty()) checkAgcOffset(data);
             else checkAgcBlockOffsets(data);
             checkJammingIndicator(data);
+            checkReceiverSecurity(data);
         }
     }
     checkPosOffset(data);
@@ -193,7 +194,7 @@ void GnssAnalyzer::updDisplay()
 bool GnssAnalyzer::anyOffsetTriggered() const
 {
     return posOffsetTriggered || altOffsetTriggered || timeOffsetTriggered
-           || cnoLimitTriggered || agcLimitTriggered || jamIndTriggered;
+           || cnoLimitTriggered || agcLimitTriggered || jamIndTriggered || receiverSecurityTriggered;
 }
 
 void GnssAnalyzer::emitAlarmEndedIfNoOffsetTriggered()
@@ -502,6 +503,58 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
         jamIndFilterTimer.invalidate();
 
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
+}
+
+void GnssAnalyzer::checkReceiverSecurity(GnssData &data)
+{
+    if (!data.ubloxSecSigReceived
+        || !data.ubloxSecSigTimestamp.isValid()
+        || data.ubloxSecSigTimestamp.msecsTo(AppClock::nowUtc()) > 5000) {
+        return;
+    }
+
+    QStringList alerts;
+    const UbloxSecSigData &security = data.ubloxSecSig;
+    if (security.jammingDetectionEnabled && security.jammingState == UbloxJammingState::WARNING) {
+        QStringList frequencies;
+        for (const UbloxSecSigFrequency &frequency : security.frequencies) {
+            if (frequency.jammed)
+                frequencies.append(QString::number(frequency.centerFrequencyKHz / 1000.0, 'f', 3) + " MHz");
+        }
+        alerts.append(frequencies.isEmpty()
+                          ? "receiver reports jamming"
+                          : QString("receiver reports jamming at %1").arg(frequencies.join(", ")));
+    }
+    if (security.spoofingDetectionEnabled) {
+        if (security.spoofingState == UbloxSpoofingState::INDICATED)
+            alerts.append("spoofing indicated");
+        else if (security.spoofingState == UbloxSpoofingState::AFFIRMED)
+            alerts.append("spoofing affirmed");
+    }
+
+    if (alerts.isEmpty()) {
+        if (receiverSecurityTriggered) {
+            receiverSecurityTriggered = false;
+            if (config && config->getGnssShowNotifications())
+                emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER,
+                                   config->getGnssReceiverProfile(data.id).name,
+                                   "u-blox receiver security indication cleared");
+            emitAlarmEndedIfNoOffsetTriggered();
+        }
+        return;
+    }
+
+    const QString message = "u-blox receiver security alert: " + alerts.join("; ");
+    if (!receiverSecurityTriggered) {
+        receiverSecurityTriggered = true;
+        reportRecordingTrigger(message);
+        emit visualAlarm();
+        if (config && config->getGnssShowNotifications())
+            emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER,
+                               config->getGnssReceiverProfile(data.id).name,
+                               message);
+    }
+    if (logToFile) emit alarm();
 }
 
 void GnssAnalyzer::tests()

@@ -81,6 +81,7 @@ private slots:
     void checkAgcOffset(GnssData &data);
     void checkAgcBlockOffsets(GnssData &data);
     void checkJammingIndicator(GnssData &data);
+    void checkReceiverSecurity(GnssData &data);
     void tests();
     bool shouldPauseSignalAverages();
 
@@ -97,12 +98,14 @@ private:
     QMap<int, QElapsedTimer> agcBlockTimers;
     QMap<int, QElapsedTimer> agcBlockFilterTimers;
     bool jamIndTriggered = false;
+    bool receiverSecurityTriggered = false;
 
     // config cache below here
     double cnoLimit, agcLimit;
     double posOffsetLimit, altOffsetLimit, timeOffsetLimit;
     double ownLatitude, ownLongitude, ownAltitude;
-    bool checkAgc, logToFile;
+    bool checkAgc = false;
+    bool logToFile = false;
     bool isInstrumentType = false;
 
     // pos. calculation constants here
