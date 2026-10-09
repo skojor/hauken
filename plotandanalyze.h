@@ -31,6 +31,7 @@ public:
     void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot = nullptr, QVector<qint16> avglevel = QVector<qint16>());
     void receivePlot(quint64 recordingId, QPixmap *pixmap, QDateTime timestamp);
     void receiveWaterfallSnapshot(quint64 recordingId, const QImage &image);
+    void receiveGnssSpectrumSnapshotsReady(quint64 recordingId);
     void recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts);
     void recordingContextEnded(quint64 recordingId);
     void updFrequencies(quint64 a, quint64 b);
@@ -56,6 +57,7 @@ signals:
     void reqTracePlot(quint64 recordingId);
     void reqWaterfallSnapshot(quint64 recordingId);
     void reqGnssBacklogs(quint64 recordingId);
+    void reqGnssSpectrumSnapshots(quint64 recordingId);
     void reqMaxholdData();
     void recordingArtifactReady(quint64 recordingId, const QString &filename, const QString &description);
     void recordingImageReady(quint64 recordingId, const QImage &image, const QString &description);
@@ -113,6 +115,7 @@ private:
     bool m_tracePlotReceived = false;
     bool m_waterfallReceived = false;
     bool m_traceDataReceived = false;
+    bool m_gnssSpectrumSnapshotsReceived = false;
 };
 
 #endif // PLOTANDANALYZE_H

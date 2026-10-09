@@ -345,7 +345,7 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
     ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>";
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) {
-        mailDelayTimer->start(qMax(truncateTime * 2e3, waitingForRecordingContext ? 1000 : 0));
+        mailDelayTimer->start(qMax(truncateTime * 2000, waitingForRecordingContext ? 1000 : 0));
     }
     if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
 }
@@ -467,7 +467,8 @@ void Notifications::recRecordingImage(quint64 recordingId, const QImage &image, 
 
     QByteArray data;
     QBuffer buffer(&data);
-    if (!buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "jpg"))
+    const QImage scaledImage = image.scaled(768, 400, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (!buffer.open(QIODevice::WriteOnly) || !scaledImage.save(&buffer, "jpg"))
         return;
 
     EmailAttachmentBuffer attachment;
@@ -475,6 +476,28 @@ void Notifications::recRecordingImage(quint64 recordingId, const QImage &image, 
     attachment.fileName = "waterfall_" + QString::number(recordingId) + ".jpg";
     attachment.description = description;
     attachment.contentId = "waterfall_" + QByteArray::number(recordingId);
+    attachment.contentType = "image/jpg";
+    bundle->attachments.append(attachment);
+}
+
+void Notifications::recGnssSpectrumImage(quint64 recordingId, const QString &profileId,
+                                           const QImage &image, const QString &description)
+{
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || bundle->imagesSent || image.isNull())
+        return;
+
+    QByteArray data;
+    QBuffer buffer(&data);
+    const QImage scaledImage = image.scaled(1200, 800, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    if (!buffer.open(QIODevice::WriteOnly) || !scaledImage.save(&buffer, "jpg"))
+        return;
+
+    EmailAttachmentBuffer attachment;
+    attachment.data = data;
+    attachment.fileName = "gnss_spectrum_" + QString::number(recordingId) + "_" + profileId + ".jpg";
+    attachment.description = description;
+    attachment.contentId = "gnss_spectrum_" + QByteArray::number(recordingId) + "_" + profileId.toLocal8Bit();
     attachment.contentType = "image/jpg";
     bundle->attachments.append(attachment);
 }
@@ -625,11 +648,34 @@ void Notifications::sendMail()
                 //"Maxhold and current signal levels</p>"
                 //"<img src='cid:image1'>";
 
-            for (const EmailAttachmentBuffer &attachment : currentEmailAttachments) {
-                if (!attachment.isEmpty())
-                    ts << "<br><p>" << attachment.description << "</p><img src='cid:" << attachment.contentId << "'>";
+            const auto waterfallAttachment = std::find_if(
+                currentEmailAttachments.cbegin(), currentEmailAttachments.cend(),
+                [](const EmailAttachmentBuffer &attachment) {
+                    return attachment.contentId.startsWith("waterfall_");
+                });
+            const auto appendEmailImage = [&ts](const EmailAttachmentBuffer &attachment, bool fixedSize) {
+                ts << "<br><p>" << attachment.description << "</p><img src=\"cid:" << attachment.contentId << "\"";
+                if (fixedSize)
+                    ts << " width=\"768\" height=\"400\"";
+                ts << ">";
+            };
+            bool waterfallRendered = false;
+            for (auto attachmentIt = currentEmailAttachments.cbegin(); attachmentIt != currentEmailAttachments.cend(); ++attachmentIt) {
+                const EmailAttachmentBuffer &attachment = *attachmentIt;
+                if (attachment.isEmpty() || attachmentIt == waterfallAttachment)
+                    continue;
+
+                const bool isSpectrogram = attachment.fileName.endsWith("_spectrogram.jpg", Qt::CaseInsensitive);
+                appendEmailImage(attachment, isSpectrogram);
+                if (isSpectrogram && waterfallAttachment != currentEmailAttachments.cend() && !waterfallAttachment->isEmpty()) {
+                    appendEmailImage(*waterfallAttachment, true);
+                    waterfallRendered = true;
+                }
             }
-                ts << "<hr></body></table>   /";
+            if (!waterfallRendered && waterfallAttachment != currentEmailAttachments.cend() && !waterfallAttachment->isEmpty()) {
+                appendEmailImage(*waterfallAttachment, true);
+            }
+            ts << "<hr></body></table>   /";
 
             //qDebug() << "mail debug:" << mimeHtml->data();
 

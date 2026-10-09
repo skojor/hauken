@@ -869,6 +869,7 @@ void PlotAndAnalyze::recordingContextStarted(quint64 recordingId, const QDateTim
     m_tracePlotReceived = false;
     m_waterfallReceived = false;
     m_traceDataReceived = false;
+    m_gnssSpectrumSnapshotsReceived = false;
     m_plotsToSend.clear();
     m_plotsDescription.clear();
 
@@ -901,11 +902,22 @@ void PlotAndAnalyze::requestRecordingArtifacts(quint64 recordingId)
     emit reqTracePlot(recordingId);
     emit reqWaterfallSnapshot(recordingId);
     emit reqGnssBacklogs(recordingId);
+    emit reqGnssSpectrumSnapshots(recordingId);
+}
+
+void PlotAndAnalyze::receiveGnssSpectrumSnapshotsReady(quint64 recordingId)
+{
+    if (!m_captureRequested || recordingId != m_recordingId || m_gnssSpectrumSnapshotsReceived)
+        return;
+
+    m_gnssSpectrumSnapshotsReceived = true;
+    completeRecordingArtifactsIfReady();
 }
 
 void PlotAndAnalyze::completeRecordingArtifactsIfReady()
 {
-    if (!m_captureRequested || !m_tracePlotReceived || !m_waterfallReceived || !m_traceDataReceived)
+    if (!m_captureRequested || !m_tracePlotReceived || !m_waterfallReceived || !m_traceDataReceived ||
+        !m_gnssSpectrumSnapshotsReceived)
         return;
 
     for (int i = 0; i < m_plotsToSend.size(); ++i)

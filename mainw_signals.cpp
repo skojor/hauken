@@ -348,19 +348,19 @@ void MainWindow::setSignals()
     });
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
-    connect(traceAnalyzer, &TraceAnalyzer::alarm, notifications, [notifications] {
-        notifications->recordingIncidentActivityChanged(false, true);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(false, true);
     });
-    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, notifications, [notifications] {
-        notifications->recordingIncidentActivityChanged(false, false);
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(false, false);
     });
     connect(gnssManager, &GnssManager::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(gnssManager, &GnssManager::alarm, iqPlot, &IqPlot::requestIqData);
-    connect(gnssManager, &GnssManager::alarm, notifications, [notifications] {
-        notifications->recordingIncidentActivityChanged(true, true);
+    connect(gnssManager, &GnssManager::alarm, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(true, true);
     });
-    connect(gnssManager, &GnssManager::alarmEnded, notifications, [notifications] {
-        notifications->recordingIncidentActivityChanged(true, false);
+    connect(gnssManager, &GnssManager::alarmEnded, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(true, false);
     });
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::resetTimer);
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::requestIqData);
@@ -1349,6 +1349,29 @@ void MainWindow::setSignals()
     connect(plotAndAnalyze, &PlotAndAnalyze::reqWaterfallSnapshot, waterfall, &Waterfall::requestSnapshot);
     connect(waterfall, &Waterfall::snapshotReady, plotAndAnalyze, &PlotAndAnalyze::receiveWaterfallSnapshot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqGnssBacklogs, gnssManager, &GnssManager::saveAllBacklogs);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqGnssSpectrumSnapshots, this, [this](quint64 recordingId) {
+        for (auto iterator = gnssSpectrumWindows.cbegin(); iterator != gnssSpectrumWindows.cend(); ++iterator) {
+            GnssSpectrumWindow *window = iterator.value();
+            if (!window || !window->isVisible() || !window->hasSpectrumData())
+                continue;
+
+            const QImage image = window->grab().toImage();
+            if (image.isNull())
+                continue;
+
+            const QString profileId = iterator.key();
+            const QString description = window->windowTitle();
+            Notifications *notificationsPtr = notifications;
+            QMetaObject::invokeMethod(notificationsPtr, [notificationsPtr, recordingId, profileId, image, description] {
+                notificationsPtr->recGnssSpectrumImage(recordingId, profileId, image, description);
+            }, Qt::QueuedConnection);
+        }
+
+        PlotAndAnalyze *plotAndAnalyzePtr = plotAndAnalyze;
+        QMetaObject::invokeMethod(plotAndAnalyzePtr, [plotAndAnalyzePtr, recordingId] {
+            plotAndAnalyzePtr->receiveGnssSpectrumSnapshotsReady(recordingId);
+        }, Qt::QueuedConnection);
+    });
 
     connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] (quint64 recordingId) {

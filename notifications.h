@@ -107,6 +107,8 @@ public slots:
     void recRecordingImage(quint64 recordingId, const QImage &image, const QString &description);
     void recordingPlotsReady(quint64 recordingId);
     void gnssBacklogsReady(quint64 recordingId);
+    void recGnssSpectrumImage(quint64 recordingId, const QString &profileId,
+                              const QImage &image, const QString &description);
 
     void appendIncidentLog(QDateTime dt, const QString string);
     void appendLogFile(QDateTime dt, const QString string);
