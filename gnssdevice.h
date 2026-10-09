@@ -56,7 +56,7 @@ public slots:
     void reqPosition() { emit positionUpdate(gnssData.posValid, gnssData.latitude, gnssData.longitude);}
     GnssData sendGnssData() { return gnssData;}
     bool isValid() { return gnssData.posValid;}
-    void saveBacklog();
+    void saveBacklog(quint64 recordingId);
     void setIncidenceStartedDateTime();
     void setReplayMode(bool b) { replayMode = b; gnssData.inUse = b; }
     void injectBytes(const QByteArray &data);
@@ -66,7 +66,7 @@ signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void positionUpdate(bool b, double lat, double lng);
     void gnssDisabled();
-    void sendGnssPlotFilename(QString);
+    void sendGnssPlotFilename(quint64 recordingId, QString filename);
     void spectrumReady(const GnssSpectrumBlock &block);
 
 private slots:
@@ -94,7 +94,7 @@ private slots:
     QString createFilename(const QString &suffix = QString());
     void updateBacklog(QByteArray &data, bool isBinary);
     void cleanupBacklog();
-    void createGnssPlot();
+    void createGnssPlot(quint64 recordingId);
     void decodeSbf4014(const QByteArray &data);
     void decodeSbf4092(const QByteArray &data);
     void decodeSbf4027(const QByteArray &data);
@@ -142,6 +142,8 @@ private:
     UbloxRfBandCorrelator rfBandCorrelator;
     quint64 binaryMessageSequence = 0;
     UBLOX uBloxState = UBLOX::NODEVICE;
+    bool ubloxSecSigResponseLogged = false;
+    bool ubloxSecSigParseFailureLogged = false;
     bool checkedAllSatSystems = false;
 
     // Septentrio: signal types (SBF 4.1.10) currently tracked on the main antenna, from MeasEpoch (4027)

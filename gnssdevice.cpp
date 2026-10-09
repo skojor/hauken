@@ -2,6 +2,7 @@
 #include "asciitranslator.h"
 #include "qcustomplot.h"
 #include "ubloxmonrfparser.h"
+#include "ubloxsecsigparser.h"
 #include "ubloxmonspanparser.h"
 #include "fftw3.h"
 #include "appclock.h"
@@ -580,6 +581,25 @@ void GnssDevice::decodeBinary(const QByteArray &val)
                 applyRfBandMapping(gnssData, {});
             }
         }
+
+        else if (val.indexOf(QByteArray::fromHex("2709")) == 2 && uBloxID == "X20P") {
+            UbloxSecSigData signalSecurity;
+            if (UbloxSecSigParser::parse(val, signalSecurity)) {
+                if (!ubloxSecSigResponseLogged) {
+                    qDebug() << "u-blox X20P SEC-SIG response received";
+                    ubloxSecSigResponseLogged = true;
+                }
+                gnssData.ubloxSecSig = signalSecurity;
+                gnssData.ubloxSecSigReceived = true;
+                gnssData.ubloxSecSigTimestamp = QDateTime::currentDateTimeUtc();
+            }
+            else if (!ubloxSecSigParseFailureLogged) {
+                const quint8 version = val.size() > 6 ? static_cast<quint8>(val.at(6)) : 0xff;
+                qWarning() << "u-blox X20P SEC-SIG frame rejected; version:" << version
+                           << "frame size:" << val.size();
+                ubloxSecSigParseFailureLogged = true;
+            }
+        }
     }
 }
 
@@ -864,6 +884,7 @@ void GnssDevice::setupUbloxDevice()
         qDebug() << "uBlox X20P configuration called";
         gnss->write(QByteArray::fromHex("b56206090c000000000000000000ffffffff1785")); // load defaults
         gnss->write(QByteArray::fromHex("b562068a0900000100005c03912001abfd")); // ubx-mon-rf on
+        gnss->write(QByteArray::fromHex("b562068a09000001000037069120018950")); // ubx-sec-sig on over USB
         gnss->write(QByteArray::fromHex("b56206010300f00500ff19")); // vtg off
         gnss->write(QByteArray::fromHex("b562068a090000010000cc009120001720")); // gll off
         gnss->write(QByteArray::fromHex("b562068a090000010000b80091200104bd")); // gns on
@@ -968,7 +989,7 @@ void GnssDevice::cleanupBacklog()
     }
 }
 
-void GnssDevice::saveBacklog()
+void GnssDevice::saveBacklog(quint64 recordingId)
 {
     backlogCleanupTimer->stop(); // Don't delete data while saving!
 
@@ -976,7 +997,7 @@ void GnssDevice::saveBacklog()
         if (!incidenceStartedDateTime.isValid())
             incidenceStartedDateTime = AppClock::now();
 
-        createGnssPlot();
+        createGnssPlot(recordingId);
 
         // Mirror the continuous log scheme: separate timestamped text and binary files.
         QFile incidentTextFile, incidentBinaryFile;
@@ -1018,7 +1039,7 @@ void GnssDevice::saveBacklog()
     backlogCleanupTimer->start(1000);
 }
 
-void GnssDevice::createGnssPlot()
+void GnssDevice::createGnssPlot(quint64 recordingId)
 {
     QCustomPlot *plot = new QCustomPlot;
     plot->addGraph();
@@ -1066,7 +1087,7 @@ void GnssDevice::createGnssPlot()
     plot->saveJpg(filename);
     delete plot;
     incidenceStartedDateTime = QDateTime();
-    emit sendGnssPlotFilename(filename);
+    emit sendGnssPlotFilename(recordingId, filename);
 }
 
 void GnssDevice::decodeSbf4014(const QByteArray &data)

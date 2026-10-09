@@ -14,6 +14,7 @@ private slots:
     void signalAveragesFreeze_data();
     void signalAveragesFreeze();
     void firstSignalSampleSeedsPausedAverages();
+    void ubloxSecurityIndicationTriggersAndClearsAlarm();
 };
 
 void GnssAnalyzerTest::gnssIncidentGrace()
@@ -154,6 +155,31 @@ void GnssAnalyzerTest::firstSignalSampleSeedsPausedAverages()
     QCOMPARE(data.avgAgc, 50);
     QCOMPARE(data.agcBlocks[0].avgAgc, 30);
     QCOMPARE(data.agcBlocks[1].avgAgc, 70);
+}
+
+void GnssAnalyzerTest::ubloxSecurityIndicationTriggersAndClearsAlarm()
+{
+    GnssAnalyzer analyzer({}, "receiver");
+    GnssData data;
+    data.ubloxSecSigReceived = true;
+    data.ubloxSecSigTimestamp = QDateTime::currentDateTimeUtc();
+    data.ubloxSecSig.spoofingDetectionEnabled = true;
+    data.ubloxSecSig.spoofingState = UbloxSpoofingState::INDICATED;
+    QSignalSpy visualAlarmSpy(&analyzer, &GnssAnalyzer::visualAlarm);
+    QSignalSpy alarmEndedSpy(&analyzer, &GnssAnalyzer::alarmEnded);
+    const auto checkSecurity = [&analyzer, &data]() {
+        return QMetaObject::invokeMethod(&analyzer, "checkReceiverSecurity", Qt::DirectConnection,
+                                         Q_ARG(GnssData &, data));
+    };
+
+    QVERIFY(checkSecurity());
+    QCOMPARE(visualAlarmSpy.count(), 1);
+    QVERIFY(checkSecurity());
+    QCOMPARE(visualAlarmSpy.count(), 1);
+
+    data.ubloxSecSig.spoofingState = UbloxSpoofingState::NOSPOOFING;
+    QVERIFY(checkSecurity());
+    QCOMPARE(alarmEndedSpy.count(), 1);
 }
 
 QTEST_GUILESS_MAIN(GnssAnalyzerTest)

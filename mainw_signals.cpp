@@ -348,8 +348,20 @@ void MainWindow::setSignals()
     });
     connect(traceAnalyzer, &TraceAnalyzer::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(traceAnalyzer, &TraceAnalyzer::alarm, iqPlot, &IqPlot::requestIqData);
+    connect(traceAnalyzer, &TraceAnalyzer::alarm, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(false, true);
+    });
+    connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(false, false);
+    });
     connect(gnssManager, &GnssManager::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
     connect(gnssManager, &GnssManager::alarm, iqPlot, &IqPlot::requestIqData);
+    connect(gnssManager, &GnssManager::alarm, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(true, true);
+    });
+    connect(gnssManager, &GnssManager::alarmEnded, notifications, [notificationsPtr = this->notifications] {
+        notificationsPtr->recordingIncidentActivityChanged(true, false);
+    });
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::resetTimer);
     connect(traceAnalyzer, &TraceAnalyzer::significantLevelChange, iqPlot, &IqPlot::requestIqData);
 
@@ -394,6 +406,10 @@ void MainWindow::setSignals()
             traceAnalyzer,
             &TraceAnalyzer::recorderEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceBuffer, &TraceBuffer::recorderEnded);
+    connect(sdefRecorder, &SdefRecorder::recordingContextStarted, notifications, &Notifications::recordingContextStarted);
+    connect(sdefRecorder, &SdefRecorder::recordingContextEnded, notifications, &Notifications::recordingContextEnded);
+    connect(sdefRecorder, &SdefRecorder::recordingContextStarted, plotAndAnalyze, &PlotAndAnalyze::recordingContextStarted);
+    connect(sdefRecorder, &SdefRecorder::recordingContextEnded, plotAndAnalyze, &PlotAndAnalyze::recordingContextEnded);
     connect(sdefRecorder,
             &SdefRecorder::fileReadyForUpload,
             oauthFileUploader,
@@ -1197,6 +1213,7 @@ void MainWindow::setSignals()
 
     connect(traceAnalyzer, &TraceAnalyzer::alarm, gnssManager, &GnssManager::markIncidenceStarted);
     connect(gnssManager, &GnssManager::sendGnssPlotFilename, notifications, &Notifications::setGnssPlotFilename);
+    connect(gnssManager, &GnssManager::gnssBacklogsSaved, notifications, &Notifications::gnssBacklogsReady);
 
     connect(btnNormalize, &QPushButton::clicked, this, [this] () {
         if (config->getInstrNormalizeSpectrum()) {
@@ -1328,16 +1345,37 @@ void MainWindow::setSignals()
     connect(instrMeasurementTime, &QSpinBox::valueChanged, this, [this] () {
         datastreamPScan->updWaitForPscanEndMarker(true);
     });
-    // PlotAnaAnalyze handles plot requests
-    //connect(notifications,&Notifications::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot); // ask for image
-    //connect(customPlotController, &CustomPlotController::retTracePlot, notifications, &Notifications::recTracePlot);
-
     connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, customPlotController, &CustomPlotController::reqTracePlot);
-    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracePlot, gnssManager, &GnssManager::saveAllBacklogs); // Not really what this signal was meant for, but the timing is good...
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqWaterfallSnapshot, waterfall, &Waterfall::requestSnapshot);
+    connect(waterfall, &Waterfall::snapshotReady, plotAndAnalyze, &PlotAndAnalyze::receiveWaterfallSnapshot);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqGnssBacklogs, gnssManager, &GnssManager::saveAllBacklogs);
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqGnssSpectrumSnapshots, this, [this](quint64 recordingId) {
+        for (auto iterator = gnssSpectrumWindows.cbegin(); iterator != gnssSpectrumWindows.cend(); ++iterator) {
+            GnssSpectrumWindow *window = iterator.value();
+            if (!window || !window->isVisible() || !window->hasSpectrumData())
+                continue;
+
+            const QImage image = window->grab().toImage();
+            if (image.isNull())
+                continue;
+
+            const QString profileId = iterator.key();
+            const QString description = window->windowTitle();
+            Notifications *notificationsPtr = notifications;
+            QMetaObject::invokeMethod(notificationsPtr, [notificationsPtr, recordingId, profileId, image, description] {
+                notificationsPtr->recGnssSpectrumImage(recordingId, profileId, image, description);
+            }, Qt::QueuedConnection);
+        }
+
+        PlotAndAnalyze *plotAndAnalyzePtr = plotAndAnalyze;
+        QMetaObject::invokeMethod(plotAndAnalyzePtr, [plotAndAnalyzePtr, recordingId] {
+            plotAndAnalyzePtr->receiveGnssSpectrumSnapshotsReady(recordingId);
+        }, Qt::QueuedConnection);
+    });
 
     connect(customPlotController, &CustomPlotController::retTracePlot, plotAndAnalyze, &PlotAndAnalyze::receivePlot);
-    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] () {
-        plotAndAnalyze->receiveTracedata(traceBuffer->retSecondsOfBuffer(120),
+    connect(plotAndAnalyze, &PlotAndAnalyze::reqTracedata, this, [this] (quint64 recordingId) {
+        plotAndAnalyze->receiveTracedata(recordingId, traceBuffer->retSecondsOfBuffer(120),
                                          customPlot,
                                          traceBuffer->retAvgLevel());
     });
@@ -1347,12 +1385,7 @@ void MainWindow::setSignals()
                                                customPlot->xAxis->range().lower,
                                                customPlot->xAxis->range().upper);
     });
-        connect(sdefRecorder,
-            &SdefRecorder::recordingStartedWithAnalysisArtifacts,
-            plotAndAnalyze,
-            &PlotAndAnalyze::recordingState);
-        connect(sdefRecorder,
-            &SdefRecorder::recordingStartedWithoutAnalysisArtifacts,
-            plotAndAnalyze,
-            &PlotAndAnalyze::recordingStartedWithoutAnalysisArtifacts);
+    connect(plotAndAnalyze, &PlotAndAnalyze::recordingArtifactReady, notifications, &Notifications::recRecordingArtifact);
+    connect(plotAndAnalyze, &PlotAndAnalyze::recordingImageReady, notifications, &Notifications::recRecordingImage);
+    connect(plotAndAnalyze, &PlotAndAnalyze::recordingPlotsReady, notifications, &Notifications::recordingPlotsReady);
 }

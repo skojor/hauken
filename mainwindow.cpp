@@ -611,6 +611,12 @@ void MainWindow::createLayout()
     spectrumSplitter->setStretchFactor(1, 1);
     spectrumSplitter->setCollapsible(0, false);
     spectrumSplitter->setCollapsible(1, false);
+    const QByteArray savedSpectrumWaterfallSplitterState = config->getSpectrumWaterfallSplitterState();
+    if (!savedSpectrumWaterfallSplitterState.isEmpty())
+        spectrumSplitter->restoreState(savedSpectrumWaterfallSplitterState);
+    connect(spectrumSplitter, &QSplitter::splitterMoved, this, [this] {
+        config->setSpectrumWaterfallSplitterState(spectrumSplitter->saveState());
+    });
 
     spectrumHostWindow = new QWidget;
     auto *spectrumHostLayout = new QVBoxLayout(spectrumHostWindow);
@@ -1141,9 +1147,10 @@ void MainWindow::setWaterfallOption(QString s)
 void MainWindow::applyWaterfallViewMode()
 {
     const bool split = !waterfallOverlay->isChecked();
+    waterfallPane->setVisible(split && dispWaterfall);
+    waterfallView->setVisible(split && dispWaterfall);
     if (split) {
         customPlot->axisRect()->setBackground(QPixmap(), false);
-        waterfallView->setVisible(dispWaterfall);
         if (dispWaterfall && !latestWaterfallImage.isNull())
             waterfallView->setPixmap(QPixmap::fromImage(latestWaterfallImage));
         else

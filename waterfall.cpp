@@ -30,6 +30,16 @@ void Waterfall::receiveTrace(const QVector<double> &trace)
     }
 }
 
+void Waterfall::requestSnapshot(quint64 recordingId)
+{
+    QImage snapshot;
+    {
+        QMutexLocker locker(&mutex);
+        snapshot = waterfallImage.copy();
+    }
+    emit snapshotReady(recordingId, snapshot);
+}
+
 void Waterfall::updTimerCallback()
 {
     if (!traceCopy.isEmpty() && !waterfallImage.isNull()

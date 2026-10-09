@@ -77,6 +77,43 @@ QString formatInterferenceSpoofing(const GnssData &data)
             || data.septentrioRfStatusTimestamp.msecsTo(AppClock::nowUtc()) > 5000)) {
         return "RFStatus stale";
     }
+    if (!data.septentrioReceiver && data.ubloxSecSigReceived) {
+        if (!data.ubloxSecSigTimestamp.isValid()
+            || data.ubloxSecSigTimestamp.msecsTo(AppClock::nowUtc()) > 5000) {
+            return "Signal security status stale";
+        }
+
+        const UbloxSecSigData &security = data.ubloxSecSig;
+        QString jammingText;
+        if (!security.jammingDetectionEnabled) jammingText = "disabled";
+        else {
+            switch (security.jammingState) {
+            case UbloxJammingState::UNKNOWN: jammingText = "unknown"; break;
+            case UbloxJammingState::NOJAMMING: jammingText = "no jamming indicated"; break;
+            case UbloxJammingState::WARNING: jammingText = coloredText("jamming indicated", "red"); break;
+            }
+        }
+
+        QStringList jammedFrequencies;
+        for (const UbloxSecSigFrequency &frequency : security.frequencies) {
+            if (frequency.jammed)
+                jammedFrequencies.append(QString::number(frequency.centerFrequencyKHz / 1000.0, 'f', 3));
+        }
+        if (!jammedFrequencies.isEmpty())
+            jammingText += QString(" (%1 MHz)").arg(jammedFrequencies.join(", "));
+
+        QString spoofingText;
+        if (!security.spoofingDetectionEnabled) spoofingText = "disabled";
+        else {
+            switch (security.spoofingState) {
+            case UbloxSpoofingState::UNKNOWN: spoofingText = "unknown"; break;
+            case UbloxSpoofingState::NOSPOOFING: spoofingText = "no spoofing indicated"; break;
+            case UbloxSpoofingState::INDICATED: spoofingText = coloredText("spoofing indicated", "red"); break;
+            case UbloxSpoofingState::AFFIRMED: spoofingText = coloredText("spoofing affirmed", "red"); break;
+            }
+        }
+        return QString("Jamming: %1<br>Spoofing: %2").arg(jammingText, spoofingText);
+    }
     if (!data.septentrioReceiver)
         return QString("Jamming indicator: %1<br>Spoofing: n/a").arg(formatJammingIndicator(data));
 
@@ -456,12 +493,19 @@ void GnssDisplay::updateCardText(const QString &id, GnssReceiverCard *card)
         else if (abs(data.altOffset) < 1000) card->altOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.altOffset), 'f', 0) + " m</span>");
         else card->altOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.altOffset / 1000), 'f', 0) + " km</span>");
 
-        if (data.timeOffset < 1000) card->timeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
-        else if (data.timeOffset < 5000) card->timeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(data.timeOffset / 1000) + " sec(s)</span>");
-        else if (data.timeOffset < 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 1000) + " sec(s)</span>");
-        else if (data.timeOffset < 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 60000) + " min(s)</span>");
-        else if (data.timeOffset < 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 3600000) + " hour(s)</span>");
-        else if (data.timeOffset < 24UL * 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 24UL * 3600000) + " hour(s)</span>");
+        const qint64 timeOffsetMagnitude = qAbs(data.timeOffset);
+        const QString timeOffsetSign = data.timeOffset < 0 ? "-" : "";
+        if (timeOffsetMagnitude < 1000) {
+            const QString value = timeOffsetMagnitude == 0
+                                      ? "0 secs"
+                                      : timeOffsetSign + QString::number(timeOffsetMagnitude) + " ms";
+            card->timeOffset->setText("<span style='font-size:normal;color:green;'>" + value + "</span>");
+        }
+        else if (timeOffsetMagnitude < 5000) card->timeOffset->setText("<span style='font-size:normal;color:orange;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 1000) + " sec(s)</span>");
+        else if (timeOffsetMagnitude < 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 1000) + " sec(s)</span>");
+        else if (timeOffsetMagnitude < 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 60000) + " min(s)</span>");
+        else if (timeOffsetMagnitude < 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 3600000) + " hour(s)</span>");
+        else card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / (24 * 60 * 60 * 1000)) + " day(s)</span>");
     }
     else {
         card->leftGroupBox->setTitle(name + " - position invalid");

@@ -29,6 +29,9 @@ public:
 public slots:
     void receiveSpectrum(const GnssSpectrumBlock &block);
 
+public:
+    bool hasSpectrumData() const { return !currentTraceLevels.isEmpty(); }
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void moveEvent(QMoveEvent *event) override;

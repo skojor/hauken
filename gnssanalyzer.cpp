@@ -93,7 +93,7 @@ void GnssAnalyzer::analyze(GnssData &data)
 {
     data.posOffset = distanceInMeters(data);
     data.altOffset = abs(ownAltitude - data.altitude);
-    data.timeOffset = abs(data.timestamp.msecsTo(AppClock::nowUtc()));
+    data.timeOffset = AppClock::nowUtc().msecsTo(data.timestamp);
     if (data.id != "instrument") {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);
@@ -107,6 +107,7 @@ void GnssAnalyzer::analyze(GnssData &data)
             if (data.agcBlocks.isEmpty()) checkAgcOffset(data);
             else checkAgcBlockOffsets(data);
             checkJammingIndicator(data);
+            checkReceiverSecurity(data);
         }
     }
     checkPosOffset(data);
@@ -165,7 +166,10 @@ void GnssAnalyzer::updDisplay()
         ts.setRealNumberPrecision(1);
         ts << "<tr><td>Pos. offset</td><td align>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << " m</td></tr>"
            << "<tr><td>Alt. offset</td><td align>" << gnssData.altOffset << " m</td></tr>"
-           << "<tr><td>Time offset</td><td>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << " ms</td></tr>";
+           << "<tr><td>Time offset</td><td>"
+           << (qAbs(gnssData.timeOffset) > 9999
+               ? QString("%1>9999").arg(gnssData.timeOffset < 0 ? "-" : "")
+               : QString::number(gnssData.timeOffset)) << " ms</td></tr>";
         if (!isInstrumentType)
             ts << "<tr><td>C/No (offset)</td><td>" << gnssData.cno << " (" << gnssData.cnoOffset << ") dB</td></tr>";
         if (!gnssData.agcBlocks.isEmpty()) {
@@ -193,7 +197,7 @@ void GnssAnalyzer::updDisplay()
 bool GnssAnalyzer::anyOffsetTriggered() const
 {
     return posOffsetTriggered || altOffsetTriggered || timeOffsetTriggered
-           || cnoLimitTriggered || agcLimitTriggered || jamIndTriggered;
+           || cnoLimitTriggered || agcLimitTriggered || jamIndTriggered || receiverSecurityTriggered;
 }
 
 void GnssAnalyzer::emitAlarmEndedIfNoOffsetTriggered()
@@ -294,7 +298,7 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     ts.setRealNumberNotation(QTextStream::FixedNotation);
     ts.setRealNumberPrecision(1);
 
-    if (data.posValid && timeOffsetLimit > 0 && data.timeOffset > timeOffsetLimit) {
+    if (data.posValid && timeOffsetLimit > 0 && qAbs(data.timeOffset) > timeOffsetLimit) {
         if (!timeOffsetTriggered && !timeOffsetFilterTimer.isValid())
         {
             timeOffsetFilterTimer.start();
@@ -304,7 +308,9 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
         else if (!timeOffsetTriggered && timeOffsetFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             if (!logToFile) {
                 ts << "Time offset triggered, current offset: "
-                   << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms";
+                   << (qAbs(data.timeOffset) > 9999
+                       ? QString("%1>9999").arg(data.timeOffset < 0 ? "-" : "")
+                       : QString::number(data.timeOffset)) << " ms";
             }
             timeOffsetTriggered = true;
             timeOffsetTimer.start();
@@ -502,6 +508,58 @@ void GnssAnalyzer::checkJammingIndicator(GnssData &data)
         jamIndFilterTimer.invalidate();
 
     if (!msg.isEmpty() && config->getGnssShowNotifications()) emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER, config->getGnssReceiverProfile(data.id).name, msg);
+}
+
+void GnssAnalyzer::checkReceiverSecurity(GnssData &data)
+{
+    if (!data.ubloxSecSigReceived
+        || !data.ubloxSecSigTimestamp.isValid()
+        || data.ubloxSecSigTimestamp.msecsTo(AppClock::nowUtc()) > 5000) {
+        return;
+    }
+
+    QStringList alerts;
+    const UbloxSecSigData &security = data.ubloxSecSig;
+    if (security.jammingDetectionEnabled && security.jammingState == UbloxJammingState::WARNING) {
+        QStringList frequencies;
+        for (const UbloxSecSigFrequency &frequency : security.frequencies) {
+            if (frequency.jammed)
+                frequencies.append(QString::number(frequency.centerFrequencyKHz / 1000.0, 'f', 3) + " MHz");
+        }
+        alerts.append(frequencies.isEmpty()
+                          ? "receiver reports jamming"
+                          : QString("receiver reports jamming at %1").arg(frequencies.join(", ")));
+    }
+    if (security.spoofingDetectionEnabled) {
+        if (security.spoofingState == UbloxSpoofingState::INDICATED)
+            alerts.append("spoofing indicated");
+        else if (security.spoofingState == UbloxSpoofingState::AFFIRMED)
+            alerts.append("spoofing affirmed");
+    }
+
+    if (alerts.isEmpty()) {
+        if (receiverSecurityTriggered) {
+            receiverSecurityTriggered = false;
+            if (config && config->getGnssShowNotifications())
+                emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER,
+                                   config->getGnssReceiverProfile(data.id).name,
+                                   "u-blox receiver security indication cleared");
+            emitAlarmEndedIfNoOffsetTriggered();
+        }
+        return;
+    }
+
+    const QString message = "u-blox receiver security alert: " + alerts.join("; ");
+    if (!receiverSecurityTriggered) {
+        receiverSecurityTriggered = true;
+        reportRecordingTrigger(message);
+        emit visualAlarm();
+        if (config && config->getGnssShowNotifications())
+            emit toIncidentLog(NOTIFY::TYPE::GNSSANALYZER,
+                               config->getGnssReceiverProfile(data.id).name,
+                               message);
+    }
+    if (logToFile) emit alarm();
 }
 
 void GnssAnalyzer::tests()

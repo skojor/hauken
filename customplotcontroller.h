@@ -43,7 +43,7 @@ public slots:
     void flashTrigline();
     void stopFlashTrigline();
     void updDeviceConnected(bool b);
-    void reqTracePlot();
+    void reqTracePlot(quint64 recordingId);
     void freqChanged(double a, double b);
     void resChanged(double a);
     void modeChanged(Instrument::Mode m);
@@ -72,7 +72,7 @@ private slots:
 signals:
     void reqTrigline();
     void freqSelectionChanged();
-    void retTracePlot(QPixmap *, QDateTime);
+    void retTracePlot(quint64 recordingId, QPixmap *, QDateTime);
     void centerFrequency(double f);
     void scroll(int val);
 
