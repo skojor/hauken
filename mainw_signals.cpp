@@ -185,6 +185,11 @@ void MainWindow::setSignals()
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),
             &Config::setPlotYMin);
+    connect(plotAutoYScale, &QCheckBox::toggled, this, [this](bool enabled) {
+        plotMaxScroll->setEnabled(!enabled);
+        plotMinScroll->setEnabled(!enabled);
+        config->setPlotAutoYScale(enabled);
+    });
     connect(plotMaxholdTime,
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),

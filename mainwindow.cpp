@@ -202,6 +202,9 @@ MainWindow::~MainWindow()
     QSettings extras;
     extras.setValue("incGeometry", incidentLog->saveGeometry());
     extras.setValue("plotGeometry", customPlot->saveGeometry());
+    const auto spectrumWindows = gnssSpectrumWindows.values();
+    gnssSpectrumWindows.clear();
+    for (auto *window : spectrumWindows) delete window;
     QApplication::exit();
 }
 
@@ -610,6 +613,7 @@ void MainWindow::createLayout()
     bottomPlotLayout->addWidget(showWaterfall);
     bottomPlotLayout->addWidget(new QLabel("Waterfall time"));
     bottomPlotLayout->addWidget(waterfallTime);
+    bottomPlotLayout->addWidget(plotAutoYScale);
     if (config->getPmrMode())
         bottomPlotLayout->addWidget(btnPmrTable);
 
@@ -621,6 +625,11 @@ void MainWindow::createLayout()
     plotMinScroll->setRange(-200, 200);
     plotMaxScroll->setValue(config->getPlotYMax());
     plotMinScroll->setValue(config->getPlotYMin());
+    plotAutoYScale->setText(tr("Auto Y"));
+    plotAutoYScale->setToolTip(tr("Scale the Y axis to the live trace and visible max-hold"));
+    plotAutoYScale->setChecked(config->getPlotAutoYScale());
+    plotMaxScroll->setEnabled(!plotAutoYScale->isChecked());
+    plotMinScroll->setEnabled(!plotAutoYScale->isChecked());
     plotMaxholdTime->setFixedSize(40, 20);
     plotMaxholdTime->setRange(0, 120);
     waterfallTime->setRange(10, 86400);
@@ -1096,7 +1105,7 @@ void MainWindow::updateGnssSpectrumWindows()
             continue;
         wantedProfileIds.insert(profile.id);
         if (!gnssSpectrumWindows.contains(profile.id)) {
-            GnssSpectrumWindow *window = new GnssSpectrumWindow(config, profile.id, profile.name, this);
+            GnssSpectrumWindow *window = new GnssSpectrumWindow(config, profile.id, profile.name);
             window->show();
             gnssSpectrumWindows.insert(profile.id, window);
         }

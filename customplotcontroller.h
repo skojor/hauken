@@ -34,7 +34,7 @@ public slots:
     void plotTrace(const QVector<double> &);
     void plotMaxhold(const QVector<double> &);
     void plotTriglevel(const QVector<double> &data);
-    void showMaxhold(const bool b) { customPlotPtr->graph(1)->setVisible(b);}
+    void showMaxhold(const bool b);
     void readTrigSelectionFromConfig();
     void saveTrigSelectionToConfig();
     void doReplot();
@@ -112,6 +112,7 @@ private:
     void setSpectrumMarkerFrequency(int markerIndex, double frequencyMhz, bool clampToRange = true);
     void updateSpectrumMarkerLabel(int markerIndex);
     void updateSpectrumMarkerLabels();
+    void applyAutoYRange();
     double spectrumMarkerLevel(double frequencyMhz) const;
     int spectrumMarkerAt(const QPoint &pos) const;
     int spectrumMarkerFontSize() const;

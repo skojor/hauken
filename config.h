@@ -375,6 +375,8 @@ public slots:
     void setPlotYMax(int val) { settings->setValue("plot/YMax", val); emit settingsUpdated();}
     int getPlotYMin() { return settings->value("plot/YMin", -30).toInt();}
     void setPlotYMin(int val) { settings->setValue("plot/YMin", val); emit settingsUpdated();}
+    bool getPlotAutoYScale() { return settings->value("plot/AutoYScale", false).toBool();}
+    void setPlotAutoYScale(bool enabled) { settings->setValue("plot/AutoYScale", enabled); emit settingsUpdated();}
     QByteArray getWindowGeometry() { return settings->value("windowGeometry", "").toByteArray();}
     void setWindowGeometry(QByteArray arr) { settings->setValue("windowGeometry", arr); emit settingsUpdated();}
     QByteArray getWindowState() { return settings->value("windowState", "").toByteArray();}

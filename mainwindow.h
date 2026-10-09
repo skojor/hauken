@@ -9,6 +9,7 @@
 #include <QAbstractItemView>
 #include <algorithm>
 #include <QApplication>
+#include <QCheckBox>
 #include <QDateTime>
 #include <QDebug>
 #include <QDoubleSpinBox>
@@ -333,6 +334,7 @@ private:
     CustomPlotController *customPlotController;
     QSpinBox *plotMaxScroll = new QSpinBox;
     QSpinBox *plotMinScroll = new QSpinBox;
+    QCheckBox *plotAutoYScale = new QCheckBox;
     QSpinBox *plotMaxholdTime = new QSpinBox;
     QComboBox *showWaterfall = new QComboBox;
     QSpinBox *waterfallTime = new QSpinBox;

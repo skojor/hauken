@@ -135,9 +135,15 @@ void CustomPlotController::plotTrace(const QVector<double> &data)
     if (keyValues.isEmpty()) reCalc();
     if (!keyValues.isEmpty() and !data.isEmpty()) {
         customPlotPtr->graph(0)->setData(keyValues, data);
-        updateSpectrumMarkerLabels();
-        customPlotPtr->layer("liveGraph")->replot();
-        customPlotPtr->layer("markerLayer")->replot();
+        if (config->getPlotAutoYScale()) {
+            applyAutoYRange();
+            customPlotPtr->replot(QCustomPlot::rpQueuedReplot);
+        }
+        else {
+            updateSpectrumMarkerLabels();
+            customPlotPtr->layer("liveGraph")->replot();
+            customPlotPtr->layer("markerLayer")->replot();
+        }
     }
 }
 
@@ -146,6 +152,19 @@ void CustomPlotController::plotMaxhold(const QVector<double> &data)
     if (keyValues.isEmpty()) reCalc();
     if (!keyValues.isEmpty() and !data.isEmpty()) {
         customPlotPtr->graph(1)->setData(keyValues, data);
+        if (config->getPlotAutoYScale() && customPlotPtr->graph(1)->visible()) {
+            applyAutoYRange();
+            customPlotPtr->replot(QCustomPlot::rpQueuedReplot);
+        }
+    }
+}
+
+void CustomPlotController::showMaxhold(bool visible)
+{
+    customPlotPtr->graph(1)->setVisible(visible);
+    if (config->getPlotAutoYScale()) {
+        applyAutoYRange();
+        customPlotPtr->replot(QCustomPlot::rpQueuedReplot);
     }
 }
 
@@ -429,8 +448,12 @@ void CustomPlotController::updSettings()
 
     updTextLabelPositions();
 
-    customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
-    customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+    if (config->getPlotAutoYScale())
+        applyAutoYRange();
+    else {
+        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+    }
 
     reCalc();
     updateSpectrumMarkerLabels();
@@ -652,8 +675,12 @@ void CustomPlotController::freqChanged(double a, double b)
         }
         customPlotPtr->xAxis->setRangeUpper(b / 1e6);
         customPlotPtr->xAxis->setRangeLower(a / 1e6);
-        customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
-        customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+        if (config->getPlotAutoYScale())
+            applyAutoYRange();
+        else {
+            customPlotPtr->yAxis->setRangeUpper(config->getPlotYMax());
+            customPlotPtr->yAxis->setRangeLower(config->getPlotYMin());
+        }
         reCalc();
         customPlotPtr->replot();
     }
@@ -662,6 +689,23 @@ void CustomPlotController::freqChanged(double a, double b)
 void CustomPlotController::resChanged(double a)
 {
     resolution = a / 1e6;
+}
+
+void CustomPlotController::applyAutoYRange()
+{
+    if (customPlotPtr->graphCount() == 0 || customPlotPtr->graph(0)->dataCount() == 0) return;
+
+    customPlotPtr->graph(0)->rescaleValueAxis(false, true);
+    if (customPlotPtr->graphCount() > 1 && customPlotPtr->graph(1)->visible())
+        customPlotPtr->graph(1)->rescaleValueAxis(true, true);
+
+    const QCPRange range = customPlotPtr->yAxis->range();
+    if (!std::isfinite(range.lower) || !std::isfinite(range.upper) || range.size() <= 0) return;
+
+    const double padding = qMax(1.0, range.size() * 0.05);
+    customPlotPtr->yAxis->setRange(range.lower - padding, range.upper + padding);
+    updTextLabelPositions();
+    updateSpectrumMarkerLabels();
 }
 
 void CustomPlotController::reqTracePlot()
