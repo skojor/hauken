@@ -241,6 +241,24 @@ void Notifications::generateMsg(NOTIFY::TYPE type, const QString name, const QSt
     else if (type == NOTIFY::TYPE::GNSSDEVICE || type == NOTIFY::TYPE::GNSSANALYZER) msg.prepend(name + ": ");
     else if (type == NOTIFY::TYPE::GEOLIMITER) msg.prepend("Geoblocking: ");
 
+    static const QString measurementTriggerPrefix = "Recording triggered by measurement receiver, ";
+    if (type == NOTIFY::TYPE::TRACEANALYZER && string.startsWith(measurementTriggerPrefix)) {
+        const auto bundle = recordingBundles.constFind(activeRecordingId);
+        if (bundle != recordingBundles.cend() && bundle->started <= dt &&
+            (!bundle->endedAt.isValid() || dt <= bundle->endedAt)) {
+            msg = "Measurement receiver trigger level also reached during recording, " +
+                  string.mid(measurementTriggerPrefix.size());
+        }
+    }
+
+    static const QString gnssTriggerPrefix = "GNSS recording trigger: ";
+    if (type == NOTIFY::TYPE::GNSSANALYZER && string.startsWith(gnssTriggerPrefix)) {
+        QString details = string.mid(gnssTriggerPrefix.size());
+        if (!name.isEmpty())
+            details.prepend(name + ": ");
+        recordGnssTriggerReason(dt, details);
+    }
+
     //else if (id.contains("traceAnalyzer", Qt::CaseInsensitive)) msg.prepend(getMeasurementDeviceName() + ": ");
     appendIncidentLog(dt, msg);
     appendLogFile(dt, msg);
@@ -356,6 +374,24 @@ void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime
     bundle.started = started;
     bundle.incidentStartedAt = started;
     bundle.reason = reason;
+    QStringList gnssTriggerDetails;
+    const QDateTime earliestGnssTrigger = started.addSecs(-5);
+    const QDateTime latestGnssTrigger = started.addSecs(5);
+    for (auto iterator = pendingGnssTriggerReasons.begin(); iterator != pendingGnssTriggerReasons.end();) {
+        if (iterator->timestamp < earliestGnssTrigger) {
+            iterator = pendingGnssTriggerReasons.erase(iterator);
+        }
+        else if (reason.startsWith("GNSS trigger", Qt::CaseInsensitive) &&
+                 iterator->timestamp <= latestGnssTrigger) {
+            gnssTriggerDetails.append(iterator->details);
+            iterator = pendingGnssTriggerReasons.erase(iterator);
+        }
+        else {
+            ++iterator;
+        }
+    }
+    if (reason.startsWith("GNSS trigger", Qt::CaseInsensitive) && !gnssTriggerDetails.isEmpty())
+        bundle.reason = "GNSS trigger: " + gnssTriggerDetails.join("; ");
     bundle.traceIncidentActive = traceIncidentActive || reason.startsWith("Measurement receiver", Qt::CaseInsensitive);
     bundle.gnssIncidentActive = gnssIncidentActive || reason.startsWith("GNSS", Qt::CaseInsensitive);
     bundle.includeArtifacts = includeAnalysisArtifacts;
@@ -1235,6 +1271,54 @@ void Notifications::addRecordingToPendingEmail(quint64 recordingId)
     mailtext.prepend("<tr><td>Recording started</td><td>" +
                      bundle.started.toString("dd.MM.yy hh:mm:ss") + ", " +
                      bundle.reason.toHtmlEscaped() + "</td></tr>");
+}
+
+void Notifications::setRecordingReason(quint64 recordingId, const QString &reason)
+{
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || bundle->reason == reason)
+        return;
+
+    const QString oldRow = "<tr><td>Recording started</td><td>" +
+                           bundle->started.toString("dd.MM.yy hh:mm:ss") + ", " +
+                           bundle->reason.toHtmlEscaped() + "</td></tr>";
+    bundle->reason = reason;
+    if (pendingEmailRecordingIds.contains(recordingId)) {
+        const QString newRow = "<tr><td>Recording started</td><td>" +
+                               bundle->started.toString("dd.MM.yy hh:mm:ss") + ", " +
+                               bundle->reason.toHtmlEscaped() + "</td></tr>";
+        mailtext.replace(oldRow, newRow);
+    }
+}
+
+void Notifications::recordGnssTriggerReason(const QDateTime &timestamp, const QString &details)
+{
+    quint64 recordingId = 0;
+    QDateTime latestStart;
+    for (auto iterator = recordingBundles.cbegin(); iterator != recordingBundles.cend(); ++iterator) {
+        const RecordingEmailBundle &bundle = iterator.value();
+        if (!bundle.reason.startsWith("GNSS trigger", Qt::CaseInsensitive) ||
+            bundle.started > timestamp || timestamp > bundle.started.addSecs(5) ||
+            (bundle.endedAt.isValid() && timestamp > bundle.endedAt))
+            continue;
+        if (!latestStart.isValid() || bundle.started > latestStart) {
+            latestStart = bundle.started;
+            recordingId = iterator.key();
+        }
+    }
+
+    if (!recordingId) {
+        pendingGnssTriggerReasons.append({timestamp, details});
+        while (pendingGnssTriggerReasons.size() > 32)
+            pendingGnssTriggerReasons.removeFirst();
+        return;
+    }
+
+    const QString currentReason = recordingBundles.value(recordingId).reason;
+    const QString reason = currentReason == "GNSS trigger"
+                               ? currentReason + ": " + details
+                               : currentReason + "; " + details;
+    setRecordingReason(recordingId, reason);
 }
 
 void Notifications::addIncidentSummaryRows()

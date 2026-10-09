@@ -137,6 +137,12 @@ signals:
     void reqPosition();
 
 private:
+    struct PendingGnssTriggerReason
+    {
+        QDateTime timestamp;
+        QString details;
+    };
+
     QFile *incidentLogfile = nullptr;
     QString mailtext;
     QTimer *timeBetweenEmailsTimer;
@@ -183,6 +189,7 @@ private:
     QHash<quint64, RecordingEmailBundle> recordingBundles;
     QList<quint64> pendingEmailRecordingIds;
     QList<QDateTime> pendingEmailEventTimes;
+    QList<PendingGnssTriggerReason> pendingGnssTriggerReasons;
     QList<quint64> summaryRecordingIdsInCurrentEmail;
     quint64 activeRecordingId = 0;
     bool traceIncidentActive = false;
@@ -207,6 +214,8 @@ private:
     SimpleMail::MimeInlineFile *createInlineFile(const EmailAttachmentBuffer &attachment) const;
     void clearBufferedAttachments();
     void addRecordingToPendingEmail(quint64 recordingId);
+    void setRecordingReason(quint64 recordingId, const QString &reason);
+    void recordGnssTriggerReason(const QDateTime &timestamp, const QString &details);
     void addIncidentSummaryRows();
     bool pendingEmailArtifactsReady() const;
     void trySendPendingEmail();

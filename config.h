@@ -391,6 +391,8 @@ public slots:
     void setWaterfallTime(int val) { settings->setValue("plot/WaterfallTime", val); emit settingsUpdated();}
     QString getWaterfallViewMode() { return settings->value("plot/WaterfallViewMode", "Overlay").toString();}
     void setWaterfallViewMode(const QString &mode) { settings->setValue("plot/WaterfallViewMode", mode); emit settingsUpdated();}
+    QByteArray getSpectrumWaterfallSplitterState() { return settings->value("plot/SpectrumWaterfallSplitterState", "").toByteArray();}
+    void setSpectrumWaterfallSplitterState(const QByteArray &state) { settings->setValue("plot/SpectrumWaterfallSplitterState", state); }
     int getPlotResolution() { return plotResolution;}
     QByteArray getGnssDisplayWindowState() { return settings->value("gnssDisplay/windowState", "").toByteArray();}
     void setGnssDisplayWindowState(QByteArray arr)  { settings->setValue("gnssDisplay/windowState", arr); emit settingsUpdated();}
