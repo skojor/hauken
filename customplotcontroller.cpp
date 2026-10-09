@@ -131,6 +131,8 @@ void CustomPlotController::setupBasics()
 
 void CustomPlotController::plotTrace(const QVector<double> &data)
 {
+    if (iqCapturePaused.load(std::memory_order_acquire)) return;
+
     currentTraceData = data;
     if (keyValues.isEmpty()) reCalc();
     if (!keyValues.isEmpty() and !data.isEmpty()) {
@@ -149,6 +151,8 @@ void CustomPlotController::plotTrace(const QVector<double> &data)
 
 void CustomPlotController::plotMaxhold(const QVector<double> &data)
 {
+    if (iqCapturePaused.load(std::memory_order_acquire)) return;
+
     if (keyValues.isEmpty()) reCalc();
     if (!keyValues.isEmpty() and !data.isEmpty()) {
         customPlotPtr->graph(1)->setData(keyValues, data);
@@ -157,6 +161,11 @@ void CustomPlotController::plotMaxhold(const QVector<double> &data)
             customPlotPtr->replot(QCustomPlot::rpQueuedReplot);
         }
     }
+}
+
+void CustomPlotController::setIqCapturePaused(bool paused) noexcept
+{
+    iqCapturePaused.store(paused, std::memory_order_release);
 }
 
 void CustomPlotController::showMaxhold(bool visible)

@@ -11,6 +11,7 @@
 #include <QSharedPointer>
 #include <QTimer>
 #include <QVector>
+#include <atomic>
 #include <QWheelEvent>
 #include "config.h"
 #include "qcustomplot.h"
@@ -48,6 +49,7 @@ public slots:
     void modeChanged(Instrument::Mode m);
     void ffmCenterFreqChanged(quint64 f);
     void demodBwChanged(quint32 f = 0);
+    void setIqCapturePaused(bool paused) noexcept;
 
 private slots:
     void setupBasics();
@@ -91,6 +93,7 @@ private:
     QColor colorFlash = QColor(0, 150, 0, 20);
     bool flip = true;
     bool deviceConnected = false;
+    std::atomic_bool iqCapturePaused = false;
     int plotResolution = 0;
     QPixmap *tracePlot = new QPixmap;
     bool markGnss = false;

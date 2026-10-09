@@ -1180,6 +1180,10 @@ void MainWindow::setSignals()
     connect(iqPlot, &IqPlot::busyRecording, this, [this] (bool b) {
         if (b) config->incidentStarted();
     });
+    // This direct cross-thread callback only updates the controller's atomic display gate.
+    connect(iqPlot, &IqPlot::busyRecording, customPlotController, [controller = customPlotController](bool busy) {
+        if (busy) controller->setIqCapturePaused(true);
+    }, Qt::DirectConnection);
     connect(tcpStream.data(), &DataStreamBaseClass::streamInfo, measurementDevice, &MeasurementDevice::setStreamInfo);
     connect(instrFftMode, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
     connect(instrAntPort, &QComboBox::currentTextChanged, sdefRecorder, &SdefRecorder::closeTempFile);
@@ -1244,6 +1248,7 @@ void MainWindow::setSignals()
                 connect(datastreamPScan, &StreamParserBase::frequencyChanged, plotAndAnalyze, &PlotAndAnalyze::updFrequencies);
                 connect(datastreamIfPan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
                 connect(datastreamPScan, &StreamParserBase::resolutionChanged, plotAndAnalyze, &PlotAndAnalyze::updResolution);
+                customPlotController->setIqCapturePaused(false);
             });
         }
     });
