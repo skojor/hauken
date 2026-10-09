@@ -190,6 +190,10 @@ void MainWindow::setSignals()
         plotMinScroll->setEnabled(!enabled);
         config->setPlotAutoYScale(enabled);
     });
+    connect(waterfallOverlay, &QCheckBox::toggled, this, [this](bool overlay) {
+        config->setWaterfallViewMode(overlay ? QStringLiteral("Overlay") : QStringLiteral("Split"));
+        applyWaterfallViewMode();
+    });
     connect(plotMaxholdTime,
             QOverload<int>::of(&QSpinBox::valueChanged),
             config.data(),
@@ -202,6 +206,8 @@ void MainWindow::setSignals()
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+    connect(this, &MainWindow::waterfallSizeRequested, waterfall, &Waterfall::updSize, Qt::QueuedConnection);
+    connect(this, &MainWindow::restartWaterfallRequested, waterfall, &Waterfall::restartPlot, Qt::QueuedConnection);
     connect(gnssManager, &GnssManager::gnssSpectrumReady, this, [this](const QString &profileId, const GnssSpectrumBlock &block) {
         if (gnssSpectrumWindows.contains(profileId)) gnssSpectrumWindows.value(profileId)->receiveSpectrum(block);
     });
@@ -593,15 +599,15 @@ void MainWindow::setSignals()
             },
             Qt::BlockingQueuedConnection);
 
-    connect(waterfall, &Waterfall::imageReady, customPlot, [&](QPixmap *pixmap) {
-        if (dispWaterfall) {
-            customPlot->axisRect()->setBackground(*pixmap, false);
-            //customPlot->replot();
-            //qcpImage->setPixmap(*pixmap);
-            //customPlot->layer("image")->replot();
-            //qDebug() << qcpImage->clipAxisRect()->rect() << qcpImage->pixmap().size();
-            customPlot->replot();
-        }
+    connect(waterfall, &Waterfall::imageReady, this, [this](const QImage &image) {
+        latestWaterfallImage = image;
+        if (!dispWaterfall) return;
+
+        if (!waterfallOverlay->isChecked())
+            waterfallView->setPixmap(QPixmap::fromImage(image));
+        else
+            customPlot->axisRect()->setBackground(QPixmap::fromImage(image), false);
+        customPlot->replot();
     });
 
     connect(gnssManager, &GnssManager::positionUpdate, sdefRecorder, &SdefRecorder::updPosition);
@@ -633,7 +639,7 @@ void MainWindow::setSignals()
             connect(datastreamPScan, &DatastreamPScan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             connect(datastreamPScan, &DatastreamPScan::traceReady, ptrNetwork, &Network::newTraceline);
 
-            waterfall->restartPlot();
+            emit restartWaterfallRequested();
         } else {
             disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, traceBuffer, &TraceBuffer::addTrace);
             disconnect(datastreamIfPan, &DatastreamIfPan::traceReady, ptrNetwork, &Network::newTraceline);

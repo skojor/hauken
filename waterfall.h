@@ -10,7 +10,7 @@
 #include <QMutex>
 #include <QObject>
 #include <QPainter>
-#include <QPixmap>
+#include <QImage>
 #include <QPromise>
 #include <QSharedPointer>
 #include <QTimer>
@@ -38,8 +38,7 @@ public:
 public slots:
     void start();
     void receiveTrace(const QVector<double> &trace);
-    QPixmap * retWaterfall() { return pixmap;}
-    void updSize(QRect s);
+    void updSize(QSize size);
     void updSettings();
     void restartPlot();
     void stopPlot(bool b) {
@@ -65,7 +64,7 @@ public slots:
     void updTimerCallback();
 
 signals:
-    void imageReady(QPixmap *);
+    void imageReady(const QImage &);
 
 private slots:
 
@@ -74,7 +73,7 @@ private:
     QTimer *updIntervalTimer = nullptr;
     QVector<double> traceCopy;
     QSharedPointer<Config> config;
-    QPixmap *pixmap = nullptr;
+    QImage waterfallImage;
 
     // config cache
     int scaleMin, scaleMax;

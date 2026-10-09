@@ -23,6 +23,7 @@
 #include <QFutureWatcher>
 #include <QHostAddress>
 #include <QHash>
+#include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
@@ -34,6 +35,7 @@
 #include <QRegularExpressionValidator>
 #include <QSharedPointer>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStyle>
 #include <QStandardPaths>
 #include <QString>
@@ -150,6 +152,7 @@ protected:
 #ifndef QT_NO_CONTEXTMENU
     void contextMenuEvent(QContextMenuEvent *event) override;
 #endif // QT_NO_CONTEXTMENU
+    bool eventFilter(QObject *object, QEvent *event) override;
 
 private slots:
     void createMenus();
@@ -181,6 +184,9 @@ private slots:
     bool instrCheckSettings();
     void changeAntennaPortName();
     void instrGainControlChanged(int index = -1);
+    void applyWaterfallViewMode();
+    void scheduleWaterfallResize();
+    void updateWaterfallSize();
 
     void generatePopup(const QString msg);
     void updateStatusLine(const QString msg);
@@ -338,6 +344,14 @@ private:
     QSpinBox *plotMaxholdTime = new QSpinBox;
     QComboBox *showWaterfall = new QComboBox;
     QSpinBox *waterfallTime = new QSpinBox;
+    QCheckBox *waterfallOverlay = new QCheckBox;
+    QWidget *spectrumHostWindow = nullptr;
+    QWidget *spectrumPlotPane = nullptr;
+    QWidget *waterfallPane = nullptr;
+    QSplitter *spectrumSplitter = nullptr;
+    QLabel *waterfallView = new QLabel;
+    QImage latestWaterfallImage;
+    QTimer *waterfallResizeTimer = nullptr;
     QMap<QString, GnssSpectrumWindow *> gnssSpectrumWindows; // profileId -> window, only for profiles with showSpectrumWindow enabled
     bool updatingGnssSpectrumWindows = false; // reentrancy guard, see MainWindow::updateGnssSpectrumWindows()
     QCPItemPixmap *qcpImage;
@@ -370,7 +384,7 @@ private:
 
     QString gnssLastDisplayedId;
     QDateTime gnssLastDisplayedTime = QDateTime::currentDateTime();
-    bool dispWaterfall;
+    bool dispWaterfall = false;
 
     PositionReport *positionReport = nullptr;
     GeoLimit *geoLimit = nullptr;
@@ -421,6 +435,8 @@ private:
 
 signals:
     void stopPlot(bool);
+    void waterfallSizeRequested(QSize size);
+    void restartWaterfallRequested();
     void antennaNameEdited(const int index, const QString name);
     void antennaPortChanged();
     void antennaNameChanged(QString);

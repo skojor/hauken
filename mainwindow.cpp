@@ -15,6 +15,10 @@ void restartApplication()
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    waterfallResizeTimer = new QTimer(this);
+    waterfallResizeTimer->setSingleShot(true);
+    connect(waterfallResizeTimer, &QTimer::timeout, this, &MainWindow::updateWaterfallSize);
+
     qInfo() << "MainWindow: constructing core services";
     VersionUpdater versionUpdater(config); // Handles any config changes needed
     settingsDialog = new SettingsDialog(this, config);
@@ -117,9 +121,7 @@ MainWindow::MainWindow(QWidget *parent)
     updateGnssSpectrumWindows();
     QTimer::singleShot(50, customPlotController, [this] {
         //customPlotController->updSettings();
-        waterfall->updSize(
-            customPlot->axisRect()
-                ->rect()); // weird func, needed to set the size of the waterfall image delayed
+        updateWaterfallSize();
     });
     notificationTimer->setSingleShot(true);
 
@@ -134,8 +136,8 @@ MainWindow::MainWindow(QWidget *parent)
     QSettings extras;
     if (extras.value("incGeometry").isValid())
         incidentLog->restoreGeometry(extras.value("incGeometry").toByteArray());
-    if (extras.value("plotGeometry").isValid())
-        customPlot->restoreGeometry(extras.value("plotGeometry").toByteArray());
+    if (config->getSeparatedWindows() && extras.value("plotGeometry").isValid())
+        spectrumHostWindow->restoreGeometry(extras.value("plotGeometry").toByteArray());
 
     if (config->getDarkMode()) {
         customPlot->setBackground(QBrush(Qt::black));
@@ -183,7 +185,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     config->setWindowGeometry(this->saveGeometry());
     config->setWindowState(this->saveState());
     incidentLog->close();
-    customPlot->close();
+    spectrumHostWindow->close();
 
     const auto windows = iqPlotWindows.values();
     for (const auto &window : windows) {
@@ -202,7 +204,8 @@ MainWindow::~MainWindow()
 {
     QSettings extras;
     extras.setValue("incGeometry", incidentLog->saveGeometry());
-    extras.setValue("plotGeometry", customPlot->saveGeometry());
+    if (config->getSeparatedWindows())
+        extras.setValue("plotGeometry", spectrumHostWindow->saveGeometry());
     const auto spectrumWindows = gnssSpectrumWindows.values();
     gnssSpectrumWindows.clear();
     for (auto *window : spectrumWindows) delete window;
@@ -578,9 +581,42 @@ void MainWindow::createLayout()
     ffmInfoLayout->addWidget(btnDetector);
     hideLayoutWidgets(ffmInfoLayout, true);
 
-    plotLayout->addWidget(plotMaxScroll,1, 0, 1, 1);
-    plotLayout->addLayout(ffmInfoLayout, 0, 1, 1, 1);
-    plotLayout->addWidget(plotMinScroll, 3, 0, 1, 1);
+    spectrumPlotPane = new QWidget;
+    auto *spectrumPaneLayout = new QGridLayout(spectrumPlotPane);
+    spectrumPaneLayout->setContentsMargins(0, 0, 0, 0);
+    spectrumPaneLayout->addLayout(ffmInfoLayout, 0, 1, 1, 1);
+    spectrumPaneLayout->addWidget(plotMaxScroll, 1, 0, 1, 1);
+    spectrumPaneLayout->addWidget(plotMinScroll, 3, 0, 1, 1);
+    spectrumPaneLayout->addWidget(customPlot, 1, 1, 3, 1);
+    spectrumPaneLayout->setColumnStretch(1, 1);
+    spectrumPaneLayout->setRowStretch(2, 1);
+    customPlot->installEventFilter(this);
+
+    waterfallView->setAlignment(Qt::AlignCenter);
+    waterfallView->setMinimumHeight(80);
+    waterfallView->setScaledContents(true);
+    waterfallView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    waterfallView->installEventFilter(this);
+
+    waterfallPane = new QWidget;
+    auto *waterfallPaneLayout = new QHBoxLayout(waterfallPane);
+    waterfallPaneLayout->setContentsMargins(0, 0, 0, 0);
+    waterfallPaneLayout->setSpacing(0);
+    waterfallPaneLayout->addWidget(waterfallView);
+
+    spectrumSplitter = new QSplitter(Qt::Vertical);
+    spectrumSplitter->addWidget(spectrumPlotPane);
+    spectrumSplitter->addWidget(waterfallPane);
+    spectrumSplitter->setStretchFactor(0, 3);
+    spectrumSplitter->setStretchFactor(1, 1);
+    spectrumSplitter->setCollapsible(0, false);
+    spectrumSplitter->setCollapsible(1, false);
+
+    spectrumHostWindow = new QWidget;
+    auto *spectrumHostLayout = new QVBoxLayout(spectrumHostWindow);
+    spectrumHostLayout->setContentsMargins(0, 0, 0, 0);
+    spectrumHostLayout->addWidget(spectrumSplitter);
+    spectrumHostWindow->setMinimumSize(500, 300);
 
     // plotLayout->addLayout(vboxLayout, 0, 0);
     btnBw->setMaximumHeight(20);
@@ -591,11 +627,11 @@ void MainWindow::createLayout()
     btnSigLevel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     if (config->getSeparatedWindows()) {
-        customPlot->show();
-        customPlot->setWindowTitle("RF spectrum");
+        spectrumHostWindow->setWindowTitle("RF spectrum");
+        spectrumHostWindow->show();
     }
     else {
-        plotLayout->addWidget(customPlot, 1, 1, 3, 1);
+        plotLayout->addWidget(spectrumHostWindow, 1, 1, 3, 1);
     }
 
     btnNormalize->setText(( config->getInstrNormalizeSpectrum() ? "Normalized" : "Not normalized" ));
@@ -610,7 +646,8 @@ void MainWindow::createLayout()
     //btnTrigRecording->setFixedWidth(100);
     bottomPlotLayout->addWidget(new QLabel("Maxhold time (seconds)"));
     bottomPlotLayout->addWidget(plotMaxholdTime);
-    bottomPlotLayout->addWidget(new QLabel("Waterfall type"));
+    bottomPlotLayout->addWidget(new QLabel("Waterfall"));
+    bottomPlotLayout->addWidget(waterfallOverlay);
     bottomPlotLayout->addWidget(showWaterfall);
     bottomPlotLayout->addWidget(new QLabel("Waterfall time"));
     bottomPlotLayout->addWidget(waterfallTime);
@@ -631,6 +668,9 @@ void MainWindow::createLayout()
     plotAutoYScale->setChecked(config->getPlotAutoYScale());
     plotMaxScroll->setEnabled(!plotAutoYScale->isChecked());
     plotMinScroll->setEnabled(!plotAutoYScale->isChecked());
+    waterfallOverlay->setText(tr("Overlay"));
+    waterfallOverlay->setChecked(config->getWaterfallViewMode() != "Split");
+    waterfallOverlay->setToolTip(tr("Show the waterfall over the spectrum; clear to use split view"));
     plotMaxholdTime->setFixedSize(40, 20);
     plotMaxholdTime->setRange(0, 120);
     waterfallTime->setRange(10, 86400);
@@ -1043,13 +1083,20 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     if (!restoringWindowState) config->setWindowGeometry(saveGeometry());
     QWidget::resizeEvent(event);
-    if (waterfall && customPlot) waterfall->updSize(customPlot->axisRect()->rect());
+    scheduleWaterfallResize();
 }
 
 void MainWindow::moveEvent(QMoveEvent *event)
 {
     if (!restoringWindowState) config->setWindowState(saveState());
     QWidget::moveEvent(event);
+}
+
+bool MainWindow::eventFilter(QObject *object, QEvent *event)
+{
+    if ((object == customPlot || object == waterfallView) && event->type() == QEvent::Resize)
+        scheduleWaterfallResize();
+    return QMainWindow::eventFilter(object, event);
 }
 
 void MainWindow::updConfigSettings()
@@ -1082,16 +1129,59 @@ void MainWindow::setWaterfallOption(QString s)
     else
         dispWaterfall = true;
 
-    if (!dispWaterfall) {
-        customPlot->axisRect()->setBackground(QPixmap());
-        customPlot->replot();
-    }
     if (s != "Pride")
         customPlot->graph(0)->setPen(QPen(Qt::blue));
     else
         customPlot->graph(0)->setPen(QPen(Qt::black));
 
+    applyWaterfallViewMode();
     config->setShowWaterfall(s);
+}
+
+void MainWindow::applyWaterfallViewMode()
+{
+    const bool split = !waterfallOverlay->isChecked();
+    if (split) {
+        customPlot->axisRect()->setBackground(QPixmap(), false);
+        waterfallView->setVisible(dispWaterfall);
+        if (dispWaterfall && !latestWaterfallImage.isNull())
+            waterfallView->setPixmap(QPixmap::fromImage(latestWaterfallImage));
+        else
+            waterfallView->clear();
+    }
+    else {
+        waterfallView->hide();
+        if (dispWaterfall && !latestWaterfallImage.isNull())
+            customPlot->axisRect()->setBackground(QPixmap::fromImage(latestWaterfallImage), false);
+        else
+            customPlot->axisRect()->setBackground(QPixmap(), false);
+    }
+    customPlot->replot();
+    scheduleWaterfallResize();
+}
+
+void MainWindow::scheduleWaterfallResize()
+{
+    if (waterfallResizeTimer) waterfallResizeTimer->start(50);
+}
+
+void MainWindow::updateWaterfallSize()
+{
+    if (!waterfall || !customPlot) return;
+
+    const bool split = !waterfallOverlay->isChecked() && dispWaterfall
+                       && waterfallView->isVisible();
+    const QRect plotArea = customPlot->axisRect()->rect();
+    if (split && spectrumPlotPane && waterfallPane) {
+        const QPoint plotTopLeft = customPlot->mapTo(spectrumPlotPane, plotArea.topLeft());
+        const int leftMargin = qMax(0, plotTopLeft.x());
+        const int rightMargin = qMax(0, spectrumPlotPane->width() - leftMargin - plotArea.width());
+        waterfallPane->layout()->setContentsMargins(leftMargin, 0, rightMargin, 0);
+    }
+
+    const QSize size = split ? QSize(plotArea.width(), waterfallView->contentsRect().height())
+                             : plotArea.size();
+    if (size.width() > 0 && size.height() > 0) emit waterfallSizeRequested(size);
 }
 
 void MainWindow::updateGnssSpectrumWindows()
@@ -1210,7 +1300,8 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event)
 void MainWindow::restartWaterfall()
 {
     QTimer::singleShot(50, this, [this] { // short delay to allow screen to update before restarting
-        waterfall->updSize(customPlot->axisRect()->rect());
+        updateWaterfallSize();
+        emit restartWaterfallRequested();
     });
 }
 
