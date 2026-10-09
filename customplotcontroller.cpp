@@ -717,7 +717,7 @@ void CustomPlotController::applyAutoYRange()
     updateSpectrumMarkerLabels();
 }
 
-void CustomPlotController::reqTracePlot()
+void CustomPlotController::reqTracePlot(quint64 recordingId)
 {
     // New, remove waterfall before making a snapshot
     mutex.lock();
@@ -735,7 +735,7 @@ void CustomPlotController::reqTracePlot()
         customPlotPtr->replot();
     }
     mutex.unlock();
-    emit retTracePlot(tracePlot, AppClock::now());
+    emit retTracePlot(recordingId, tracePlot, AppClock::now());
 }
 
 void CustomPlotController::updOverlayText()

@@ -2,6 +2,7 @@
 #include "appclock.h"
 
 #include <cmath>
+#include <algorithm>
 #include <QFileInfo>
 #include <QRegularExpression>
 
@@ -314,14 +315,168 @@ void Notifications::appendLogFile(QDateTime dt, const QString string)
 
 void Notifications::appendEmailText(QDateTime dt, const QString string)
 {
+    bool waitingForRecordingContext = false;
+    quint64 recordingId = 0;
+    QDateTime latestStart;
+    for (auto iterator = recordingBundles.cbegin(); iterator != recordingBundles.cend(); ++iterator) {
+        const RecordingEmailBundle &bundle = iterator.value();
+        if (bundle.started <= dt && (!bundle.endedAt.isValid() || dt <= bundle.endedAt) &&
+            (!latestStart.isValid() || bundle.started >= latestStart)) {
+            latestStart = bundle.started;
+            recordingId = iterator.key();
+        }
+    }
+    if (recordingId) {
+        addRecordingToPendingEmail(recordingId);
+        if (string.contains("trigger", Qt::CaseInsensitive)) {
+            auto bundle = recordingBundles.find(recordingId);
+            if (bundle != recordingBundles.end() &&
+                (!bundle->incidentStartedAt.isValid() || dt < bundle->incidentStartedAt))
+                bundle->incidentStartedAt = dt;
+        }
+    }
+    else if (string.contains("trigger", Qt::CaseInsensitive)) {
+        pendingEmailEventTimes.append(dt);
+        waitingForRecordingContext = true;
+    }
+
     QString text;
     QTextStream ts(&text);
     ts << "<tr><td>" << dt.toString("dd.MM.yy hh:mm:ss") << "</td><td>" << string << "</td></tr>";
     mailtext.append(text);
     if (!mailDelayTimer->isActive()) {
-        mailDelayTimer->start(truncateTime * 2e3);
+        mailDelayTimer->start(qMax(truncateTime * 2e3, waitingForRecordingContext ? 1000 : 0));
     }
     if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
+}
+
+void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts)
+{
+    RecordingEmailBundle bundle;
+    bundle.started = started;
+    bundle.incidentStartedAt = started;
+    bundle.reason = reason;
+    bundle.traceIncidentActive = traceIncidentActive || reason.startsWith("Measurement receiver", Qt::CaseInsensitive);
+    bundle.gnssIncidentActive = gnssIncidentActive || reason.startsWith("GNSS", Qt::CaseInsensitive);
+    bundle.includeArtifacts = includeAnalysisArtifacts;
+    bundle.plotsReady = !includeAnalysisArtifacts;
+    bundle.gnssReady = !includeAnalysisArtifacts;
+    recordingBundles.insert(recordingId, bundle);
+    activeRecordingId = recordingId;
+
+    while (recordingBundles.size() > 32) {
+        auto oldest = recordingBundles.end();
+        for (auto iterator = recordingBundles.begin(); iterator != recordingBundles.end(); ++iterator) {
+            if (iterator.key() == activeRecordingId || !iterator->ended || pendingEmailRecordingIds.contains(iterator.key()))
+                continue;
+            if (oldest == recordingBundles.end() || iterator->started < oldest->started)
+                oldest = iterator;
+        }
+        if (oldest == recordingBundles.end())
+            break;
+        recordingBundles.erase(oldest);
+    }
+
+    const QDateTime earliestTrigger = started.addSecs(-5);
+    const QDateTime latestTrigger = started.addSecs(5);
+    const bool hasPendingTrigger = std::any_of(pendingEmailEventTimes.cbegin(), pendingEmailEventTimes.cend(),
+                                               [&](const QDateTime &eventTime) {
+                                                   return eventTime >= earliestTrigger && eventTime <= latestTrigger;
+                                               });
+    if (hasPendingTrigger) {
+        for (const QDateTime &eventTime : pendingEmailEventTimes) {
+            if (eventTime >= earliestTrigger && eventTime <= latestTrigger && eventTime < bundle.incidentStartedAt)
+                bundle.incidentStartedAt = eventTime;
+        }
+        recordingBundles[recordingId].incidentStartedAt = bundle.incidentStartedAt;
+    }
+    if (hasPendingTrigger && !pendingEmailRecordingIds.contains(recordingId))
+        addRecordingToPendingEmail(recordingId);
+}
+
+void Notifications::recordingIncidentActivityChanged(bool gnss, bool active)
+{
+    if (gnss)
+        gnssIncidentActive = active;
+    else
+        traceIncidentActive = active;
+
+    auto bundle = recordingBundles.find(activeRecordingId);
+    if (bundle == recordingBundles.end())
+        return;
+
+    if (gnss)
+        bundle->gnssIncidentActive = active;
+    else
+        bundle->traceIncidentActive = active;
+
+    if (active) {
+        bundle->incidentEndedAt = QDateTime();
+    }
+    else if (!bundle->traceIncidentActive && !bundle->gnssIncidentActive) {
+        bundle->incidentEndedAt = AppClock::now();
+    }
+}
+
+void Notifications::recordingContextEnded(quint64 recordingId)
+{
+    if (activeRecordingId == recordingId)
+        activeRecordingId = 0;
+
+    if (recordingBundles.contains(recordingId))
+    {
+        recordingBundles[recordingId].ended = true;
+        recordingBundles[recordingId].endedAt = AppClock::now();
+    }
+    cleanupRecordingBundle(recordingId);
+}
+
+void Notifications::recordingPlotsReady(quint64 recordingId)
+{
+    if (recordingBundles.contains(recordingId))
+        recordingBundles[recordingId].plotsReady = true;
+    trySendPendingEmail();
+    cleanupRecordingBundle(recordingId);
+}
+
+void Notifications::gnssBacklogsReady(quint64 recordingId)
+{
+    if (recordingBundles.contains(recordingId))
+        recordingBundles[recordingId].gnssReady = true;
+    trySendPendingEmail();
+    cleanupRecordingBundle(recordingId);
+}
+
+void Notifications::recRecordingArtifact(quint64 recordingId, const QString &filename, const QString &description)
+{
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || bundle->imagesSent)
+        return;
+
+    const QByteArray contentId = "recording_" + QByteArray::number(recordingId) + "_" + QByteArray::number(bundle->attachments.size());
+    EmailAttachmentBuffer attachment = readAttachment(filename, contentId, description);
+    if (!attachment.isEmpty())
+        bundle->attachments.append(attachment);
+}
+
+void Notifications::recRecordingImage(quint64 recordingId, const QImage &image, const QString &description)
+{
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || bundle->imagesSent || image.isNull())
+        return;
+
+    QByteArray data;
+    QBuffer buffer(&data);
+    if (!buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "jpg"))
+        return;
+
+    EmailAttachmentBuffer attachment;
+    attachment.data = data;
+    attachment.fileName = "waterfall_" + QString::number(recordingId) + ".jpg";
+    attachment.description = description;
+    attachment.contentId = "waterfall_" + QByteArray::number(recordingId);
+    attachment.contentType = "image/jpg";
+    bundle->attachments.append(attachment);
 }
 
 void Notifications::sendHtmlEmail(const QString &subject, const QString &html, bool usePriorityRecipients)
@@ -385,6 +540,11 @@ void Notifications::sendHtmlEmail(const QString &subject, const QString &html, b
 
 void Notifications::sendMail()
 {
+    if (!pendingEmailArtifactsReady())
+        return;
+
+    addIncidentSummaryRows();
+
     if (!timeBetweenEmailsTimer->isActive()) {
         if (simpleParametersCheck() and !mailtext.isEmpty()) {
             const QStringList mailRecipients = validEmailRecipients(recipients);
@@ -418,6 +578,14 @@ void Notifications::sendMail()
                 for (auto &recipient : mailRecipients)
                     message.addTo(SimpleMail::EmailAddress(recipient, recipient.split('@').at(0)));
             }
+
+            currentEmailAttachments = iqPlots;
+            for (quint64 recordingId : pendingEmailRecordingIds) {
+                const auto bundle = recordingBundles.constFind(recordingId);
+                if (bundle != recordingBundles.cend() && bundle->includeArtifacts && !bundle->imagesSent)
+                    currentEmailAttachments.append(bundle->attachments);
+            }
+
             QString data;
             QTextStream ts(&data);
 
@@ -457,17 +625,9 @@ void Notifications::sendMail()
                 //"Maxhold and current signal levels</p>"
                 //"<img src='cid:image1'>";
 
-            int iter = 0;
-            for (auto && iqPlot : iqPlots) {
-                if (!iqPlot.isEmpty()) {
-                    ts << "<br><p>" << iqPlot.description << "</p><img src='cid:iqplot" << iter << "'>";
-                }
-                iter++;
-            }
-
-            for (auto &&gnssPlot : gnssPlots) {
-                if (!gnssPlot.isEmpty())
-                    ts << "<br><p>" << gnssPlot.description << "</p><img src='cid:" << gnssPlot.contentId << "'>";
+            for (const EmailAttachmentBuffer &attachment : currentEmailAttachments) {
+                if (!attachment.isEmpty())
+                    ts << "<br><p>" << attachment.description << "</p><img src='cid:" << attachment.contentId << "'>";
             }
                 ts << "<hr></body></table>   /";
 
@@ -482,32 +642,27 @@ void Notifications::sendMail()
                 predictionReceived = false;
             }
 
-            QList<SimpleMail::MimeInlineFile *> inlineAttachments;
-            for (auto &&gnssPlot : gnssPlots) {
-                if (!gnssPlot.isEmpty())
-                    inlineAttachments.append(createInlineFile(gnssPlot));
+            for (const EmailAttachmentBuffer &attachment : currentEmailAttachments) {
+                if (!attachment.isEmpty())
+                    message.addPart(createInlineFile(attachment));
             }
-            for (auto &&iqPlot : iqPlots) {
-                if (!iqPlot.isEmpty())
-                    inlineAttachments.append(createInlineFile(iqPlot));
-            }
-
-            for (auto && part : inlineAttachments)
-                message.addPart(part);
 
             //qDebug() << "mail debug stuff" << mimeHtml->data() << message.sender().address() << message.toRecipients().first().address() << message.subject();
             emailBacklog.append(message);
             //qDebug() << mimeHtml->html();
             mailtext.clear();
+            pendingEmailEventTimes.clear();
+            summaryRecordingIdsInCurrentEmail.clear();
 
             // MS Graph code in here!
             if (msGraphConfigured) {
                 generateGraphEmail();
+                consumeCurrentEmailAttachments();
                 if (!graphEmailLog.isEmpty()) authGraph(); // try to auth and send immediately
             }
             else {
                 notifyPriorityRecipients = false;
-                clearBufferedAttachments();
+                consumeCurrentEmailAttachments();
                 SimpleMail::ServerReply *reply = server->sendMail(message);
                 connect(reply, &SimpleMail::ServerReply::finished, this, [this, reply]
                         {
@@ -734,17 +889,16 @@ void Notifications::recIqPlot(const QString &filename, const QString &descriptio
     iqPlots.append(readAttachment(filename, contentId, description));
 }
 
-void Notifications::setGnssPlotFilename(const QString &profileId, const QString &profileName, QString name)
+void Notifications::setGnssPlotFilename(quint64 recordingId, const QString &profileId, const QString &profileName, QString name)
 {
-    const QByteArray contentId = "gnssplot_" + profileId.toLocal8Bit();
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || bundle->imagesSent)
+        return;
+
+    const QByteArray contentId = "gnssplot_" + QByteArray::number(recordingId) + "_" + profileId.toLocal8Bit();
     const EmailAttachmentBuffer attachment = readAttachment(name, contentId, profileName + " data");
-    for (EmailAttachmentBuffer &existing : gnssPlots) {
-        if (existing.contentId == contentId) {
-            existing = attachment;
-            return;
-        }
-    }
-    gnssPlots.append(attachment);
+    if (!attachment.isEmpty())
+        bundle->attachments.append(attachment);
 }
 
 void Notifications::updSettings()
@@ -858,19 +1012,12 @@ void Notifications::generateGraphEmail()
         att.insert("isInline", "true");
         attachments.append(att);
     }*/
-    for (auto &&gnssPlot : gnssPlots) {
-        if (!gnssPlot.isEmpty()) {
+    for (const EmailAttachmentBuffer &attachment : currentEmailAttachments) {
+        if (!attachment.isEmpty()) {
             fileOk = true;
-            appendGraphAttachment(attachments, gnssPlot);
+            appendGraphAttachment(attachments, attachment);
         }
     }
-    for (auto &&iqPlot : iqPlots) {
-        if (!iqPlot.isEmpty()) {
-            fileOk = true;
-            appendGraphAttachment(attachments, iqPlot);
-        }
-    }
-    clearBufferedAttachments();
 
     message.insert("subject", currentEmailSubject.isEmpty() ? "Notification from " + config->getStationName() + " (" + config->getSdefStationInitals() + ")" : currentEmailSubject);
     message.insert("body", body);
@@ -1029,6 +1176,82 @@ SimpleMail::MimeInlineFile *Notifications::createInlineFile(const EmailAttachmen
 
 void Notifications::clearBufferedAttachments()
 {
-    gnssPlots.clear();
     iqPlots.clear();
+}
+
+void Notifications::addRecordingToPendingEmail(quint64 recordingId)
+{
+    if (pendingEmailRecordingIds.contains(recordingId) || !recordingBundles.contains(recordingId))
+        return;
+
+    pendingEmailRecordingIds.append(recordingId);
+    const RecordingEmailBundle &bundle = recordingBundles[recordingId];
+    mailtext.prepend("<tr><td>Recording started</td><td>" +
+                     bundle.started.toString("dd.MM.yy hh:mm:ss") + ", " +
+                     bundle.reason.toHtmlEscaped() + "</td></tr>");
+}
+
+void Notifications::addIncidentSummaryRows()
+{
+    for (quint64 recordingId : pendingEmailRecordingIds) {
+        const auto bundle = recordingBundles.constFind(recordingId);
+        if (bundle == recordingBundles.cend() || !bundle->imagesSent || !bundle->incidentEndedAt.isValid() ||
+            summaryRecordingIdsInCurrentEmail.contains(recordingId))
+            continue;
+
+        const QDateTime incidentStartedAt = bundle->incidentStartedAt.isValid() ? bundle->incidentStartedAt : bundle->started;
+        const qint64 durationSeconds = qMax<qint64>(0, incidentStartedAt.secsTo(bundle->incidentEndedAt));
+        const qint64 hours = durationSeconds / 3600;
+        const qint64 minutes = (durationSeconds % 3600) / 60;
+        const qint64 seconds = durationSeconds % 60;
+        mailtext.append("<tr><td>Incident summary</td><td>Incident ID " + QString::number(recordingId) +
+                        ", total time " + QStringLiteral("%1:%2:%3").arg(hours, 2, 10, QLatin1Char('0'))
+                            .arg(minutes, 2, 10, QLatin1Char('0')).arg(seconds, 2, 10, QLatin1Char('0')) + "</td></tr>");
+        summaryRecordingIdsInCurrentEmail.append(recordingId);
+    }
+}
+
+bool Notifications::pendingEmailArtifactsReady() const
+{
+    for (quint64 recordingId : pendingEmailRecordingIds) {
+        const auto bundle = recordingBundles.constFind(recordingId);
+        if (bundle != recordingBundles.cend() && bundle->includeArtifacts && !bundle->imagesSent &&
+            (!bundle->plotsReady || !bundle->gnssReady))
+            return false;
+    }
+    return true;
+}
+
+void Notifications::trySendPendingEmail()
+{
+    if (!mailtext.isEmpty() && !mailDelayTimer->isActive() && pendingEmailArtifactsReady())
+        sendMail();
+}
+
+void Notifications::consumeCurrentEmailAttachments()
+{
+    for (quint64 recordingId : pendingEmailRecordingIds) {
+        auto bundle = recordingBundles.find(recordingId);
+        if (bundle != recordingBundles.end() && !bundle->imagesSent) {
+            bundle->imagesSent = true;
+            bundle->attachments.clear();
+        }
+    }
+    clearBufferedAttachments();
+    currentEmailAttachments.clear();
+
+    const QList<quint64> completedRecordingIds = pendingEmailRecordingIds;
+    pendingEmailRecordingIds.clear();
+    for (quint64 recordingId : completedRecordingIds)
+        cleanupRecordingBundle(recordingId);
+}
+
+void Notifications::cleanupRecordingBundle(quint64 recordingId)
+{
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || !bundle->ended || pendingEmailRecordingIds.contains(recordingId))
+        return;
+
+    if (bundle->imagesSent)
+        bundle->attachments.clear();
 }

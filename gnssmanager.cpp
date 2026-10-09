@@ -101,8 +101,8 @@ void GnssManager::addReceiver(const GnssReceiverProfile &profile)
             emit gnssSpectrumReady(profileId, block);
         }, Qt::QueuedConnection);
     });
-    connect(device, &GnssDevice::sendGnssPlotFilename, this, [this, profile](const QString &filename) {
-        emit sendGnssPlotFilename(profile.id, config->getGnssReceiverProfile(profile.id).name, filename);
+    connect(device, &GnssDevice::sendGnssPlotFilename, this, [this, profile](quint64 recordingId, const QString &filename) {
+        emit sendGnssPlotFilename(recordingId, profile.id, config->getGnssReceiverProfile(profile.id).name, filename);
     });
     connect(device, &GnssDevice::gnssDisabled, this, [this, analyzer, profile] {
         analyzer->updStateInstrumentGnss(false);
@@ -135,9 +135,10 @@ void GnssManager::markIncidenceStarted()
     for (auto it = devices.cbegin(); it != devices.cend(); ++it) it.value()->setIncidenceStartedDateTime();
 }
 
-void GnssManager::saveAllBacklogs()
+void GnssManager::saveAllBacklogs(quint64 recordingId)
 {
-    for (auto it = devices.cbegin(); it != devices.cend(); ++it) it.value()->saveBacklog();
+    for (auto it = devices.cbegin(); it != devices.cend(); ++it) it.value()->saveBacklog(recordingId);
+    emit gnssBacklogsSaved(recordingId);
 }
 
 void GnssManager::setInstrumentGnssConnected(bool connected)

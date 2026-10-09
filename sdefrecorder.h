@@ -88,6 +88,8 @@ signals:
     void recordingStartedWithAnalysisArtifacts();
     void recordingStartedWithoutAnalysisArtifacts();
     void recordingEnded();
+    void recordingContextStarted(quint64 recordingId, QDateTime started, QString reason, bool includeAnalysisArtifacts);
+    void recordingContextEnded(quint64 recordingId);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void reqTraceHistory(int);
     void warning(QString);
@@ -152,6 +154,8 @@ private:
 
     bool flagUploadIntentionalOnly = false;
     TriggerSource triggerSource = TriggerSource::Unknown;
+    quint64 recordingSequence = 0;
+    quint64 activeRecordingId = 0;
 
     // Config cache
     bool useNewMsFormat;

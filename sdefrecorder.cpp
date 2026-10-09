@@ -167,6 +167,17 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
             } else {
                 file.write(createHeader());
                 writeSettingsSnapshot();
+                activeRecordingId = ++recordingSequence;
+                QString reason;
+                switch (triggerSource) {
+                case TriggerSource::TraceAnalyzer: reason = "Measurement receiver spectrum trigger"; break;
+                case TriggerSource::Gnss: reason = "GNSS trigger"; break;
+                case TriggerSource::Manual: reason = "Manual recording trigger"; break;
+                case TriggerSource::Mqtt: reason = "MQTT trigger"; break;
+                case TriggerSource::AutoRecorder: reason = "Automatic recording"; break;
+                case TriggerSource::Unknown: reason = "Recording trigger not identified"; break;
+                }
+                emit recordingContextStarted(activeRecordingId, dateTimeRecordingStarted, reason, includeAnalysisArtifacts);
                 if (includeAnalysisArtifacts)
                     emit recordingStartedWithAnalysisArtifacts();
                 else
@@ -405,6 +416,10 @@ QString SdefRecorder::convertDdToddmmss(const double d, const bool lat)
 void SdefRecorder::endRecording()
 {
     if (file.isOpen()) {
+        if (activeRecordingId) {
+            emit recordingContextEnded(activeRecordingId);
+            activeRecordingId = 0;
+        }
         emit recordingEnded();
         if (config->getSdefSaveToFile()) {
             if (recordingTimeoutTimer->isActive()) {

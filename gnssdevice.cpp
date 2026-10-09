@@ -968,7 +968,7 @@ void GnssDevice::cleanupBacklog()
     }
 }
 
-void GnssDevice::saveBacklog()
+void GnssDevice::saveBacklog(quint64 recordingId)
 {
     backlogCleanupTimer->stop(); // Don't delete data while saving!
 
@@ -976,7 +976,7 @@ void GnssDevice::saveBacklog()
         if (!incidenceStartedDateTime.isValid())
             incidenceStartedDateTime = AppClock::now();
 
-        createGnssPlot();
+        createGnssPlot(recordingId);
 
         // Mirror the continuous log scheme: separate timestamped text and binary files.
         QFile incidentTextFile, incidentBinaryFile;
@@ -1018,7 +1018,7 @@ void GnssDevice::saveBacklog()
     backlogCleanupTimer->start(1000);
 }
 
-void GnssDevice::createGnssPlot()
+void GnssDevice::createGnssPlot(quint64 recordingId)
 {
     QCustomPlot *plot = new QCustomPlot;
     plot->addGraph();
@@ -1066,7 +1066,7 @@ void GnssDevice::createGnssPlot()
     plot->saveJpg(filename);
     delete plot;
     incidenceStartedDateTime = QDateTime();
-    emit sendGnssPlotFilename(filename);
+    emit sendGnssPlotFilename(recordingId, filename);
 }
 
 void GnssDevice::decodeSbf4014(const QByteArray &data)

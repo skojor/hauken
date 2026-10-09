@@ -38,6 +38,7 @@ public:
 public slots:
     void start();
     void receiveTrace(const QVector<double> &trace);
+    void requestSnapshot(quint64 recordingId);
     void updSize(QSize size);
     void updSettings();
     void restartPlot();
@@ -65,6 +66,7 @@ public slots:
 
 signals:
     void imageReady(const QImage &);
+    void snapshotReady(quint64 recordingId, const QImage &image);
 
 private slots:
 

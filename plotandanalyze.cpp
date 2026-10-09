@@ -15,31 +15,13 @@ PlotAndAnalyze::PlotAndAnalyze(QSharedPointer<Config> c)
 
 void PlotAndAnalyze::start()
 {
-    m_reqTracedataTimer = new QTimer(this);
-    m_sendPlotsTimer = new QTimer(this);
     m_reqTraceplotTimer = new QTimer(this);
     m_incidentEndTimer = new QTimer(this);
-    m_reqTracedataTimer->setSingleShot(true);
-    m_sendPlotsTimer->setSingleShot(true);
     m_reqTraceplotTimer->setSingleShot(true);
     m_incidentEndTimer->setSingleShot(true);
 
-    connect(m_reqTracedataTimer, &QTimer::timeout, this, [this] () {
-        emit reqTracedata();
-    });
-
-    connect(m_sendPlotsTimer, &QTimer::timeout, this, [this] () {
-        if (m_collectNotificationArtifacts) {
-            for (int i = 0; i < m_plotsToSend.size(); i++) {
-                emit imageReady(m_plotsToSend[i], m_plotsDescription[i]);
-            }
-        }
-        m_plotsToSend.clear();
-        m_plotsDescription.clear();
-    });
-
     connect(m_reqTraceplotTimer, &QTimer::timeout, this, [this] () {
-        emit reqTracePlot();
+        requestRecordingArtifacts(m_recordingId);
     });
 
     connect(m_incidentEndTimer, &QTimer::timeout, this, [this] () {
@@ -51,8 +33,6 @@ void PlotAndAnalyze::end()
 {
     // Timers are now owned by parent (this), will be deleted automatically
     delete m_reqTraceplotTimer;
-    delete m_sendPlotsTimer;
-    delete m_reqTracedataTimer;
 }
 
 void PlotAndAnalyze::traceIncidentStarted()
@@ -795,6 +775,21 @@ float PlotAndAnalyze::findMaxMagnitudeAndPosition(const QVector<complexInt16> &i
 
 void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot, QVector<qint16> avglevel)
 {
+    processTraceData(traceData, plot, avglevel);
+}
+
+void PlotAndAnalyze::receiveTracedata(quint64 recordingId, TraceDataStruct traceData, QCustomPlot *plot, QVector<qint16> avglevel)
+{
+    if (!m_captureRequested || recordingId != m_recordingId || m_traceDataReceived)
+        return;
+
+    processTraceData(traceData, plot, avglevel);
+    m_traceDataReceived = true;
+    completeRecordingArtifactsIfReady();
+}
+
+void PlotAndAnalyze::processTraceData(TraceDataStruct traceData, QCustomPlot *plot, QVector<qint16> avglevel)
+{
     if (traceData.data.size() > 20) {
         int max, min, avg;
         findTracedataMinMaxAvg(traceData.data, min, max, avg);
@@ -866,36 +861,60 @@ void PlotAndAnalyze::receiveTracedata(TraceDataStruct traceData, QCustomPlot *pl
     }
 }
 
-void PlotAndAnalyze::recordingState()
+void PlotAndAnalyze::recordingContextStarted(quint64 recordingId, const QDateTime &, const QString &, bool includeAnalysisArtifacts)
 {
-    m_collectNotificationArtifacts = true;
+    m_recordingId = recordingId;
+    m_collectNotificationArtifacts = includeAnalysisArtifacts;
+    m_captureRequested = false;
+    m_tracePlotReceived = false;
+    m_waterfallReceived = false;
+    m_traceDataReceived = false;
     m_plotsToSend.clear();
     m_plotsDescription.clear();
+
+    if (!includeAnalysisArtifacts)
+        return;
 
     if (!m_config->getIqCreateFftPlot())
         createFilename();
 
     int traceplotTimeout = (m_config->getPlotMaxholdTime() * 1e3) - 5e3;
-    int tracedataTimeout = 3e4;
     if (traceplotTimeout > 45e3) traceplotTimeout = 45e3;
-
-    m_reqTracedataTimer->start(tracedataTimeout);
     m_reqTraceplotTimer->start(traceplotTimeout);
-    QTimer::singleShot(tracedataTimeout, this, [this] () { emit reqMaxholdData(); });
-
-    if (traceplotTimeout > tracedataTimeout) m_sendPlotsTimer->start(traceplotTimeout + 10e3);
-    else m_sendPlotsTimer->start(tracedataTimeout + 10e3);
-
 }
 
-void PlotAndAnalyze::recordingStartedWithoutAnalysisArtifacts()
+void PlotAndAnalyze::recordingContextEnded(quint64 recordingId)
 {
-    m_collectNotificationArtifacts = false;
+    if (recordingId == m_recordingId && m_collectNotificationArtifacts && !m_captureRequested)
+        requestRecordingArtifacts(recordingId);
+}
+
+void PlotAndAnalyze::requestRecordingArtifacts(quint64 recordingId)
+{
+    if (!m_collectNotificationArtifacts || recordingId != m_recordingId || m_captureRequested)
+        return;
+
+    m_captureRequested = true;
+    m_reqTraceplotTimer->stop();
+    emit reqTracedata(recordingId);
+    emit reqMaxholdData();
+    emit reqTracePlot(recordingId);
+    emit reqWaterfallSnapshot(recordingId);
+    emit reqGnssBacklogs(recordingId);
+}
+
+void PlotAndAnalyze::completeRecordingArtifactsIfReady()
+{
+    if (!m_captureRequested || !m_tracePlotReceived || !m_waterfallReceived || !m_traceDataReceived)
+        return;
+
+    for (int i = 0; i < m_plotsToSend.size(); ++i)
+        emit recordingArtifactReady(m_recordingId, m_plotsToSend[i], m_plotsDescription[i]);
+
     m_plotsToSend.clear();
     m_plotsDescription.clear();
-    m_reqTracedataTimer->stop();
-    m_reqTraceplotTimer->stop();
-    m_sendPlotsTimer->stop();
+    m_collectNotificationArtifacts = false;
+    emit recordingPlotsReady(m_recordingId);
 }
 
 void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg)
@@ -914,17 +933,40 @@ void PlotAndAnalyze::findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data
     avg = sum / ( data.size() * data.first().size() );
 }
 
-void PlotAndAnalyze::receivePlot(QPixmap *pix, QDateTime timestamp)
+void PlotAndAnalyze::receivePlot(quint64 recordingId, QPixmap *pix, QDateTime timestamp)
 {
+    if (!m_captureRequested || recordingId != m_recordingId || m_tracePlotReceived)
+        return;
+
+    m_tracePlotReceived = true;
+    if (!pix || pix->isNull()) {
+        completeRecordingArtifactsIfReady();
+        return;
+    }
+
     QPixmap img = pix->scaled(768, 400, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    img.save(m_metadata.filename + "_trace_maxhold.jpg");
-    m_plotsToSend.prepend(m_metadata.filename + "_trace_maxhold.jpg");
-    m_plotsDescription.prepend("Maxhold and current signal levels at " +
+    const QString filename = m_metadata.filename + "_trace_maxhold.jpg";
+    if (img.save(filename)) {
+        m_plotsToSend.prepend(filename);
+        m_plotsDescription.prepend("Maxhold and current signal levels at " +
                                timestamp.toString("hh:mm:ss, ") +
                                "maxhold time " +
                                QString::number(m_config->getPlotMaxholdTime()) +
                                " seconds"
                                );
+    }
+    completeRecordingArtifactsIfReady();
+}
+
+void PlotAndAnalyze::receiveWaterfallSnapshot(quint64 recordingId, const QImage &image)
+{
+    if (!m_captureRequested || recordingId != m_recordingId || m_waterfallReceived)
+        return;
+
+    m_waterfallReceived = true;
+    if (!image.isNull())
+        emit recordingImageReady(recordingId, image, "Waterfall at incident capture time");
+    completeRecordingArtifactsIfReady();
 
 }
 

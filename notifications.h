@@ -11,6 +11,7 @@
 #include <QElapsedTimer>
 #include <QDebug>
 #include <QPixmap>
+#include <QImage>
 #include <QBuffer>
 #include <QFile>
 #include <QDirIterator>
@@ -24,6 +25,7 @@
 #include <QCoreApplication>
 #include <QStringList>
 #include <QMutex>
+#include <QHash>
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QJsonObject>
@@ -64,6 +66,24 @@ public:
     QByteArray contentType;
 };
 
+class RecordingEmailBundle
+{
+public:
+    QDateTime started;
+    QDateTime incidentStartedAt;
+    QDateTime endedAt;
+    QDateTime incidentEndedAt;
+    QString reason;
+    bool includeArtifacts = false;
+    bool plotsReady = false;
+    bool gnssReady = false;
+    bool imagesSent = false;
+    bool ended = false;
+    bool traceIncidentActive = false;
+    bool gnssIncidentActive = false;
+    QList<EmailAttachmentBuffer> attachments;
+};
+
 class Notifications : public QObject
 {
     Q_OBJECT
@@ -79,7 +99,14 @@ public slots:
     //void recWaterfall(QPixmap *pic) { waterfall = pic;}
     void getLatitudeLongitude(bool valid, double lat, double lon);
     void recPrediction(const QString &text);
-    void setGnssPlotFilename(const QString &profileId, const QString &profileName, QString name);
+    void setGnssPlotFilename(quint64 recordingId, const QString &profileId, const QString &profileName, QString name);
+    void recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts);
+    void recordingContextEnded(quint64 recordingId);
+    void recordingIncidentActivityChanged(bool gnss, bool active);
+    void recRecordingArtifact(quint64 recordingId, const QString &filename, const QString &description);
+    void recRecordingImage(quint64 recordingId, const QImage &image, const QString &description);
+    void recordingPlotsReady(quint64 recordingId);
+    void gnssBacklogsReady(quint64 recordingId);
 
     void appendIncidentLog(QDateTime dt, const QString string);
     void appendLogFile(QDateTime dt, const QString string);
@@ -149,8 +176,15 @@ private:
     int probability = 0;
     bool predictionReceived = false;
     bool notifyPriorityRecipients = false;
-    QList<EmailAttachmentBuffer> gnssPlots;
     QList<EmailAttachmentBuffer> iqPlots;
+    QList<EmailAttachmentBuffer> currentEmailAttachments;
+    QHash<quint64, RecordingEmailBundle> recordingBundles;
+    QList<quint64> pendingEmailRecordingIds;
+    QList<QDateTime> pendingEmailEventTimes;
+    QList<quint64> summaryRecordingIdsInCurrentEmail;
+    quint64 activeRecordingId = 0;
+    bool traceIncidentActive = false;
+    bool gnssIncidentActive = false;
     QString m_instrData;
     DailySummaryStatistics dailySummaryStatistics;
     bool dailySummaryEnabled = false;
@@ -170,6 +204,12 @@ private:
     void appendGraphAttachment(QJsonArray &attachments, const EmailAttachmentBuffer &attachment) const;
     SimpleMail::MimeInlineFile *createInlineFile(const EmailAttachmentBuffer &attachment) const;
     void clearBufferedAttachments();
+    void addRecordingToPendingEmail(quint64 recordingId);
+    void addIncidentSummaryRows();
+    bool pendingEmailArtifactsReady() const;
+    void trySendPendingEmail();
+    void consumeCurrentEmailAttachments();
+    void cleanupRecordingBundle(quint64 recordingId);
 
 };
 

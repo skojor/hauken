@@ -32,7 +32,7 @@ public slots:
     void traceIncidentStarted();
     void traceIncidentEnded();
     void markIncidenceStarted(); // any GNSS or RF incident marks the start point on all device backlogs
-    void saveAllBacklogs();
+    void saveAllBacklogs(quint64 recordingId);
     void setInstrumentGnssConnected(bool connected);
     void reqPositionForProfile(const QString &profileId);
     void injectReplayData(const QString &profileId, const QByteArray &data);
@@ -45,7 +45,8 @@ signals:
     void alarmEnded();
     void incidentActivityChanged(bool active);
     void positionUpdate(bool valid, double lat, double lng);
-    void sendGnssPlotFilename(const QString &profileId, const QString &profileName, QString filename);
+    void sendGnssPlotFilename(quint64 recordingId, const QString &profileId, const QString &profileName, QString filename);
+    void gnssBacklogsSaved(quint64 recordingId);
     void gnssDisabled(const QString &profileId);
     void gnssSpectrumReady(const QString &profileId, const GnssSpectrumBlock &block);
 

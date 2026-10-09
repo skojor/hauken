@@ -27,9 +27,12 @@ public:
     void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta);
+    void receiveTracedata(quint64 recordingId, TraceDataStruct traceData, QCustomPlot *plot = nullptr, QVector<qint16> avglevel = QVector<qint16>());
     void receiveTracedata(TraceDataStruct traceData, QCustomPlot *plot = nullptr, QVector<qint16> avglevel = QVector<qint16>());
-    void receivePlot(QPixmap *pixmap, QDateTime timestamp);
-    void recordingState();
+    void receivePlot(quint64 recordingId, QPixmap *pixmap, QDateTime timestamp);
+    void receiveWaterfallSnapshot(quint64 recordingId, const QImage &image);
+    void recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts);
+    void recordingContextEnded(quint64 recordingId);
     void updFrequencies(quint64 a, quint64 b);
     void updResolution(int a) { m_resolution = a;}
     void readFile(QString filename);
@@ -41,7 +44,6 @@ public:
 public slots:
     void traceIncidentStarted();
     void traceIncidentEnded();
-    void recordingStartedWithoutAnalysisArtifacts();
 
 signals:
     void imagesReadyForClassification(QVector<QImage>, IqMetadata);
@@ -50,9 +52,14 @@ signals:
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void analyzerResult(QString, int);
     void reportIntentional(QString);
-    void reqTracedata();
-    void reqTracePlot();
+    void reqTracedata(quint64 recordingId);
+    void reqTracePlot(quint64 recordingId);
+    void reqWaterfallSnapshot(quint64 recordingId);
+    void reqGnssBacklogs(quint64 recordingId);
     void reqMaxholdData();
+    void recordingArtifactReady(quint64 recordingId, const QString &filename, const QString &description);
+    void recordingImageReady(quint64 recordingId, const QImage &image, const QString &description);
+    void recordingPlotsReady(quint64 recordingId);
 
 private:
     float findMaxMagnitudeAndPosition(const QVector<complexInt16> &iq16, int &pos);
@@ -72,6 +79,9 @@ private:
     void addText(QImage &image, const double secondsAnalyzed);
     void addLines(QImage &image, const double secondsAnalyzed);
     void createFilename();
+    void processTraceData(TraceDataStruct traceData, QCustomPlot *plot, QVector<qint16> avglevel);
+    void requestRecordingArtifacts(quint64 recordingId);
+    void completeRecordingArtifactsIfReady();
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
     void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
     void writeMetaToDisk(cv::Mat results, QStringList classes);
@@ -86,9 +96,7 @@ private:
     IqMetadata m_metadata;
     QVector<complexInt16> m_iq16;
     bool m_flagRecordingState = false;
-    QTimer *m_reqTracedataTimer;
     QTimer *m_reqTraceplotTimer;
-    QTimer *m_sendPlotsTimer;
     QTimer *m_incidentEndTimer = nullptr;
     QVector<QString> m_plotsToSend;
     QVector<QString> m_plotsDescription;
@@ -100,6 +108,11 @@ private:
     double m_lastClassificationStopMHz = 0;
     bool m_freqNotificationSentForIncident = false;
     bool m_collectNotificationArtifacts = false;
+    quint64 m_recordingId = 0;
+    bool m_captureRequested = false;
+    bool m_tracePlotReceived = false;
+    bool m_waterfallReceived = false;
+    bool m_traceDataReceived = false;
 };
 
 #endif // PLOTANDANALYZE_H
