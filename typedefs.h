@@ -930,7 +930,7 @@ public:
     int  avgJammingIndicator = 0;
     double posOffset;
     double altOffset;
-    quint64 timeOffset = 0;
+    qint64 timeOffset = 0;
     int cnoOffset = 0;
     int agcOffset = 0;
     int jammingIndicatorOffset = 0;

@@ -93,7 +93,7 @@ void GnssAnalyzer::analyze(GnssData &data)
 {
     data.posOffset = distanceInMeters(data);
     data.altOffset = abs(ownAltitude - data.altitude);
-    data.timeOffset = abs(data.timestamp.msecsTo(AppClock::nowUtc()));
+    data.timeOffset = AppClock::nowUtc().msecsTo(data.timestamp);
     if (data.id != "instrument") {
         data.cnoOffset = abs(data.cno - data.avgCno);
         data.agcOffset = abs(data.agc - data.avgAgc);
@@ -166,7 +166,10 @@ void GnssAnalyzer::updDisplay()
         ts.setRealNumberPrecision(1);
         ts << "<tr><td>Pos. offset</td><td align>" << (gnssData.posOffset > 999?">999":QString::number(gnssData.posOffset, 'f', 1)) << " m</td></tr>"
            << "<tr><td>Alt. offset</td><td align>" << gnssData.altOffset << " m</td></tr>"
-           << "<tr><td>Time offset</td><td>" << (gnssData.timeOffset > 9999?">9999":QString::number(gnssData.timeOffset)) << " ms</td></tr>";
+           << "<tr><td>Time offset</td><td>"
+           << (qAbs(gnssData.timeOffset) > 9999
+               ? QString("%1>9999").arg(gnssData.timeOffset < 0 ? "-" : "")
+               : QString::number(gnssData.timeOffset)) << " ms</td></tr>";
         if (!isInstrumentType)
             ts << "<tr><td>C/No (offset)</td><td>" << gnssData.cno << " (" << gnssData.cnoOffset << ") dB</td></tr>";
         if (!gnssData.agcBlocks.isEmpty()) {
@@ -295,7 +298,7 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
     ts.setRealNumberNotation(QTextStream::FixedNotation);
     ts.setRealNumberPrecision(1);
 
-    if (data.posValid && timeOffsetLimit > 0 && data.timeOffset > timeOffsetLimit) {
+    if (data.posValid && timeOffsetLimit > 0 && qAbs(data.timeOffset) > timeOffsetLimit) {
         if (!timeOffsetTriggered && !timeOffsetFilterTimer.isValid())
         {
             timeOffsetFilterTimer.start();
@@ -305,7 +308,9 @@ void GnssAnalyzer::checkTimeOffset(GnssData &data)
         else if (!timeOffsetTriggered && timeOffsetFilterTimer.elapsed() > config->getGnssTimeFilter() * 1e3) {
             if (!logToFile) {
                 ts << "Time offset triggered, current offset: "
-                   << (data.timeOffset > 9999?">9999":QString::number(data.timeOffset)) << " ms";
+                   << (qAbs(data.timeOffset) > 9999
+                       ? QString("%1>9999").arg(data.timeOffset < 0 ? "-" : "")
+                       : QString::number(data.timeOffset)) << " ms";
             }
             timeOffsetTriggered = true;
             timeOffsetTimer.start();

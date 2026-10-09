@@ -142,6 +142,8 @@ private:
     UbloxRfBandCorrelator rfBandCorrelator;
     quint64 binaryMessageSequence = 0;
     UBLOX uBloxState = UBLOX::NODEVICE;
+    bool ubloxSecSigResponseLogged = false;
+    bool ubloxSecSigParseFailureLogged = false;
     bool checkedAllSatSystems = false;
 
     // Septentrio: signal types (SBF 4.1.10) currently tracked on the main antenna, from MeasEpoch (4027)

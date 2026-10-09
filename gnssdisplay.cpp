@@ -493,12 +493,19 @@ void GnssDisplay::updateCardText(const QString &id, GnssReceiverCard *card)
         else if (abs(data.altOffset) < 1000) card->altOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.altOffset), 'f', 0) + " m</span>");
         else card->altOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(abs(data.altOffset / 1000), 'f', 0) + " km</span>");
 
-        if (data.timeOffset < 1000) card->timeOffset->setText("<span style='font-size:normal;color:green;'>0 secs</span>");
-        else if (data.timeOffset < 5000) card->timeOffset->setText("<span style='font-size:normal;color:orange;'>" + QString::number(data.timeOffset / 1000) + " sec(s)</span>");
-        else if (data.timeOffset < 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 1000) + " sec(s)</span>");
-        else if (data.timeOffset < 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 60000) + " min(s)</span>");
-        else if (data.timeOffset < 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 3600000) + " hour(s)</span>");
-        else if (data.timeOffset < 24UL * 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + QString::number(data.timeOffset / 24UL * 3600000) + " hour(s)</span>");
+        const qint64 timeOffsetMagnitude = qAbs(data.timeOffset);
+        const QString timeOffsetSign = data.timeOffset < 0 ? "-" : "";
+        if (timeOffsetMagnitude < 1000) {
+            const QString value = timeOffsetMagnitude == 0
+                                      ? "0 secs"
+                                      : timeOffsetSign + QString::number(timeOffsetMagnitude) + " ms";
+            card->timeOffset->setText("<span style='font-size:normal;color:green;'>" + value + "</span>");
+        }
+        else if (timeOffsetMagnitude < 5000) card->timeOffset->setText("<span style='font-size:normal;color:orange;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 1000) + " sec(s)</span>");
+        else if (timeOffsetMagnitude < 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 1000) + " sec(s)</span>");
+        else if (timeOffsetMagnitude < 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 60000) + " min(s)</span>");
+        else if (timeOffsetMagnitude < 60 * 60 * 60000) card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / 3600000) + " hour(s)</span>");
+        else card->timeOffset->setText("<span style='font-size:normal;color:red;'>" + timeOffsetSign + QString::number(timeOffsetMagnitude / (24 * 60 * 60 * 1000)) + " day(s)</span>");
     }
     else {
         card->leftGroupBox->setTitle(name + " - position invalid");
