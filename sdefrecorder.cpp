@@ -177,7 +177,10 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
                 case TriggerSource::AutoRecorder: reason = "Automatic recording"; break;
                 case TriggerSource::Unknown: reason = "Recording trigger not identified"; break;
                 }
-                emit recordingContextStarted(activeRecordingId, dateTimeRecordingStarted, reason, includeAnalysisArtifacts);
+                emit recordingContextStarted(activeRecordingId, dateTimeRecordingStarted, reason,
+                                             includeAnalysisArtifacts,
+                                             triggerSource == TriggerSource::Gnss,
+                                             triggerSource == TriggerSource::TraceAnalyzer);
                 if (includeAnalysisArtifacts)
                     emit recordingStartedWithAnalysisArtifacts();
                 else

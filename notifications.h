@@ -17,6 +17,7 @@
 #include <QDirIterator>
 #include "config.h"
 #include "typedefs.h"
+#include "emailattachmentordering.h"
 #include "SimpleMail/SimpleMail"
 #include "dailysummarystatistics.h"
 #include <QProcess>
@@ -74,6 +75,7 @@ public:
     QDateTime endedAt;
     QDateTime incidentEndedAt;
     QString reason;
+    EmailImageOrder imageOrder = EmailImageOrder::Preserve;
     bool includeArtifacts = false;
     bool plotsReady = false;
     bool gnssReady = false;
@@ -100,7 +102,8 @@ public slots:
     void getLatitudeLongitude(bool valid, double lat, double lon);
     void recPrediction(const QString &text);
     void setGnssPlotFilename(quint64 recordingId, const QString &profileId, const QString &profileName, QString name);
-    void recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts);
+    void recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason,
+                                 bool includeAnalysisArtifacts, bool gnssTriggered, bool measurementTriggered);
     void recordingContextEnded(quint64 recordingId);
     void recordingIncidentActivityChanged(bool gnss, bool active);
     void recRecordingArtifact(quint64 recordingId, const QString &filename, const QString &description);

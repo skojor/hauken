@@ -88,7 +88,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     mqtt.cpp mqtt.h mqttbrokerprofile.h mqttmanager.cpp mqttmanager.h
     mqttoptions.cpp mqttoptions.h
     ppsstatusparser.cpp ppsstatusparser.h
-    notifications.cpp notifications.h
+    notifications.cpp notifications.h emailattachmentordering.h
     oauthfileuploader.cpp oauthfileuploader.h
 
     optionsbaseclass.cpp optionsbaseclass.h
@@ -261,6 +261,14 @@ if (BUILD_TESTING)
     target_include_directories(gnssanalyzer_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(gnssanalyzer_test PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME gnssanalyzer_test COMMAND gnssanalyzer_test)
+
+    qt_add_executable(notification_email_ordering_test
+        tests/notification_email_ordering_test.cpp
+        emailattachmentordering.h
+    )
+    target_include_directories(notification_email_ordering_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(notification_email_ordering_test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME notification_email_ordering_test COMMAND notification_email_ordering_test)
 
     qt_add_executable(ppsstatusparser_test
         tests/ppsstatusparser_test.cpp

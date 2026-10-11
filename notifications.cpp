@@ -368,12 +368,17 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
     if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
 }
 
-void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts)
+void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason,
+                                            bool includeAnalysisArtifacts, bool gnssTriggered, bool measurementTriggered)
 {
     RecordingEmailBundle bundle;
     bundle.started = started;
     bundle.incidentStartedAt = started;
     bundle.reason = reason;
+    if (gnssTriggered)
+        bundle.imageOrder = EmailImageOrder::GnssFirst;
+    else if (measurementTriggered)
+        bundle.imageOrder = EmailImageOrder::GnssLast;
     QStringList gnssTriggerDetails;
     const QDateTime earliestGnssTrigger = started.addSecs(-5);
     const QDateTime latestGnssTrigger = started.addSecs(5);
@@ -641,8 +646,15 @@ void Notifications::sendMail()
             currentEmailAttachments = iqPlots;
             for (quint64 recordingId : pendingEmailRecordingIds) {
                 const auto bundle = recordingBundles.constFind(recordingId);
-                if (bundle != recordingBundles.cend() && bundle->includeArtifacts && !bundle->imagesSent)
-                    currentEmailAttachments.append(bundle->attachments);
+                if (bundle != recordingBundles.cend() && bundle->includeArtifacts && !bundle->imagesSent) {
+                    const QList<EmailAttachmentBuffer> orderedAttachments = orderEmailAttachments(
+                        bundle->attachments, bundle->imageOrder,
+                        [](const EmailAttachmentBuffer &attachment) {
+                            return attachment.contentId.startsWith("gnssplot_") ||
+                                   attachment.contentId.startsWith("gnss_spectrum_");
+                        });
+                    currentEmailAttachments.append(orderedAttachments);
+                }
             }
 
             QString data;
