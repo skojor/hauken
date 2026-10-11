@@ -41,6 +41,7 @@ public slots:
     void requestSnapshot(quint64 recordingId);
     void updSize(QSize size);
     void updSettings();
+    void setAutoYRange(double lower, double upper);
     void restartPlot();
     void stopPlot(bool b) {
         if (!b) {
@@ -78,7 +79,9 @@ private:
     QImage waterfallImage;
 
     // config cache
-    int scaleMin, scaleMax;
+    double scaleMin = 0;
+    double scaleMax = 0;
+    bool autoRangeReceived = false;
     quint64 startfreq, stopfreq;
     QString resolution;
     QString fftMode;

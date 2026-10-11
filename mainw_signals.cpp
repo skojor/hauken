@@ -206,6 +206,8 @@ void MainWindow::setSignals()
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+    connect(customPlotController, &CustomPlotController::autoYRangeChanged,
+            waterfall, &Waterfall::setAutoYRange);
     connect(this, &MainWindow::waterfallSizeRequested, waterfall, &Waterfall::updSize, Qt::QueuedConnection);
     connect(this, &MainWindow::restartWaterfallRequested, waterfall, &Waterfall::restartPlot, Qt::QueuedConnection);
     connect(gnssManager, &GnssManager::gnssSpectrumReady, this, [this](const QString &profileId, const GnssSpectrumBlock &block) {
