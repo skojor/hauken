@@ -16,6 +16,7 @@ void NotificationEmailOrderingTest::gnssTriggeredPlacesGnssImagesFirst()
 {
     const QStringList attachments = {
         "measurement-maxhold.jpg",
+        "gnss_info_receiver-data.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-spectrogram.jpg",
         "gnss_spectrum_receiver-b.jpg",
@@ -25,12 +26,17 @@ void NotificationEmailOrderingTest::gnssTriggeredPlacesGnssImagesFirst()
     const QStringList orderedAttachments = orderEmailAttachments(
         attachments, EmailImageOrder::GnssFirst,
         [](const QString &attachment) {
-            return attachment.startsWith("gnssplot_") || attachment.startsWith("gnss_spectrum_");
+            if (attachment.startsWith("gnss_info_"))
+                return EmailAttachmentGroup::GnssInfo;
+            if (attachment.startsWith("gnssplot_") || attachment.startsWith("gnss_spectrum_"))
+                return EmailAttachmentGroup::GnssPlot;
+            return EmailAttachmentGroup::Other;
         });
 
     QCOMPARE(orderedAttachments, QStringList({
         "gnssplot_receiver-a.jpg",
         "gnss_spectrum_receiver-b.jpg",
+        "gnss_info_receiver-data.jpg",
         "measurement-maxhold.jpg",
         "measurement-spectrogram.jpg",
         "waterfall.jpg"
@@ -40,6 +46,7 @@ void NotificationEmailOrderingTest::gnssTriggeredPlacesGnssImagesFirst()
 void NotificationEmailOrderingTest::measurementTriggeredPlacesGnssImagesLast()
 {
     const QStringList attachments = {
+        "gnss_info_receiver-data.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-maxhold.jpg",
         "gnss_spectrum_receiver-b.jpg",
@@ -50,7 +57,11 @@ void NotificationEmailOrderingTest::measurementTriggeredPlacesGnssImagesLast()
     const QStringList orderedAttachments = orderEmailAttachments(
         attachments, EmailImageOrder::GnssLast,
         [](const QString &attachment) {
-            return attachment.startsWith("gnssplot_") || attachment.startsWith("gnss_spectrum_");
+            if (attachment.startsWith("gnss_info_"))
+                return EmailAttachmentGroup::GnssInfo;
+            if (attachment.startsWith("gnssplot_") || attachment.startsWith("gnss_spectrum_"))
+                return EmailAttachmentGroup::GnssPlot;
+            return EmailAttachmentGroup::Other;
         });
 
     QCOMPARE(orderedAttachments, QStringList({
@@ -58,13 +69,15 @@ void NotificationEmailOrderingTest::measurementTriggeredPlacesGnssImagesLast()
         "measurement-spectrogram.jpg",
         "waterfall.jpg",
         "gnssplot_receiver-a.jpg",
-        "gnss_spectrum_receiver-b.jpg"
+        "gnss_spectrum_receiver-b.jpg",
+        "gnss_info_receiver-data.jpg"
     }));
 }
 
 void NotificationEmailOrderingTest::otherTriggersPreserveImageOrder()
 {
     const QStringList attachments = {
+        "gnss_info_receiver-data.jpg",
         "measurement-maxhold.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-spectrogram.jpg",
@@ -74,10 +87,20 @@ void NotificationEmailOrderingTest::otherTriggersPreserveImageOrder()
     const QStringList orderedAttachments = orderEmailAttachments(
         attachments, EmailImageOrder::Preserve,
         [](const QString &attachment) {
-            return attachment.startsWith("gnssplot_") || attachment.startsWith("gnss_spectrum_");
+            if (attachment.startsWith("gnss_info_"))
+                return EmailAttachmentGroup::GnssInfo;
+            if (attachment.startsWith("gnssplot_") || attachment.startsWith("gnss_spectrum_"))
+                return EmailAttachmentGroup::GnssPlot;
+            return EmailAttachmentGroup::Other;
         });
 
-    QCOMPARE(orderedAttachments, attachments);
+    QCOMPARE(orderedAttachments, QStringList({
+        "measurement-maxhold.jpg",
+        "gnssplot_receiver-a.jpg",
+        "measurement-spectrogram.jpg",
+        "gnss_spectrum_receiver-b.jpg",
+        "gnss_info_receiver-data.jpg"
+    }));
 }
 
 QTEST_APPLESS_MAIN(NotificationEmailOrderingTest)

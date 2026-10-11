@@ -63,6 +63,7 @@ public:
     void updSettings();
     void updText();
     void updGnssData(GnssData data, QString id);
+    QImage emailInfoImage() const;
     void updPpsData(const PpsData &data);
     void updPpsAvailability(bool online);
     void updPpsError(const QString &error);

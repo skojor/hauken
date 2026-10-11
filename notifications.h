@@ -76,6 +76,7 @@ public:
     QDateTime incidentEndedAt;
     QString reason;
     EmailImageOrder imageOrder = EmailImageOrder::Preserve;
+    bool gnssInfoReady = false;
     bool includeArtifacts = false;
     bool plotsReady = false;
     bool gnssReady = false;
@@ -112,6 +113,7 @@ public slots:
     void gnssBacklogsReady(quint64 recordingId);
     void recGnssSpectrumImage(quint64 recordingId, const QString &profileId,
                               const QImage &image, const QString &description);
+    void recGnssInfoImage(quint64 recordingId, const QImage &image);
 
     void appendIncidentLog(QDateTime dt, const QString string);
     void appendLogFile(QDateTime dt, const QString string);
@@ -138,6 +140,7 @@ signals:
     void reqTracePlot();
     void reqWaterfall();
     void reqPosition();
+    void requestGnssInfoImage(quint64 recordingId);
 
 private:
     struct PendingGnssTriggerReason
