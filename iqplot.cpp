@@ -120,8 +120,9 @@ void IqPlot::parseIqData(const QVector<complexInt16> &iq16, IqMetadata meta)
                                  this,
                                  iq16);
     }
+    QVector<QVector<double>> fftData = doFft(iq16);
     iqdataReady(iq16, m_iqMetadata);
-    emit fftdataReady( doFft(iq16), m_iqMetadata );
+    emit fftdataReady(fftData, m_iqMetadata);
 }
 
 QVector<QVector<double> > IqPlot::doFft(const QVector<complexInt16> &iq, int samplesToAnalyze)
