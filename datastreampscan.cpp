@@ -66,12 +66,18 @@ void DatastreamPScan::checkOptHeader()
 {
     quint64 startFreq = (quint64)m_pscanOptHeader.startFreqHigh << 32 | m_pscanOptHeader.startFreqLow;
     quint64 stopFreq = (quint64)m_pscanOptHeader.stopFreqHigh << 32 | m_pscanOptHeader.stopFreqLow;
+    const bool frequencyRangeChanged = startFreq != m_pscStartFreq or stopFreq != m_pscStopFreq;
+    const bool resolutionStepChanged = m_pscRes != m_pscanOptHeader.stepFreq;
+
+    if (frequencyRangeChanged or resolutionStepChanged)
+        updWaitForPscanEndMarker(true);
+
     if (startFreq != m_pscStartFreq or stopFreq != m_pscStopFreq) {
         m_pscStartFreq = startFreq;
         m_pscStopFreq = stopFreq;
         emit frequencyChanged(startFreq, stopFreq);
     }
-    if (m_pscRes != m_pscanOptHeader.stepFreq) {
+    if (resolutionStepChanged) {
         m_pscRes = m_pscanOptHeader.stepFreq;
         emit resolutionChanged(m_pscRes);
     }

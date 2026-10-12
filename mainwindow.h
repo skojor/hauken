@@ -140,7 +140,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(QWidget *parent = nullptr, QSharedPointer<Config> sharedConfig = {});
     ~MainWindow();
 
 public slots:
@@ -226,7 +226,7 @@ private slots:
     void finalizeRecordedReplay();
 
 private:
-    QSharedPointer<Config> config = QSharedPointer<Config>(new Config, &QObject::deleteLater);
+    QSharedPointer<Config> config;
     QWidget *centralWidget = new QWidget(this);
     QStatusBar *statusBar = new QStatusBar;
     QProgressBar *progressBar = new QProgressBar;
@@ -346,8 +346,8 @@ private:
     QSpinBox *waterfallTime = new QSpinBox;
     QCheckBox *waterfallOverlay = new QCheckBox;
     QWidget *spectrumHostWindow = nullptr;
-    QWidget *spectrumPlotPane = nullptr;
-    QWidget *waterfallPane = nullptr;
+    QFrame *spectrumPlotPane = nullptr;
+    QFrame *waterfallPane = nullptr;
     QSplitter *spectrumSplitter = nullptr;
     QLabel *waterfallView = new QLabel;
     QImage latestWaterfallImage;
