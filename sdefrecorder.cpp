@@ -145,6 +145,10 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
 
         if (!recording && saveToSdef) {
             recording = true;
+            pendingPositionTraces.clear();
+            waitingForPositionWarningEmitted = false;
+            pendingPositionOverflowWarningEmitted = false;
+            positionedCefWriteLogged = false;
             dateTimeRecordingStarted = AppClock::now(); // for incident log
 
             emit recordingStarted();
@@ -270,11 +274,15 @@ void SdefRecorder::writeSettingsSnapshot()
 void SdefRecorder::receiveTrace(const QDateTime &timestamp, const QVector<qint16> &data)
 {
     if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
-        if (addPosition and !positionHistory.isEmpty())
-            file.write(genSdefTraceLine(positionHistory.last().first,
-                                        positionHistory.last().second,
-                                        data,
-                                        timestamp));
+        if (addPosition && !positionEstablished) {
+            queueTraceUntilPosition(timestamp, data);
+        } else if (addPosition and !positionHistory.isEmpty())
+            logPositionedTraceWritten(
+                timestamp,
+                file.write(genSdefTraceLine(positionHistory.last().first,
+                                            positionHistory.last().second,
+                                            data,
+                                            timestamp)));
         else
             file.write(genSdefTraceLine(0, 0, data, timestamp));
     }
@@ -299,6 +307,22 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
         buffer.clear();
         bool ok = true;
 
+        for (const qint16 value : data.at(i)) {
+            if (value < -999 || value >= 2000) {
+                ok = false;
+                break;
+            }
+        }
+        if (!ok) {
+            qDebug() << "This backlog line failed validation at" << datetime.at(i);
+            continue;
+        }
+
+        if (addPosition && !positionEstablished) {
+            queueTraceUntilPosition(datetime.at(i), data.at(i));
+            continue;
+        }
+
         if (useNewMsFormat)
             buffer.append(datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
         else
@@ -312,7 +336,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
                                 / 10.0);
         }
 
-        if (addPosition and !positionHistory.isEmpty()) {
+        if (addPosition && !positionHistory.isEmpty()) {
             if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed
                 dateIterator++;
                 startTime = datetime.at(i);
@@ -322,19 +346,18 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
 
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6));
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6));
+        } else if (addPosition) {
+            buffer.append(",").append(QByteArray::number(prevLat, 'f', 6));
+            buffer.append(",").append(QByteArray::number(prevLng, 'f', 6));
         }
-        else if (addPosition and positionHistory.isEmpty())
-            emit warning("No GNSS source is selected as position source for CEF data");
 
-        for (auto &&val : data.at(i)) {
+        for (const qint16 val : data.at(i))
             buffer.append(',').append(QByteArray::number(val / 10));
-            if (val < -999 || val >= 2000)
-                ok = false;
-        }
         buffer.append('\n');
 
-        if (ok) file.write(buffer);
-        else qDebug() << "This backlog line failed:" << buffer;
+        const qint64 bytesWritten = file.write(buffer);
+        if (addPosition)
+            logPositionedTraceWritten(datetime.at(i), bytesWritten);
     }
     historicDataSaved = true;
     qDebug() << "SdefRecorder: Backlog used" << timer.elapsed() << "ms to write to disk";
@@ -486,6 +509,13 @@ void SdefRecorder::endRecording()
 
         if (!failed)
             recording = historicDataSaved = failed = false;
+        if (!pendingPositionTraces.isEmpty()) {
+            qWarning() << "Discarding" << pendingPositionTraces.size()
+                       << "CEF traces without a valid GNSS position at recording end";
+            pendingPositionTraces.clear();
+        }
+        waitingForPositionWarningEmitted = false;
+        pendingPositionOverflowWarningEmitted = false;
         triggerSource = TriggerSource::Unknown;
     }
 }
@@ -621,15 +651,84 @@ void SdefRecorder::curlUpload()
 void SdefRecorder::updPosition(bool b, double l1, double l2)
 {
     //qDebug() << b << l1 << l2;
+    const bool firstValidPosition = b && !positionEstablished;
     if (b) {
+        positionEstablished = true;
         positionHistory.append(QPair<double, double>(l1, l2));
         prevLat = l1;
         prevLng = l2;
     } else {
+        if (!positionEstablished)
+            return;
         positionHistory.append(QPair<double, double>(prevLat, prevLng));
     }
     while (positionHistory.size() > 120) { // keeps a constant 120 values in buffer
         positionHistory.removeFirst();
+    }
+    if (firstValidPosition && addPosition && recording) {
+        qDebug() << "SdefRecorder: Valid GNSS position established for CEF recording"
+                 << file.fileName() << "position" << l1 << l2
+                 << "pending traces" << pendingPositionTraces.size();
+    }
+    if (b && !pendingPositionTraces.isEmpty())
+        flushTracesWaitingForPosition(l1, l2);
+}
+
+void SdefRecorder::queueTraceUntilPosition(const QDateTime &timestamp,
+                                           const QVector<qint16> &data)
+{
+    if (!waitingForPositionWarningEmitted) {
+        emit warning("Waiting for a valid GNSS position before writing CEF data");
+        qDebug() << "SdefRecorder: Deferring CEF trace until valid GNSS position"
+                 << file.fileName() << "first pending timestamp" << timestamp;
+        waitingForPositionWarningEmitted = true;
+    }
+    if (pendingPositionTraces.size() >= maximumPendingPositionTraces) {
+        pendingPositionTraces.removeFirst();
+        if (!pendingPositionOverflowWarningEmitted) {
+            emit warning("Pending CEF data limit reached while waiting for GNSS; oldest traces will be dropped");
+            pendingPositionOverflowWarningEmitted = true;
+        }
+    }
+    pendingPositionTraces.append({timestamp, data});
+}
+
+void SdefRecorder::flushTracesWaitingForPosition(double latitude, double longitude)
+{
+    if (!recording || !file.isOpen()) {
+        pendingPositionTraces.clear();
+        return;
+    }
+
+    const int pendingCount = pendingPositionTraces.size();
+    for (const PendingPositionTrace &trace : std::as_const(pendingPositionTraces)) {
+        const qint64 bytesWritten = file.write(
+            genSdefTraceLine(latitude, longitude, trace.data, trace.timestamp));
+        logPositionedTraceWritten(trace.timestamp, bytesWritten);
+    }
+
+    pendingPositionTraces.clear();
+    waitingForPositionWarningEmitted = false;
+    pendingPositionOverflowWarningEmitted = false;
+    qDebug() << "SdefRecorder: CEF log updated with queued traces"
+             << file.fileName() << "written traces" << pendingCount
+             << "position" << latitude << longitude;
+}
+
+void SdefRecorder::logPositionedTraceWritten(const QDateTime &timestamp, qint64 bytesWritten)
+{
+    if (positionedCefWriteLogged)
+        return;
+
+    if (bytesWritten > 0) {
+        qDebug() << "SdefRecorder: First CEF trace written with valid GNSS position"
+                 << file.fileName() << "timestamp" << timestamp
+                 << "bytes" << bytesWritten;
+        positionedCefWriteLogged = true;
+    } else {
+        qWarning() << "SdefRecorder: Failed writing positioned CEF trace"
+                   << file.fileName() << "timestamp" << timestamp
+                   << file.errorString();
     }
 }
 
@@ -814,6 +913,9 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
 
 void SdefRecorder::saveDataToTempFile()
 {
+    if (addPosition && !positionEstablished)
+        return;
+
     if (!tempFile.isOpen() and tempFileTracedata.size() > 0 and tracePerSecondForTempFile > 0) {
         tempFileTracedata.clear();
         startTempFile();

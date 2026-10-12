@@ -111,11 +111,19 @@ signals:
 
 private:
     using ArchiveCallback = std::function<void(bool, const QString &)>;
+    struct PendingPositionTrace
+    {
+        QDateTime timestamp;
+        QVector<qint16> data;
+    };
 
     void startRecording(bool includeAnalysisArtifacts);
     void archiveFile(const QString &filename, bool incidentArchive, ArchiveCallback callback);
     void notifyFileReadyForUpload(const QString &filename, bool intentional, int delayMs = 10000);
     void startCurlLoginProcess();
+    void queueTraceUntilPosition(const QDateTime &timestamp, const QVector<qint16> &data);
+    void flushTracesWaitingForPosition(double latitude, double longitude);
+    void logPositionedTraceWritten(const QDateTime &timestamp, qint64 bytesWritten);
     //QSharedPointer<Config> config;
     QFile file;
     double tracePerSecond = -1, tracePerSecondForTempFile = -1;
@@ -137,6 +145,12 @@ private:
     int recordTime;
     int maxRecordTime;
     bool addPosition;
+    bool positionEstablished = false;
+    bool waitingForPositionWarningEmitted = false;
+    bool pendingPositionOverflowWarningEmitted = false;
+    bool positionedCefWriteLogged = false;
+    static constexpr int maximumPendingPositionTraces = 4096;
+    QList<PendingPositionTrace> pendingPositionTraces;
     QProcess *process;
     double prevLat = 0, prevLng = 0;
     QString positionSource;
