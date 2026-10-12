@@ -646,13 +646,16 @@ void GnssSpectrumWindow::clearWaterfallHistory()
 
 void GnssSpectrumWindow::plotBlock(const GnssSpectrumBlock &block)
 {
-    if (block.levels.isEmpty() || block.resolutionHz == 0) return;
+    if (block.levels.isEmpty() || (block.resolutionHz == 0 && block.spanHz == 0)) return;
 
     QVector<double> keys, values;
     keys.reserve(block.levels.size());
     values.reserve(block.levels.size());
     const double startMHz = (double)(block.centerHz - block.spanHz / 2) / 1e6;
-    const double stepMHz = (double)block.resolutionHz / 1e6;
+    const double stepHz = block.resolutionHz > 0
+                              ? static_cast<double>(block.resolutionHz)
+                              : static_cast<double>(block.spanHz) / block.levels.size();
+    const double stepMHz = stepHz / 1e6;
     for (int i = 0; i < block.levels.size(); i++) {
         keys.append(startMHz + i * stepMHz);
         values.append(block.levels.at(i));
