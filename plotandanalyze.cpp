@@ -1208,6 +1208,7 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
     const double res = ((stopfreq - startfreq) / (maxholdData.size() - 1));
     const double l1StartMHz = (GPSL1 - 512e3) * 1e-6;
     const double l1StopMHz = (GPSL1 + 512e3) * 1e-6;
+    const bool triggerAtL1Center = qAbs(static_cast<double>(m_metadata.trigFrequency) - GPSL1) <= 5e3;
     const double trigFrequencyMHz = m_metadata.trigFrequency > 1e6
             ? m_metadata.trigFrequency * 1e-6
             : m_metadata.trigFrequency;
@@ -1300,6 +1301,7 @@ void PlotAndAnalyze::findFreqsAboveAvgLevel(const QVector<double> maxholdData,
     m_freqNotificationSentForIncident = true;
     emit toIncidentLog(NOTIFY::TYPE::AI, "", text);
 
-    if (signalOverlapsL1 && classificationHasRfiForRange(l1StartMHz, l1StopMHz))
+    if (signalOverlapsL1 && triggerAtL1Center &&
+        classificationHasRfiForRange(l1StartMHz, l1StopMHz))
         emit reportIntentional("Signal within L1 band, could be harmful");
 }
