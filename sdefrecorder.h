@@ -14,7 +14,11 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QElapsedTimer>
+#include <QHash>
+#include <QSet>
+#include <QThreadPool>
 #include <QVector>
+#include <functional>
 #include "config.h"
 #include "typedefs.h"
 #include <QNetworkAccessManager>
@@ -47,13 +51,13 @@ public slots:
     void stopRecordingManually(bool suppressIncidentTriggers);
     void clearIncidentTriggerSuppression();
     void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
-    void receiveTrace(const QVector<qint16> data); // new data arrives here
+    void receiveTrace(const QDateTime &timestamp, const QVector<qint16> &data); // new data arrives here
     void updTracesPerSecond(double d);
     void setDeviceCconnectedState(bool b);
     void endRecording();
     void updPosition(bool b, double l1, double l2);
     void recPrediction(QString pred, int prob);
-    void loginRequest() {  askedForLogin = true; curlLogin(); }
+    void loginRequest() { askedForLogin = true; curlLogin(finishedFilename); }
     void setModeUsed(QString s) { modeUsed = s;}
     void dataPointsChanged(int d) { datapoints = d;}
     void tempFileData(const QVector<qint16> data);
@@ -74,21 +78,23 @@ private slots:
     QString createFilename();
     QString incidentBasePath();
     void writeSettingsSnapshot();
-    bool curlLogin();
+    bool curlLogin(QString filename = {}, bool notifyOAuth = false, bool intentional = false);
     void curlUpload();
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
-    void zipit();
-    bool zipIncidentFolder();
     void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
     void startTempFile();
-    QByteArray genSdefTraceLine(double lat = 0, double lng = 0, const QVector<qint16> = QVector<qint16>());
+    QByteArray genSdefTraceLine(double lat = 0,
+                                double lng = 0,
+                                const QVector<qint16> = QVector<qint16>(),
+                                const QDateTime &timestamp = QDateTime());
 
 signals:
     void recordingStarted();
     void recordingStartedWithAnalysisArtifacts();
     void recordingStartedWithoutAnalysisArtifacts();
     void recordingEnded();
-    void recordingContextStarted(quint64 recordingId, QDateTime started, QString reason, bool includeAnalysisArtifacts);
+    void recordingContextStarted(quint64 recordingId, QDateTime started, QString reason,
+                                 bool includeAnalysisArtifacts, bool gnssTriggered, bool measurementTriggered);
     void recordingContextEnded(quint64 recordingId);
     void toIncidentLog(const NOTIFY::TYPE, const QString, const QString);
     void reqTraceHistory(int);
@@ -104,7 +110,20 @@ signals:
     void incidentFilesBasePath(const QString &basePath);
 
 private:
+    using ArchiveCallback = std::function<void(bool, const QString &)>;
+    struct PendingPositionTrace
+    {
+        QDateTime timestamp;
+        QVector<qint16> data;
+    };
+
     void startRecording(bool includeAnalysisArtifacts);
+    void archiveFile(const QString &filename, bool incidentArchive, ArchiveCallback callback);
+    void notifyFileReadyForUpload(const QString &filename, bool intentional, int delayMs = 10000);
+    void startCurlLoginProcess();
+    void queueTraceUntilPosition(const QDateTime &timestamp, const QVector<qint16> &data);
+    void flushTracesWaitingForPosition(double latitude, double longitude);
+    void logPositionedTraceWritten(const QDateTime &timestamp, qint64 bytesWritten);
     //QSharedPointer<Config> config;
     QFile file;
     double tracePerSecond = -1, tracePerSecondForTempFile = -1;
@@ -114,7 +133,6 @@ private:
     QTimer *reqPositionTimer = nullptr;
     QTimer *periodicCheckUploadsTimer = nullptr;
     QTimer *autorecorderTimer = nullptr;
-    QTimer *finishedFileTimer = nullptr;
     QTimer *tempFileTimer = nullptr;
     QTimer *tempFileCheckFilesize = nullptr;
     //QDateTime foldernameDateTime = QDateTime::currentDateTime();
@@ -127,12 +145,21 @@ private:
     int recordTime;
     int maxRecordTime;
     bool addPosition;
+    bool positionEstablished = false;
+    bool waitingForPositionWarningEmitted = false;
+    bool pendingPositionOverflowWarningEmitted = false;
+    bool positionedCefWriteLogged = false;
+    static constexpr int maximumPendingPositionTraces = 4096;
+    QList<PendingPositionTrace> pendingPositionTraces;
     QProcess *process;
     double prevLat = 0, prevLng = 0;
     QString positionSource;
     QList<QPair<double, double>> positionHistory;
     bool deviceConnected = false;
     QString finishedFilename;
+    QSet<QString> archivePathsInProgress;
+    QHash<QString, QVector<ArchiveCallback>> archiveCallbacksInProgress;
+    QThreadPool archiveThreadPool;
     bool stateCurlAwaitingLogin = false;
     bool stateCurlAwaitingFileUpload = false;
     QStringList filesAwaitingUpload;

@@ -368,12 +368,17 @@ void Notifications::appendEmailText(QDateTime dt, const QString string)
     if (config->getSdefAddPosition()) emit reqPosition(); // ask for position at this point if we are mobile, to insert into mail text later
 }
 
-void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason, bool includeAnalysisArtifacts)
+void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime &started, const QString &reason,
+                                            bool includeAnalysisArtifacts, bool gnssTriggered, bool measurementTriggered)
 {
     RecordingEmailBundle bundle;
     bundle.started = started;
     bundle.incidentStartedAt = started;
     bundle.reason = reason;
+    if (gnssTriggered)
+        bundle.imageOrder = EmailImageOrder::GnssFirst;
+    else if (measurementTriggered)
+        bundle.imageOrder = EmailImageOrder::GnssLast;
     QStringList gnssTriggerDetails;
     const QDateTime earliestGnssTrigger = started.addSecs(-5);
     const QDateTime latestGnssTrigger = started.addSecs(5);
@@ -399,6 +404,7 @@ void Notifications::recordingContextStarted(quint64 recordingId, const QDateTime
     bundle.gnssReady = !includeAnalysisArtifacts;
     recordingBundles.insert(recordingId, bundle);
     activeRecordingId = recordingId;
+    emit requestGnssInfoImage(recordingId);
 
     while (recordingBundles.size() > 32) {
         auto oldest = recordingBundles.end();
@@ -538,6 +544,31 @@ void Notifications::recGnssSpectrumImage(quint64 recordingId, const QString &pro
     bundle->attachments.append(attachment);
 }
 
+void Notifications::recGnssInfoImage(quint64 recordingId, const QImage &image)
+{
+    auto bundle = recordingBundles.find(recordingId);
+    if (bundle == recordingBundles.end() || bundle->imagesSent)
+        return;
+
+    bundle->gnssInfoReady = true;
+    if (!image.isNull()) {
+        QByteArray data;
+        QBuffer buffer(&data);
+        const QImage scaledImage = image.scaled(1200, 1600, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        if (buffer.open(QIODevice::WriteOnly) && scaledImage.save(&buffer, "jpg")) {
+            EmailAttachmentBuffer attachment;
+            attachment.data = data;
+            attachment.fileName = "gnss_info_" + QString::number(recordingId) + ".jpg";
+            attachment.description = "GNSS receiver information";
+            attachment.contentId = "gnss_info_" + QByteArray::number(recordingId);
+            attachment.contentType = "image/jpg";
+            bundle->attachments.append(attachment);
+        }
+    }
+
+    trySendPendingEmail();
+}
+
 void Notifications::sendHtmlEmail(const QString &subject, const QString &html, bool usePriorityRecipients)
 {
     if (!simpleParametersCheck() || html.isEmpty()) {
@@ -641,8 +672,24 @@ void Notifications::sendMail()
             currentEmailAttachments = iqPlots;
             for (quint64 recordingId : pendingEmailRecordingIds) {
                 const auto bundle = recordingBundles.constFind(recordingId);
-                if (bundle != recordingBundles.cend() && bundle->includeArtifacts && !bundle->imagesSent)
-                    currentEmailAttachments.append(bundle->attachments);
+                if (bundle != recordingBundles.cend() && !bundle->imagesSent) {
+                    QList<EmailAttachmentBuffer> attachments;
+                    for (const EmailAttachmentBuffer &attachment : bundle->attachments) {
+                        if (bundle->includeArtifacts || attachment.contentId.startsWith("gnss_info_"))
+                            attachments.append(attachment);
+                    }
+                    const QList<EmailAttachmentBuffer> orderedAttachments = orderEmailAttachments(
+                        attachments, bundle->imageOrder,
+                        [](const EmailAttachmentBuffer &attachment) {
+                            if (attachment.contentId.startsWith("gnss_info_"))
+                                return EmailAttachmentGroup::GnssInfo;
+                            if (attachment.contentId.startsWith("gnssplot_") ||
+                                attachment.contentId.startsWith("gnss_spectrum_"))
+                                return EmailAttachmentGroup::GnssPlot;
+                            return EmailAttachmentGroup::Other;
+                        });
+                    currentEmailAttachments.append(orderedAttachments);
+                }
             }
 
             QString data;
@@ -1345,8 +1392,9 @@ bool Notifications::pendingEmailArtifactsReady() const
 {
     for (quint64 recordingId : pendingEmailRecordingIds) {
         const auto bundle = recordingBundles.constFind(recordingId);
-        if (bundle != recordingBundles.cend() && bundle->includeArtifacts && !bundle->imagesSent &&
-            (!bundle->plotsReady || !bundle->gnssReady))
+        if (bundle != recordingBundles.cend() && !bundle->imagesSent &&
+            (!bundle->gnssInfoReady ||
+             (bundle->includeArtifacts && (!bundle->plotsReady || !bundle->gnssReady))))
             return false;
     }
     return true;

@@ -206,6 +206,8 @@ void MainWindow::setSignals()
 
     connect(traceBuffer, &TraceBuffer::newDispTrace, customPlotController, &CustomPlotController::plotTrace);
     connect(traceBuffer, &TraceBuffer::newDispTrace, waterfall, &Waterfall::receiveTrace);
+    connect(customPlotController, &CustomPlotController::autoYRangeChanged,
+            waterfall, &Waterfall::setAutoYRange);
     connect(this, &MainWindow::waterfallSizeRequested, waterfall, &Waterfall::updSize, Qt::QueuedConnection);
     connect(this, &MainWindow::restartWaterfallRequested, waterfall, &Waterfall::restartPlot, Qt::QueuedConnection);
     connect(gnssManager, &GnssManager::gnssSpectrumReady, this, [this](const QString &profileId, const GnssSpectrumBlock &block) {
@@ -407,6 +409,13 @@ void MainWindow::setSignals()
             &TraceAnalyzer::recorderEnded);
     connect(sdefRecorder, &SdefRecorder::recordingEnded, traceBuffer, &TraceBuffer::recorderEnded);
     connect(sdefRecorder, &SdefRecorder::recordingContextStarted, notifications, &Notifications::recordingContextStarted);
+    connect(notifications, &Notifications::requestGnssInfoImage, this, [this](quint64 recordingId) {
+        const QImage image = gnssDisplay->emailInfoImage();
+        Notifications *notificationsPtr = notifications;
+        QMetaObject::invokeMethod(notificationsPtr, [notificationsPtr, recordingId, image] {
+            notificationsPtr->recGnssInfoImage(recordingId, image);
+        }, Qt::QueuedConnection);
+    });
     connect(sdefRecorder, &SdefRecorder::recordingContextEnded, notifications, &Notifications::recordingContextEnded);
     connect(sdefRecorder, &SdefRecorder::recordingContextStarted, plotAndAnalyze, &PlotAndAnalyze::recordingContextStarted);
     connect(sdefRecorder, &SdefRecorder::recordingContextEnded, plotAndAnalyze, &PlotAndAnalyze::recordingContextEnded);

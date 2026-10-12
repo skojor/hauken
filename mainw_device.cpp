@@ -101,6 +101,7 @@ void MainWindow::instrPscanFreqChanged()
 {
     if (measurementDevice->currentMode() == Instrument::Mode::PSCAN &&
         instrStartFreq->value() < instrStopFreq->value()) {
+        datastreamPScan->updWaitForPscanEndMarker(true);
         measurementDevice->setPscanFrequency(instrStartFreq->value() * 1e6, instrStopFreq->value() * 1e6);
         config->setInstrStartFreq(instrStartFreq->value() * 1e6);
         config->setInstrStopFreq(instrStopFreq->value() * 1e6);

@@ -40,6 +40,13 @@ void Waterfall::requestSnapshot(quint64 recordingId)
     emit snapshotReady(recordingId, snapshot);
 }
 
+void Waterfall::setAutoYRange(double lower, double upper)
+{
+    scaleMin = lower;
+    scaleMax = upper;
+    autoRangeReceived = true;
+}
+
 void Waterfall::updTimerCallback()
 {
     if (!traceCopy.isEmpty() && !waterfallImage.isNull()
@@ -107,8 +114,10 @@ void Waterfall::updSize(QSize size)
 
 void Waterfall::updSettings()
 {
-    scaleMin = config->getPlotYMin() + 2; // +2 to clean up the screen when no signal is present
-    scaleMax = config->getPlotYMax();
+    if (!config->getPlotAutoYScale() || !autoRangeReceived) {
+        scaleMin = config->getPlotYMin() + 2; // +2 to clean up the screen when no signal is present
+        scaleMax = config->getPlotYMax();
+    }
     if (startfreq != config->getInstrStartFreq() || stopfreq != config->getInstrStopFreq()
         || !resolution.contains(config->getInstrResolution())
         || !fftMode.contains(config->getInstrFftMode())) {

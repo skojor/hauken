@@ -1,5 +1,7 @@
 #include "gnssdisplay.h"
 #include "appclock.h"
+#include <QPainter>
+#include <QTextDocument>
 
 namespace {
 QString coloredText(const QString &text, const QString &color)
@@ -193,6 +195,55 @@ void GnssDisplay::updGnssData(GnssData g, QString id)
 
     card->data = g;
     updText();
+}
+
+QImage GnssDisplay::emailInfoImage() const
+{
+    QString html = "<html><body><h2>GNSS receiver information</h2>";
+    bool hasReceiver = false;
+    const auto appendRow = [&html](const QString &label, const QLabel *value) {
+        html += "<tr><th align='left'>" + label.toHtmlEscaped() + "</th><td>" + value->text() + "</td></tr>";
+    };
+
+    for (const GnssReceiverProfile &profile : config->getGnssReceiverProfiles()) {
+        const GnssReceiverCard *card = cards.value(profile.id);
+        if (!profile.enabled || !card)
+            continue;
+
+        hasReceiver = true;
+        const QString name = profile.name.isEmpty() ? profile.id : profile.name;
+        html += "<h3>" + name.toHtmlEscaped() + "</h3><table width='100%' cellspacing='0' cellpadding='4' border='1'>";
+        appendRow("Latitude", card->latitude);
+        appendRow("Longitude", card->longitude);
+        appendRow("Altitude", card->altitude);
+        appendRow("GNSS time", card->time);
+        appendRow("DOP", card->dop);
+        appendRow("C/No", card->cno);
+        appendRow("Sats tracked", card->sats);
+        appendRow("Position valid", card->posValid);
+        appendRow("Position offset", card->posOffset);
+        appendRow("Altitude offset", card->altOffset);
+        appendRow("Time offset", card->timeOffset);
+        appendRow("AGC", card->agc);
+        appendRow("Interference / spoofing", card->cwJamming);
+        html += "</table>";
+    }
+
+    if (!hasReceiver)
+        return {};
+
+    html += "</body></html>";
+    QTextDocument document;
+    document.setDefaultFont(wdg->font());
+    document.setHtml(html);
+    document.setTextWidth(1200);
+
+    const QSize imageSize = document.size().toSize() + QSize(16, 16);
+    QImage image(imageSize, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::white);
+    QPainter painter(&image);
+    document.drawContents(&painter, QRectF(8, 8, imageSize.width() - 16, imageSize.height() - 16));
+    return image;
 }
 
 void GnssDisplay::updPpsData(const PpsData &data)

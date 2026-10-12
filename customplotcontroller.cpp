@@ -713,6 +713,8 @@ void CustomPlotController::applyAutoYRange()
 
     const double padding = qMax(1.0, range.size() * 0.05);
     customPlotPtr->yAxis->setRange(range.lower - padding, range.upper + padding);
+    const QCPRange autoRange = customPlotPtr->yAxis->range();
+    emit autoYRangeChanged(autoRange.lower, autoRange.upper);
     updTextLabelPositions();
     updateSpectrumMarkerLabels();
 }

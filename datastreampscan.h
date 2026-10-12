@@ -13,8 +13,15 @@ class DatastreamPScan : public StreamParserBase
     Q_OBJECT
 public:
     explicit DatastreamPScan(QObject *parent = nullptr);
-    void updWaitForPscanEndMarker(bool b) { m_waitingForPscanEndMarker = true; }
-    void invalidateHeader() { m_pscStartFreq = m_pscStopFreq = m_pscRes = 0; }
+    void updWaitForPscanEndMarker(bool b) {
+        m_waitingForPscanEndMarker = b;
+        if (b)
+            m_fft.clear();
+    }
+    void invalidateHeader() {
+        m_pscStartFreq = m_pscStopFreq = m_pscRes = 0;
+        updWaitForPscanEndMarker(true);
+    }
 
 signals:
     void traceReady(const QVector<qint16> &);

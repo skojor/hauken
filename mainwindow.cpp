@@ -12,8 +12,9 @@ void restartApplication()
     QCoreApplication::quit();
 }
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget *parent, QSharedPointer<Config> sharedConfig)
     : QMainWindow(parent)
+    , config(sharedConfig ? sharedConfig : QSharedPointer<Config>(new Config, &QObject::deleteLater))
 {
     waterfallResizeTimer = new QTimer(this);
     waterfallResizeTimer->setSingleShot(true);
@@ -581,7 +582,8 @@ void MainWindow::createLayout()
     ffmInfoLayout->addWidget(btnDetector);
     hideLayoutWidgets(ffmInfoLayout, true);
 
-    spectrumPlotPane = new QWidget;
+    spectrumPlotPane = new QFrame;
+    spectrumPlotPane->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     auto *spectrumPaneLayout = new QGridLayout(spectrumPlotPane);
     spectrumPaneLayout->setContentsMargins(0, 0, 0, 0);
     spectrumPaneLayout->addLayout(ffmInfoLayout, 0, 1, 1, 1);
@@ -598,7 +600,8 @@ void MainWindow::createLayout()
     waterfallView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     waterfallView->installEventFilter(this);
 
-    waterfallPane = new QWidget;
+    waterfallPane = new QFrame;
+    waterfallPane->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     auto *waterfallPaneLayout = new QHBoxLayout(waterfallPane);
     waterfallPaneLayout->setContentsMargins(0, 0, 0, 0);
     waterfallPaneLayout->setSpacing(0);

@@ -3,10 +3,23 @@
 #include "asciitranslator.h"
 #include "JlCompress.h"
 #include <QMetaEnum>
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrentRun>
+#include <utility>
 #include "appclock.h"
+
+namespace {
+struct ArchiveResult
+{
+    bool success = false;
+    QString error;
+};
+}
+
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
     config = c;
+    archiveThreadPool.setMaxThreadCount(1);
 }
 
 void SdefRecorder::start()
@@ -17,10 +30,8 @@ void SdefRecorder::start()
     reqPositionTimer = new QTimer(this);
     periodicCheckUploadsTimer = new QTimer(this);
     autorecorderTimer = new QTimer(this);
-    finishedFileTimer = new QTimer(this);
     tempFileTimer = new QTimer(this);
     tempFileCheckFilesize = new QTimer(this);
-    finishedFileTimer->setSingleShot(true);
 
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
@@ -55,21 +66,6 @@ void SdefRecorder::start()
         1800 * 1e3); // check if any files still waits for upload every half hour
 
     networkManager = new QNetworkAccessManager(this);
-
-    connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
-        if (!config->getSdefUploadIntentionalOnly() ||
-            (config->getSdefUploadIntentionalOnly() and flagUploadIntentionalOnly)
-            )
-        {
-            qDebug() << "Preparing upload of" << finishedFilename << flagUploadIntentionalOnly;
-            emit fileReadyForUpload(finishedFilename);
-            flagUploadIntentionalOnly = false; // Reset for next file
-        }
-        else
-            qDebug() << "Classified as non-intentional or no classification received. Not uploading";
-
-        finishedFilename.clear();
-    });
 
     tempFileCheckFilesize->start(3600 * 1e3);
     connect(tempFileCheckFilesize, &QTimer::timeout, this, [this] {
@@ -149,6 +145,10 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
 
         if (!recording && saveToSdef) {
             recording = true;
+            pendingPositionTraces.clear();
+            waitingForPositionWarningEmitted = false;
+            pendingPositionOverflowWarningEmitted = false;
+            positionedCefWriteLogged = false;
             dateTimeRecordingStarted = AppClock::now(); // for incident log
 
             emit recordingStarted();
@@ -177,7 +177,10 @@ void SdefRecorder::startRecording(bool includeAnalysisArtifacts)
                 case TriggerSource::AutoRecorder: reason = "Automatic recording"; break;
                 case TriggerSource::Unknown: reason = "Recording trigger not identified"; break;
                 }
-                emit recordingContextStarted(activeRecordingId, dateTimeRecordingStarted, reason, includeAnalysisArtifacts);
+                emit recordingContextStarted(activeRecordingId, dateTimeRecordingStarted, reason,
+                                             includeAnalysisArtifacts,
+                                             triggerSource == TriggerSource::Gnss,
+                                             triggerSource == TriggerSource::TraceAnalyzer);
                 if (includeAnalysisArtifacts)
                     emit recordingStartedWithAnalysisArtifacts();
                 else
@@ -227,10 +230,17 @@ QString SdefRecorder::incidentBasePath()
 
 QString SdefRecorder::createFilename()
 {
-    return incidentBasePath()
-           + "_" + QString::number(1e-3 * startfreq, 'f', 0) + "-"
-           + QString::number(1e-3 * stopfreq, 'f', 0)
-           + ".cef";
+    const QString basePath = incidentBasePath()
+                             + "_" + QString::number(1e-3 * startfreq, 'f', 0) + "-"
+                             + QString::number(1e-3 * stopfreq, 'f', 0);
+    QString filename = basePath + ".cef";
+    int suffix = 1;
+    while (QFileInfo::exists(filename) || QFileInfo::exists(filename + ".zip")
+           || archivePathsInProgress.contains(filename)
+           || archivePathsInProgress.contains(filename + ".zip")) {
+        filename = basePath + "_part" + QString::number(suffix++) + ".cef";
+    }
+    return filename;
 }
 
 void SdefRecorder::writeSettingsSnapshot()
@@ -261,13 +271,20 @@ void SdefRecorder::writeSettingsSnapshot()
 
     emit incidentFilesBasePath(basePath);
 }
-void SdefRecorder::receiveTrace(const QVector<qint16> data)
+void SdefRecorder::receiveTrace(const QDateTime &timestamp, const QVector<qint16> &data)
 {
     if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
-        if (addPosition and !positionHistory.isEmpty())
-            file.write(genSdefTraceLine(positionHistory.last().first, positionHistory.last().second, data));
+        if (addPosition && !positionEstablished) {
+            queueTraceUntilPosition(timestamp, data);
+        } else if (addPosition and !positionHistory.isEmpty())
+            logPositionedTraceWritten(
+                timestamp,
+                file.write(genSdefTraceLine(positionHistory.last().first,
+                                            positionHistory.last().second,
+                                            data,
+                                            timestamp)));
         else
-            file.write(genSdefTraceLine(0, 0, data));
+            file.write(genSdefTraceLine(0, 0, data, timestamp));
     }
     if (skipTraces) skipTraces--;
 }
@@ -290,6 +307,22 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
         buffer.clear();
         bool ok = true;
 
+        for (const qint16 value : data.at(i)) {
+            if (value < -999 || value >= 2000) {
+                ok = false;
+                break;
+            }
+        }
+        if (!ok) {
+            qDebug() << "This backlog line failed validation at" << datetime.at(i);
+            continue;
+        }
+
+        if (addPosition && !positionEstablished) {
+            queueTraceUntilPosition(datetime.at(i), data.at(i));
+            continue;
+        }
+
         if (useNewMsFormat)
             buffer.append(datetime.at(i).toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
         else
@@ -303,7 +336,7 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
                                 / 10.0);
         }
 
-        if (addPosition and !positionHistory.isEmpty()) {
+        if (addPosition && !positionHistory.isEmpty()) {
             if (startTime.secsTo(datetime.at(i)) > 0) { // one second of data has passed
                 dateIterator++;
                 startTime = datetime.at(i);
@@ -313,19 +346,18 @@ void SdefRecorder::receiveTraceBuffer(const QList<QDateTime> datetime,
 
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).first, 'f', 6));
             buffer.append(",").append(QByteArray::number(positionHistory.at(dateIterator).second, 'f', 6));
+        } else if (addPosition) {
+            buffer.append(",").append(QByteArray::number(prevLat, 'f', 6));
+            buffer.append(",").append(QByteArray::number(prevLng, 'f', 6));
         }
-        else if (addPosition and positionHistory.isEmpty())
-            emit warning("No GNSS source is selected as position source for CEF data");
 
-        for (auto &&val : data.at(i)) {
+        for (const qint16 val : data.at(i))
             buffer.append(',').append(QByteArray::number(val / 10));
-            if (val < -999 || val >= 2000)
-                ok = false;
-        }
         buffer.append('\n');
 
-        if (ok) file.write(buffer);
-        else qDebug() << "This backlog line failed:" << buffer;
+        const qint64 bytesWritten = file.write(buffer);
+        if (addPosition)
+            logPositionedTraceWritten(datetime.at(i), bytesWritten);
     }
     historicDataSaved = true;
     qDebug() << "SdefRecorder: Backlog used" << timer.elapsed() << "ms to write to disk";
@@ -439,42 +471,57 @@ void SdefRecorder::endRecording()
         if (file.isOpen()) {
             file.close();
             tracePerSecond = -1;
-            finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+            finishedFilename = file.fileName();
         }
+        const QString closedFilename = finishedFilename;
+        const bool intentional = flagUploadIntentionalOnly;
+        flagUploadIntentionalOnly = false;
 
         if (predictionReceived)
-            updFileWithPrediction(file.fileName());
+            updFileWithPrediction(closedFilename);
 
         if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording && !config->isReplayMode()) {
-            QTimer::singleShot(
-                10000,
-                this,
-                &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
+            QTimer::singleShot(10000, this, [this, closedFilename, intentional] {
+                if (!curlLogin(closedFilename, true, intentional))
+                    notifyFileReadyForUpload(closedFilename, intentional, 0);
+            }); // allow AI to process the file before zipping
         } else {
-            if (config->getSdefZipAllIncidentFiles() && recording)
-                zipIncidentFolder();
-            else if (config->getSdefZipFiles() && recording)
-                zipit(); // Zip the file anyways, we don't shit storage space here
+            const bool shouldZip = recording && !config->isReplayMode()
+                                   && (config->getSdefZipAllIncidentFiles()
+                                       || config->getSdefZipFiles());
+            if (shouldZip) {
+                archiveFile(closedFilename, config->getSdefZipAllIncidentFiles(),
+                            [this, closedFilename, intentional](bool success,
+                                                                 const QString &resultFilename) {
+                    const QString readyFilename = success ? resultFilename : closedFilename;
+                    if (finishedFilename == closedFilename)
+                        finishedFilename = readyFilename;
+                    if (!config->isReplayMode())
+                        notifyFileReadyForUpload(readyFilename, intentional);
+                });
+            } else if (!closedFilename.isEmpty() && !config->isReplayMode()) {
+                notifyFileReadyForUpload(closedFilename, intentional);
+            }
         }
-        if (!finishedFilename.isEmpty() && !config->isReplayMode())
-            finishedFileTimer->start(10000);
 
         recordingTimeoutTimer->stop();
         recordingStartedTimer->stop();
 
         if (!failed)
             recording = historicDataSaved = failed = false;
+        if (!pendingPositionTraces.isEmpty()) {
+            qWarning() << "Discarding" << pendingPositionTraces.size()
+                       << "CEF traces without a valid GNSS position at recording end";
+            pendingPositionTraces.clear();
+        }
+        waitingForPositionWarningEmitted = false;
+        pendingPositionOverflowWarningEmitted = false;
         triggerSource = TriggerSource::Unknown;
     }
 }
 
-bool SdefRecorder::curlLogin()
+bool SdefRecorder::curlLogin(QString filename, bool notifyOAuth, bool intentional)
 {
-    if (!process->atEnd()) {
-        qDebug() << "Curl process stuck, closing";
-        process->close();
-    }
-
     // parameters check
     if (!askedForLogin) {
         if (config->getSdefStationInitals().isEmpty() or config->getSdefUsername().isEmpty()
@@ -495,14 +542,40 @@ bool SdefRecorder::curlLogin()
             return false;
         }
     }
-    if (config->getSdefZipAllIncidentFiles()) {
-        if (!zipIncidentFolder())
-            return false;
+
+    if (filename.isEmpty())
+        filename = finishedFilename;
+    const bool loginOnly = askedForLogin;
+    const bool shouldZip = !filename.isEmpty()
+                           && (config->getSdefZipAllIncidentFiles() || config->getSdefZipFiles());
+    auto continueLogin = [this, filename, notifyOAuth, intentional, loginOnly,
+                          incidentArchive = config->getSdefZipAllIncidentFiles()]
+                         (bool success, const QString &resultFilename) {
+        if (finishedFilename == filename && success)
+            finishedFilename = resultFilename;
+        if (notifyOAuth && !filename.isEmpty())
+            notifyFileReadyForUpload(success ? resultFilename : filename, intentional, 0);
+        if (!success && incidentArchive)
+            return;
+        if (!loginOnly && !filename.isEmpty())
+            filesAwaitingUpload.append(success ? resultFilename : filename);
+        startCurlLoginProcess();
+    };
+
+    if (shouldZip)
+        archiveFile(filename, config->getSdefZipAllIncidentFiles(), std::move(continueLogin));
+    else
+        continueLogin(true, filename);
+
+    return true;
+}
+
+void SdefRecorder::startCurlLoginProcess()
+{
+    if (!process->atEnd()) {
+        qDebug() << "Curl process stuck, closing";
+        process->close();
     }
-    else if (config->getSdefZipFiles())
-        zipit();
-    if (!askedForLogin && !finishedFilename.isEmpty())
-        filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
     QStringList l;
     l << "-H"
@@ -518,8 +591,6 @@ bool SdefRecorder::curlLogin()
     stateCurlAwaitingLogin = true;
 
     //qDebug() << "Calling curl login"; // << process->program() << process->arguments();
-
-    return true;
 }
 
 void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
@@ -580,74 +651,184 @@ void SdefRecorder::curlUpload()
 void SdefRecorder::updPosition(bool b, double l1, double l2)
 {
     //qDebug() << b << l1 << l2;
+    const bool firstValidPosition = b && !positionEstablished;
     if (b) {
+        positionEstablished = true;
         positionHistory.append(QPair<double, double>(l1, l2));
         prevLat = l1;
         prevLng = l2;
     } else {
+        if (!positionEstablished)
+            return;
         positionHistory.append(QPair<double, double>(prevLat, prevLng));
     }
     while (positionHistory.size() > 120) { // keeps a constant 120 values in buffer
         positionHistory.removeFirst();
     }
+    if (firstValidPosition && addPosition && recording) {
+        qDebug() << "SdefRecorder: Valid GNSS position established for CEF recording"
+                 << file.fileName() << "position" << l1 << l2
+                 << "pending traces" << pendingPositionTraces.size();
+    }
+    if (b && !pendingPositionTraces.isEmpty())
+        flushTracesWaitingForPosition(l1, l2);
 }
 
-void SdefRecorder::zipit()
+void SdefRecorder::queueTraceUntilPosition(const QDateTime &timestamp,
+                                           const QVector<qint16> &data)
 {
-    if (finishedFilename.size() > 1
-        && !JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
-        qDebug() << "Compression of" << finishedFilename << "failed";
-    } else if (finishedFilename.size() > 1) {
-        QFile::remove(file.fileName());
-        finishedFilename += ".zip";
+    if (!waitingForPositionWarningEmitted) {
+        emit warning("Waiting for a valid GNSS position before writing CEF data");
+        qDebug() << "SdefRecorder: Deferring CEF trace until valid GNSS position"
+                 << file.fileName() << "first pending timestamp" << timestamp;
+        waitingForPositionWarningEmitted = true;
+    }
+    if (pendingPositionTraces.size() >= maximumPendingPositionTraces) {
+        pendingPositionTraces.removeFirst();
+        if (!pendingPositionOverflowWarningEmitted) {
+            emit warning("Pending CEF data limit reached while waiting for GNSS; oldest traces will be dropped");
+            pendingPositionOverflowWarningEmitted = true;
+        }
+    }
+    pendingPositionTraces.append({timestamp, data});
+}
+
+void SdefRecorder::flushTracesWaitingForPosition(double latitude, double longitude)
+{
+    if (!recording || !file.isOpen()) {
+        pendingPositionTraces.clear();
+        return;
+    }
+
+    const int pendingCount = pendingPositionTraces.size();
+    for (const PendingPositionTrace &trace : std::as_const(pendingPositionTraces)) {
+        const qint64 bytesWritten = file.write(
+            genSdefTraceLine(latitude, longitude, trace.data, trace.timestamp));
+        logPositionedTraceWritten(trace.timestamp, bytesWritten);
+    }
+
+    pendingPositionTraces.clear();
+    waitingForPositionWarningEmitted = false;
+    pendingPositionOverflowWarningEmitted = false;
+    qDebug() << "SdefRecorder: CEF log updated with queued traces"
+             << file.fileName() << "written traces" << pendingCount
+             << "position" << latitude << longitude;
+}
+
+void SdefRecorder::logPositionedTraceWritten(const QDateTime &timestamp, qint64 bytesWritten)
+{
+    if (positionedCefWriteLogged)
+        return;
+
+    if (bytesWritten > 0) {
+        qDebug() << "SdefRecorder: First CEF trace written with valid GNSS position"
+                 << file.fileName() << "timestamp" << timestamp
+                 << "bytes" << bytesWritten;
+        positionedCefWriteLogged = true;
+    } else {
+        qWarning() << "SdefRecorder: Failed writing positioned CEF trace"
+                   << file.fileName() << "timestamp" << timestamp
+                   << file.errorString();
     }
 }
 
-bool SdefRecorder::zipIncidentFolder()
+void SdefRecorder::notifyFileReadyForUpload(const QString &filename, bool intentional, int delayMs)
 {
-    if (finishedFilename.isEmpty())
-        return false;
+    QTimer::singleShot(delayMs, this, [this, filename, intentional] {
+        if (!config->getSdefUploadIntentionalOnly() || intentional) {
+            qDebug() << "Preparing upload of" << filename << intentional;
+            emit fileReadyForUpload(filename);
+        } else {
+            qDebug() << "Classified as non-intentional or no classification received. Not uploading";
+        }
+        if (finishedFilename == filename)
+            finishedFilename.clear();
+    });
+}
 
-    const QFileInfo finishedFileInfo(finishedFilename);
-    const QDir incidentFolder = finishedFileInfo.absoluteDir();
-    const QString zipFilename = incidentFolder.absoluteFilePath(finishedFileInfo.completeBaseName() + "_incident.zip");
-    const QFileInfo zipFileInfo(zipFilename);
-
-    QStringList filesToZip;
-    const QFileInfoList incidentFiles = incidentFolder.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
-    for (const QFileInfo &fileInfo : incidentFiles) {
-        if (fileInfo.absoluteFilePath() == zipFileInfo.absoluteFilePath())
-            continue;
-
-        if (fileInfo.suffix().compare("zip", Qt::CaseInsensitive) == 0)
-            continue;
-
-        filesToZip.append(fileInfo.absoluteFilePath());
+void SdefRecorder::archiveFile(const QString &filename,
+                               bool incidentArchive,
+                               ArchiveCallback callback)
+{
+    if (filename.isEmpty()) {
+        callback(false, filename);
+        return;
+    }
+    if (archivePathsInProgress.contains(filename)) {
+        archiveCallbacksInProgress[filename].append(std::move(callback));
+        return;
     }
 
-    if (filesToZip.isEmpty()) {
-        qDebug() << "No incident files found to compress in" << incidentFolder.absolutePath();
-        return false;
+    QStringList filesToArchive;
+    QString archiveFilename;
+    if (incidentArchive) {
+        const QFileInfo sourceInfo(filename);
+        const QDir incidentFolder = sourceInfo.absoluteDir();
+        const QString preferredName = incidentFolder.absoluteFilePath(
+            sourceInfo.completeBaseName() + "_incident.zip");
+        const QFileInfo preferredInfo(preferredName);
+        const QFileInfoList incidentFiles = incidentFolder.entryInfoList(
+            QDir::Files | QDir::Readable, QDir::Name);
+        for (const QFileInfo &fileInfo : incidentFiles) {
+            if (fileInfo.suffix().compare("zip", Qt::CaseInsensitive) != 0)
+                filesToArchive.append(fileInfo.absoluteFilePath());
+        }
+        if (filesToArchive.isEmpty()) {
+            qDebug() << "No incident files found to compress in" << incidentFolder.absolutePath();
+            callback(false, filename);
+            return;
+        }
+        archiveFilename = preferredInfo.absoluteFilePath();
+    } else {
+        filesToArchive.append(filename);
+        archiveFilename = filename + ".zip";
     }
 
-    if (zipFileInfo.exists() && !QFile::remove(zipFilename)) {
-        qDebug() << "Could not replace existing incident zip" << zipFilename;
-        return false;
+    const QFileInfo archiveInfo(archiveFilename);
+    const QString archiveBase = archiveInfo.completeBaseName();
+    const QString archiveSuffix = archiveInfo.suffix();
+    int suffix = 1;
+    while (QFileInfo::exists(archiveFilename) || archivePathsInProgress.contains(archiveFilename)) {
+        archiveFilename = archiveInfo.absoluteDir().absoluteFilePath(
+            archiveBase + "_" + QString::number(suffix++) + "." + archiveSuffix);
     }
 
-    if (!JlCompress::compressFiles(zipFilename, filesToZip)) {
-        qDebug() << "Compression of incident folder" << incidentFolder.absolutePath() << "failed";
-        QFile::remove(zipFilename);
-        return false;
-    }
+    for (const QString &source : std::as_const(filesToArchive))
+        archivePathsInProgress.insert(source);
+    archivePathsInProgress.insert(archiveFilename);
+    archiveCallbacksInProgress[filename].append(std::move(callback));
 
-    for (const QString &filename : std::as_const(filesToZip)) {
-        if (!QFile::remove(filename))
-            qDebug() << "Could not remove compressed incident file" << filename;
-    }
+    auto *watcher = new QFutureWatcher<ArchiveResult>(this);
+    connect(watcher, &QFutureWatcher<ArchiveResult>::finished, this,
+            [this, watcher, filename, filesToArchive, archiveFilename] {
+        const ArchiveResult result = watcher->result();
+        watcher->deleteLater();
+        for (const QString &source : filesToArchive)
+            archivePathsInProgress.remove(source);
+        archivePathsInProgress.remove(archiveFilename);
 
-    finishedFilename = zipFilename;
-    return true;
+        if (!result.success)
+            qWarning() << "Compression of" << filename << "failed:" << result.error;
+        const QString resultFilename = result.success ? archiveFilename : filename;
+        const auto callbacks = archiveCallbacksInProgress.take(filename);
+        for (const ArchiveCallback &completion : callbacks)
+            completion(result.success, resultFilename);
+    });
+
+    watcher->setFuture(QtConcurrent::run(&archiveThreadPool, [filesToArchive, archiveFilename] {
+        ArchiveResult result;
+        result.success = filesToArchive.size() == 1
+                             ? JlCompress::compressFile(archiveFilename, filesToArchive.first())
+                             : JlCompress::compressFiles(archiveFilename, filesToArchive);
+        if (!result.success) {
+            result.error = QStringLiteral("archive creation failed");
+            QFile::remove(archiveFilename);
+            return result;
+        }
+        for (const QString &source : filesToArchive)
+            QFile::remove(source);
+        return result;
+    }));
 }
 
 void SdefRecorder::recPrediction(QString pred, int prob)
@@ -732,6 +913,9 @@ void SdefRecorder::tempFileData(const QVector<qint16> data)
 
 void SdefRecorder::saveDataToTempFile()
 {
+    if (addPosition && !positionEstablished)
+        return;
+
     if (!tempFile.isOpen() and tempFileTracedata.size() > 0 and tracePerSecondForTempFile > 0) {
         tempFileTracedata.clear();
         startTempFile();
@@ -799,15 +983,20 @@ void SdefRecorder::updScanTime(int i)
     //}
 }
 
-QByteArray SdefRecorder::genSdefTraceLine(double lat, double lng, const QVector<qint16> line)
+QByteArray SdefRecorder::genSdefTraceLine(double lat,
+                                         double lng,
+                                         const QVector<qint16> line,
+                                         const QDateTime &timestamp)
 {
     QByteArray buffer;
     buffer.reserve(line.size() * 4 + 128);
 
     if (useNewMsFormat)
-        buffer.append(AppClock::now().toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
+        buffer.append((timestamp.isValid() ? timestamp : AppClock::now())
+                          .toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
     else
-        buffer.append(AppClock::now().toString("hh:mm:ss").toUtf8());
+        buffer.append((timestamp.isValid() ? timestamp : AppClock::now())
+                          .toString("hh:mm:ss").toUtf8());
 
     if (addPosition) {
         buffer.append(',').append(QByteArray::number(lat,  'f', 6));
