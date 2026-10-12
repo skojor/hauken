@@ -3,10 +3,23 @@
 #include "asciitranslator.h"
 #include "JlCompress.h"
 #include <QMetaEnum>
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrentRun>
+#include <utility>
 #include "appclock.h"
+
+namespace {
+struct ArchiveResult
+{
+    bool success = false;
+    QString error;
+};
+}
+
 SdefRecorder::SdefRecorder(QSharedPointer<Config> c)
 {
     config = c;
+    archiveThreadPool.setMaxThreadCount(1);
 }
 
 void SdefRecorder::start()
@@ -17,10 +30,8 @@ void SdefRecorder::start()
     reqPositionTimer = new QTimer(this);
     periodicCheckUploadsTimer = new QTimer(this);
     autorecorderTimer = new QTimer(this);
-    finishedFileTimer = new QTimer(this);
     tempFileTimer = new QTimer(this);
     tempFileCheckFilesize = new QTimer(this);
-    finishedFileTimer->setSingleShot(true);
 
     recordingStartedTimer->setSingleShot(true);
     recordingTimeoutTimer->setSingleShot(true);
@@ -55,21 +66,6 @@ void SdefRecorder::start()
         1800 * 1e3); // check if any files still waits for upload every half hour
 
     networkManager = new QNetworkAccessManager(this);
-
-    connect(finishedFileTimer, &QTimer::timeout, this, [this]() {
-        if (!config->getSdefUploadIntentionalOnly() ||
-            (config->getSdefUploadIntentionalOnly() and flagUploadIntentionalOnly)
-            )
-        {
-            qDebug() << "Preparing upload of" << finishedFilename << flagUploadIntentionalOnly;
-            emit fileReadyForUpload(finishedFilename);
-            flagUploadIntentionalOnly = false; // Reset for next file
-        }
-        else
-            qDebug() << "Classified as non-intentional or no classification received. Not uploading";
-
-        finishedFilename.clear();
-    });
 
     tempFileCheckFilesize->start(3600 * 1e3);
     connect(tempFileCheckFilesize, &QTimer::timeout, this, [this] {
@@ -230,10 +226,17 @@ QString SdefRecorder::incidentBasePath()
 
 QString SdefRecorder::createFilename()
 {
-    return incidentBasePath()
-           + "_" + QString::number(1e-3 * startfreq, 'f', 0) + "-"
-           + QString::number(1e-3 * stopfreq, 'f', 0)
-           + ".cef";
+    const QString basePath = incidentBasePath()
+                             + "_" + QString::number(1e-3 * startfreq, 'f', 0) + "-"
+                             + QString::number(1e-3 * stopfreq, 'f', 0);
+    QString filename = basePath + ".cef";
+    int suffix = 1;
+    while (QFileInfo::exists(filename) || QFileInfo::exists(filename + ".zip")
+           || archivePathsInProgress.contains(filename)
+           || archivePathsInProgress.contains(filename + ".zip")) {
+        filename = basePath + "_part" + QString::number(suffix++) + ".cef";
+    }
+    return filename;
 }
 
 void SdefRecorder::writeSettingsSnapshot()
@@ -442,25 +445,38 @@ void SdefRecorder::endRecording()
         if (file.isOpen()) {
             file.close();
             tracePerSecond = -1;
-            finishedFilename = file.fileName(); // copy the name, in case a new recording starts immediately
+            finishedFilename = file.fileName();
         }
+        const QString closedFilename = finishedFilename;
+        const bool intentional = flagUploadIntentionalOnly;
+        flagUploadIntentionalOnly = false;
 
         if (predictionReceived)
-            updFileWithPrediction(file.fileName());
+            updFileWithPrediction(closedFilename);
 
         if (config->getSdefUploadFile() && recordingTimeoutTimer->isActive() && recording && !config->isReplayMode()) {
-            QTimer::singleShot(
-                10000,
-                this,
-                &SdefRecorder::curlLogin); // 10 secs to allow AI to process the file before zipping
+            QTimer::singleShot(10000, this, [this, closedFilename, intentional] {
+                if (!curlLogin(closedFilename, true, intentional))
+                    notifyFileReadyForUpload(closedFilename, intentional, 0);
+            }); // allow AI to process the file before zipping
         } else {
-            if (config->getSdefZipAllIncidentFiles() && recording)
-                zipIncidentFolder();
-            else if (config->getSdefZipFiles() && recording)
-                zipit(); // Zip the file anyways, we don't shit storage space here
+            const bool shouldZip = recording && !config->isReplayMode()
+                                   && (config->getSdefZipAllIncidentFiles()
+                                       || config->getSdefZipFiles());
+            if (shouldZip) {
+                archiveFile(closedFilename, config->getSdefZipAllIncidentFiles(),
+                            [this, closedFilename, intentional](bool success,
+                                                                 const QString &resultFilename) {
+                    const QString readyFilename = success ? resultFilename : closedFilename;
+                    if (finishedFilename == closedFilename)
+                        finishedFilename = readyFilename;
+                    if (!config->isReplayMode())
+                        notifyFileReadyForUpload(readyFilename, intentional);
+                });
+            } else if (!closedFilename.isEmpty() && !config->isReplayMode()) {
+                notifyFileReadyForUpload(closedFilename, intentional);
+            }
         }
-        if (!finishedFilename.isEmpty() && !config->isReplayMode())
-            finishedFileTimer->start(10000);
 
         recordingTimeoutTimer->stop();
         recordingStartedTimer->stop();
@@ -471,13 +487,8 @@ void SdefRecorder::endRecording()
     }
 }
 
-bool SdefRecorder::curlLogin()
+bool SdefRecorder::curlLogin(QString filename, bool notifyOAuth, bool intentional)
 {
-    if (!process->atEnd()) {
-        qDebug() << "Curl process stuck, closing";
-        process->close();
-    }
-
     // parameters check
     if (!askedForLogin) {
         if (config->getSdefStationInitals().isEmpty() or config->getSdefUsername().isEmpty()
@@ -498,14 +509,40 @@ bool SdefRecorder::curlLogin()
             return false;
         }
     }
-    if (config->getSdefZipAllIncidentFiles()) {
-        if (!zipIncidentFolder())
-            return false;
+
+    if (filename.isEmpty())
+        filename = finishedFilename;
+    const bool loginOnly = askedForLogin;
+    const bool shouldZip = !filename.isEmpty()
+                           && (config->getSdefZipAllIncidentFiles() || config->getSdefZipFiles());
+    auto continueLogin = [this, filename, notifyOAuth, intentional, loginOnly,
+                          incidentArchive = config->getSdefZipAllIncidentFiles()]
+                         (bool success, const QString &resultFilename) {
+        if (finishedFilename == filename && success)
+            finishedFilename = resultFilename;
+        if (notifyOAuth && !filename.isEmpty())
+            notifyFileReadyForUpload(success ? resultFilename : filename, intentional, 0);
+        if (!success && incidentArchive)
+            return;
+        if (!loginOnly && !filename.isEmpty())
+            filesAwaitingUpload.append(success ? resultFilename : filename);
+        startCurlLoginProcess();
+    };
+
+    if (shouldZip)
+        archiveFile(filename, config->getSdefZipAllIncidentFiles(), std::move(continueLogin));
+    else
+        continueLogin(true, filename);
+
+    return true;
+}
+
+void SdefRecorder::startCurlLoginProcess()
+{
+    if (!process->atEnd()) {
+        qDebug() << "Curl process stuck, closing";
+        process->close();
     }
-    else if (config->getSdefZipFiles())
-        zipit();
-    if (!askedForLogin && !finishedFilename.isEmpty())
-        filesAwaitingUpload.append(finishedFilename); // add to transmit queue
 
     QStringList l;
     l << "-H"
@@ -521,8 +558,6 @@ bool SdefRecorder::curlLogin()
     stateCurlAwaitingLogin = true;
 
     //qDebug() << "Calling curl login"; // << process->program() << process->arguments();
-
-    return true;
 }
 
 void SdefRecorder::curlCallback(int exitCode, QProcess::ExitStatus exitStatus)
@@ -595,62 +630,103 @@ void SdefRecorder::updPosition(bool b, double l1, double l2)
     }
 }
 
-void SdefRecorder::zipit()
+void SdefRecorder::notifyFileReadyForUpload(const QString &filename, bool intentional, int delayMs)
 {
-    if (finishedFilename.size() > 1
-        && !JlCompress::compressFile(finishedFilename + ".zip", finishedFilename)) {
-        qDebug() << "Compression of" << finishedFilename << "failed";
-    } else if (finishedFilename.size() > 1) {
-        QFile::remove(file.fileName());
-        finishedFilename += ".zip";
-    }
+    QTimer::singleShot(delayMs, this, [this, filename, intentional] {
+        if (!config->getSdefUploadIntentionalOnly() || intentional) {
+            qDebug() << "Preparing upload of" << filename << intentional;
+            emit fileReadyForUpload(filename);
+        } else {
+            qDebug() << "Classified as non-intentional or no classification received. Not uploading";
+        }
+        if (finishedFilename == filename)
+            finishedFilename.clear();
+    });
 }
 
-bool SdefRecorder::zipIncidentFolder()
+void SdefRecorder::archiveFile(const QString &filename,
+                               bool incidentArchive,
+                               ArchiveCallback callback)
 {
-    if (finishedFilename.isEmpty())
-        return false;
-
-    const QFileInfo finishedFileInfo(finishedFilename);
-    const QDir incidentFolder = finishedFileInfo.absoluteDir();
-    const QString zipFilename = incidentFolder.absoluteFilePath(finishedFileInfo.completeBaseName() + "_incident.zip");
-    const QFileInfo zipFileInfo(zipFilename);
-
-    QStringList filesToZip;
-    const QFileInfoList incidentFiles = incidentFolder.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
-    for (const QFileInfo &fileInfo : incidentFiles) {
-        if (fileInfo.absoluteFilePath() == zipFileInfo.absoluteFilePath())
-            continue;
-
-        if (fileInfo.suffix().compare("zip", Qt::CaseInsensitive) == 0)
-            continue;
-
-        filesToZip.append(fileInfo.absoluteFilePath());
+    if (filename.isEmpty()) {
+        callback(false, filename);
+        return;
+    }
+    if (archivePathsInProgress.contains(filename)) {
+        archiveCallbacksInProgress[filename].append(std::move(callback));
+        return;
     }
 
-    if (filesToZip.isEmpty()) {
-        qDebug() << "No incident files found to compress in" << incidentFolder.absolutePath();
-        return false;
+    QStringList filesToArchive;
+    QString archiveFilename;
+    if (incidentArchive) {
+        const QFileInfo sourceInfo(filename);
+        const QDir incidentFolder = sourceInfo.absoluteDir();
+        const QString preferredName = incidentFolder.absoluteFilePath(
+            sourceInfo.completeBaseName() + "_incident.zip");
+        const QFileInfo preferredInfo(preferredName);
+        const QFileInfoList incidentFiles = incidentFolder.entryInfoList(
+            QDir::Files | QDir::Readable, QDir::Name);
+        for (const QFileInfo &fileInfo : incidentFiles) {
+            if (fileInfo.suffix().compare("zip", Qt::CaseInsensitive) != 0)
+                filesToArchive.append(fileInfo.absoluteFilePath());
+        }
+        if (filesToArchive.isEmpty()) {
+            qDebug() << "No incident files found to compress in" << incidentFolder.absolutePath();
+            callback(false, filename);
+            return;
+        }
+        archiveFilename = preferredInfo.absoluteFilePath();
+    } else {
+        filesToArchive.append(filename);
+        archiveFilename = filename + ".zip";
     }
 
-    if (zipFileInfo.exists() && !QFile::remove(zipFilename)) {
-        qDebug() << "Could not replace existing incident zip" << zipFilename;
-        return false;
+    const QFileInfo archiveInfo(archiveFilename);
+    const QString archiveBase = archiveInfo.completeBaseName();
+    const QString archiveSuffix = archiveInfo.suffix();
+    int suffix = 1;
+    while (QFileInfo::exists(archiveFilename) || archivePathsInProgress.contains(archiveFilename)) {
+        archiveFilename = archiveInfo.absoluteDir().absoluteFilePath(
+            archiveBase + "_" + QString::number(suffix++) + "." + archiveSuffix);
     }
 
-    if (!JlCompress::compressFiles(zipFilename, filesToZip)) {
-        qDebug() << "Compression of incident folder" << incidentFolder.absolutePath() << "failed";
-        QFile::remove(zipFilename);
-        return false;
-    }
+    for (const QString &source : std::as_const(filesToArchive))
+        archivePathsInProgress.insert(source);
+    archivePathsInProgress.insert(archiveFilename);
+    archiveCallbacksInProgress[filename].append(std::move(callback));
 
-    for (const QString &filename : std::as_const(filesToZip)) {
-        if (!QFile::remove(filename))
-            qDebug() << "Could not remove compressed incident file" << filename;
-    }
+    auto *watcher = new QFutureWatcher<ArchiveResult>(this);
+    connect(watcher, &QFutureWatcher<ArchiveResult>::finished, this,
+            [this, watcher, filename, filesToArchive, archiveFilename] {
+        const ArchiveResult result = watcher->result();
+        watcher->deleteLater();
+        for (const QString &source : filesToArchive)
+            archivePathsInProgress.remove(source);
+        archivePathsInProgress.remove(archiveFilename);
 
-    finishedFilename = zipFilename;
-    return true;
+        if (!result.success)
+            qWarning() << "Compression of" << filename << "failed:" << result.error;
+        const QString resultFilename = result.success ? archiveFilename : filename;
+        const auto callbacks = archiveCallbacksInProgress.take(filename);
+        for (const ArchiveCallback &completion : callbacks)
+            completion(result.success, resultFilename);
+    });
+
+    watcher->setFuture(QtConcurrent::run(&archiveThreadPool, [filesToArchive, archiveFilename] {
+        ArchiveResult result;
+        result.success = filesToArchive.size() == 1
+                             ? JlCompress::compressFile(archiveFilename, filesToArchive.first())
+                             : JlCompress::compressFiles(archiveFilename, filesToArchive);
+        if (!result.success) {
+            result.error = QStringLiteral("archive creation failed");
+            QFile::remove(archiveFilename);
+            return result;
+        }
+        for (const QString &source : filesToArchive)
+            QFile::remove(source);
+        return result;
+    }));
 }
 
 void SdefRecorder::recPrediction(QString pred, int prob)
