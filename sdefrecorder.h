@@ -51,7 +51,7 @@ public slots:
     void stopRecordingManually(bool suppressIncidentTriggers);
     void clearIncidentTriggerSuppression();
     void receiveTraceBuffer(const QVector<QDateTime> datetime, const QVector<QVector<qint16 >> data); // backlog arrives here, no reference as this should be thread safe
-    void receiveTrace(const QVector<qint16> data); // new data arrives here
+    void receiveTrace(const QDateTime &timestamp, const QVector<qint16> &data); // new data arrives here
     void updTracesPerSecond(double d);
     void setDeviceCconnectedState(bool b);
     void endRecording();
@@ -83,7 +83,10 @@ private slots:
     void curlCallback(int exitCode, QProcess::ExitStatus exitStatus);
     void updFileWithPrediction(const QString filename); // changes note in sdef file to reflect AI prediction
     void startTempFile();
-    QByteArray genSdefTraceLine(double lat = 0, double lng = 0, const QVector<qint16> = QVector<qint16>());
+    QByteArray genSdefTraceLine(double lat = 0,
+                                double lng = 0,
+                                const QVector<qint16> = QVector<qint16>(),
+                                const QDateTime &timestamp = QDateTime());
 
 signals:
     void recordingStarted();

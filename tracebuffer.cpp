@@ -48,6 +48,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
     if (data.isEmpty() || plotResolution <= 0)
         return;
 
+    const QDateTime timestamp = AppClock::now();
     mutex.lock();  // blocking access to containers, in case the cleanup timers wants to do work at the same time
     if (!traceBuffer.isEmpty()) {
         if (traceBuffer.last().size() != data.size()) { // two different container sizes indicates freq/resolution changed, let's discard the buffer
@@ -74,12 +75,12 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
         else
             traceBuffer.append(data);
 
+        datetimeBuffer.append(timestamp);
+
         if (recording)
-            emit traceToRecorder(traceBuffer.last());
+            emit traceToRecorder(timestamp, traceBuffer.last());
 
         emit traceData(traceBuffer.last());
-
-        datetimeBuffer.append(AppClock::now());
 
         addDisplayBufferTrace(data);
         calcMaxhold();

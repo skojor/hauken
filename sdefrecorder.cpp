@@ -267,13 +267,16 @@ void SdefRecorder::writeSettingsSnapshot()
 
     emit incidentFilesBasePath(basePath);
 }
-void SdefRecorder::receiveTrace(const QVector<qint16> data)
+void SdefRecorder::receiveTrace(const QDateTime &timestamp, const QVector<qint16> &data)
 {
     if (historicDataSaved && !iqRecordingInProgress && !skipTraces) { // TODO: Quickfix to see if random "not saved correctly" error message disappears. NB! This one will just skip trace(s) until backlog is saved!
         if (addPosition and !positionHistory.isEmpty())
-            file.write(genSdefTraceLine(positionHistory.last().first, positionHistory.last().second, data));
+            file.write(genSdefTraceLine(positionHistory.last().first,
+                                        positionHistory.last().second,
+                                        data,
+                                        timestamp));
         else
-            file.write(genSdefTraceLine(0, 0, data));
+            file.write(genSdefTraceLine(0, 0, data, timestamp));
     }
     if (skipTraces) skipTraces--;
 }
@@ -878,15 +881,20 @@ void SdefRecorder::updScanTime(int i)
     //}
 }
 
-QByteArray SdefRecorder::genSdefTraceLine(double lat, double lng, const QVector<qint16> line)
+QByteArray SdefRecorder::genSdefTraceLine(double lat,
+                                         double lng,
+                                         const QVector<qint16> line,
+                                         const QDateTime &timestamp)
 {
     QByteArray buffer;
     buffer.reserve(line.size() * 4 + 128);
 
     if (useNewMsFormat)
-        buffer.append(AppClock::now().toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
+        buffer.append((timestamp.isValid() ? timestamp : AppClock::now())
+                          .toString("yyyy-MM-dd hh:mm:ss.zzz").toUtf8());
     else
-        buffer.append(AppClock::now().toString("hh:mm:ss").toUtf8());
+        buffer.append((timestamp.isValid() ? timestamp : AppClock::now())
+                          .toString("hh:mm:ss").toUtf8());
 
     if (addPosition) {
         buffer.append(',').append(QByteArray::number(lat,  'f', 6));
