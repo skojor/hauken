@@ -7,6 +7,7 @@
 #include "fftw3.h"
 #include <algorithm>
 #include <complex>
+#include <limits>
 #include <QFileInfo>
 #include <QPainter>
 
@@ -1040,11 +1041,19 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
 
 double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
 {
+    const auto finish = [this](double period, const QString &reason) {
+        qDebug() << "IQ sweep period estimate:" << period * 1e6 << "us;" << reason
+                 << "center frequency:" << m_iqMetadata.centerfreq
+                 << "sample rate:" << m_iqMetadata.samplerate
+                 << "IQ samples:" << m_iq16.size();
+        return period;
+    };
+
     if (m_iq16.isEmpty() || m_iqMetadata.samplerate == 0 || m_iqMetadata.samplesInc <= 0
         || m_iqMetadata.fftSize < 8 || m_iqMetadata.samplerate != m_metadata.samplerate
         || m_iqMetadata.centerfreq != m_metadata.centerfreq
         || m_iqMetadata.timestamp != m_metadata.timestamp) {
-        return 0;
+        return finish(0, "invalid or mismatched IQ capture");
     }
 
     const int windowSize = qMin(16, m_iqMetadata.fftSize);
@@ -1055,11 +1064,11 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
     const qint64 lastSample = qMin(static_cast<qint64>(lastRow) * hopSize,
                                    static_cast<qint64>(m_iq16.size()));
     if (lastSample - firstSample < windowSize)
-        return 0;
+        return finish(0, "insufficient samples for one analysis window");
 
     const int frameCount = 1 + static_cast<int>((lastSample - firstSample - windowSize) / hopSize);
     if (frameCount < 12)
-        return 0;
+        return finish(0, "too few analysis frames");
 
     QVector<double> spectra(frameCount * windowSize);
     double *fftInput = static_cast<double *>(fftw_malloc(sizeof(double) * windowSize * 2));
@@ -1067,7 +1076,7 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
     if (!fftInput || !fftOutput) {
         fftw_free(fftInput);
         fftw_free(fftOutput);
-        return 0;
+        return finish(0, "FFT buffer allocation failed");
     }
 
     fftw_plan fftPlan = fftw_plan_dft_1d(windowSize,
@@ -1076,7 +1085,7 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
     if (!fftPlan) {
         fftw_free(fftInput);
         fftw_free(fftOutput);
-        return 0;
+        return finish(0, "FFT plan creation failed");
     }
 
     for (int frame = 0; frame < frameCount; ++frame) {
@@ -1110,7 +1119,7 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
         fftw_free(correlationInput);
         fftw_free(correlationOutput);
         fftw_free(correlationSpectrum);
-        return 0;
+        return finish(0, "autocorrelation buffer allocation failed");
     }
 
     fftw_plan forwardPlan = fftw_plan_dft_r2c_1d(correlationSize, correlationInput,
@@ -1123,7 +1132,7 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
         fftw_free(correlationInput);
         fftw_free(correlationOutput);
         fftw_free(correlationSpectrum);
-        return 0;
+        return finish(0, "autocorrelation plan creation failed");
     }
 
     QVector<double> autocorrelation(frameCount, 0.0);
@@ -1157,14 +1166,14 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
 
     const double correlationAtZero = autocorrelation[0];
     if (correlationAtZero <= 0)
-        return 0;
+        return finish(0, "no spectral variation to correlate");
     for (double &value : autocorrelation)
         value /= correlationAtZero;
 
     const int minLag = 2;
     const int maxLag = frameCount / 3;
     if (maxLag <= minLag + 1)
-        return 0;
+        return finish(0, "capture is too short for a reliable period");
 
     QVector<double> background;
     background.reserve(maxLag - minLag + 1);
@@ -1180,28 +1189,75 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
     const double mad = deviations[deviations.size() / 2];
     const double minimumPeak = qMax(0.12, median + 6.0 * 1.4826 * mad);
 
-    int bestLag = 0;
-    double bestPeak = minimumPeak;
+    QVector<int> peakLags;
     for (int lag = minLag + 1; lag < maxLag; ++lag) {
         const double value = autocorrelation[lag];
         if (value >= autocorrelation[lag - 1] && value >= autocorrelation[lag + 1]
-            && value > bestPeak) {
-            bestLag = lag;
-            bestPeak = value;
+            && value > minimumPeak)
+            peakLags.append(lag);
+    }
+    if (peakLags.isEmpty())
+        return finish(0, "no significant periodic peak");
+
+    int bestLag = 0;
+    int bestHarmonicCount = 0;
+    double bestPeak = 0;
+    QVector<int> supportedHarmonics;
+    for (int candidateLag : peakLags) {
+        QVector<int> harmonics{1};
+        for (int harmonic = 2; harmonic <= 8; ++harmonic) {
+            const int expectedLag = candidateLag * harmonic;
+            if (expectedLag >= maxLag)
+                break;
+
+            const int tolerance = qMax(1, qCeil(expectedLag * 0.025));
+            const auto matchingPeak = std::lower_bound(peakLags.cbegin(), peakLags.cend(),
+                                                       expectedLag - tolerance);
+            if (matchingPeak != peakLags.cend() && *matchingPeak <= expectedLag + tolerance)
+                harmonics.append(harmonic);
+        }
+
+        if (harmonics.size() > bestHarmonicCount
+            || (harmonics.size() == bestHarmonicCount && candidateLag < bestLag)) {
+            bestLag = candidateLag;
+            bestHarmonicCount = harmonics.size();
+            bestPeak = autocorrelation[candidateLag];
+            supportedHarmonics = harmonics;
         }
     }
-    if (!bestLag)
-        return 0;
+    if (bestHarmonicCount < 4)
+        return finish(0, "no peak has sufficient harmonic support");
+
+    const auto interpolatedCorrelation = [&autocorrelation, frameCount](double lag) {
+        if (lag < 0 || lag >= frameCount - 1)
+            return 0.0;
+        const int lowerLag = static_cast<int>(lag);
+        const double fraction = lag - lowerLag;
+        return autocorrelation[lowerLag] * (1.0 - fraction)
+               + autocorrelation[lowerLag + 1] * fraction;
+    };
 
     double refinedLag = bestLag;
-    const double left = autocorrelation[bestLag - 1];
-    const double center = autocorrelation[bestLag];
-    const double right = autocorrelation[bestLag + 1];
-    const double curvature = left - 2.0 * center + right;
-    if (curvature < 0)
-        refinedLag += qBound(-0.5, 0.5 * (left - right) / curvature, 0.5);
+    double bestLadderScore = -std::numeric_limits<double>::infinity();
+    for (int step = -50; step <= 50; ++step) {
+        const double candidateLag = bestLag + step * 0.01;
+        double score = 0;
+        for (int harmonic : supportedHarmonics)
+            score += interpolatedCorrelation(candidateLag * harmonic) / std::sqrt(harmonic);
+        if (score > bestLadderScore) {
+            bestLadderScore = score;
+            refinedLag = candidateLag;
+        }
+    }
 
-    return refinedLag * hopSize / m_iqMetadata.samplerate;
+    const double period = refinedLag * hopSize / m_iqMetadata.samplerate;
+    const QString peakDetails = QStringLiteral("fundamental peak; lag %1 frames; correlation %2; threshold %3; harmonics %4; analyzed frames %5")
+                                    .arg(refinedLag, 0, 'f', 2)
+                                    .arg(bestPeak, 0, 'f', 3)
+                                    .arg(minimumPeak, 0, 'f', 3)
+                                    .arg(bestHarmonicCount)
+                                    .arg(frameCount);
+    return finish(period, peakDetails);
 }
 
 void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
