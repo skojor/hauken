@@ -4,6 +4,8 @@
 #include "opencv2/opencv.hpp"
 #include "version.h"
 #include "appclock.h"
+#include "fftw3.h"
+#include <algorithm>
 #include <complex>
 #include <QFileInfo>
 #include <QPainter>
@@ -381,7 +383,7 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
 
         else if (mostLikelyChirpRadar) {
             ts << "Classified as a chirp radar signal. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
             if (withinL2(m_metadata.trigFrequency))
                 ts << "Within L2 band. ";
@@ -390,21 +392,21 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
         else if (mostLikelyWbJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Classified as a wide band jammer. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (mostLikelyPbJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Classified as a partial band jammer. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (mostLikelyJammer and (imgsWithJammerInRow > 2 or imgsWithJammerTotal > 5)) {
             flagReport = true;
             ts << "Could be a jammer. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
@@ -415,20 +417,20 @@ void PlotAndAnalyze::receiveClassification(cv::Mat allResults, QStringList class
 
         else if (sweepAndPulse) {
             ts << "Sweep and pulse signal. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (nbSweep) {
             flagReport = true;
             ts << "Narrowband sweep signal. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
         }
 
         else if (pulseAndWb) {
             ts << "Wideband pulse. ";
-            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 4e-6)
+            if (shouldIncludePeriodEstimate() && m_metadata.periodTime > 0)
                 ts << "Period estimate: " << (int)(m_metadata.periodTime * 1e6) << " μs. ";
             if (withinAirRadar(m_metadata.trigFrequency))
                 ts << "Could be air radar at 1274 MHz. ";
@@ -1015,69 +1017,12 @@ double stddev(const QVector<int>& v)
 void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to)
 {
     if (from >= to || from < 0 || to < 0 || to > data.size() || from > data.size()) return;
+    m_metadata.periodTime = estimateSweepPeriodFromIq(from, to);
     from -= 1500; // Rewind a little from maxLoc
     if (from < 0) from = 0;
 
-    QVector<int> firstBinAboveSquelchArray;
     double squelch = m_metadata.max;
-    double timePerLine = (1.0 / m_metadata.samplerate) * m_metadata.samplesInc;
-    int avgFirstBin = 0, prevBinValue;
-
-    for (int i = 0; i < 200; i++) { // Try to locate optimal squelch level
-        squelch -= 0.2;
-        firstBinAboveSquelchArray.clear();
-        for (int row = from; row < to; row++) { // Locate first bin above squelch
-            int firstBin = 0;
-            for (int bin = 0; bin < data[row].size(); bin++) {
-                if (data[row][bin] > squelch) {
-                    firstBinAboveSquelchArray.append(bin);
-                    break;
-                }
-            }
-        }
-        prevBinValue = avgFirstBin;
-        avgFirstBin = 0;
-        for (auto && val : firstBinAboveSquelchArray) avgFirstBin += val;
-        double avg = 0.5 + ((double)avgFirstBin / firstBinAboveSquelchArray.size());
-        avgFirstBin = avg;
-
-        //qDebug() << "Bin locator: Found" << firstBinAboveSquelchArray.size() << "first bins qualifying, avg" << avgFirstBin << ", squelch" << squelch << "stddev" << stddev(firstBinAboveSquelchArray) << firstBinAboveSquelchArray;
-        if (stddev(firstBinAboveSquelchArray) > 5) {
-            if (i) {
-                squelch += 0.2;
-                avgFirstBin = prevBinValue;
-            }
-            qDebug() << "PRF: Using squelch level" << squelch << "first bin" << avgFirstBin;
-            break;
-        }
-    }
-
-    QVector<double> timeBetweenLinesAboveSquelch;
-    bool skipFirstValue = true;
     int binsAboveSquelch = 0;
-    int linesBetweenTops = 11;
-
-    for (int row = from; row < to; row++) {
-        if (data[row][avgFirstBin] > squelch) {
-            binsAboveSquelch++;
-            if (linesBetweenTops > 10) {
-                //qDebug() << "top at" << row << "time betw tops" << 1e6 * (double)linesBetweenTops * timePerLine << "us";
-                if (!skipFirstValue) timeBetweenLinesAboveSquelch.append((double)linesBetweenTops * timePerLine);
-                else
-                    skipFirstValue = false;
-            }
-            linesBetweenTops = 0;
-        }
-        else
-            linesBetweenTops++;
-    }
-    double avgPeriod = 0;
-    if (!timeBetweenLinesAboveSquelch.isEmpty()) {
-        for (auto && val : timeBetweenLinesAboveSquelch) avgPeriod += val;
-        if (!timeBetweenLinesAboveSquelch.isEmpty()) avgPeriod /=  timeBetweenLinesAboveSquelch.size();
-    }
-    m_metadata.periodTime = avgPeriod;
-    if (m_metadata.periodTime < 4e-6) m_metadata.periodTime = 0; // Assume super low period time means wrong measurement
 
     binsAboveSquelch = 0;
     squelch = m_metadata.max - 1;
@@ -1091,6 +1036,172 @@ void PlotAndAnalyze::calcPeriodAndDensity(const QVector<QVector<double>> &data, 
     }
     m_metadata.spectral = 1e3 * (double)binsAboveSquelch / ((to - from) * data.first().size());
     //qDebug() << "PRF period/spec" << m_metadata.periodTime << m_metadata.spectral;
+}
+
+double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
+{
+    if (m_iq16.isEmpty() || m_iqMetadata.samplerate == 0 || m_iqMetadata.samplesInc <= 0
+        || m_iqMetadata.fftSize < 8 || m_iqMetadata.samplerate != m_metadata.samplerate
+        || m_iqMetadata.centerfreq != m_metadata.centerfreq
+        || m_iqMetadata.timestamp != m_metadata.timestamp) {
+        return 0;
+    }
+
+    const int windowSize = qMin(16, m_iqMetadata.fftSize);
+    const int hopSize = m_iqMetadata.samplesInc;
+    const int firstRow = qMax(0, from - 1500);
+    const int lastRow = qMin(to, static_cast<int>(m_iq16.size() / hopSize));
+    const qint64 firstSample = static_cast<qint64>(firstRow) * hopSize;
+    const qint64 lastSample = qMin(static_cast<qint64>(lastRow) * hopSize,
+                                   static_cast<qint64>(m_iq16.size()));
+    if (lastSample - firstSample < windowSize)
+        return 0;
+
+    const int frameCount = 1 + static_cast<int>((lastSample - firstSample - windowSize) / hopSize);
+    if (frameCount < 12)
+        return 0;
+
+    QVector<double> spectra(frameCount * windowSize);
+    double *fftInput = static_cast<double *>(fftw_malloc(sizeof(double) * windowSize * 2));
+    fftw_complex *fftOutput = fftw_alloc_complex(windowSize);
+    if (!fftInput || !fftOutput) {
+        fftw_free(fftInput);
+        fftw_free(fftOutput);
+        return 0;
+    }
+
+    fftw_plan fftPlan = fftw_plan_dft_1d(windowSize,
+                                         reinterpret_cast<fftw_complex *>(fftInput),
+                                         fftOutput, FFTW_FORWARD, FFTW_ESTIMATE);
+    if (!fftPlan) {
+        fftw_free(fftInput);
+        fftw_free(fftOutput);
+        return 0;
+    }
+
+    for (int frame = 0; frame < frameCount; ++frame) {
+        const qint64 frameStart = firstSample + static_cast<qint64>(frame) * hopSize;
+        for (int sample = 0; sample < windowSize; ++sample) {
+            const double window = 0.5 * (1.0 - std::cos(2.0 * M_PI * sample / (windowSize - 1)));
+            const complexInt16 &iq = m_iq16[static_cast<qsizetype>(frameStart + sample)];
+            fftInput[2 * sample] = window * iq.real;
+            fftInput[2 * sample + 1] = window * iq.imag;
+        }
+        fftw_execute(fftPlan);
+        for (int bin = 0; bin < windowSize; ++bin) {
+            const double real = fftOutput[bin][0];
+            const double imag = fftOutput[bin][1];
+            spectra[frame * windowSize + bin] = real * real + imag * imag;
+        }
+    }
+
+    fftw_destroy_plan(fftPlan);
+    fftw_free(fftInput);
+    fftw_free(fftOutput);
+
+    int correlationSize = 1;
+    while (correlationSize < 2 * frameCount)
+        correlationSize <<= 1;
+
+    double *correlationInput = static_cast<double *>(fftw_malloc(sizeof(double) * correlationSize));
+    double *correlationOutput = static_cast<double *>(fftw_malloc(sizeof(double) * correlationSize));
+    fftw_complex *correlationSpectrum = fftw_alloc_complex(correlationSize / 2 + 1);
+    if (!correlationInput || !correlationOutput || !correlationSpectrum) {
+        fftw_free(correlationInput);
+        fftw_free(correlationOutput);
+        fftw_free(correlationSpectrum);
+        return 0;
+    }
+
+    fftw_plan forwardPlan = fftw_plan_dft_r2c_1d(correlationSize, correlationInput,
+                                                  correlationSpectrum, FFTW_ESTIMATE);
+    fftw_plan inversePlan = fftw_plan_dft_c2r_1d(correlationSize, correlationSpectrum,
+                                                  correlationOutput, FFTW_ESTIMATE);
+    if (!forwardPlan || !inversePlan) {
+        if (forwardPlan) fftw_destroy_plan(forwardPlan);
+        if (inversePlan) fftw_destroy_plan(inversePlan);
+        fftw_free(correlationInput);
+        fftw_free(correlationOutput);
+        fftw_free(correlationSpectrum);
+        return 0;
+    }
+
+    QVector<double> autocorrelation(frameCount, 0.0);
+    for (int bin = 0; bin < windowSize; ++bin) {
+        double meanPower = 0;
+        for (int frame = 0; frame < frameCount; ++frame)
+            meanPower += spectra[frame * windowSize + bin];
+        meanPower /= frameCount;
+
+        for (int frame = 0; frame < frameCount; ++frame)
+            correlationInput[frame] = spectra[frame * windowSize + bin] - meanPower;
+        std::fill(correlationInput + frameCount, correlationInput + correlationSize, 0.0);
+
+        fftw_execute(forwardPlan);
+        for (int i = 0; i <= correlationSize / 2; ++i) {
+            const double real = correlationSpectrum[i][0];
+            const double imag = correlationSpectrum[i][1];
+            correlationSpectrum[i][0] = real * real + imag * imag;
+            correlationSpectrum[i][1] = 0;
+        }
+        fftw_execute(inversePlan);
+        for (int lag = 0; lag < frameCount; ++lag)
+            autocorrelation[lag] += correlationOutput[lag] / correlationSize;
+    }
+
+    fftw_destroy_plan(forwardPlan);
+    fftw_destroy_plan(inversePlan);
+    fftw_free(correlationInput);
+    fftw_free(correlationOutput);
+    fftw_free(correlationSpectrum);
+
+    const double correlationAtZero = autocorrelation[0];
+    if (correlationAtZero <= 0)
+        return 0;
+    for (double &value : autocorrelation)
+        value /= correlationAtZero;
+
+    const int minLag = 2;
+    const int maxLag = frameCount / 3;
+    if (maxLag <= minLag + 1)
+        return 0;
+
+    QVector<double> background;
+    background.reserve(maxLag - minLag + 1);
+    for (int lag = minLag; lag <= maxLag; ++lag)
+        background.append(autocorrelation[lag]);
+    std::sort(background.begin(), background.end());
+    const double median = background[background.size() / 2];
+    QVector<double> deviations;
+    deviations.reserve(background.size());
+    for (double value : background)
+        deviations.append(qAbs(value - median));
+    std::sort(deviations.begin(), deviations.end());
+    const double mad = deviations[deviations.size() / 2];
+    const double minimumPeak = qMax(0.12, median + 6.0 * 1.4826 * mad);
+
+    int bestLag = 0;
+    double bestPeak = minimumPeak;
+    for (int lag = minLag + 1; lag < maxLag; ++lag) {
+        const double value = autocorrelation[lag];
+        if (value >= autocorrelation[lag - 1] && value >= autocorrelation[lag + 1]
+            && value > bestPeak) {
+            bestLag = lag;
+            bestPeak = value;
+        }
+    }
+    if (!bestLag)
+        return 0;
+
+    double refinedLag = bestLag;
+    const double left = autocorrelation[bestLag - 1];
+    const double center = autocorrelation[bestLag];
+    const double right = autocorrelation[bestLag + 1];
+    const double curvature = left - 2.0 * center + right;
+    if (curvature < 0)
+        refinedLag += qBound(-0.5, 0.5 * (left - right) / curvature, 0.5);
+
+    return refinedLag * hopSize / m_iqMetadata.samplerate;
 }
 
 void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)

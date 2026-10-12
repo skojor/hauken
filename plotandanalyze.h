@@ -24,7 +24,7 @@ public:
     void start(); // Called by thread
     void end(); // Called by thread
     void createIqDiagram();
-    void receiveIqData(const QVector<complexInt16> &iq, IqMetadata) {m_iq16 = iq;};
+    void receiveIqData(const QVector<complexInt16> &iq, IqMetadata meta) {m_iq16 = iq; m_iqMetadata = meta;};
     void receiveFftData(const QVector<QVector<double>> &fftVector, const IqMetadata &meta);
     void receiveClassification(cv::Mat allResults, QStringList classes, IqMetadata meta);
     void receiveTracedata(quint64 recordingId, TraceDataStruct traceData, QCustomPlot *plot = nullptr, QVector<qint16> avglevel = QVector<qint16>());
@@ -86,6 +86,7 @@ private:
     void completeRecordingArtifactsIfReady();
     void findTracedataMinMaxAvg(const QVector<QVector<qint16>> &data, int &min, int &max, int &avg);
     void calcPeriodAndDensity(const QVector<QVector<double>> &data, int from, int to);
+    double estimateSweepPeriodFromIq(int from, int to) const;
     void writeMetaToDisk(cv::Mat results, QStringList classes);
     bool shouldIncludePeriodEstimate() const;
     bool attachClassificationToPendingPlot(const QString &text);
@@ -96,6 +97,7 @@ private:
 
     QSharedPointer<Config> m_config;
     IqMetadata m_metadata;
+    IqMetadata m_iqMetadata;
     QVector<complexInt16> m_iq16;
     bool m_flagRecordingState = false;
     QTimer *m_reqTraceplotTimer;
