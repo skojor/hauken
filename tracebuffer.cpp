@@ -45,7 +45,7 @@ void TraceBuffer::addTrace(const QVector<qint16> &data)
 {
     //if (!traceBuffer.isEmpty() )qDebug() << data.size() << traceBuffer.last().size();
 
-    if (data.isEmpty() || plotResolution <= 0)
+    if (!acceptingTraces.load(std::memory_order_acquire) || data.isEmpty() || plotResolution <= 0)
         return;
 
     const QDateTime timestamp = AppClock::now();
@@ -310,6 +310,17 @@ void TraceBuffer::emptyBuffer()
     failedTracesCtr = 0;
 
     restartCalcAvgLevel();
+}
+
+void TraceBuffer::invalidateForReceiverProfileChange()
+{
+    emptyBuffer();
+    restartCalcAvgLevel(true);
+}
+
+void TraceBuffer::setAcceptingTraces(bool accepting)
+{
+    acceptingTraces.store(accepting, std::memory_order_release);
 }
 
 void TraceBuffer::finishAvgLevelCalc()

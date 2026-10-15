@@ -163,6 +163,9 @@ private slots:
     void saveConfigValues();
     void instrAutoAttChanged();
     void instrModeChanged();
+    void syncReceiverProfileControls();
+    void handleGnssAlarm();
+    void restoreOrdinaryReceiverProfile();
     void instrResolutionChanged();
     void instrFfmSpanChanged();
     void instrFfmCenterFreqChanged();
@@ -418,6 +421,7 @@ private:
     Network *ptrNetwork = nullptr;
     bool useDbm;
     bool measDeviceFinished = false;
+        bool syncingReceiverControls = false;
     bool startupStateApplied = false;
     AudioPlayer audioPlayer;
     AudioRecorder audioRecorder;

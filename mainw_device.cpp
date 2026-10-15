@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include <QSignalBlocker>
 
 void MainWindow::updInstrButtonsStatus()
 {
@@ -33,9 +34,11 @@ void MainWindow::instrModeChanged()
         instrFfmSpan->setHidden(true);
         instrStartFreq->setHidden(false);
         instrResolution->setHidden(false);
-        config->setInstrMode(instrMode->currentText());
-        measurementDevice->setMode();
-        customPlotController->modeChanged(Instrument::Mode::PSCAN);
+        if (!syncingReceiverControls) {
+            config->setInstrMode(instrMode->currentText());
+            measurementDevice->setMode();
+            customPlotController->modeChanged(Instrument::Mode::PSCAN);
+        }
         hideLayoutWidgets(ffmInfoLayout, true);
     }
     else if (instrMode->currentText().contains("ffm", Qt::CaseInsensitive)/* &&
@@ -51,13 +54,115 @@ void MainWindow::instrModeChanged()
         instrFfmSpan->setHidden(false);
         instrStartFreq->setHidden(true);
         instrResolution->setHidden(true);
-        config->setInstrMode(instrMode->currentText());
-        measurementDevice->setMode();
-        customPlotController->modeChanged(Instrument::Mode::FFM);
+        if (!syncingReceiverControls) {
+            config->setInstrMode(instrMode->currentText());
+            measurementDevice->setMode();
+            customPlotController->modeChanged(Instrument::Mode::FFM);
+        }
         hideLayoutWidgets(ffmInfoLayout, false);
     }
-    instrPscanFreqChanged();
+    if (!syncingReceiverControls)
+        instrPscanFreqChanged();
     setResolutionFunction();
+}
+
+void MainWindow::handleGnssAlarm()
+{
+    const bool shouldApplyGnssSettings = !config->isReplayMode() &&
+                                         config->getGnssIncidentReceiverSettingsEnabled() &&
+                                         config->getSdefSaveToFile() &&
+                                         measurementDevice->isConnected();
+    if (shouldApplyGnssSettings && !config->isGnssIncidentReceiverSettingsActive()) {
+        traceBuffer->setAcceptingTraces(false);
+        if (config->activateGnssIncidentReceiverSettings()) {
+            measurementDevice->restartStream();
+            traceBuffer->invalidateForReceiverProfileChange();
+            traceAnalyzer->resetAverageLevel();
+            traceAnalyzer->clearAlarmState();
+            customPlotController->clearReceiverProfileData();
+            QMetaObject::invokeMethod(waterfall, "restartPlot", Qt::QueuedConnection);
+            syncReceiverProfileControls();
+            traceBuffer->setAcceptingTraces(true);
+        }
+        else {
+            traceBuffer->setAcceptingTraces(true);
+        }
+    }
+
+    traceBuffer->incidenceTriggered();
+    QMetaObject::invokeMethod(sdefRecorder, [recorder = sdefRecorder] {
+        recorder->setTriggerSource(SdefRecorder::TriggerSource::Gnss);
+        recorder->triggerRecording();
+    }, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(iqPlot, [plot = iqPlot] {
+        plot->requestIqData();
+    }, Qt::QueuedConnection);
+}
+
+void MainWindow::restoreOrdinaryReceiverProfile()
+{
+    if (!config->isGnssIncidentReceiverSettingsActive())
+        return;
+
+    traceBuffer->setAcceptingTraces(false);
+    config->deactivateGnssIncidentReceiverSettings();
+    measurementDevice->restartStream();
+    traceBuffer->invalidateForReceiverProfileChange();
+    traceAnalyzer->resetAverageLevel();
+    traceAnalyzer->clearAlarmState();
+    customPlotController->clearReceiverProfileData();
+    QMetaObject::invokeMethod(waterfall, "restartPlot", Qt::QueuedConnection);
+    syncReceiverProfileControls();
+    traceBuffer->setAcceptingTraces(true);
+}
+
+void MainWindow::syncReceiverProfileControls()
+{
+    const QSignalBlocker startBlocker(instrStartFreq);
+    const QSignalBlocker stopBlocker(instrStopFreq);
+    const QSignalBlocker resolutionBlocker(instrResolution);
+    const QSignalBlocker ffmCenterBlocker(instrFfmCenterFreq);
+    const QSignalBlocker ffmSpanBlocker(instrFfmSpan);
+    const QSignalBlocker measurementTimeBlocker(instrMeasurementTime);
+    const QSignalBlocker attenuatorBlocker(instrAtt);
+    const QSignalBlocker autoAttenuatorBlocker(instrAutoAtt);
+    const QSignalBlocker antennaPortBlocker(instrAntPort);
+    const QSignalBlocker modeBlocker(instrMode);
+    const QSignalBlocker fftModeBlocker(instrFftMode);
+    const QSignalBlocker gainControlBlocker(instrGainControl);
+
+    instrStartFreq->setValue(config->getInstrStartFreq() / 1e6);
+    instrStopFreq->setValue(config->getInstrStopFreq() / 1e6);
+    instrFfmCenterFreq->setValue(config->getInstrFfmCenterFreq() / 1e6);
+    instrMeasurementTime->setValue(config->getInstrMeasurementTime());
+    instrAtt->setValue(config->getInstrManAtt());
+    instrAutoAtt->setChecked(config->getInstrAutoAtt());
+    instrMode->setCurrentText(config->getInstrMode());
+    instrFftMode->setCurrentText(config->getInstrFftMode());
+    instrAntPort->setCurrentIndex(config->getInstrAntPort());
+
+    const int gainIndex = instrGainControl->findData(config->getInstrGainControl());
+    if (gainIndex >= 0)
+        instrGainControl->setCurrentIndex(gainIndex);
+
+    syncingReceiverControls = true;
+    instrModeChanged();
+    syncingReceiverControls = false;
+
+    const QString resolution = config->getInstrResolution();
+    if (instrResolution->findText(resolution) < 0)
+        instrResolution->addItem(resolution);
+    instrResolution->setCurrentText(resolution);
+
+    const QString ffmSpan = config->getInstrFfmSpan();
+    if (instrFfmSpan->findText(ffmSpan) < 0)
+        instrFfmSpan->addItem(ffmSpan);
+    instrFfmSpan->setCurrentText(ffmSpan);
+    instrAtt->setDisabled(config->getInstrAutoAtt());
+    customPlotController->modeChanged(config->getInstrMode().contains("pscan", Qt::CaseInsensitive)
+                                           ? Instrument::Mode::PSCAN
+                                           : Instrument::Mode::FFM);
+    setInputsState(measurementDevice->isConnected());
 }
 
 void MainWindow::setValidators()

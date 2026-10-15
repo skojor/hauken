@@ -153,6 +153,11 @@ void CustomPlotController::plotMaxhold(const QVector<double> &data)
 {
     if (iqCapturePaused.load(std::memory_order_acquire)) return;
 
+    if (data.isEmpty()) {
+        clearReceiverProfileData();
+        return;
+    }
+
     if (keyValues.isEmpty()) reCalc();
     if (!keyValues.isEmpty() and !data.isEmpty()) {
         customPlotPtr->graph(1)->setData(keyValues, data);
@@ -161,6 +166,13 @@ void CustomPlotController::plotMaxhold(const QVector<double> &data)
             customPlotPtr->replot(QCustomPlot::rpQueuedReplot);
         }
     }
+}
+
+void CustomPlotController::clearReceiverProfileData()
+{
+    customPlotPtr->graph(0)->setData(QVector<double>(), QVector<double>());
+    customPlotPtr->graph(1)->setData(QVector<double>(), QVector<double>());
+    customPlotPtr->replot(QCustomPlot::rpQueuedReplot);
 }
 
 void CustomPlotController::setIqCapturePaused(bool paused) noexcept

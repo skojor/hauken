@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <QMutex>
 #include <QBuffer>
+#include <atomic>
 #include "typedefs.h"
 #include "config.h"
 
@@ -33,6 +34,8 @@ public slots:
     void start();
     void addTrace(const QVector<qint16> &data);
     void emptyBuffer();
+    void invalidateForReceiverProfileChange();
+    void setAcceptingTraces(bool accepting);
     void getSecondsOfBuffer(int secs = 0);
     QVector<double> retMaxhold();
     QVector<qint16> retAvgLevel() { return averageLevel;}
@@ -141,6 +144,7 @@ private:
     int failedTracesCtr = 0;
     QString avgFilename = ".avgdata";
     bool started = false;
+    std::atomic_bool acceptingTraces = true;
 };
 
 #endif // TRACEBUFFER_H

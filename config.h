@@ -3,6 +3,7 @@
 
 #include <QSettings>
 #include <QObject>
+#include <QReadWriteLock>
 #include <QStandardPaths>
 #include <QString>
 #include <QDebug>
@@ -12,12 +13,14 @@
 #include <QFileInfo>
 #include "mqttbrokerprofile.h"
 #include "gnssreceiverprofile.h"
+#include "measurementreceiversettings.h"
 
 class Config : public QObject
 {
     Q_OBJECT
 public:
     explicit Config(QObject *parent = nullptr);
+    explicit Config(const QString &settingsFile, QObject *parent = nullptr);
     QByteArray simpleEncr(QByteArray) const;
     QSettings *settings;
 
@@ -26,27 +29,27 @@ signals:
 
 public slots:
     // meas. device data
-    quint64 getInstrStartFreq() { return settings->value("instr/StartFreq", 1.56e9).toULongLong();}
+    quint64 getInstrStartFreq() { return effectiveReceiverSetting(&MeasurementReceiverSettings::startFreq, [this] { return settings->value("instr/StartFreq", 1.56e9).toULongLong(); }); }
     void setInstrStartFreq(quint64 val) { settings->setValue("instr/StartFreq", val); emit settingsUpdated();}
-    quint64 getInstrStopFreq() { return settings->value("instr/StopFreq", 1.61e9).toULongLong();}
+    quint64 getInstrStopFreq() { return effectiveReceiverSetting(&MeasurementReceiverSettings::stopFreq, [this] { return settings->value("instr/StopFreq", 1.61e9).toULongLong(); }); }
     void setInstrStopFreq(quint64 val) { settings->setValue("instr/StopFreq", val); emit settingsUpdated();}
-    QString getInstrResolution() { return settings->value("instr/Resolution", 1).toString(); }
+    QString getInstrResolution() { return effectiveReceiverSetting(&MeasurementReceiverSettings::resolution, [this] { return settings->value("instr/Resolution", 1).toString(); }); }
     void setInstrResolution(QString f) { if (!f.isEmpty()) settings->setValue("instr/Resolution", f); emit settingsUpdated();}
-    quint64 getInstrFfmCenterFreq() { return settings->value("instr/FfmCenterFreq", 1560).toULongLong();}
+    quint64 getInstrFfmCenterFreq() { return effectiveReceiverSetting(&MeasurementReceiverSettings::ffmCenterFreq, [this] { return settings->value("instr/FfmCenterFreq", 1560).toULongLong(); }); }
     void setInstrFfmCenterFreq(quint64 f) { settings->setValue("instr/FfmCenterFreq", f); emit settingsUpdated();}
-    QString getInstrFfmSpan() { return settings->value("instr/FfmSpan", "2000").toString(); emit settingsUpdated();}
+    QString getInstrFfmSpan() { return effectiveReceiverSetting(&MeasurementReceiverSettings::ffmSpan, [this] { return settings->value("instr/FfmSpan", "2000").toString(); }); }
     void setInstrFfmSpan(QString s) { settings->setValue("instr/FfmSpan", s); emit settingsUpdated(); emit settingsUpdated();}
-    int getInstrMeasurementTime() { return settings->value("instr/MeasurementTime", 18).toInt();}
+    int getInstrMeasurementTime() { return effectiveReceiverSetting(&MeasurementReceiverSettings::measurementTime, [this] { return settings->value("instr/MeasurementTime", 18).toInt(); }); }
     void setInstrMeasurementTime(int val) { settings->setValue("instr/MeasurementTime", val); emit settingsUpdated();}
-    int getInstrManAtt() { return settings->value("instr/ManAtt", 0).toInt(); }
+    int getInstrManAtt() { return effectiveReceiverSetting(&MeasurementReceiverSettings::manualAttenuator, [this] { return settings->value("instr/ManAtt", 0).toInt(); }); }
     void setInstrManAtt(int val) { settings->setValue("instr/ManAtt", val); emit settingsUpdated();}
-    bool getInstrAutoAtt() { return settings->value("instr/AutoAtt", true).toBool(); }
+    bool getInstrAutoAtt() { return effectiveReceiverSetting(&MeasurementReceiverSettings::autoAttenuator, [this] { return settings->value("instr/AutoAtt", true).toBool(); }); }
     void setInstrAutoAtt(bool b) { settings->setValue("instr/AutoAtt", b); emit settingsUpdated();}
-    int getInstrAntPort() { return settings->value("instr/AntPort", "Default").toUInt(); }
+    int getInstrAntPort() { return effectiveReceiverSetting(&MeasurementReceiverSettings::antennaPort, [this] { return settings->value("instr/AntPort", "Default").toUInt(); }); }
     void setInstrAntPort(int index) { settings->setValue("instr/AntPort", QString::number(index)); emit settingsUpdated();}
-    QString getInstrMode() { return settings->value("instr/Mode", "PScan").toString(); }
+    QString getInstrMode() { return effectiveReceiverSetting(&MeasurementReceiverSettings::mode, [this] { return settings->value("instr/Mode", "PScan").toString(); }); }
     void setInstrMode(QString val) { settings->setValue("instr/Mode", val); emit settingsUpdated();}
-    QString getInstrFftMode() { return settings->value("instr/FftMode", 0).toString(); }
+    QString getInstrFftMode() { return effectiveReceiverSetting(&MeasurementReceiverSettings::fftMode, [this] { return settings->value("instr/FftMode", 0).toString(); }); }
     void setInstrFftMode(QString val) { if (!val.isEmpty()) settings->setValue("instr/FftMode", val); emit settingsUpdated();}
     QString getInstrIpAddr() { return settings->value("instr/IpAddr", "").toString(); }
     void setInstrIpAddr(QString str) { settings->setValue("instr/IpAddr", str); emit settingsUpdated();}
@@ -56,7 +59,7 @@ public slots:
     void setInstrId(QString s) { settings->setValue("instr/Id", s); emit settingsUpdated();}
     QString getMeasurementDeviceName() { return measurementDeviceName;}
     void setMeasurementDeviceName(QString s) { measurementDeviceName = s; emit settingsUpdated();}
-    int getInstrGainControl() { return settings->value("instr/gainControl", 1).toInt(); }
+    int getInstrGainControl() { return effectiveReceiverSetting(&MeasurementReceiverSettings::gainControl, [this] { return settings->value("instr/gainControl", 1).toInt(); }); }
     void setInstrGainControl(int i) { settings->setValue("instr/gainControl", i); emit settingsUpdated(); }
     QString getInstrCustomEntry() { return settings->value("instr/customEntry", "").toString();}
     void setInstrCustomEntry(QString s) { settings->setValue("instr/customEntry", s);}
@@ -262,6 +265,15 @@ public slots:
     void setGnssReceiverProfile(const GnssReceiverProfile &profile);
     void removeGnssReceiverProfile(const QString &id);
     bool hasGnssReceiverProfiles() const;
+
+    MeasurementReceiverSettings getMeasurementReceiverSettings() const;
+    MeasurementReceiverSettings getGnssIncidentReceiverSettings() const;
+    void setGnssIncidentReceiverSettings(const MeasurementReceiverSettings &settings);
+    bool getGnssIncidentReceiverSettingsEnabled() const;
+    void setGnssIncidentReceiverSettingsEnabled(bool enabled);
+    bool activateGnssIncidentReceiverSettings();
+    void deactivateGnssIncidentReceiverSettings();
+    bool isGnssIncidentReceiverSettingsActive() const;
 
     // Email/notification options
     QString getEmailSmtpServer() { return settings->value("email/SmtpServer").toString().trimmed();}
@@ -536,6 +548,20 @@ public slots:
 private slots:
 
 private:
+    template <typename Value, typename ReadOrdinaryValue>
+    Value effectiveReceiverSetting(Value MeasurementReceiverSettings::*field,
+                                   ReadOrdinaryValue readOrdinaryValue) const
+    {
+        {
+            QReadLocker locker(&receiverSettingsLock);
+            if (activeGnssIncidentSettings)
+                return activeMeasurementReceiverSettings.*field;
+        }
+        return readOrdinaryValue();
+    }
+    mutable QReadWriteLock receiverSettingsLock;
+    MeasurementReceiverSettings activeMeasurementReceiverSettings;
+    bool activeGnssIncidentSettings = false;
     void migrateGnssProfilesIfNeeded();
 
     QSettings *basicSettings;

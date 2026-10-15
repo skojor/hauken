@@ -1,3 +1,4 @@
+    instrFfmSpan->setEnabled(canEditReceiverSettings);
 #include "mainwindow.h"
 #include "version.h"
 #include "versionupdater.h"

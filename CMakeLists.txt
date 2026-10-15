@@ -85,6 +85,7 @@ qt_add_executable(Hauken WIN32 MACOSX_BUNDLE ${app_icon_resource_windows} ${CMAK
     main.cpp
     mainwindow.cpp mainwindow.h mainw_signals.cpp mainw_changelog.cpp mainw_device.cpp
     measurementdevice.cpp measurementdevice.h
+    measurementreceiversettings.h
     mqtt.cpp mqtt.h mqttbrokerprofile.h mqttmanager.cpp mqttmanager.h
     mqttoptions.cpp mqttoptions.h
     ppsstatusparser.cpp ppsstatusparser.h
@@ -327,6 +328,17 @@ if (BUILD_TESTING)
     target_include_directories(measurementdeviceavailability_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(measurementdeviceavailability_test PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME measurementdeviceavailability_test COMMAND measurementdeviceavailability_test)
+
+    qt_add_executable(measurementreceiverprofile_test
+        tests/measurementreceiverprofile_test.cpp
+        config.cpp config.h measurementreceiversettings.h
+        asciitranslator.cpp asciitranslator.h
+        tracebuffer.cpp tracebuffer.h
+        waterfall.cpp waterfall.h
+    )
+    target_include_directories(measurementreceiverprofile_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(measurementreceiverprofile_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6::Test)
+    add_test(NAME measurementreceiverprofile_test COMMAND measurementreceiverprofile_test)
 endif()
 
 if (MSVC)

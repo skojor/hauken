@@ -34,6 +34,7 @@ public slots:
     void reCalc();
     void plotTrace(const QVector<double> &);
     void plotMaxhold(const QVector<double> &);
+    void clearReceiverProfileData();
     void plotTriglevel(const QVector<double> &data);
     void showMaxhold(const bool b);
     void readTrigSelectionFromConfig();

@@ -356,8 +356,7 @@ void MainWindow::setSignals()
     connect(traceAnalyzer, &TraceAnalyzer::alarmEnded, notifications, [notificationsPtr = this->notifications] {
         notificationsPtr->recordingIncidentActivityChanged(false, false);
     });
-    connect(gnssManager, &GnssManager::alarm, traceBuffer, &TraceBuffer::incidenceTriggered);
-    connect(gnssManager, &GnssManager::alarm, iqPlot, &IqPlot::requestIqData);
+    connect(gnssManager, &GnssManager::alarm, this, &MainWindow::handleGnssAlarm);
     connect(gnssManager, &GnssManager::alarm, notifications, [notificationsPtr = this->notifications] {
         notificationsPtr->recordingIncidentActivityChanged(true, true);
     });
@@ -486,6 +485,7 @@ void MainWindow::setSignals()
         recordIncidentAlarm(true);
     });
     connect(sdefRecorder, &SdefRecorder::recordingEnded, this, [this]() {
+        restoreOrdinaryReceiverProfile();
         recordIncidentAlarm(false);
     });
     connect(gnssManager, &GnssManager::visualAlarm, this, [this] { gnssIncidentAlarm(true); });
@@ -511,10 +511,6 @@ void MainWindow::setSignals()
     connect(iqPlotThread, &QThread::finished, plotAndAnalyze, &PlotAndAnalyze::end);
 
     connect(gnssManager, &GnssManager::displayGnssData, this, &MainWindow::updGnssBox);
-    connect(gnssManager, &GnssManager::alarm, sdefRecorder, [recorder = sdefRecorder] {
-        recorder->setTriggerSource(SdefRecorder::TriggerSource::Gnss);
-        recorder->triggerRecording();
-    });
     connect(gnssManager, &GnssManager::toIncidentLog, notifications, &Notifications::toIncidentLog);
     connect(gnssManager, &GnssManager::gnssDisabled, this, [this] {
         gnssStatus->clear();

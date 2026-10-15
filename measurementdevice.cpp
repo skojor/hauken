@@ -1106,12 +1106,6 @@ void MeasurementDevice::invalidateAutoReconnectAvailability(const QString &reaso
 
 void MeasurementDevice::updSettings()
 {
-    /*if ((devicePtr->pscanStartFrequency != config->getInstrStartFreq() * 1e6 ||
-         devicePtr->pscanStopFrequency != config->getInstrStopFreq() * 1e6) && config->getInstrStopFreq() > config->getInstrStartFreq()) {
-        devicePtr->pscanStartFrequency = config->getInstrStartFreq() * 1e6;
-        devicePtr->pscanStopFrequency = config->getInstrStopFreq() * 1e6;
-        setPscanFrequency();
-    }*/
     if (devicePtr->pscanResolution != config->getInstrResolution().toDouble() * 1e3) {
         devicePtr->pscanResolution = config->getInstrResolution().toDouble() * 1e3;
         setPscanResolution();
@@ -1143,6 +1137,7 @@ void MeasurementDevice::updSettings()
 
     const bool requestedPscan = config->getInstrMode().contains("pscan", Qt::CaseInsensitive);
     const bool requestedFfm = config->getInstrMode().contains("ffm", Qt::CaseInsensitive);
+    bool modeChanged = false;
     if ((requestedPscan && devicePtr->mode != Instrument::Mode::PSCAN) ||
         (requestedFfm && devicePtr->mode != Instrument::Mode::FFM)) {
         invalidateAutoReconnectAvailability("instrument mode changed");
@@ -1152,20 +1147,42 @@ void MeasurementDevice::updSettings()
         devicePtr->mode != Instrument::Mode::PSCAN) {
         devicePtr->mode = Instrument::Mode::PSCAN;
         setMode();
-        setPscanFrequency();
-        setPscanResolution();
+        modeChanged = true;
     }
     else if (requestedFfm &&
              devicePtr->mode != Instrument::Mode::FFM) {
         devicePtr->mode = Instrument::Mode::FFM;
         setMode();
-        setFfmCenterFrequency();
-        setFfmFrequencySpan();
+        modeChanged = true;
     }
 
-    else if (!fftMode.contains(config->getInstrFftMode().toLocal8Bit())) {
+    if (requestedPscan) {
+        const quint64 requestedStart = config->getInstrStartFreq();
+        const quint64 requestedStop = config->getInstrStopFreq();
+        if (requestedStart < requestedStop &&
+            (modeChanged || devicePtr->pscanStartFrequency != requestedStart ||
+             devicePtr->pscanStopFrequency != requestedStop)) {
+            setPscanFrequency(requestedStart, requestedStop);
+        }
+        if (modeChanged)
+            setPscanResolution();
+    }
+    else if (requestedFfm) {
+        const quint64 requestedCenter = config->getInstrFfmCenterFreq();
+        if (modeChanged || devicePtr->ffmCenterFrequency != requestedCenter)
+            setFfmCenterFrequency(requestedCenter);
+        if (modeChanged)
+            setFfmFrequencySpan();
+    }
+
+    if (fftMode != config->getInstrFftMode().toLocal8Bit()) {
         fftMode = config->getInstrFftMode().toLocal8Bit();
         setFftMode();
+    }
+    if (gainControl != config->getInstrGainControl()) {
+        gainControl = config->getInstrGainControl();
+        if (connected)
+            setGainControl(gainControl);
     }
     //scpiAddress = new QHostAddress(config->getInstrIpAddr());
     scpiPort = config->getInstrPort();

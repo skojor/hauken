@@ -96,6 +96,9 @@ void Waterfall::restartPlot()
 {
     mutex.lock();
     if (!waterfallImage.isNull()) waterfallImage.fill(Qt::transparent);
+    traceCopy.clear();
+    initial = 2;
+    if (updIntervalTimer) updIntervalTimer->stop();
     mutex.unlock();
 }
 

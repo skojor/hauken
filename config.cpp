@@ -34,6 +34,14 @@ Config::Config(QObject *parent)
     }
 }
 
+Config::Config(const QString &settingsFile, QObject *parent)
+    : QObject(parent)
+{
+    basicSettings = new QSettings("Nkom", "Hauken");
+    curFile = settingsFile;
+    settings = new QSettings(curFile, QSettings::IniFormat);
+}
+
 void Config::newFileName(const QString file)
 {
     curFile = file;
@@ -202,6 +210,105 @@ void Config::removeGnssReceiverProfile(const QString &id)
 bool Config::hasGnssReceiverProfiles() const
 {
     return !getGnssReceiverProfileIds().isEmpty();
+}
+
+MeasurementReceiverSettings Config::getMeasurementReceiverSettings() const
+{
+    MeasurementReceiverSettings receiverSettings;
+    receiverSettings.startFreq = settings->value("instr/StartFreq", 1.56e9).toULongLong();
+    receiverSettings.stopFreq = settings->value("instr/StopFreq", 1.61e9).toULongLong();
+    receiverSettings.resolution = settings->value("instr/Resolution", 1).toString();
+    receiverSettings.ffmCenterFreq = settings->value("instr/FfmCenterFreq", 1560).toULongLong();
+    receiverSettings.ffmSpan = settings->value("instr/FfmSpan", "2000").toString();
+    receiverSettings.measurementTime = settings->value("instr/MeasurementTime", 18).toInt();
+    receiverSettings.manualAttenuator = settings->value("instr/ManAtt", 0).toInt();
+    receiverSettings.autoAttenuator = settings->value("instr/AutoAtt", true).toBool();
+    receiverSettings.antennaPort = settings->value("instr/AntPort", "Default").toUInt();
+    receiverSettings.mode = settings->value("instr/Mode", "PScan").toString();
+    receiverSettings.fftMode = settings->value("instr/FftMode", 0).toString();
+    receiverSettings.gainControl = settings->value("instr/gainControl", 1).toInt();
+    return receiverSettings;
+}
+
+bool Config::isGnssIncidentReceiverSettingsActive() const
+{
+    QReadLocker locker(&receiverSettingsLock);
+    return activeGnssIncidentSettings;
+}
+
+MeasurementReceiverSettings Config::getGnssIncidentReceiverSettings() const
+{
+    const MeasurementReceiverSettings ordinary = getMeasurementReceiverSettings();
+    const QString prefix = "instr/gnssIncident/";
+    MeasurementReceiverSettings receiverSettings;
+    receiverSettings.startFreq = settings->value(prefix + "StartFreq", ordinary.startFreq).toULongLong();
+    receiverSettings.stopFreq = settings->value(prefix + "StopFreq", ordinary.stopFreq).toULongLong();
+    receiverSettings.resolution = settings->value(prefix + "Resolution", ordinary.resolution).toString();
+    receiverSettings.ffmCenterFreq = settings->value(prefix + "FfmCenterFreq", ordinary.ffmCenterFreq).toULongLong();
+    receiverSettings.ffmSpan = settings->value(prefix + "FfmSpan", ordinary.ffmSpan).toString();
+    receiverSettings.measurementTime = settings->value(prefix + "MeasurementTime", ordinary.measurementTime).toInt();
+    receiverSettings.manualAttenuator = settings->value(prefix + "ManAtt", ordinary.manualAttenuator).toInt();
+    receiverSettings.autoAttenuator = settings->value(prefix + "AutoAtt", ordinary.autoAttenuator).toBool();
+    receiverSettings.antennaPort = settings->value(prefix + "AntPort", ordinary.antennaPort).toInt();
+    receiverSettings.mode = settings->value(prefix + "Mode", ordinary.mode).toString();
+    receiverSettings.fftMode = settings->value(prefix + "FftMode", ordinary.fftMode).toString();
+    receiverSettings.gainControl = settings->value(prefix + "gainControl", ordinary.gainControl).toInt();
+    return receiverSettings;
+}
+
+void Config::setGnssIncidentReceiverSettings(const MeasurementReceiverSettings &receiverSettings)
+{
+    const QString prefix = "instr/gnssIncident/";
+    settings->setValue(prefix + "StartFreq", receiverSettings.startFreq);
+    settings->setValue(prefix + "StopFreq", receiverSettings.stopFreq);
+    settings->setValue(prefix + "Resolution", receiverSettings.resolution);
+    settings->setValue(prefix + "FfmCenterFreq", receiverSettings.ffmCenterFreq);
+    settings->setValue(prefix + "FfmSpan", receiverSettings.ffmSpan);
+    settings->setValue(prefix + "MeasurementTime", receiverSettings.measurementTime);
+    settings->setValue(prefix + "ManAtt", receiverSettings.manualAttenuator);
+    settings->setValue(prefix + "AutoAtt", receiverSettings.autoAttenuator);
+    settings->setValue(prefix + "AntPort", receiverSettings.antennaPort);
+    settings->setValue(prefix + "Mode", receiverSettings.mode);
+    settings->setValue(prefix + "FftMode", receiverSettings.fftMode);
+    settings->setValue(prefix + "gainControl", receiverSettings.gainControl);
+}
+
+bool Config::getGnssIncidentReceiverSettingsEnabled() const
+{
+    return settings->value("instr/gnssIncident/enabled", false).toBool();
+}
+
+void Config::setGnssIncidentReceiverSettingsEnabled(bool enabled)
+{
+    settings->setValue("instr/gnssIncident/enabled", enabled);
+}
+
+bool Config::activateGnssIncidentReceiverSettings()
+{
+    if (!getGnssIncidentReceiverSettingsEnabled())
+        return false;
+
+    const MeasurementReceiverSettings receiverSettings = getGnssIncidentReceiverSettings();
+    {
+        QWriteLocker locker(&receiverSettingsLock);
+        if (activeGnssIncidentSettings)
+            return false;
+        activeMeasurementReceiverSettings = receiverSettings;
+        activeGnssIncidentSettings = true;
+    }
+    emit settingsUpdated();
+    return true;
+}
+
+void Config::deactivateGnssIncidentReceiverSettings()
+{
+    {
+        QWriteLocker locker(&receiverSettingsLock);
+        if (!activeGnssIncidentSettings)
+            return;
+        activeGnssIncidentSettings = false;
+    }
+    emit settingsUpdated();
 }
 
 void Config::migrateGnssProfilesIfNeeded()

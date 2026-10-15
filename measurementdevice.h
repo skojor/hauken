@@ -202,6 +202,7 @@ private:
     QByteArray antPort;
     //Instrument::Mode mode;
     QByteArray fftMode;
+    int gainControl = -1;
     QTimer *tcpTimeoutTimer = new QTimer;
     QTimer *autoReconnectTimer = new QTimer;
     QTimer *timedReconnectTimer = new QTimer;
