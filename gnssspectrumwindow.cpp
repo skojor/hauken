@@ -146,6 +146,42 @@ void GnssSpectrumWindow::receiveSpectrum(const GnssSpectrumBlock &block)
     if (block.blockIndex == selectedBlockIndex) plotBlock(block);
 }
 
+QVector<GnssSpectrumSnapshot> GnssSpectrumWindow::createSpectrumSnapshots()
+{
+    QVector<GnssSpectrumSnapshot> snapshots;
+    snapshots.reserve(lastBlockByIndex.size());
+    const int originalSelection = selectedBlockIndex;
+    constexpr int plotWidth = 1200;
+    constexpr int plotHeight = 800;
+    constexpr int titleHeight = 40;
+
+    for (auto iterator = lastBlockByIndex.cbegin(); iterator != lastBlockByIndex.cend(); ++iterator) {
+        const GnssSpectrumBlock &block = iterator.value();
+        selectedBlockIndex = iterator.key();
+        plotBlock(block);
+
+        const QPixmap plotPixmap = plot->toPixmap(plotWidth, plotHeight);
+        if (plotPixmap.isNull()) continue;
+
+        const QString description = tr("%1 - Band %2 (%3 MHz)")
+                                        .arg(windowTitle())
+                                        .arg(iterator.key() + 1)
+                                        .arg(block.centerHz / 1e6, 0, 'f', 2);
+        QImage image(plotWidth, plotHeight + titleHeight, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::white);
+        QPainter painter(&image);
+        painter.setPen(Qt::black);
+        painter.drawText(QRect(12, 0, plotWidth - 24, titleHeight), Qt::AlignVCenter | Qt::AlignLeft, description);
+        painter.drawPixmap(0, titleHeight, plotPixmap);
+        snapshots.append({iterator.key(), image, description});
+    }
+
+    selectedBlockIndex = originalSelection;
+    if (lastBlockByIndex.contains(originalSelection))
+        plotBlock(lastBlockByIndex.value(originalSelection));
+    return snapshots;
+}
+
 void GnssSpectrumWindow::bandSelectionChanged(int index)
 {
     selectedBlockIndex = bandSelector->itemData(index).toInt();

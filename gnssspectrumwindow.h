@@ -10,6 +10,7 @@
 #include <QMouseEvent>
 #include <QSharedPointer>
 #include <QSpinBox>
+#include <QVector>
 #include "config.h"
 #include "gnssspectrumblock.h"
 #include "qcustomplot.h"
@@ -19,6 +20,13 @@
  * Receivers reporting several bands/front-ends per sweep (e.g. u-blox X20P MON-SPAN) show
  * a band selector; only the currently selected band's data is plotted.
  */
+struct GnssSpectrumSnapshot
+{
+    int bandIndex = -1;
+    QImage image;
+    QString description;
+};
+
 class GnssSpectrumWindow : public QDialog
 {
     Q_OBJECT
@@ -31,6 +39,7 @@ public slots:
 
 public:
     bool hasSpectrumData() const { return !currentTraceLevels.isEmpty(); }
+    QVector<GnssSpectrumSnapshot> createSpectrumSnapshots();
 
 protected:
     void resizeEvent(QResizeEvent *event) override;

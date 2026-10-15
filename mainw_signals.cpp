@@ -1361,19 +1361,18 @@ void MainWindow::setSignals()
     connect(plotAndAnalyze, &PlotAndAnalyze::reqGnssSpectrumSnapshots, this, [this](quint64 recordingId) {
         for (auto iterator = gnssSpectrumWindows.cbegin(); iterator != gnssSpectrumWindows.cend(); ++iterator) {
             GnssSpectrumWindow *window = iterator.value();
-            if (!window || !window->isVisible() || !window->hasSpectrumData())
-                continue;
-
-            const QImage image = window->grab().toImage();
-            if (image.isNull())
-                continue;
+            if (!window) continue;
 
             const QString profileId = iterator.key();
-            const QString description = window->windowTitle();
-            Notifications *notificationsPtr = notifications;
-            QMetaObject::invokeMethod(notificationsPtr, [notificationsPtr, recordingId, profileId, image, description] {
-                notificationsPtr->recGnssSpectrumImage(recordingId, profileId, image, description);
-            }, Qt::QueuedConnection);
+            for (const GnssSpectrumSnapshot &snapshot : window->createSpectrumSnapshots()) {
+                Notifications *notificationsPtr = notifications;
+                QMetaObject::invokeMethod(notificationsPtr,
+                                          [notificationsPtr, recordingId, profileId, snapshot] {
+                                              notificationsPtr->recGnssSpectrumImage(
+                                                  recordingId, profileId, snapshot.bandIndex,
+                                                  snapshot.image, snapshot.description);
+                                          }, Qt::QueuedConnection);
+            }
         }
 
         PlotAndAnalyze *plotAndAnalyzePtr = plotAndAnalyze;
