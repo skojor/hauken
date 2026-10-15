@@ -111,7 +111,7 @@ public slots:
     void recRecordingImage(quint64 recordingId, const QImage &image, const QString &description);
     void recordingPlotsReady(quint64 recordingId);
     void gnssBacklogsReady(quint64 recordingId);
-    void recGnssSpectrumImage(quint64 recordingId, const QString &profileId,
+    void recGnssSpectrumImage(quint64 recordingId, const QString &profileId, int bandIndex,
                               const QImage &image, const QString &description);
     void recGnssInfoImage(quint64 recordingId, const QImage &image);
 

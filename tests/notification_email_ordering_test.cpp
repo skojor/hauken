@@ -19,7 +19,8 @@ void NotificationEmailOrderingTest::gnssTriggeredPlacesGnssImagesFirst()
         "gnss_info_receiver-data.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-spectrogram.jpg",
-        "gnss_spectrum_receiver-b.jpg",
+        "gnss_spectrum_receiver-b_band_1.jpg",
+        "gnss_spectrum_receiver-b_band_2.jpg",
         "waterfall.jpg"
     };
 
@@ -35,7 +36,8 @@ void NotificationEmailOrderingTest::gnssTriggeredPlacesGnssImagesFirst()
 
     QCOMPARE(orderedAttachments, QStringList({
         "gnssplot_receiver-a.jpg",
-        "gnss_spectrum_receiver-b.jpg",
+        "gnss_spectrum_receiver-b_band_1.jpg",
+        "gnss_spectrum_receiver-b_band_2.jpg",
         "gnss_info_receiver-data.jpg",
         "measurement-maxhold.jpg",
         "measurement-spectrogram.jpg",
@@ -49,7 +51,8 @@ void NotificationEmailOrderingTest::measurementTriggeredPlacesGnssImagesLast()
         "gnss_info_receiver-data.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-maxhold.jpg",
-        "gnss_spectrum_receiver-b.jpg",
+        "gnss_spectrum_receiver-b_band_1.jpg",
+        "gnss_spectrum_receiver-b_band_2.jpg",
         "measurement-spectrogram.jpg",
         "waterfall.jpg"
     };
@@ -69,7 +72,8 @@ void NotificationEmailOrderingTest::measurementTriggeredPlacesGnssImagesLast()
         "measurement-spectrogram.jpg",
         "waterfall.jpg",
         "gnssplot_receiver-a.jpg",
-        "gnss_spectrum_receiver-b.jpg",
+        "gnss_spectrum_receiver-b_band_1.jpg",
+        "gnss_spectrum_receiver-b_band_2.jpg",
         "gnss_info_receiver-data.jpg"
     }));
 }
@@ -81,7 +85,8 @@ void NotificationEmailOrderingTest::otherTriggersPreserveImageOrder()
         "measurement-maxhold.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-spectrogram.jpg",
-        "gnss_spectrum_receiver-b.jpg"
+        "gnss_spectrum_receiver-b_band_1.jpg",
+        "gnss_spectrum_receiver-b_band_2.jpg"
     };
 
     const QStringList orderedAttachments = orderEmailAttachments(
@@ -98,7 +103,8 @@ void NotificationEmailOrderingTest::otherTriggersPreserveImageOrder()
         "measurement-maxhold.jpg",
         "gnssplot_receiver-a.jpg",
         "measurement-spectrogram.jpg",
-        "gnss_spectrum_receiver-b.jpg",
+        "gnss_spectrum_receiver-b_band_1.jpg",
+        "gnss_spectrum_receiver-b_band_2.jpg"
         "gnss_info_receiver-data.jpg"
     }));
 }

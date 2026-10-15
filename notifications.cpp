@@ -522,7 +522,7 @@ void Notifications::recRecordingImage(quint64 recordingId, const QImage &image, 
     bundle->attachments.append(attachment);
 }
 
-void Notifications::recGnssSpectrumImage(quint64 recordingId, const QString &profileId,
+void Notifications::recGnssSpectrumImage(quint64 recordingId, const QString &profileId, int bandIndex,
                                            const QImage &image, const QString &description)
 {
     auto bundle = recordingBundles.find(recordingId);
@@ -537,9 +537,11 @@ void Notifications::recGnssSpectrumImage(quint64 recordingId, const QString &pro
 
     EmailAttachmentBuffer attachment;
     attachment.data = data;
-    attachment.fileName = "gnss_spectrum_" + QString::number(recordingId) + "_" + profileId + ".jpg";
+    attachment.fileName = "gnss_spectrum_" + QString::number(recordingId) + "_" + profileId
+                          + "_band_" + QString::number(bandIndex + 1) + ".jpg";
     attachment.description = description;
-    attachment.contentId = "gnss_spectrum_" + QByteArray::number(recordingId) + "_" + profileId.toLocal8Bit();
+    attachment.contentId = "gnss_spectrum_" + QByteArray::number(recordingId) + "_" + profileId.toLocal8Bit()
+                           + "_band_" + QByteArray::number(bandIndex + 1);
     attachment.contentType = "image/jpg";
     bundle->attachments.append(attachment);
 }
