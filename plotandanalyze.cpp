@@ -1257,7 +1257,8 @@ double PlotAndAnalyze::estimateSweepPeriodFromIq(int from, int to) const
                                     .arg(minimumPeak, 0, 'f', 3)
                                     .arg(bestHarmonicCount)
                                     .arg(frameCount);
-    return finish(period, peakDetail}
+    return finish(period, peakDetails);
+}
 
 void PlotAndAnalyze::writeMetaToDisk(cv::Mat results, QStringList classes)
 {
